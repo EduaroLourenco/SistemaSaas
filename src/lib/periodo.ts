@@ -67,7 +67,14 @@ export function recortar(
   const ordenadas = [...janela].sort();
 
   const somar = (filtro: Set<string>) => {
-    const t = { receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedCanc: 0 };
+    const t = {
+      receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedCanc: 0,
+      // Pedidos das linhas que TÊM visita registrada. É esse par que serve
+      // para conversão: somar pedido cuja visita não foi registrada infla a
+      // conta — 0,7% real vira 1,7% —, e conversão inflada é do tipo que
+      // faz aumentar investimento em mídia por engano.
+      pedidosComVisita: 0,
+    };
     for (const l of linhas) {
       if (!filtro.has(l.data)) continue;
       t.receita += l.receita;
@@ -76,6 +83,7 @@ export function recortar(
       t.ads += l.ads;
       t.cancelado += l.cancelado;
       t.pedCanc += l.pedidosCancelados;
+      if (l.visitas > 0) t.pedidosComVisita += l.pedidos;
     }
     return t;
   };
@@ -83,7 +91,8 @@ export function recortar(
   const b = somar(antes);
 
   const ticket = (t: typeof a) => (t.pedidos ? t.receita / t.pedidos : 0);
-  const conv = (t: typeof a) => (t.visitas ? (t.pedidos * 100) / t.visitas : 0);
+  const conv = (t: typeof a) =>
+    t.visitas ? (t.pedidosComVisita * 100) / t.visitas : 0;
 
   const porDia = new Map<string, DiaFaturamento>();
   for (const l of linhas) {
@@ -120,13 +129,17 @@ export function recortar(
       spark: spark((l) => l.cancelado) },
   ];
 
-  const agr = new Map<string, { rec: number; ped: number; vis: number; ant: number }>();
+  const agr = new Map<
+    string,
+    { rec: number; ped: number; vis: number; ant: number; pedComVis: number }
+  >();
   for (const l of linhas) {
-    const g = agr.get(l.canalId) ?? { rec: 0, ped: 0, vis: 0, ant: 0 };
+    const g = agr.get(l.canalId) ?? { rec: 0, ped: 0, vis: 0, ant: 0, pedComVis: 0 };
     if (janela.has(l.data)) {
       g.rec += l.receita;
       g.ped += l.pedidos;
       g.vis += l.visitas;
+      if (l.visitas > 0) g.pedComVis += l.pedidos;
     } else if (antes.has(l.data)) {
       g.ant += l.receita;
     }
@@ -136,14 +149,14 @@ export function recortar(
 
   const canais: Canal[] = canaisInfo
     .map((c) => {
-      const g = agr.get(c.id) ?? { rec: 0, ped: 0, vis: 0, ant: 0 };
+      const g = agr.get(c.id) ?? { rec: 0, ped: 0, vis: 0, ant: 0, pedComVis: 0 };
       return {
         id: c.id,
         nome: c.nome,
         faturamento: g.rec,
         pedidos: g.ped,
         ticket: g.ped ? g.rec / g.ped : 0,
-        conversao: g.vis ? (g.ped * 100) / g.vis : 0,
+        conversao: g.vis ? (g.pedComVis * 100) / g.vis : 0,
         // Sem custo por canal em nenhuma planilha, margem não existe ainda.
         margem: 0,
         delta: variacao(g.rec, g.ant),
@@ -193,6 +206,15 @@ export type SemanaAgregada = {
   tacos: number;
   parcial: boolean;
   comDados: boolean;
+  /**
+   * Há dia com pedido e ZERO visita na semana.
+   *
+   * Acontece quando a venda veio da listagem de pedidos e a visita não —
+   * a listagem não tem visitas. Numerador cheio com denominador pela
+   * metade infla a conversão: 0,7% real vira 1,7% na tela. Com a marca, a
+   * tela mostra "—" em vez de um número que parece bom.
+   */
+  visitasIncompletas: boolean;
 };
 
 const MESES_CURTOS = [
@@ -226,15 +248,20 @@ export function agruparSemanas(
 
   const acc = new Map<
     number,
-    { rec: number; ped: number; vis: number; ads: number; canc: number; pc: number; dias: Set<string> }
+    {
+      rec: number; ped: number; vis: number; ads: number;
+      canc: number; pc: number; dias: Set<string>; furos: number;
+    }
   >();
 
   for (const l of fonte) {
     const { ano: a, semana } = semanaIso(l.data);
     if (a !== ano) continue;
     const g = acc.get(semana) ?? {
-      rec: 0, ped: 0, vis: 0, ads: 0, canc: 0, pc: 0, dias: new Set<string>(),
+      rec: 0, ped: 0, vis: 0, ads: 0, canc: 0, pc: 0,
+      dias: new Set<string>(), furos: 0,
     };
+    if (l.pedidos > 0 && l.visitas === 0) g.furos += 1;
     g.rec += l.receita;
     g.ped += l.pedidos;
     g.vis += l.visitas;
@@ -283,6 +310,7 @@ export function agruparSemanas(
       ticket: ped ? rec / ped : 0,
       visitas: vis,
       conversao: vis ? (ped * 100) / vis : 0,
+      visitasIncompletas: (g?.furos ?? 0) > 0,
       ads,
       tacos: rec ? (ads * 100) / rec : 0,
       // Semana em curso: tem dado, mas não sete dias. Comparar uma semana

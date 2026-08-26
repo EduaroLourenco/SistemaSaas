@@ -135,6 +135,8 @@ function BarraParticipacao({
 /* ══ Linha da tabela ═════════════════════════════════════════ */
 
 type Linha = SemanaVendas & {
+  /** Visitas faltando na semana — ver periodo.ts. */
+  visitasIncompletas?: boolean;
   /** variação da receita sobre a semana anterior, em % */
   wow: number | null;
   /** participação da receita no total do ano, em % */
@@ -256,14 +258,27 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
       {
         chave: "visitas",
         rotulo: "Visitas",
-        valor: (s) => (s.comDados && s.visitas ? s.visitas : null),
+        dica: "vazio quando a semana tem dia sem visita registrada",
+        valor: (s) =>
+          s.comDados && s.visitas && !(s as Linha).visitasIncompletas
+            ? s.visitas
+            : null,
         formato: (v) => count(v),
       },
       {
+        /*
+         * Conversão só aparece quando visitas E pedidos vêm da mesma
+         * semana inteira. Dia com pedido e sem visita infla a conta —
+         * 0,7% real vira 1,7% —, e um número inflado de conversão é o tipo
+         * que faz aumentar investimento em mídia por engano.
+         */
         chave: "conversao",
         rotulo: "Conversão",
         dica: "pedidos por visita",
-        valor: (s) => (s.comDados && s.visitas ? s.conversao : null),
+        valor: (s) =>
+          s.comDados && s.visitas && !(s as Linha).visitasIncompletas
+            ? s.conversao
+            : null,
         formato: (v) => pct(v, 2),
       },
       {

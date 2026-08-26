@@ -55,13 +55,19 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
     const anteriores = DIAS_DO_PERIODO[periodo] ?? 30;
     const base = new Set(datas.slice(-anteriores * 2, -anteriores));
 
-    const agr = new Map<string, { rec: number; ped: number; vis: number; ant: number }>();
+    const agr = new Map<
+      string,
+      { rec: number; ped: number; vis: number; ant: number; pedComVis: number }
+    >();
     for (const l of dados.linhas) {
-      const g = agr.get(l.canalId) ?? { rec: 0, ped: 0, vis: 0, ant: 0 };
+      const g = agr.get(l.canalId) ?? { rec: 0, ped: 0, vis: 0, ant: 0, pedComVis: 0 };
       if (janela.has(l.data)) {
         g.rec += l.receita;
         g.ped += l.pedidos;
         g.vis += l.visitas;
+        // Só pedido com visita registrada entra na conversão: sem isso, dia
+        // vindo da listagem de pedidos (que não tem visitas) infla a conta.
+        if (l.visitas > 0) g.pedComVis += l.pedidos;
       } else if (base.has(l.data)) {
         g.ant += l.receita;
       }
@@ -73,14 +79,14 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
 
     const lista: Canal[] = dados.canais
       .map((c) => {
-        const g = agr.get(c.id) ?? { rec: 0, ped: 0, vis: 0, ant: 0 };
+        const g = agr.get(c.id) ?? { rec: 0, ped: 0, vis: 0, ant: 0, pedComVis: 0 };
         return {
           id: c.id,
           nome: c.nome,
           faturamento: g.rec,
           pedidos: g.ped,
           ticket: g.ped ? g.rec / g.ped : 0,
-          conversao: g.vis ? (g.ped * 100) / g.vis : 0,
+          conversao: g.vis ? (g.pedComVis * 100) / g.vis : 0,
           // A planilha não traz custo por canal, então margem não existe.
           margem: 0,
           delta: g.ant ? ((g.rec - g.ant) / g.ant) * 100 : 0,
