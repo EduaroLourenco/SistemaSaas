@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from "next/server";
+import JSZip from "jszip";
+import { lerFormulaBase, resumoFormulaBase } from "@/lib/planilhas/formula-base";
+import { processarPlanilha, type LinhaProcessada } from "@/lib/planilhas/processar";
+import { generateReport, type ReportItem } from "@/lib/planilhas/relatorio-gerencial";
+import { guardarPacote } from "@/lib/planilhas/pacotes";
+
+// exceljs e jszip precisam do runtime Node, não do Edge.
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+/**
+ * Processa as planilhas da Central de Promoções.
+ *
+ * Devolve JSON com a conferência item a item — a tela mostra isso antes de
+ * o usuário baixar qualquer coisa. O arquivo gerado fica guardado por alguns
+ * minutos e sai pela rota de download.
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const formData = await req.formData();
+    const planilhas = formData.getAll("planilha") as File[];
+    const base = formData.get("formulaBase") as File | null;
+    const descontoExtra = parseFloat((formData.get("descontoExtra") as string) || "0");
+
+    if (!planilhas.length) {
+      return NextResponse.json(
+        { erro: "Envie ao menos uma planilha da Central de Promoções." },
+        { status: 400 }
+      );
+    }
+    if (!base) {
+      return NextResponse.json(
+        { erro: "Envie a Fórmula base — sem ela não há preço de tabela para comparar." },
+        { status: 400 }
+      );
+    }
+
+    const formulaData = await lerFormulaBase(
+      Buffer.from(await base.arrayBuffer())
+    );
+    const resumoBase = resumoFormulaBase(formulaData);
+
+    if (resumoBase.itens === 0) {
+      return NextResponse.json(
+        {
+          erro:
+            'A aba "Base MLB" veio vazia. Sem ela todo item volta como pendência, então o processamento foi interrompido.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const zip = new JSZip();
+    const todasLinhas: LinhaProcessada[] = [];
+    const todosItens: ReportItem[] = [];
+    const arquivos: { nome: string; campanha: string; linhas: number }[] = [];
+
+    for (const arquivo of planilhas) {
+      const buffer = Buffer.from(await arquivo.arrayBuffer());
+      const r = await processarPlanilha(
+        buffer,
+        arquivo.name,
+        formulaData,
+        descontoExtra
+      );
+
+      zip.file(`processado_${arquivo.name}`, r.buffer);
+      todasLinhas.push(...r.linhas);
+      todosItens.push(...r.itensRelatorio);
+      arquivos.push({
+        nome: arquivo.name,
+        campanha: r.campanha,
+        linhas: r.linhas.length,
+      });
+    }
+
+    if (todosItens.length > 0) {
+      const relatorio = await generateReport(todosItens);
+      zip.file("Relatorio_Gerencial_Campanhas.xlsx", relatorio);
+    }
+
+    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+    const id = guardarPacote(zipBuffer);
+
+    const participam = todasLinhas.filter((l) => l.aprovado).length;
+    const pendencias = todasLinhas.filter((l) => l.motivo).length;
+
+    // Cada cenário já sai ordenado do jeito que a tela precisa mostrar.
+    const revisao = {
+      tabela_acima_ml: todasLinhas
+        .filter((l) => l.tags.includes("tabela_acima_ml"))
+        .sort((a, b) => (a.folga ?? 0) - (b.folga ?? 0)),
+
+      tabela_acima_original: todasLinhas
+        .filter((l) => l.tags.includes("tabela_acima_original"))
+        .sort(
+          (a, b) =>
+            b.precoTabela - (b.precoOriginal ?? 0) -
+            (a.precoTabela - (a.precoOriginal ?? 0))
+        ),
+
+      // do menor para o maior: quem faltou menos aparece primeiro
+      quase: todasLinhas
+        .filter((l) => l.tags.includes("quase"))
+        .sort((a, b) => Math.abs(a.folga ?? 0) - Math.abs(b.folga ?? 0)),
+
+      // maior sobra primeiro, e com redução de tarifa na frente do empate
+      folga: todasLinhas
+        .filter((l) => l.tags.includes("folga"))
+        .sort((a, b) => {
+          const red =
+            Number(b.tipoCampanha === "Com Redução") -
+            Number(a.tipoCampanha === "Com Redução");
+          return red !== 0 ? red : (b.folga ?? 0) - (a.folga ?? 0);
+        }),
+    };
+
+    return NextResponse.json({
+      id,
+      resumoBase,
+      arquivos,
+      resumo: {
+        lidos: todasLinhas.length,
+        participam,
+        fora: todasLinhas.length - participam,
+        pendencias,
+        recalculados: todasLinhas.filter((l) => l.recalculado).length,
+        revisar: new Set(
+          todasLinhas.filter((l) => l.tags.length).map((l) => l.mlb)
+        ).size,
+      },
+      revisao,
+      linhas: todasLinhas,
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Erro desconhecido";
+    console.error("Falha ao processar promoções:", e);
+    return NextResponse.json({ erro: msg }, { status: 400 });
+  }
+}
