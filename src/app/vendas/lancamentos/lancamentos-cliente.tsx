@@ -220,7 +220,16 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
   } = dados;
 
   const CANAIS_LANCAMENTO = React.useMemo(
-    () => [{ id: "todos", nome: "Todos os canais" }, ...dados.canais.map((c) => ({ id: c.id, nome: c.nome }))],
+    () => [
+      // "Todos" não grava: um número lançado no consolidado não teria a que
+      // canal pertencer, e a linha do banco é por conta de vendedor.
+      { id: "todos", nome: "Todos os canais", contaCanalId: undefined },
+      ...dados.canais.map((c) => ({
+        id: c.id,
+        nome: c.nome,
+        contaCanalId: c.contaCanalId,
+      })),
+    ],
     [dados.canais]
   );
   const lancamentosDoMes = React.useCallback(
@@ -364,13 +373,68 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
     });
   }
 
-  function salvar() {
-    if (pendentesTotal === 0) return;
-    setSalvos((s) => ({ ...s, ...rascunho }));
-    setRascunho({});
-    setAviso(
-      `${pendentesTotal} ${pendentesTotal === 1 ? "alteração salva" : "alterações salvas"}`
-    );
+  const [gravando, setGravando] = React.useState(false);
+
+  /**
+   * Grava no banco.
+   *
+   * Antes isto só mexia em estado do React: o usuário digitava, via
+   * "salvo", e perdia tudo ao recarregar. A tela existe justamente para
+   * preencher o que a planilha não trouxe — perder o que foi digitado é o
+   * pior desfecho possível dela.
+   */
+  async function salvar() {
+    if (pendentesTotal === 0 || gravando) return;
+
+    // As chaves do rascunho são "canal|mes|dia|campo". Reagrupa por dia,
+    // porque a gravação é uma linha por dia.
+    const porDia = new Map<string, Record<string, number>>();
+    for (const [k, valor] of Object.entries(rascunho)) {
+      const [canalK, mesK, diaK, campo] = k.split("|");
+      const conta = CANAIS_LANCAMENTO.find((c) => c.id === canalK)?.contaCanalId;
+      if (!conta) continue;
+      const data = `${ANO}-${String(Number(mesK) + 1).padStart(2, "0")}-${String(diaK).padStart(2, "0")}`;
+      const chaveDia = `${conta}|${data}`;
+      const at = porDia.get(chaveDia) ?? {};
+      // "ads" na tela é "investimentoAds" na rota.
+      at[campo === "ads" ? "investimentoAds" : campo] = valor;
+      porDia.set(chaveDia, at);
+    }
+
+    const edicoes = [...porDia.entries()].map(([k, campos]) => {
+      const [contaCanalId, data] = k.split("|");
+      return { contaCanalId, data, ...campos };
+    });
+
+    if (!edicoes.length) {
+      setAviso("Escolha um canal com conta cadastrada para gravar");
+      return;
+    }
+
+    setGravando(true);
+    try {
+      const r = await fetch("/api/lancamentos", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ edicoes }),
+      });
+      const corpo = await r.json();
+      if (!r.ok) {
+        setAviso(corpo.erro ?? "Não foi possível gravar");
+        return;
+      }
+      setSalvos((s) => ({ ...s, ...rascunho }));
+      setRascunho({});
+      setAviso(
+        `${edicoes.length} ${edicoes.length === 1 ? "dia gravado" : "dias gravados"}`
+      );
+    } catch {
+      // Falha de rede não pode limpar o rascunho: o que foi digitado
+      // continua na tela para tentar de novo.
+      setAviso("Sem conexão — nada foi gravado, os valores seguem aqui");
+    } finally {
+      setGravando(false);
+    }
   }
 
   function descartarRascunho() {
@@ -769,15 +833,20 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                   </span>
                 )}
               </span>
-              <Button className="h-11 md:h-8 shrink-0" onClick={descartarRascunho}>
+              <Button
+                className="h-11 md:h-8 shrink-0"
+                onClick={descartarRascunho}
+                disabled={gravando}
+              >
                 Descartar
               </Button>
               <Button
                 variant="primary"
                 className="h-11 md:h-8 shrink-0"
                 onClick={salvar}
+                disabled={gravando}
               >
-                Salvar
+                {gravando ? "Gravando…" : "Salvar"}
               </Button>
             </div>
           </div>

@@ -24,7 +24,13 @@ export type LinhaVendaDia = {
   pedidosCancelados: number;
 };
 
-export type CanalInfo = { id: string; nome: string; cor: string };
+export type CanalInfo = {
+  id: string;
+  nome: string;
+  cor: string;
+  /** Conta de vendedor no banco — é o destino de qualquer gravação. */
+  contaCanalId?: string;
+};
 
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
 
@@ -134,6 +140,7 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
             nome: rotulo(c),
             cor: `var(--s${serie})`,
             ordem: (c.canais?.ordem ?? 99) * 10 + i,
+            contaCanalId: c.id,
           },
         ] as const;
       })
@@ -166,7 +173,12 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
   const vistos = new Set<string>();
   const canais: CanalInfo[] = [...info.values()]
     .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome))
-    .map((i) => ({ id: chaveCanal(i.nome), nome: i.nome, cor: i.cor }))
+    .map((i) => ({
+      id: chaveCanal(i.nome),
+      nome: i.nome,
+      cor: i.cor,
+      contaCanalId: i.contaCanalId,
+    }))
     .filter((c) => {
       if (!comMovimento.has(c.id) || vistos.has(c.id)) return false;
       vistos.add(c.id);
