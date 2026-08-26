@@ -38,6 +38,18 @@ export async function proxy(req: NextRequest) {
   const publica = PUBLICAS.some((p) => caminho.startsWith(p));
 
   if (!data.user && !publica) {
+    // Rota de API responde em JSON, não em redirecionamento.
+    //
+    // `fetch` segue redirecionamento por padrão: a chamada receberia 200
+    // com o HTML do login e quebraria no `res.json()`, com um erro de
+    // parse que não tem nada a ver com a causa. 401 diz o que aconteceu.
+    if (caminho.startsWith("/api/")) {
+      return NextResponse.json(
+        { erro: "Não autenticado", codigo: "sem_sessao" },
+        { status: 401 }
+      );
+    }
+
     const url = req.nextUrl.clone();
     url.pathname = "/entrar";
     // Guarda para onde ele queria ir, e devolve depois do login.

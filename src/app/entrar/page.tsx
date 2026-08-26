@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { clienteNavegador } from "@/lib/supabase/navegador";
 import { Button } from "@/components/ui/primitives";
 import { Loader2 } from "lucide-react";
@@ -13,10 +13,8 @@ import { Loader2 } from "lucide-react";
  * dentro, não pedido de fora. Um cadastro aberto num painel de operação é
  * porta que ninguém lembra de fechar.
  */
-function Formulario() {
+export default function Entrar() {
   const router = useRouter();
-  const params = useSearchParams();
-  const destino = params.get("destino") || "/";
 
   const [email, setEmail] = React.useState("");
   const [senha, setSenha] = React.useState("");
@@ -27,6 +25,12 @@ function Formulario() {
     e.preventDefault();
     setErro(null);
     setEnviando(true);
+
+    // Lido aqui, e não com useSearchParams(): aquele hook obriga o Next a
+    // desistir da renderização no servidor, e o login — a primeira tela que
+    // qualquer pessoa vê — subia em branco até o JavaScript chegar.
+    const destino =
+      new URLSearchParams(window.location.search).get("destino") || "/";
 
     const sb = clienteNavegador();
     const { error } = await sb.auth.signInWithPassword({ email, password: senha });
@@ -125,14 +129,5 @@ function Formulario() {
         </p>
       </div>
     </main>
-  );
-}
-
-export default function Entrar() {
-  // useSearchParams() exige limite de Suspense para não bloquear a rota.
-  return (
-    <React.Suspense fallback={<div className="min-h-screen bg-ground" />}>
-      <Formulario />
-    </React.Suspense>
   );
 }
