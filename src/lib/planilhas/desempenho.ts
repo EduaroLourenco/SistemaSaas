@@ -17,9 +17,75 @@ export interface AnaliseReport {
   id: string;
   fileName: string;
   periodo: string;
+  /** Datas extraídas do período, quando a frase pôde ser lida. */
+  inicio?: string;
+  fim?: string;
+  anoIso?: number;
+  semanaIso?: number;
   dataPreco?: string;
   data: MLPerformanceRow[];
   uploadedAt: string;
+}
+
+const MESES = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+/**
+ * Extrai as duas datas de "…de 17 de agosto de 2026 até 23 de agosto de 2026".
+ *
+ * O banco guarda desempenho por semana ISO, então a frase precisa virar
+ * data de verdade: sem isso não há como dizer a que semana a linha pertence,
+ * nem impedir que o mesmo arquivo entre duas vezes.
+ */
+export function extrairIntervalo(texto: string): {
+  inicio: string;
+  fim: string;
+  anoIso: number;
+  semanaIso: number;
+} | null {
+  const mes = `(${MESES.join("|")})`;
+  const re = new RegExp(
+    `de\\s+(\\d{1,2})\\s+de\\s+${mes}\\s+de\\s+(\\d{4})\\s+at[ée]\\s+(\\d{1,2})\\s+de\\s+${mes}\\s+de\\s+(\\d{4})`,
+    "iu"
+  );
+  const m = texto.match(re);
+  if (!m) return null;
+
+  const iso = (dia: string, nomeMes: string, ano: string) => {
+    const idx = MESES.indexOf(nomeMes.toLowerCase());
+    if (idx < 0) return null;
+    return `${ano}-${String(idx + 1).padStart(2, "0")}-${dia.padStart(2, "0")}`;
+  };
+
+  const inicio = iso(m[1], m[2], m[3]);
+  const fim = iso(m[4], m[5], m[6]);
+  if (!inicio || !fim) return null;
+
+  const { ano, semana } = semanaIsoDe(inicio);
+  return { inicio, fim, anoIso: ano, semanaIso: semana };
+}
+
+/**
+ * Ano e semana ISO-8601 de uma data.
+ *
+ * ISO e não "semana do ano" ingênua porque a virada de ano é o caso que
+ * quebra: 30/12/2025 pertence à semana 1 de 2026, e uma contagem simples
+ * a colocaria na 53 de 2025 — criando uma semana duplicada no gráfico.
+ */
+export function semanaIsoDe(data: string): { ano: number; semana: number } {
+  const d = new Date(`${data}T00:00:00Z`);
+  // Quinta-feira da mesma semana define o ano ISO, por definição da norma.
+  const dia = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dia + 3);
+  const ano = d.getUTCFullYear();
+  const primeiraQuinta = new Date(Date.UTC(ano, 0, 4));
+  const deslocamento = (primeiraQuinta.getUTCDay() + 6) % 7;
+  primeiraQuinta.setUTCDate(primeiraQuinta.getUTCDate() - deslocamento + 3);
+  const semana =
+    1 + Math.round((d.getTime() - primeiraQuinta.getTime()) / (7 * 86400000));
+  return { ano, semana };
 }
 
 function parseNumber(val: any): number {
@@ -50,11 +116,22 @@ export async function parsePerformanceReport(buffer: Buffer, fileName: string, c
 
   let periodoStr = customPeriodo || "Período Indefinido";
   if (!customPeriodo) {
-    const row3 = worksheet.getRow(3).values as any[];
-    if (row3 && row3[2]) {
-      periodoStr = extractText(row3[2]);
+    // Varre as primeiras linhas em vez de ler uma célula fixa. A frase do
+    // período está na coluna 1, não na 2 como estava escrito aqui — o
+    // resultado era todo arquivo virar "Período Indefinido", e sem período
+    // as semanas se empilham numa só: quatro relatórios viram um borrão.
+    busca: for (let r = 1; r <= 6; r++) {
+      for (let c = 1; c <= 4; c++) {
+        const t = extractText(worksheet.getRow(r).getCell(c).value);
+        if (t && /\bde\s+\d{1,2}\s+de\s+\p{L}+\s+de\s+\d{4}/iu.test(t)) {
+          periodoStr = t.trim();
+          break busca;
+        }
+      }
     }
   }
+
+  const intervalo = extrairIntervalo(periodoStr);
 
   let headerRowIndex = 0;
   for (let i = 1; i <= 30; i++) {
@@ -140,6 +217,10 @@ export async function parsePerformanceReport(buffer: Buffer, fileName: string, c
     id: Date.now().toString() + "-" + Math.floor(Math.random() * 1000),
     fileName,
     periodo: periodoStr,
+    inicio: intervalo?.inicio,
+    fim: intervalo?.fim,
+    anoIso: intervalo?.anoIso,
+    semanaIso: intervalo?.semanaIso,
     dataPreco: customDataPreco || "",
     data: items,
     uploadedAt: new Date().toISOString()
