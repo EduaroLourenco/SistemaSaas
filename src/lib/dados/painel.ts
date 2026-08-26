@@ -1,15 +1,18 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { carregarBaseVendas, chaveCanal } from "./vendas";
 import type { Kpi, DiaFaturamento, Canal, Anuncio } from "@/mock";
 
 /**
  * Dados do painel, lidos do banco.
  *
- * Devolve exatamente as formas que as telas já consomem — trocar mock por
- * banco não deve virar refatoração de gráfico. Onde a planilha não tem o
- * número que o mock inventava (margem por canal, por exemplo), o campo vem
- * zerado e a tela mostra vazio: número inventado num painel de decisão é
- * pior que campo em branco.
+ * Usa a MESMA base das telas de vendas (`carregarBaseVendas`). Duas
+ * agregações separadas do mesmo dado é como um painel passa a mostrar um
+ * total e a tela de canais outro, sem ninguém saber qual está certo.
+ *
+ * A unidade é a CONTA DE VENDEDOR, não o canal: o Mercado Livre opera com
+ * duas contas que vendem de formas diferentes, e somá-las esconde a
+ * comparação que interessa.
  */
 
 export type SerieCanalSemana = { semana: string } & Record<string, number | string>;
@@ -27,28 +30,7 @@ export type DadosPainel = {
   vazio: boolean;
 };
 
-type LinhaDia = {
-  data: string;
-  receita: string;
-  pedidos: number;
-  visitas: number;
-  investimento_ads: string;
-  valor_cancelado: string;
-  pedidos_cancelados: number;
-  canal_id: string;
-};
-
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
-
-/** Nome do canal como chave estável para série e cor. */
-function chave(nome: string) {
-  return nome
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "");
-}
 
 /** Variação percentual; zero quando não há base de comparação. */
 function delta(atual: number, anterior: number): number {
@@ -67,23 +49,9 @@ function semanaDe(iso: string): string {
 }
 
 export async function carregarPainel(): Promise<DadosPainel> {
-  const sb = await clienteServidor();
+  const base = await carregarBaseVendas();
 
-  const [{ data: dias }, { data: canaisBanco }] = await Promise.all([
-    sb
-      .from("vendas_diarias")
-      .select(
-        "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados,canal_id"
-      )
-      .order("data", { ascending: true })
-      .limit(20000),
-    sb.from("canais").select("id,nome,cor_serie").order("ordem"),
-  ]);
-
-  const linhas = (dias ?? []) as unknown as LinhaDia[];
-  const canais = canaisBanco ?? [];
-
-  if (!linhas.length) {
+  if (base.vazio) {
     return {
       kpis: [],
       faturamento30d: [],
@@ -97,8 +65,8 @@ export async function carregarPainel(): Promise<DadosPainel> {
     };
   }
 
-  const nomePorId = new Map(canais.map((c) => [c.id as string, c.nome as string]));
-  const ultimaData = linhas[linhas.length - 1].data;
+  const linhas = base.linhas;
+  const ultimaData = base.ultimaData!;
 
   /*
    * Janela de comparação: os 30 últimos DIAS COM MOVIMENTO, contra os 30
@@ -114,11 +82,11 @@ export async function carregarPainel(): Promise<DadosPainel> {
     const t = { receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0 };
     for (const l of linhas) {
       if (!filtro.has(l.data)) continue;
-      t.receita += n(l.receita);
+      t.receita += l.receita;
       t.pedidos += l.pedidos;
       t.visitas += l.visitas;
-      t.ads += n(l.investimento_ads);
-      t.cancelado += n(l.valor_cancelado);
+      t.ads += l.ads;
+      t.cancelado += l.cancelado;
     }
     return t;
   };
@@ -126,11 +94,9 @@ export async function carregarPainel(): Promise<DadosPainel> {
   const b = somar(anterior);
 
   const ultimas12 = datas.slice(-12);
-  const spark = (campo: (l: LinhaDia) => number) =>
+  const spark = (campo: (l: (typeof linhas)[number]) => number) =>
     ultimas12.map((d) =>
-      Math.round(
-        linhas.filter((l) => l.data === d).reduce((s, l) => s + campo(l), 0)
-      )
+      Math.round(linhas.filter((l) => l.data === d).reduce((s, l) => s + campo(l), 0))
     );
 
   const ticket = (t: typeof a) => (t.pedidos ? t.receita / t.pedidos : 0);
@@ -138,67 +104,41 @@ export async function carregarPainel(): Promise<DadosPainel> {
 
   const kpis: Kpi[] = [
     {
-      id: "faturamento",
-      label: "Faturamento",
-      value: a.receita,
-      format: "money",
-      delta: delta(a.receita, b.receita),
-      hint: "vs. 30 dias anteriores",
-      spark: spark((l) => n(l.receita)),
+      id: "faturamento", label: "Faturamento", value: a.receita, format: "money",
+      delta: delta(a.receita, b.receita), hint: "vs. 30 dias anteriores",
+      spark: spark((l) => l.receita),
     },
     {
-      id: "pedidos",
-      label: "Pedidos",
-      value: a.pedidos,
-      format: "count",
-      delta: delta(a.pedidos, b.pedidos),
-      hint: "vs. 30 dias anteriores",
+      id: "pedidos", label: "Pedidos", value: a.pedidos, format: "count",
+      delta: delta(a.pedidos, b.pedidos), hint: "vs. 30 dias anteriores",
       spark: spark((l) => l.pedidos),
     },
     {
-      id: "ticket",
-      label: "Ticket médio",
-      value: ticket(a),
-      format: "money",
-      delta: delta(ticket(a), ticket(b)),
-      hint: "vs. 30 dias anteriores",
-      spark: spark((l) => n(l.receita)),
+      id: "ticket", label: "Ticket médio", value: ticket(a), format: "money",
+      delta: delta(ticket(a), ticket(b)), hint: "vs. 30 dias anteriores",
+      spark: spark((l) => l.receita),
     },
     {
-      id: "conversao",
-      label: "Conversão",
-      value: conv(a),
-      format: "pct",
-      delta: delta(conv(a), conv(b)),
-      hint: "vs. 30 dias anteriores",
+      id: "conversao", label: "Conversão", value: conv(a), format: "pct",
+      delta: delta(conv(a), conv(b)), hint: "vs. 30 dias anteriores",
       spark: spark((l) => l.visitas),
     },
     {
-      id: "ads",
-      label: "Investimento em ADS",
-      value: a.ads,
-      format: "money",
-      delta: delta(a.ads, b.ads),
-      inverse: true,
-      hint: "vs. 30 dias anteriores",
-      spark: spark((l) => n(l.investimento_ads)),
+      id: "ads", label: "Investimento em ADS", value: a.ads, format: "money",
+      delta: delta(a.ads, b.ads), inverse: true, hint: "vs. 30 dias anteriores",
+      spark: spark((l) => l.ads),
     },
     {
-      id: "cancelado",
-      label: "Valor cancelado",
-      value: a.cancelado,
-      format: "money",
-      delta: delta(a.cancelado, b.cancelado),
-      inverse: true,
-      hint: "vs. 30 dias anteriores",
-      spark: spark((l) => n(l.valor_cancelado)),
+      id: "cancelado", label: "Valor cancelado", value: a.cancelado, format: "money",
+      delta: delta(a.cancelado, b.cancelado), inverse: true, hint: "vs. 30 dias anteriores",
+      spark: spark((l) => l.cancelado),
     },
   ];
 
   const porDia = new Map<string, DiaFaturamento>();
   for (const l of linhas) {
     const d = porDia.get(l.data) ?? { data: l.data, faturamento: 0, pedidos: 0 };
-    d.faturamento += n(l.receita);
+    d.faturamento += l.receita;
     d.pedidos += l.pedidos;
     porDia.set(l.data, d);
   }
@@ -209,25 +149,24 @@ export async function carregarPainel(): Promise<DadosPainel> {
 
   const agr = new Map<string, { rec: number; ped: number; vis: number; recAnt: number }>();
   for (const l of linhas) {
-    const g = agr.get(l.canal_id) ?? { rec: 0, ped: 0, vis: 0, recAnt: 0 };
+    const g = agr.get(l.canalId) ?? { rec: 0, ped: 0, vis: 0, recAnt: 0 };
     if (janela.has(l.data)) {
-      g.rec += n(l.receita);
+      g.rec += l.receita;
       g.ped += l.pedidos;
       g.vis += l.visitas;
     } else if (anterior.has(l.data)) {
-      g.recAnt += n(l.receita);
+      g.recAnt += l.receita;
     }
-    agr.set(l.canal_id, g);
+    agr.set(l.canalId, g);
   }
   const totalRec = [...agr.values()].reduce((s, g) => s + g.rec, 0);
 
-  const listaCanais: Canal[] = [...agr.entries()]
-    .filter(([, g]) => g.rec > 0 || g.ped > 0)
-    .map(([id, g]) => {
-      const nome = nomePorId.get(id) ?? "—";
+  const listaCanais: Canal[] = base.canais
+    .map((c) => {
+      const g = agr.get(c.id) ?? { rec: 0, ped: 0, vis: 0, recAnt: 0 };
       return {
-        id: chave(nome),
-        nome,
+        id: c.id,
+        nome: c.nome,
         faturamento: g.rec,
         pedidos: g.ped,
         ticket: g.ped ? g.rec / g.ped : 0,
@@ -239,20 +178,20 @@ export async function carregarPainel(): Promise<DadosPainel> {
         spark: ultimas12.map((d) =>
           Math.round(
             linhas
-              .filter((l) => l.data === d && l.canal_id === id)
-              .reduce((s, l) => s + n(l.receita), 0) / 1000
+              .filter((l) => l.data === d && l.canalId === c.id)
+              .reduce((s, l) => s + l.receita, 0) / 1000
           )
         ),
       };
     })
+    .filter((c) => c.faturamento > 0 || c.pedidos > 0)
     .sort((x, y) => y.faturamento - x.faturamento);
 
   const porSemana = new Map<string, Record<string, number>>();
   for (const l of linhas) {
     const s = semanaDe(l.data);
     const linha = porSemana.get(s) ?? {};
-    const k = chave(nomePorId.get(l.canal_id) ?? "outro");
-    linha[k] = (linha[k] ?? 0) + n(l.receita) / 1000;
+    linha[l.canalId] = (linha[l.canalId] ?? 0) + l.receita / 1000;
     porSemana.set(s, linha);
   }
   const canaisSemanas = [...porSemana.entries()]
@@ -266,11 +205,12 @@ export async function carregarPainel(): Promise<DadosPainel> {
 
   const cores: Record<string, string> = {};
   const nomes: Record<string, string> = {};
-  for (const c of canais) {
-    const k = chave(c.nome as string);
-    cores[k] = `var(--s${(c.cor_serie as number) ?? 1})`;
-    nomes[k] = c.nome as string;
+  for (const c of base.canais) {
+    cores[c.id] = c.cor;
+    nomes[c.id] = c.nome;
   }
+
+  const sb = await clienteServidor();
 
   return {
     kpis,
@@ -372,3 +312,5 @@ async function carregarAnuncios(
     return copia as Anuncio;
   });
 }
+
+export { chaveCanal };

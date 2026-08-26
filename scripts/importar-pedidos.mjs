@@ -40,6 +40,18 @@ async function enviar(tabela, linhas, conflito, tamanho = 300) {
   process.stdout.write("\n");
 }
 
+/**
+ * Conta do hub → conta de vendedor cadastrada.
+ *
+ * O Mercado Livre aparece com duas contas na listagem, e elas vendem de
+ * formas diferentes. Somá-las apagaria a comparação que interessa.
+ */
+const CONTA = {
+  "colchoes_probel_sp": "São Paulo — pronta entrega",
+  "colchões probel": "2ª conta — venda a prazo",
+  "colchoes probel": "2ª conta — venda a prazo",
+};
+
 /** Nome do canal no hub → canal cadastrado. */
 const CANAL = {
   "vtex": "Loja própria (VTEX)",
@@ -61,9 +73,18 @@ console.log(`  ${r.colunasDescartadas} colunas descartadas por não serem analí
 console.log(`  canais: ${Object.entries(r.marketplaces).map(([k, v]) => `${k}=${v}`).join(", ")}`);
 
 const contas = await api("/contas_canal?select=id,nome,canal_id,canais(nome)");
-const padrao = (nomeCanal) =>
-  contas.find((c) => c.canais.nome === nomeCanal && c.padrao !== false) ??
-  contas.find((c) => c.canais.nome === nomeCanal);
+/** Acha a conta certa: pelo nome do hub quando conhecido, senão a padrão. */
+const achar = (nomeCanal, contaHub) => {
+  const alvo = CONTA[(contaHub ?? "").toLowerCase().trim()];
+  if (alvo) {
+    const exata = contas.find((c) => c.canais.nome === nomeCanal && c.nome === alvo);
+    if (exata) return exata;
+  }
+  return (
+    contas.find((c) => c.canais.nome === nomeCanal && c.padrao !== false) ??
+    contas.find((c) => c.canais.nome === nomeCanal)
+  );
+};
 
 // Descobre se a migração 06 já rodou; sem ela, o líquido não tem onde ficar.
 let temLiquido = true;
@@ -75,7 +96,7 @@ const semCanal = new Set();
 const linhas = [];
 for (const p of r.pedidos) {
   const nome = CANAL[p.marketplace.toLowerCase()] ?? "Outros";
-  const c = padrao(nome);
+  const c = achar(nome, p.conta);
   if (!c) { semCanal.add(p.marketplace); continue; }
   const linha = {
     operacao_id: OPERACAO,
@@ -123,7 +144,7 @@ const itens = [];
 let semPedido = 0;
 for (const p of r.pedidos) {
   const nome = CANAL[p.marketplace.toLowerCase()] ?? "Outros";
-  const c = padrao(nome);
+  const c = achar(nome, p.conta);
   if (!c) continue;
   const pedidoId = porCodigo.get(`${c.canal_id}|${p.codigoExterno.toUpperCase()}`);
   if (!pedidoId) { semPedido += 1; continue; }
@@ -155,3 +176,68 @@ const comAnuncio = itens.filter((i) => i.anuncio_id).length;
 console.log(`\n=== resumo ===`);
 console.log(`  pedidos     : ${linhas.length}`);
 console.log(`  itens       : ${itens.length}  (${comAnuncio} ligados a anúncio pelo SKU)`);
+
+/* ── Preencher lacunas de vendas_diarias ──────────────────────
+ *
+ * A planilha de KPIs vem incompleta em agosto — vários dias zerados. A
+ * listagem de pedidos tem esses dias, por canal e por conta, então serve
+ * para tapar o buraco.
+ *
+ * Só preenche dia que está FALTANDO ou ZERADO. Onde a planilha de KPIs tem
+ * número, ela manda: é ela que traz visitas e investimento em mídia, que a
+ * listagem de pedidos não tem. Sobrescrever ali trocaria um dado completo
+ * por um parcial.
+ */
+const existentes = await api(
+  `/vendas_diarias?select=conta_canal_id,data,receita,pedidos&data=gte.${r.inicio}&data=lte.${r.fim}&limit=20000`
+);
+const jaTem = new Set(
+  existentes.filter((v) => Number(v.receita) > 0 || v.pedidos > 0)
+            .map((v) => `${v.conta_canal_id}|${v.data}`)
+);
+
+const porContaDia = new Map();
+for (const p of r.pedidos) {
+  if (p.cancelado) continue;
+  const nome = CANAL[p.marketplace.toLowerCase()] ?? "Outros";
+  const c = achar(nome, p.conta);
+  if (!c) continue;
+  const k = `${c.id}|${p.data}`;
+  if (jaTem.has(k)) continue;
+  const at = porContaDia.get(k) ?? {
+    operacao_id: OPERACAO, canal_id: c.canal_id, conta_canal_id: c.id,
+    data: p.data, visitas: 0, pedidos: 0, receita: 0,
+    investimento_ads: 0, pedidos_cancelados: 0, valor_cancelado: 0,
+    origem: "planilha",
+  };
+  at.pedidos += 1;
+  at.receita += p.total;
+  porContaDia.set(k, at);
+}
+
+// Cancelados entram como cancelamento, não como venda.
+for (const p of r.pedidos) {
+  if (!p.cancelado) continue;
+  const nome = CANAL[p.marketplace.toLowerCase()] ?? "Outros";
+  const c = achar(nome, p.conta);
+  if (!c) continue;
+  const k = `${c.id}|${p.data}`;
+  const at = porContaDia.get(k);
+  if (!at) continue;
+  at.pedidos_cancelados += 1;
+  at.valor_cancelado += p.total;
+}
+
+const preenchidas = [...porContaDia.values()].map((v) => ({
+  ...v,
+  receita: +v.receita.toFixed(2),
+  valor_cancelado: +v.valor_cancelado.toFixed(2),
+}));
+
+if (preenchidas.length) {
+  await enviar("vendas_diarias", preenchidas, "conta_canal_id,data");
+  const dias = new Set(preenchidas.map((v) => v.data));
+  console.log(`  lacunas preenchidas: ${preenchidas.length} linhas em ${dias.size} dias`);
+} else {
+  console.log("  nenhuma lacuna a preencher");
+}

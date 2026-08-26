@@ -68,22 +68,78 @@ export type BaseVendas = {
 export async function carregarBaseVendas(): Promise<BaseVendas> {
   const sb = await clienteServidor();
 
-  const [{ data: dias }, { data: canaisBanco }] = await Promise.all([
+  const [{ data: dias }, { data: contasBanco }] = await Promise.all([
     sb
       .from("vendas_diarias")
       .select(
-        "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados,canal_id"
+        "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados,conta_canal_id"
       )
       .order("data", { ascending: true })
       .limit(20000),
-    sb.from("canais").select("id,nome,cor_serie").order("ordem"),
+    sb
+      .from("contas_canal")
+      .select("id,nome,canal_id,canais(nome,cor_serie,ordem)")
+      .limit(200),
   ]);
 
-  const canaisLista = canaisBanco ?? [];
-  const nomePorId = new Map(canaisLista.map((c) => [c.id as string, c.nome as string]));
+  type Conta = {
+    id: string;
+    nome: string;
+    canal_id: string;
+    canais: { nome: string; cor_serie: number; ordem: number } | null;
+  };
+  const contas = (contasBanco ?? []) as unknown as Conta[];
+
+  /*
+   * A unidade das telas é a CONTA DE VENDEDOR, não o canal.
+   *
+   * O Mercado Livre opera com duas contas que vendem de formas diferentes
+   * — pronta entrega e venda a prazo. Somá-las esconde exatamente a
+   * comparação que interessa, e nenhuma decisão de preço ou de anúncio vale
+   * para as duas ao mesmo tempo.
+   *
+   * O nome só ganha o sufixo da conta quando o canal tem mais de uma: para
+   * Amazon ou Magalu, "Amazon · Conta principal" seria ruído.
+   */
+  const contasPorCanal = new Map<string, number>();
+  for (const c of contas) {
+    contasPorCanal.set(c.canal_id, (contasPorCanal.get(c.canal_id) ?? 0) + 1);
+  }
+
+  const rotulo = (c: Conta) => {
+    const canal = c.canais?.nome ?? "Outros";
+    return (contasPorCanal.get(c.canal_id) ?? 1) > 1 ? `${canal} — ${c.nome}` : canal;
+  };
+
+  /*
+   * Cor por conta, e não por canal: duas contas do mesmo canal herdariam a
+   * mesma cor e virariam uma linha só no gráfico. A segunda conta anda uma
+   * casa na paleta — próxima o bastante para se ler como o mesmo canal,
+   * distinta o bastante para separar as curvas.
+   */
+  const ordinal = new Map<string, number>();
+  const info = new Map(
+    [...contas]
+      .sort((a, b) => a.nome.localeCompare(b.nome))
+      .map((c) => {
+        const i = ordinal.get(c.canal_id) ?? 0;
+        ordinal.set(c.canal_id, i + 1);
+        const base = c.canais?.cor_serie ?? 1;
+        const serie = i === 0 ? base : ((base + i * 4 - 1) % 10) + 1;
+        return [
+          c.id,
+          {
+            nome: rotulo(c),
+            cor: `var(--s${serie})`,
+            ordem: (c.canais?.ordem ?? 99) * 10 + i,
+          },
+        ] as const;
+      })
+  );
 
   const linhas: LinhaVendaDia[] = (dias ?? []).map((l) => {
-    const nome = nomePorId.get(l.canal_id as string) ?? "Outros";
+    const i = info.get(l.conta_canal_id as string);
+    const nome = i?.nome ?? "Outros";
     return {
       data: l.data as string,
       canal: nome,
@@ -101,17 +157,19 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
     return { linhas: [], canais: [], ano: new Date().getFullYear(), ultimaData: null, vazio: true };
   }
 
-  // Só canais com movimento entram nas telas. Listar canal cadastrado e
-  // vazio enche a legenda de linhas retas e esconde o que importa.
+  // Só contas com movimento entram nas telas. Listar conta cadastrada e
+  // vazia enche a legenda de linhas retas e esconde o que importa.
   const comMovimento = new Set(linhas.filter((l) => l.receita > 0 || l.pedidos > 0).map((l) => l.canalId));
 
-  const canais: CanalInfo[] = canaisLista
-    .map((c) => ({
-      id: chaveCanal(c.nome as string),
-      nome: c.nome as string,
-      cor: `var(--s${(c.cor_serie as number) ?? 1})`,
-    }))
-    .filter((c) => comMovimento.has(c.id));
+  const vistos = new Set<string>();
+  const canais: CanalInfo[] = [...info.values()]
+    .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome))
+    .map((i) => ({ id: chaveCanal(i.nome), nome: i.nome, cor: i.cor }))
+    .filter((c) => {
+      if (!comMovimento.has(c.id) || vistos.has(c.id)) return false;
+      vistos.add(c.id);
+      return true;
+    });
 
   const ultimaData = linhas[linhas.length - 1].data;
   return { linhas, canais, ano: Number(ultimaData.slice(0, 4)), ultimaData, vazio: false };
