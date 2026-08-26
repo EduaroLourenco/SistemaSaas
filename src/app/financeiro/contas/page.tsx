@@ -12,9 +12,31 @@ import {
 import { Tabs, Checkbox } from "@/components/ui/controls";
 import { StatTile } from "@/components/ui/stat-tile";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { CONTAS, RESUMO_CONTAS, HOJE, type Conta, type Faixa } from "@/mock/financeiro";
+import {
+  CONTAS as __CONTAS,
+  RESUMO_CONTAS as __RESUMO_CONTAS,
+  HOJE as __HOJE,
+  type Conta,
+  type Faixa,
+} from "@/mock/financeiro";
 import { money, count } from "@/lib/format";
 import { Download, Check, CheckCheck, CircleAlert } from "lucide-react";
+
+import { zerar } from "@/mock/zerar";
+
+/*
+ * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
+ * propósito: com a maior parte da plataforma já lendo o banco, número
+ * de exemplo com cara de real é pior que campo vazio — não há como
+ * saber, olhando, se aquilo é a operação ou é enfeite.
+ *
+ * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
+ * tela vai exibir quando o dado chegar.
+ */
+const CONTAS = zerar(__CONTAS);
+const RESUMO_CONTAS = zerar(__RESUMO_CONTAS);
+const HOJE = zerar(__HOJE);
+
 
 type Aba = "vencidas" | "hoje" | "sete" | "mes" | "todas";
 

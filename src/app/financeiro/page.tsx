@@ -20,16 +20,36 @@ import {
   YAxis,
 } from "recharts";
 import {
-  FLUXO_12_MESES,
-  RESUMO_PAINEL,
-  CUSTOS,
-  CUSTO_TOTAL,
-  PROXIMOS_VENCIMENTOS,
-  MOVIMENTACOES,
-  RESUMO_CONTAS,
+  FLUXO_12_MESES as __FLUXO_12_MESES,
+  RESUMO_PAINEL as __RESUMO_PAINEL,
+  CUSTOS as __CUSTOS,
+  CUSTO_TOTAL as __CUSTO_TOTAL,
+  PROXIMOS_VENCIMENTOS as __PROXIMOS_VENCIMENTOS,
+  MOVIMENTACOES as __MOVIMENTACOES,
+  RESUMO_CONTAS as __RESUMO_CONTAS,
 } from "@/mock/financeiro";
 import { money, moneyShort, pct } from "@/lib/format";
 import { CalendarDays, Download, ArrowDownRight, ArrowUpRight } from "lucide-react";
+
+import { zerar } from "@/mock/zerar";
+
+/*
+ * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
+ * propósito: com a maior parte da plataforma já lendo o banco, número
+ * de exemplo com cara de real é pior que campo vazio — não há como
+ * saber, olhando, se aquilo é a operação ou é enfeite.
+ *
+ * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
+ * tela vai exibir quando o dado chegar.
+ */
+const FLUXO_12_MESES = zerar(__FLUXO_12_MESES);
+const RESUMO_PAINEL = zerar(__RESUMO_PAINEL);
+const CUSTOS = zerar(__CUSTOS);
+const CUSTO_TOTAL = zerar(__CUSTO_TOTAL);
+const PROXIMOS_VENCIMENTOS = zerar(__PROXIMOS_VENCIMENTOS);
+const MOVIMENTACOES = zerar(__MOVIMENTACOES);
+const RESUMO_CONTAS = zerar(__RESUMO_CONTAS);
+
 
 /** dd/mm a partir do ISO. */
 function dataCurta(iso: string) {

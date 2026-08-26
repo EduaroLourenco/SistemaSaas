@@ -23,13 +23,16 @@ import { StatTile, Sparkline } from "@/components/ui/stat-tile";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import {
-  MONITORES_PRECO,
-  ALERTAS_PRECO,
-  RESUMO_PRECO,
-  CANAIS_MONITORADOS,
+  MONITORES_PRECO as __MONITORES_PRECO,
+  ALERTAS_PRECO as __ALERTAS_PRECO,
+  RESUMO_PRECO as __RESUMO_PRECO,
+  CANAIS_MONITORADOS as __CANAIS_MONITORADOS,
   type MonitorPreco,
 } from "@/mock/monitoramento";
-import { CANAL_NOMES, CANAL_CORES } from "@/mock";
+import {
+  CANAL_NOMES as __CANAL_NOMES,
+  CANAL_CORES as __CANAL_CORES,
+} from "@/mock";
 import { money, count, pct } from "@/lib/format";
 import {
   CartesianGrid,
@@ -51,6 +54,25 @@ import {
   TrendingDown,
   Radar,
 } from "lucide-react";
+
+import { zerar } from "@/mock/zerar";
+
+/*
+ * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
+ * propósito: com a maior parte da plataforma já lendo o banco, número
+ * de exemplo com cara de real é pior que campo vazio — não há como
+ * saber, olhando, se aquilo é a operação ou é enfeite.
+ *
+ * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
+ * tela vai exibir quando o dado chegar.
+ */
+const MONITORES_PRECO = zerar(__MONITORES_PRECO);
+const ALERTAS_PRECO = zerar(__ALERTAS_PRECO);
+const RESUMO_PRECO = zerar(__RESUMO_PRECO);
+const CANAIS_MONITORADOS = zerar(__CANAIS_MONITORADOS);
+const CANAL_NOMES = zerar(__CANAL_NOMES);
+const CANAL_CORES = zerar(__CANAL_CORES);
+
 
 const SITUACOES = [
   { value: "todos", label: "Todos" },

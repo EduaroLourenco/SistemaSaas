@@ -25,6 +25,24 @@ async function api(caminho, opc = {}) {
   return txt ? JSON.parse(txt) : null;
 }
 
+/**
+ * Lê uma tabela inteira, em páginas.
+ *
+ * O PostgREST corta em 1000 linhas por padrão, e o `limit` na query não
+ * levanta esse teto. Sem paginar, o mapa de pedidos vinha truncado e os
+ * itens das linhas seguintes eram descartados em silêncio — o pior tipo de
+ * perda, porque o script termina dizendo "concluído".
+ */
+async function lerTudo(caminho, passo = 1000) {
+  const todos = [];
+  for (let off = 0; ; off += passo) {
+    const juncao = caminho.includes("?") ? "&" : "?";
+    const pagina = await api(`${caminho}${juncao}limit=${passo}&offset=${off}`);
+    todos.push(...pagina);
+    if (pagina.length < passo) return todos;
+  }
+}
+
 async function enviar(tabela, linhas, conflito, tamanho = 300) {
   let n = 0;
   for (let i = 0; i < linhas.length; i += tamanho) {
@@ -62,6 +80,16 @@ const CANAL = {
   "magalu": "Magalu",
   "amazon": "Amazon",
   "casas bahia": "Casas Bahia",
+  "casas bahia marketplace": "Casas Bahia",
+  "via varejo": "Casas Bahia",
+  "shopee": "Shopee",
+  "carrefour": "Carrefour",
+  "webcontinental": "WebContinental",
+  "casa & video": "Casa & Video",
+  "casa e video": "Casa & Video",
+  "lebiscuit": "Lebiscuit",
+  "mateus mais": "Mateus Mais",
+  "sicredi": "Sicredi",
 };
 
 const caminho = process.argv[2];
@@ -135,9 +163,9 @@ void reg;
 await enviar("pedidos", linhas, "canal_id,codigo_externo");
 
 // Itens: precisam do id do pedido, que só existe depois da gravação.
-const gravados = await api("/pedidos?select=id,codigo_externo,canal_id&limit=20000");
+const gravados = await lerTudo("/pedidos?select=id,codigo_externo,canal_id");
 const porCodigo = new Map(gravados.map((p) => [`${p.canal_id}|${p.codigo_externo.toUpperCase()}`, p.id]));
-const anuncios = await api("/anuncios?select=id,sku_canal&limit=5000");
+const anuncios = await lerTudo("/anuncios?select=id,sku_canal");
 const porSku = new Map(anuncios.filter((a) => a.sku_canal).map((a) => [a.sku_canal.toUpperCase(), a.id]));
 
 const itens = [];
@@ -188,8 +216,8 @@ console.log(`  itens       : ${itens.length}  (${comAnuncio} ligados a anúncio 
  * listagem de pedidos não tem. Sobrescrever ali trocaria um dado completo
  * por um parcial.
  */
-const existentes = await api(
-  `/vendas_diarias?select=conta_canal_id,data,receita,pedidos&data=gte.${r.inicio}&data=lte.${r.fim}&limit=20000`
+const existentes = await lerTudo(
+  `/vendas_diarias?select=conta_canal_id,data,receita,pedidos&data=gte.${r.inicio}&data=lte.${r.fim}`
 );
 const jaTem = new Set(
   existentes.filter((v) => Number(v.receita) > 0 || v.pedidos > 0)

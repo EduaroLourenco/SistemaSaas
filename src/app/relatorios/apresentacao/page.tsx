@@ -6,9 +6,9 @@ import { Button, Panel, PanelHeader, Badge, Delta } from "@/components/ui/primit
 import { Segmented, Checkbox, SectionTitle } from "@/components/ui/controls";
 import { AXIS, GRID } from "@/components/ui/chart";
 import {
-  SLIDES,
-  FORMATOS,
-  ROTEIRO_PADRAO,
+  SLIDES as __SLIDES,
+  FORMATOS as __FORMATOS,
+  ROTEIRO_PADRAO as __ROTEIRO_PADRAO,
   type FormatoDeck,
   type Slide,
 } from "@/mock/relatorios";
@@ -24,6 +24,22 @@ import {
   YAxis,
 } from "recharts";
 import { Play, ChevronLeft, ChevronRight, X, Presentation } from "lucide-react";
+
+import { zerar } from "@/mock/zerar";
+
+/*
+ * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
+ * propósito: com a maior parte da plataforma já lendo o banco, número
+ * de exemplo com cara de real é pior que campo vazio — não há como
+ * saber, olhando, se aquilo é a operação ou é enfeite.
+ *
+ * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
+ * tela vai exibir quando o dado chegar.
+ */
+const SLIDES = zerar(__SLIDES);
+const FORMATOS = zerar(__FORMATOS);
+const ROTEIRO_PADRAO = zerar(__ROTEIRO_PADRAO);
+
 
 function valorFormatado(s: Slide) {
   if (s.formato === "money") return money(s.valor);

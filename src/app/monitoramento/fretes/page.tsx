@@ -15,21 +15,24 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import {
-  MONITORES_FRETE,
-  FRETE_12_SEMANAS,
-  RESUMO_REGIOES,
-  RESUMO_FRETE,
-  VARIACAO_MES,
-  MODALIDADES,
-  REGIOES,
-  FAIXAS_CEP,
-  CANAIS_MONITORADOS,
-  REGIAO_KEY,
-  REGIAO_COR,
+  MONITORES_FRETE as __MONITORES_FRETE,
+  FRETE_12_SEMANAS as __FRETE_12_SEMANAS,
+  RESUMO_REGIOES as __RESUMO_REGIOES,
+  RESUMO_FRETE as __RESUMO_FRETE,
+  VARIACAO_MES as __VARIACAO_MES,
+  MODALIDADES as __MODALIDADES,
+  REGIOES as __REGIOES,
+  FAIXAS_CEP as __FAIXAS_CEP,
+  CANAIS_MONITORADOS as __CANAIS_MONITORADOS,
+  REGIAO_KEY as __REGIAO_KEY,
+  REGIAO_COR as __REGIAO_COR,
   type MonitorFrete,
   type Modalidade,
 } from "@/mock/monitoramento";
-import { CANAL_NOMES, CANAL_CORES } from "@/mock";
+import {
+  CANAL_NOMES as __CANAL_NOMES,
+  CANAL_CORES as __CANAL_CORES,
+} from "@/mock";
 import { money, count, pct } from "@/lib/format";
 import {
   CartesianGrid,
@@ -41,6 +44,32 @@ import {
   YAxis,
 } from "recharts";
 import { Search, RefreshCw, X, SearchX, SlidersHorizontal } from "lucide-react";
+
+import { zerar } from "@/mock/zerar";
+
+/*
+ * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
+ * propósito: com a maior parte da plataforma já lendo o banco, número
+ * de exemplo com cara de real é pior que campo vazio — não há como
+ * saber, olhando, se aquilo é a operação ou é enfeite.
+ *
+ * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
+ * tela vai exibir quando o dado chegar.
+ */
+const MONITORES_FRETE = zerar(__MONITORES_FRETE);
+const FRETE_12_SEMANAS = zerar(__FRETE_12_SEMANAS);
+const RESUMO_REGIOES = zerar(__RESUMO_REGIOES);
+const RESUMO_FRETE = zerar(__RESUMO_FRETE);
+const VARIACAO_MES = zerar(__VARIACAO_MES);
+const MODALIDADES = zerar(__MODALIDADES);
+const REGIOES = zerar(__REGIOES);
+const FAIXAS_CEP = zerar(__FAIXAS_CEP);
+const CANAIS_MONITORADOS = zerar(__CANAIS_MONITORADOS);
+const REGIAO_KEY = zerar(__REGIAO_KEY);
+const REGIAO_COR = zerar(__REGIAO_COR);
+const CANAL_NOMES = zerar(__CANAL_NOMES);
+const CANAL_CORES = zerar(__CANAL_CORES);
+
 
 export default function MonitoramentoFretes() {
   const [busca, setBusca] = React.useState("");

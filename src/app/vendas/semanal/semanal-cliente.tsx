@@ -7,6 +7,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { Segmented, FilterSheet } from "@/components/ui/controls";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
+import { Matriz, type IndicadorMatriz, type ColunaMatriz } from "@/components/ui/matriz";
 import { type SemanaVendas } from "@/mock/semanal";
 import type { DadosSemanal } from "@/lib/dados/vendas";
 import { money, moneyShort, count, pct } from "@/lib/format";
@@ -181,6 +182,101 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
   const exibidas = React.useMemo(
     () => (escopo === "dados" ? linhas.filter((l) => l.comDados) : linhas),
     [linhas, escopo]
+  );
+
+  /* ── tabela cruzada: semanas nas colunas ────────────────── */
+
+  const colunasMatriz: ColunaMatriz[] = React.useMemo(
+    () =>
+      exibidas.map((s) => ({
+        chave: s.rotulo,
+        rotulo: s.rotulo,
+        sub: s.intervalo,
+        parcial: s.parcial,
+      })),
+    [exibidas]
+  );
+
+  /*
+   * Semana sem dado devolve null, não zero. Zero é uma afirmação — "não
+   * vendeu" — e aqui o que houve foi ausência de importação. A diferença
+   * decide se alguém vai investigar a operação ou o arquivo.
+   */
+  const nulo = (s: SemanaVendas, v: number) => (s.comDados ? v : null);
+
+  const INDICADORES: IndicadorMatriz<SemanaVendas>[] = React.useMemo(
+    () => [
+      {
+        chave: "receita",
+        rotulo: "Receita",
+        destaque: true,
+        valor: (s) => nulo(s, s.receita),
+        formato: (v) => money(v),
+      },
+      {
+        chave: "liquida",
+        rotulo: "Receita líquida",
+        dica: "descontando cancelamentos",
+        valor: (s) => nulo(s, s.receitaLiquida),
+        formato: (v) => money(v),
+      },
+      {
+        chave: "pedidos",
+        rotulo: "Pedidos",
+        destaque: true,
+        valor: (s) => nulo(s, s.pedidos),
+        formato: (v) => count(v),
+      },
+      {
+        chave: "ticket",
+        rotulo: "Ticket médio",
+        valor: (s) => (s.comDados && s.pedidos ? s.ticket : null),
+        formato: (v) => money(v),
+      },
+      {
+        chave: "visitas",
+        rotulo: "Visitas",
+        valor: (s) => (s.comDados && s.visitas ? s.visitas : null),
+        formato: (v) => count(v),
+      },
+      {
+        chave: "conversao",
+        rotulo: "Conversão",
+        dica: "pedidos por visita",
+        valor: (s) => (s.comDados && s.visitas ? s.conversao : null),
+        formato: (v) => pct(v, 2),
+      },
+      {
+        chave: "ads",
+        rotulo: "Investimento em ADS",
+        menorMelhor: true,
+        valor: (s) => (s.comDados && s.ads ? s.ads : null),
+        formato: (v) => money(v),
+      },
+      {
+        chave: "tacos",
+        rotulo: "TACOS",
+        dica: "mídia sobre receita total",
+        menorMelhor: true,
+        valor: (s) => (s.comDados && s.ads ? s.tacos : null),
+        formato: (v) => pct(v, 2),
+      },
+      {
+        chave: "cancelado",
+        rotulo: "Valor cancelado",
+        menorMelhor: true,
+        valor: (s) => nulo(s, s.cancelado),
+        formato: (v) => money(v),
+      },
+      {
+        chave: "pedCanc",
+        rotulo: "Pedidos cancelados",
+        menorMelhor: true,
+        valor: (s) => nulo(s, s.pedidosCancelados),
+        formato: (v) => count(v),
+      },
+    ],
+    []
   );
 
   /* ── série do gráfico + média móvel de 4 semanas ───────── */
@@ -483,11 +579,26 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
 
         <Panel className="overflow-hidden">
           <PanelHeader
-            title={`As ${TOTAL_SEMANAS} semanas de ${ANO}`}
-            hint="WoW compara a receita com a semana anterior"
+            title="Semana a semana"
+            hint="Semanas nas colunas · indicadores nas linhas · a seta compara com a semana à esquerda"
             action={
-              <span className="num text-[12px] text-ink-3">{exibidas.length}</span>
+              <span className="num text-[12px] text-ink-3">
+                {exibidas.length} semanas
+              </span>
             }
+          />
+          <Matriz
+            colunas={colunasMatriz}
+            periodos={exibidas}
+            indicadores={INDICADORES}
+          />
+        </Panel>
+
+        {/* a lista continua disponível para quem quiser ordenar por métrica */}
+        <Panel className="overflow-hidden">
+          <PanelHeader
+            title="Lista ordenável"
+            hint="Mesmo dado, uma linha por semana — para ordenar por qualquer indicador"
           />
           <DataTable
             columns={colunas}

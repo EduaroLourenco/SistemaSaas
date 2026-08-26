@@ -6,12 +6,28 @@ import { Button, Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Toggle, SectionTitle } from "@/components/ui/controls";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import {
-  FORMATOS_EXPORTACAO,
-  HISTORICO_EXPORTACOES,
-  AGENDAMENTOS,
+  FORMATOS_EXPORTACAO as __FORMATOS_EXPORTACAO,
+  HISTORICO_EXPORTACOES as __HISTORICO_EXPORTACOES,
+  AGENDAMENTOS as __AGENDAMENTOS,
   type Exportacao,
 } from "@/mock/relatorios";
 import { CalendarDays, Download, FileSpreadsheet, RotateCw } from "lucide-react";
+
+import { zerar } from "@/mock/zerar";
+
+/*
+ * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
+ * propósito: com a maior parte da plataforma já lendo o banco, número
+ * de exemplo com cara de real é pior que campo vazio — não há como
+ * saber, olhando, se aquilo é a operação ou é enfeite.
+ *
+ * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
+ * tela vai exibir quando o dado chegar.
+ */
+const FORMATOS_EXPORTACAO = zerar(__FORMATOS_EXPORTACAO);
+const HISTORICO_EXPORTACOES = zerar(__HISTORICO_EXPORTACOES);
+const AGENDAMENTOS = zerar(__AGENDAMENTOS);
+
 
 const STATUS_TOM = {
   Concluída: "up",

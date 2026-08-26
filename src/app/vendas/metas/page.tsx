@@ -9,23 +9,23 @@ import { AXIS, GRID, ChartTooltip, Legend } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 import { money, moneyShort, pct } from "@/lib/format";
 import {
-  ANO,
-  CANAIS_META,
-  CANAIS_META_IDS,
-  DATA_CORTE,
-  FRACAO_ANO_DECORRIDA,
-  MESES_CURTOS,
-  MESES_LONGOS,
-  MES_ATUAL,
-  META_ANUAL_SUGERIDA,
-  PARTICIPACAO,
-  PESOS_NORMALIZADOS,
-  PESOS_SAZONAIS,
-  REALIZADO,
-  REALIZADO_ANO,
-  REALIZADO_ANTERIOR_TOTAL,
-  REALIZADO_ANO_TOTAL,
-  REALIZADO_TOTAL,
+  ANO as __ANO,
+  CANAIS_META as __CANAIS_META,
+  CANAIS_META_IDS as __CANAIS_META_IDS,
+  DATA_CORTE as __DATA_CORTE,
+  FRACAO_ANO_DECORRIDA as __FRACAO_ANO_DECORRIDA,
+  MESES_CURTOS as __MESES_CURTOS,
+  MESES_LONGOS as __MESES_LONGOS,
+  MES_ATUAL as __MES_ATUAL,
+  META_ANUAL_SUGERIDA as __META_ANUAL_SUGERIDA,
+  PARTICIPACAO as __PARTICIPACAO,
+  PESOS_NORMALIZADOS as __PESOS_NORMALIZADOS,
+  PESOS_SAZONAIS as __PESOS_SAZONAIS,
+  REALIZADO as __REALIZADO,
+  REALIZADO_ANO as __REALIZADO_ANO,
+  REALIZADO_ANTERIOR_TOTAL as __REALIZADO_ANTERIOR_TOTAL,
+  REALIZADO_ANO_TOTAL as __REALIZADO_ANO_TOTAL,
+  REALIZADO_TOTAL as __REALIZADO_TOTAL,
   type CanalMetaId,
 } from "@/mock/metas";
 import {
@@ -39,6 +39,36 @@ import {
   YAxis,
 } from "recharts";
 import { CalendarRange, Equal, Eraser, Target } from "lucide-react";
+
+import { zerar } from "@/mock/zerar";
+
+/*
+ * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
+ * propósito: com a maior parte da plataforma já lendo o banco, número
+ * de exemplo com cara de real é pior que campo vazio — não há como
+ * saber, olhando, se aquilo é a operação ou é enfeite.
+ *
+ * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
+ * tela vai exibir quando o dado chegar.
+ */
+const ANO = zerar(__ANO);
+const CANAIS_META = zerar(__CANAIS_META);
+const CANAIS_META_IDS = zerar(__CANAIS_META_IDS);
+const DATA_CORTE = zerar(__DATA_CORTE);
+const FRACAO_ANO_DECORRIDA = zerar(__FRACAO_ANO_DECORRIDA);
+const MESES_CURTOS = zerar(__MESES_CURTOS);
+const MESES_LONGOS = zerar(__MESES_LONGOS);
+const MES_ATUAL = zerar(__MES_ATUAL);
+const META_ANUAL_SUGERIDA = zerar(__META_ANUAL_SUGERIDA);
+const PARTICIPACAO = zerar(__PARTICIPACAO);
+const PESOS_NORMALIZADOS = zerar(__PESOS_NORMALIZADOS);
+const PESOS_SAZONAIS = zerar(__PESOS_SAZONAIS);
+const REALIZADO = zerar(__REALIZADO);
+const REALIZADO_ANO = zerar(__REALIZADO_ANO);
+const REALIZADO_ANTERIOR_TOTAL = zerar(__REALIZADO_ANTERIOR_TOTAL);
+const REALIZADO_ANO_TOTAL = zerar(__REALIZADO_ANO_TOTAL);
+const REALIZADO_TOTAL = zerar(__REALIZADO_TOTAL);
+
 
 /* ══ apoio local ═════════════════════════════════════════════ */
 

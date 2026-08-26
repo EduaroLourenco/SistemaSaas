@@ -18,14 +18,31 @@ import {
   YAxis,
 } from "recharts";
 import {
-  FUNCIONARIOS,
-  SETORES,
-  FOLHA_POR_SETOR,
-  RESUMO_FOLHA,
+  FUNCIONARIOS as __FUNCIONARIOS,
+  SETORES as __SETORES,
+  FOLHA_POR_SETOR as __FOLHA_POR_SETOR,
+  RESUMO_FOLHA as __RESUMO_FOLHA,
   type Funcionario,
 } from "@/mock/financeiro";
 import { money, moneyShort, count, pct } from "@/lib/format";
 import { Download, Search, X, SearchX, SlidersHorizontal } from "lucide-react";
+
+import { zerar } from "@/mock/zerar";
+
+/*
+ * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
+ * propósito: com a maior parte da plataforma já lendo o banco, número
+ * de exemplo com cara de real é pior que campo vazio — não há como
+ * saber, olhando, se aquilo é a operação ou é enfeite.
+ *
+ * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
+ * tela vai exibir quando o dado chegar.
+ */
+const FUNCIONARIOS = zerar(__FUNCIONARIOS);
+const SETORES = zerar(__SETORES);
+const FOLHA_POR_SETOR = zerar(__FOLHA_POR_SETOR);
+const RESUMO_FOLHA = zerar(__RESUMO_FOLHA);
+
 
 /** dd/mm/aaaa a partir do ISO. */
 function dataBr(iso: string) {

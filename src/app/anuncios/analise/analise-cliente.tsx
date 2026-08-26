@@ -26,6 +26,7 @@ import { StatTile, Sparkline } from "@/components/ui/stat-tile";
 import { AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { TabelaSemanal } from "@/components/analise/tabela-semanal";
+import { MatrizAnuncios } from "@/components/analise/matriz-anuncios";
 import { LinhaDoTempo } from "@/components/analise/linha-do-tempo";
 import { Elasticidade } from "@/components/analise/elasticidade";
 import { CompararAnuncios } from "@/components/analise/comparar";
@@ -835,11 +836,14 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
           )}
         </Panel>
 
-        {/* ── Matriz evolutiva ───────────────────────────────── */}
+        {/* ── SKU × semana, com o gráfico de quem subiu e quem caiu ── */}
+        <MatrizAnuncios itens={filtrados} semanas={semanasSelecionadas} />
+
+        {/* ── Lista por anúncio ──────────────────────────────── */}
         <Panel className="overflow-hidden">
           <PanelHeader
-            title="Matriz evolutiva"
-            hint="clique numa linha para abrir o raio-X do anúncio"
+            title="Lista por anúncio"
+            hint="um MLB por linha · clique para abrir o raio-X"
             action={
               marcados.length > 0 ? (
                 <span className="flex items-center gap-2">

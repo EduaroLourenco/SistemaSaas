@@ -17,14 +17,31 @@ import {
   YAxis,
 } from "recharts";
 import {
-  CUSTOS,
-  CUSTO_TOTAL,
-  CUSTOS_12_MESES,
-  FLUXO_12_MESES,
+  CUSTOS as __CUSTOS,
+  CUSTO_TOTAL as __CUSTO_TOTAL,
+  CUSTOS_12_MESES as __CUSTOS_12_MESES,
+  FLUXO_12_MESES as __FLUXO_12_MESES,
   type Custo,
 } from "@/mock/financeiro";
 import { money, moneyShort, pct } from "@/lib/format";
 import { Download } from "lucide-react";
+
+import { zerar } from "@/mock/zerar";
+
+/*
+ * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
+ * propósito: com a maior parte da plataforma já lendo o banco, número
+ * de exemplo com cara de real é pior que campo vazio — não há como
+ * saber, olhando, se aquilo é a operação ou é enfeite.
+ *
+ * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
+ * tela vai exibir quando o dado chegar.
+ */
+const CUSTOS = zerar(__CUSTOS);
+const CUSTO_TOTAL = zerar(__CUSTO_TOTAL);
+const CUSTOS_12_MESES = zerar(__CUSTOS_12_MESES);
+const FLUXO_12_MESES = zerar(__FLUXO_12_MESES);
+
 
 const UNIDADES = [
   { value: "reais", label: "R$" },
