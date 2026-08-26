@@ -37,9 +37,11 @@ async function enviar(tabela, linhas, conflito, tamanho = 400) {
   let gravadas = 0;
   for (let i = 0; i < linhas.length; i += tamanho) {
     const lote = linhas.slice(i, i + tamanho);
-    await api(`/${tabela}?on_conflict=${conflito}`, {
+    await api(`/${tabela}${conflito ? `?on_conflict=${conflito}` : ""}`, {
       method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      headers: {
+        Prefer: `${conflito ? "resolution=merge-duplicates," : ""}return=minimal`,
+      },
       body: JSON.stringify(lote),
     });
     gravadas += lote.length;
@@ -106,6 +108,9 @@ async function importarKpis(caminho, { lerKpisDiarios }) {
 
   await registrar("consolidado", caminho, bytes, r.inicio, r.fim, r.linhas.length, linhas.length);
   await enviar("vendas_diarias", linhas, "conta_canal_id,data");
+
+  const qtdMetas = await importarMetas(r.linhas, contas);
+  console.log(`  metas mensais: ${qtdMetas}`);
   return linhas.length;
 }
 
@@ -180,6 +185,43 @@ async function importarDesempenho(pasta, { parsePerformanceReport }) {
   return totalSemanas;
 }
 
+
+
+/**
+ * Metas mensais por canal.
+ *
+ * A planilha traz a meta repetida em cada DIA do mês; a tabela guarda por
+ * MÊS. Somar os dias daria doze vezes a meta, então o valor de um dia
+ * qualquer do mês é o que vale — todos são iguais por construção.
+ */
+async function importarMetas(linhas, contas) {
+  const porMes = new Map();
+  for (const l of linhas) {
+    if (l.meta == null || l.meta <= 0) continue;
+    const c = contas.find(
+      (x) => x.canais.nome === l.canal && x.nome === l.conta
+    );
+    if (!c) continue;
+    const [ano, mes] = l.data.split("-").map(Number);
+    porMes.set(`${c.canal_id}|${ano}|${mes}`, {
+      operacao_id: OPERACAO,
+      canal_id: c.canal_id,
+      ano,
+      mes,
+      receita_meta: +l.meta.toFixed(2),
+    });
+  }
+  const metas = [...porMes.values()];
+  if (!metas.length) { console.log("  nenhuma meta na planilha"); return 0; }
+
+  // Sem chave natural na tabela: limpa o que existe do período e regrava.
+  const anos = [...new Set(metas.map((m) => m.ano))];
+  for (const ano of anos) {
+    await api(`/metas?ano=eq.${ano}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+  }
+  await enviar("metas", metas, null);
+  return metas.length;
+}
 
 /* ── Catálogo de anúncios ─────────────────────────────────── */
 
