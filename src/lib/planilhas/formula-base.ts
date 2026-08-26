@@ -1,5 +1,6 @@
 /* eslint-disable */
-import ExcelJS from "exceljs";
+import type ExcelJS from "exceljs";
+import { abrirPlanilha } from "./abrir";
 import { FormulaBaseData } from "./motor-promocoes";
 
 /**
@@ -17,8 +18,9 @@ import { FormulaBaseData } from "./motor-promocoes";
  *   "Boa forma"       → matriz MLB × comissão → preço de tabela
  */
 export async function lerFormulaBase(buffer: Buffer): Promise<FormulaBaseData> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as any);
+  // Passa pelo abridor tolerante: a Fórmula base costuma ter gráficos e
+  // comentários, que derrubam o ExcelJS na reconciliação.
+  const workbook = await abrirPlanilha(buffer);
 
   const baseMlb = new Map();
   const precosSKU = new Map();
