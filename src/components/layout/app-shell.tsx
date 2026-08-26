@@ -40,7 +40,14 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
 
 /* ══ Seletor de conta / operação — o que faz parecer SaaS ═════ */
 
-const CONTAS = ["Operação principal", "Operação B2B", "Loja própria"];
+/*
+ * Só a operação que existe de verdade.
+ *
+ * "Operação B2B" e "Loja própria" estão cadastradas no banco mas não têm
+ * dado nem tela própria ainda. Oferecer a troca sugere que há algo do
+ * outro lado, e a pessoa clica para descobrir que não muda nada.
+ */
+const CONTAS = ["Operação principal"];
 
 function AccountSwitcher() {
   const [open, setOpen] = React.useState(false);

@@ -9,7 +9,6 @@ import { Button, Panel, PanelHeader, Delta } from "@/components/ui/primitives";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { DesdeOntem } from "@/components/painel/desde-ontem";
 import { type Anuncio } from "@/mock";
 import type { DadosPainel } from "@/lib/dados/painel";
 import { recortar } from "@/lib/periodo";
@@ -170,9 +169,12 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       />
 
       <PageBody>
-        {/* O que mudou — abre o dia antes dos totais */}
-        <DesdeOntem />
-
+        {/*
+          O bloco "Desde ontem" saiu daqui. Ele mostrava mudanças de preço de
+          concorrente e alertas que não têm fonte: viriam da API de
+          monitoramento, que ainda não existe. Volta quando houver o que
+          mostrar.
+        */}
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {KPIS.map((k) => (
