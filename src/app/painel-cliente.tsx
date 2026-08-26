@@ -12,6 +12,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { DesdeOntem } from "@/components/painel/desde-ontem";
 import { type Anuncio } from "@/mock";
 import type { DadosPainel } from "@/lib/dados/painel";
+import { recortar } from "@/lib/periodo";
 import { money, moneyShort, count, pct, shortDate } from "@/lib/format";
 import {
   Area,
@@ -38,14 +39,24 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
   const [periodo, setPeriodo] = React.useState("30 dias");
 
   const {
-    kpis: KPIS,
-    faturamento30d: FATURAMENTO_30D,
-    canais: CANAIS,
     canaisSemanas: CANAIS_12_SEMANAS,
     canalCores: CANAL_CORES,
     canalNomes: CANAL_NOMES,
     anuncios: ANUNCIOS,
   } = dados;
+
+  /*
+   * KPIs, canais e a curva de faturamento saem do período escolhido. Antes
+   * vinham prontos numa janela fixa de 30 dias, e o seletor só pintava o
+   * botão — clicar em "Ano" mudava a cor e não o número.
+   */
+  const recorte = React.useMemo(
+    () => recortar(dados.linhas, dados.canaisInfo, periodo),
+    [dados.linhas, dados.canaisInfo, periodo]
+  );
+  const KPIS = recorte.kpis;
+  const CANAIS = recorte.canais;
+  const FATURAMENTO_30D = recorte.faturamento;
 
   /*
    * Quais canais empilhar no gráfico: sai do próprio dado, e não de uma
@@ -129,7 +140,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           <>
             <Button size="sm">
               <CalendarDays className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">1 – 24 ago 2026</span>
+              <span className="hidden sm:inline">{recorte.intervalo}</span>
               <span className="sm:hidden">Período</span>
             </Button>
             <Button size="sm" variant="primary">
@@ -182,7 +193,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           <Panel className="xl:col-span-2 overflow-hidden">
             <PanelHeader
               title="Faturamento por dia"
-              hint="últimos 30 dias"
+              hint={`${recorte.dias} dias com movimento`}
               action={
                 <span className="num text-[12px] text-ink-2">
                   {money(FATURAMENTO_30D.reduce((s, d) => s + d.faturamento, 0))}

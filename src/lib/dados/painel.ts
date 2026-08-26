@@ -25,6 +25,9 @@ export type DadosPainel = {
   canalCores: Record<string, string>;
   canalNomes: Record<string, string>;
   anuncios: Anuncio[];
+  /** Série diária: a tela recorta por período sem voltar ao servidor. */
+  linhas: import("@/lib/periodo").LinhaDia[];
+  canaisInfo: import("@/lib/periodo").CanalInfo[];
   /** Última data com movimento — o painel diz a que dia se refere. */
   ultimaData: string | null;
   vazio: boolean;
@@ -60,6 +63,8 @@ export async function carregarPainel(): Promise<DadosPainel> {
       canalCores: {},
       canalNomes: {},
       anuncios: [],
+      linhas: [],
+      canaisInfo: [],
       ultimaData: null,
       vazio: true,
     };
@@ -220,6 +225,8 @@ export async function carregarPainel(): Promise<DadosPainel> {
     canalCores: cores,
     canalNomes: nomes,
     anuncios: await carregarAnuncios(sb),
+    linhas,
+    canaisInfo: base.canais,
     ultimaData,
     vazio: false,
   };

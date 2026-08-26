@@ -182,6 +182,9 @@ export type DadosSemanal = {
   totalSemanas: number;
   ano: number;
   canais: CanalInfo[];
+  /** Série diária: a tela reagrupa por canal sem voltar ao servidor. */
+  linhas: LinhaVendaDia[];
+  ultimaData: string;
   vazio: boolean;
 };
 
@@ -190,7 +193,8 @@ export async function carregarSemanal(): Promise<DadosSemanal> {
   if (base.vazio) {
     return {
       semanas: [], semanasFechadas: [], semanaAtual: 1,
-      totalSemanas: 52, ano: base.ano, canais: [], vazio: true,
+      totalSemanas: 52, ano: base.ano, canais: [],
+      linhas: [], ultimaData: "", vazio: true,
     };
   }
 
@@ -269,6 +273,8 @@ export async function carregarSemanal(): Promise<DadosSemanal> {
     totalSemanas,
     ano: base.ano,
     canais: base.canais,
+    linhas: base.linhas,
+    ultimaData: base.ultimaData!,
     vazio: false,
   };
 }

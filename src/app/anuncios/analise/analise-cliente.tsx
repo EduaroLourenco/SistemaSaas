@@ -27,6 +27,7 @@ import { AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { TabelaSemanal } from "@/components/analise/tabela-semanal";
 import { MatrizAnuncios } from "@/components/analise/matriz-anuncios";
+import { SeletorCanal } from "@/components/ui/seletor-canal";
 import { LinhaDoTempo } from "@/components/analise/linha-do-tempo";
 import { Elasticidade } from "@/components/analise/elasticidade";
 import { CompararAnuncios } from "@/components/analise/comparar";
@@ -165,6 +166,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
   const [precos, setPrecos] = React.useState<EstadoPrecos>({ fase: "ocioso" });
   const [lente, setLente] = React.useState<Lente>("todos");
   const [busca, setBusca] = React.useState("");
+  const [conta, setConta] = React.useState("");
   const [categoria, setCategoria] = React.useState("Todas");
   const [tipo, setTipo] = React.useState<(typeof TIPOS)[number]>("Todos");
   const [status, setStatus] = React.useState<(typeof STATUS)[number]>("Todos");
@@ -189,9 +191,21 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
 
   // Filtros de atributo (não afetam as médias da carteira, de propósito:
   // "acima da média" tem de significar a média de tudo, não a do filtro).
+  /*
+   * Contas que aparecem nos anúncios importados. Sai do dado, não de uma
+   * lista fixa: quando a 2ª conta do Mercado Livre passar a ter relatório
+   * de desempenho, ela entra sozinha no seletor.
+   */
+  const CONTAS = React.useMemo(() => {
+    const vistas = new Map<string, string>();
+    for (const i of itens) if (i.conta) vistas.set(i.conta, i.conta);
+    return [...vistas.keys()].sort().map((c) => ({ id: c, nome: c }));
+  }, [itens]);
+
   const porAtributo = React.useMemo(() => {
     const q = busca.trim().toLowerCase();
     return itens.filter((i) => {
+      if (conta && i.conta !== conta) return false;
       if (categoria !== "Todas" && i.categoria !== categoria) return false;
       if (tipo !== "Todos" && i.tipo !== tipo) return false;
       if (status !== "Todos" && i.status !== status) return false;
@@ -202,7 +216,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
         i.mlb.toLowerCase().includes(q)
       );
     });
-  }, [itens, busca, categoria, tipo, status]);
+  }, [itens, busca, categoria, tipo, status, conta]);
 
   const contagemLentes = React.useMemo(() => {
     const m = {} as Record<Lente, number>;
@@ -501,6 +515,12 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
         }
         filters={
           <>
+            <SeletorCanal
+              canais={CONTAS}
+              valor={conta}
+              onChange={setConta}
+              rotuloTodos="Todas as contas"
+            />
             <div className="relative shrink-0 w-full sm:w-64">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
               <input

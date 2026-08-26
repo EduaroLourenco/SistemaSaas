@@ -8,6 +8,8 @@ import { Segmented, FilterSheet } from "@/components/ui/controls";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Matriz, type IndicadorMatriz, type ColunaMatriz } from "@/components/ui/matriz";
+import { SeletorCanal } from "@/components/ui/seletor-canal";
+import { agruparSemanas } from "@/lib/periodo";
 import { type SemanaVendas } from "@/mock/semanal";
 import type { DadosSemanal } from "@/lib/dados/vendas";
 import { money, moneyShort, count, pct } from "@/lib/format";
@@ -142,13 +144,30 @@ type Linha = SemanaVendas & {
 /* ══ Tela ════════════════════════════════════════════════════ */
 
 export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
+  const [canal, setCanal] = React.useState("");
+
   const {
-    semanas: SEMANAS,
-    semanasFechadas: SEMANAS_FECHADAS,
     semanaAtual: SEMANA_ATUAL,
     totalSemanas: TOTAL_SEMANAS,
     ano: ANO,
   } = dados;
+
+  /*
+   * As semanas são reagrupadas conforme o canal escolhido. No consolidado,
+   * a alta de um canal cobre a queda de outro e a semana parece estável —
+   * só olhando um por vez dá para responder quem caiu.
+   */
+  const SEMANAS = React.useMemo(
+    () =>
+      dados.linhas.length
+        ? agruparSemanas(dados.linhas, dados.ano, dados.ultimaData, canal || undefined)
+        : dados.semanas,
+    [dados, canal]
+  );
+  const SEMANAS_FECHADAS = React.useMemo(
+    () => SEMANAS.filter((s) => s.comDados && !s.parcial),
+    [SEMANAS]
+  );
 
   const [metricaId, setMetricaId] = React.useState<MetricaId>("receita");
   const [escopo, setEscopo] = React.useState<Escopo>("todas");
@@ -172,7 +191,8 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
         participacao: totalAno > 0 ? (s.receita / totalAno) * 100 : 0,
       };
     });
-  }, []);
+    // Dependia de nada: ao trocar de canal, a tabela não recalculava.
+  }, [SEMANAS]);
 
   const participacaoMaxima = React.useMemo(
     () => linhas.reduce((m, l) => Math.max(m, l.participacao), 0),
@@ -467,6 +487,11 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
         }
         filters={
           <>
+            <SeletorCanal
+              canais={dados.canais}
+              valor={canal}
+              onChange={setCanal}
+            />
             <Segmented<MetricaId>
               options={OPCOES_METRICA}
               value={metricaId}
