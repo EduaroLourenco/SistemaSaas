@@ -110,7 +110,7 @@ const CENARIOS: {
 ];
 
 const ETAPAS = [
-  { n: 1, titulo: "Enviar planilhas", hint: "Central de Promoções e Fórmula base" },
+  { n: 1, titulo: "Enviar planilhas", hint: "Central de Promoções — a Fórmula base é opcional" },
   { n: 2, titulo: "Conferir", hint: "decisão item a item" },
   { n: 3, titulo: "Exportar", hint: "planilha pronta para subir" },
 ] as const;
@@ -297,7 +297,12 @@ export default function ProcessarPromocoes() {
     },
   ];
 
-  const podeProcessar = planilhas.length > 0 && base.length > 0 && !processando;
+  /*
+   * A Fórmula base deixou de ser obrigatória: quando não vem arquivo, a
+   * rota usa a versão guardada no banco. Enviar continua valendo e tem
+   * precedência — é assim que a base é atualizada.
+   */
+  const podeProcessar = planilhas.length > 0 && !processando;
 
   return (
     <>
@@ -403,7 +408,7 @@ export default function ProcessarPromocoes() {
               <div className="p-4">
                 <SectionTitle
                   title="Planilha interna"
-                  hint='Precisa ter as abas "Base MLB", "Base com preços" e "Boa forma".'
+                  hint="Opcional — sem arquivo, usa a base guardada no banco. Envie só para atualizá-la."
                 />
                 <div className="mt-3 space-y-3">
                   <FileDrop

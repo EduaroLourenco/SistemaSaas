@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import JSZip from "jszip";
 import { lerFormulaBase, resumoFormulaBase } from "@/lib/planilhas/formula-base";
+import { carregarFormulaBase } from "@/lib/dados/formula-base";
 import { processarPlanilha, type LinhaProcessada } from "@/lib/planilhas/processar";
 import { generateReport, type ReportItem } from "@/lib/planilhas/relatorio-gerencial";
 import { guardarPacote } from "@/lib/planilhas/pacotes";
@@ -29,16 +30,39 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (!base) {
-      return NextResponse.json(
-        { erro: "Envie a Fórmula base — sem ela não há preço de tabela para comparar." },
-        { status: 400 }
-      );
+    /*
+     * A Fórmula base pode vir no envio OU do banco.
+     *
+     * Ela muda poucas vezes por ano e a planilha de promoção chega toda
+     * semana. Exigir o reenvio era pedir o mesmo arquivo de novo — e abria
+     * espaço para mandar uma versão antiga sem perceber, o que mudaria
+     * todo preço calculado sem nenhum sinal na tela.
+     *
+     * Enviar continua valendo, e o arquivo enviado tem precedência: é
+     * assim que a base é atualizada.
+     */
+    let formulaData;
+    let origemBase: string;
+
+    if (base) {
+      formulaData = await lerFormulaBase(Buffer.from(await base.arrayBuffer()));
+      origemBase = "arquivo enviado agora";
+    } else {
+      const guardada = await carregarFormulaBase();
+      if (!guardada) {
+        return NextResponse.json(
+          {
+            erro:
+              "Não há Fórmula base guardada. Envie o arquivo desta vez — " +
+              "nas próximas ele fica opcional.",
+          },
+          { status: 400 }
+        );
+      }
+      formulaData = guardada.dados;
+      origemBase = `base guardada, vigente desde ${guardada.vigenteDe}`;
     }
 
-    const formulaData = await lerFormulaBase(
-      Buffer.from(await base.arrayBuffer())
-    );
     const resumoBase = resumoFormulaBase(formulaData);
 
     if (resumoBase.itens === 0) {
@@ -119,6 +143,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       id,
       resumoBase,
+      // De onde veio a base — a tela mostra, para ninguém processar uma
+      // semana inteira com a versão errada sem perceber.
+      origemBase,
       arquivos,
       resumo: {
         lidos: todasLinhas.length,
