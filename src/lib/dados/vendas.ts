@@ -305,3 +305,185 @@ export async function carregarAnual(): Promise<DadosAnual> {
 
   return { ano: base.ano, canais: base.canais, series, anoAnterior: anterior, vazio: false };
 }
+
+/* ── Comparativos ────────────────────────────────────────────── */
+
+export type RegistroDia = {
+  visitas: number;
+  receita: number;
+  pedidos: number;
+  ads: number;
+  pedidosCancelados: number;
+  valorCancelado: number;
+  meta: number;
+};
+
+export type DadosComparativos = {
+  ano: number;
+  canais: CanalInfo[];
+  /**
+   * Série indexada por DIA DO ANO (0 = 1º de janeiro), com a chave "todos"
+   * consolidando os canais.
+   *
+   * O índice tem que ser posicional porque a tela agrega por listas de
+   * índices pré-calculadas — "todas as terças de março", "primeira
+   * segunda de cada mês". Indexar por data quebraria essas listas.
+   */
+  serieDiaria: Record<string, RegistroDia[]>;
+  vazio: boolean;
+};
+
+const vazioDia = (): RegistroDia => ({
+  visitas: 0, receita: 0, pedidos: 0, ads: 0,
+  pedidosCancelados: 0, valorCancelado: 0, meta: 0,
+});
+
+/** Dia do ano, 0-based. */
+function diaDoAno(iso: string): number {
+  const [a, m, d] = iso.split("-").map(Number);
+  return Math.round(
+    (Date.UTC(a, m - 1, d) - Date.UTC(a, 0, 1)) / 86400000
+  );
+}
+
+export async function carregarComparativos(): Promise<DadosComparativos> {
+  const base = await carregarBaseVendas();
+  if (base.vazio) {
+    return { ano: base.ano, canais: [], serieDiaria: { todos: [] }, vazio: true };
+  }
+
+  const bissexto = new Date(Date.UTC(base.ano, 1, 29)).getUTCMonth() === 1;
+  const dias = bissexto ? 366 : 365;
+
+  const serieDiaria: Record<string, RegistroDia[]> = {
+    todos: Array.from({ length: dias }, vazioDia),
+  };
+  for (const c of base.canais) {
+    serieDiaria[c.id] = Array.from({ length: dias }, vazioDia);
+  }
+
+  for (const l of base.linhas) {
+    if (Number(l.data.slice(0, 4)) !== base.ano) continue;
+    const i = diaDoAno(l.data);
+    if (i < 0 || i >= dias) continue;
+    for (const alvo of [serieDiaria.todos, serieDiaria[l.canalId]]) {
+      if (!alvo) continue;
+      alvo[i].visitas += l.visitas;
+      alvo[i].receita += l.receita;
+      alvo[i].pedidos += l.pedidos;
+      alvo[i].ads += l.ads;
+      alvo[i].pedidosCancelados += l.pedidosCancelados;
+      alvo[i].valorCancelado += l.cancelado;
+    }
+  }
+
+  return { ano: base.ano, canais: base.canais, serieDiaria, vazio: false };
+}
+
+/* ── Lançamentos ─────────────────────────────────────────────── */
+
+export type LancamentoDia = {
+  data: string;
+  mes: number;
+  dia: number;
+  diaSemana: number;
+  rotuloDiaSemana: string;
+  fimDeSemana: boolean;
+  futuro: boolean;
+  visitas: number;
+  receita: number;
+  pedidos: number;
+  ads: number;
+  pedidosCancelados: number;
+  valorCancelado: number;
+  metaDia: number;
+};
+
+export type DadosLancamentos = {
+  ano: number;
+  mesAtual: number;
+  diaAtual: number;
+  canais: CanalInfo[];
+  /** serie[canalId][mes] = os dias daquele mês. */
+  serie: Record<string, LancamentoDia[][]>;
+  vazio: boolean;
+};
+
+const DOW = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+export async function carregarLancamentos(): Promise<DadosLancamentos> {
+  const base = await carregarBaseVendas();
+  if (base.vazio) {
+    return {
+      ano: base.ano, mesAtual: 0, diaAtual: 1,
+      canais: [], serie: {}, vazio: true,
+    };
+  }
+
+  const ultima = base.ultimaData!;
+  const mesAtual = Number(ultima.slice(5, 7)) - 1;
+  const diaAtual = Number(ultima.slice(8, 10));
+
+  const porCanalData = new Map<string, LinhaVendaDia>();
+  for (const l of base.linhas) porCanalData.set(`${l.canalId}|${l.data}`, l);
+
+  const serie: Record<string, LancamentoDia[][]> = {};
+  const ids = ["todos", ...base.canais.map((c) => c.id)];
+
+  for (const id of ids) {
+    const meses: LancamentoDia[][] = [];
+    for (let m = 0; m < 12; m++) {
+      const nDias = new Date(Date.UTC(base.ano, m + 1, 0)).getUTCDate();
+      const dias: LancamentoDia[] = [];
+      for (let d = 1; d <= nDias; d++) {
+        const iso = `${base.ano}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dow = new Date(`${iso}T00:00:00Z`).getUTCDay();
+
+        let v = { visitas: 0, receita: 0, pedidos: 0, ads: 0, pc: 0, vc: 0 };
+        if (id === "todos") {
+          for (const c of base.canais) {
+            const l = porCanalData.get(`${c.id}|${iso}`);
+            if (!l) continue;
+            v = {
+              visitas: v.visitas + l.visitas, receita: v.receita + l.receita,
+              pedidos: v.pedidos + l.pedidos, ads: v.ads + l.ads,
+              pc: v.pc + l.pedidosCancelados, vc: v.vc + l.cancelado,
+            };
+          }
+        } else {
+          const l = porCanalData.get(`${id}|${iso}`);
+          if (l) {
+            v = {
+              visitas: l.visitas, receita: l.receita, pedidos: l.pedidos,
+              ads: l.ads, pc: l.pedidosCancelados, vc: l.cancelado,
+            };
+          }
+        }
+
+        dias.push({
+          data: iso,
+          mes: m,
+          dia: d,
+          diaSemana: dow,
+          rotuloDiaSemana: DOW[dow],
+          fimDeSemana: dow === 0 || dow === 6,
+          // "Futuro" é depois do último dia COM DADO, não depois de hoje: o
+          // que a tela precisa distinguir é linha por preencher de linha
+          // preenchida com zero.
+          futuro: iso > ultima,
+          visitas: v.visitas,
+          receita: v.receita,
+          pedidos: v.pedidos,
+          ads: v.ads,
+          pedidosCancelados: v.pc,
+          valorCancelado: v.vc,
+          metaDia: 0,
+        });
+      }
+      meses.push(dias);
+    }
+    serie[id] = meses;
+  }
+
+  return { ano: base.ano, mesAtual, diaAtual, canais: base.canais, serie, vazio: false };
+}
