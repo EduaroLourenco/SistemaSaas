@@ -1,5 +1,6 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { paginar } from "./paginar";
 import type { ItemCatalogo } from "@/mock/catalogo";
 
 /**
@@ -60,20 +61,21 @@ function categoriaDe(titulo: string): string {
 export async function carregarCatalogo(): Promise<DadosCatalogo> {
   const sb = await clienteServidor();
 
-  const [{ data: anuncios }, { data: retratos }, { data: imports }] =
-    await Promise.all([
-      sb
-        .from("anuncios")
-        .select(
-          "id,codigo_externo,titulo,sku_canal,tipo,status,preco_atual,comissao_atual,atualizado_em,criado_em,contas_canal(nome)"
-        )
-        .order("titulo", { ascending: true })
-        .limit(5000),
-      sb
-        .from("anuncio_precos_vitrine")
-        .select("anuncio_id,ano_iso,semana_iso,preco,disponivel")
-        .order("semana_iso", { ascending: true })
-        .limit(20000),
+  const [anuncios, retratos, { data: imports }] = await Promise.all([
+      paginar(() =>
+        sb
+          .from("anuncios")
+          .select(
+            "id,codigo_externo,titulo,sku_canal,tipo,status,preco_atual,comissao_atual,atualizado_em,criado_em,contas_canal(nome)"
+          )
+          .order("titulo", { ascending: true })
+      ),
+      paginar(() =>
+        sb
+          .from("anuncio_precos_vitrine")
+          .select("anuncio_id,ano_iso,semana_iso,preco,disponivel")
+          .order("semana_iso", { ascending: true })
+      ),
       sb
         .from("importacoes")
         .select("id,nome_arquivo,linhas_lidas,linhas_validas,criado_em")
@@ -82,7 +84,7 @@ export async function carregarCatalogo(): Promise<DadosCatalogo> {
         .limit(10),
     ]);
 
-  const linhas = (anuncios ?? []) as unknown as LinhaAnuncio[];
+  const linhas = anuncios as unknown as LinhaAnuncio[];
   if (!linhas.length) {
     return { itens: [], categorias: [], contas: [], importacoes: [], vazio: true };
   }
@@ -96,7 +98,7 @@ export async function carregarCatalogo(): Promise<DadosCatalogo> {
 
   const historico = new Map<string, { semana: string; preco: number }[]>();
   const estoquePor = new Map<string, number>();
-  for (const r of (retratos ?? []) as unknown as Retrato[]) {
+  for (const r of retratos as unknown as Retrato[]) {
     const lista = historico.get(r.anuncio_id) ?? [];
     lista.push({ semana: `S${r.semana_iso}`, preco: n(r.preco) });
     historico.set(r.anuncio_id, lista);

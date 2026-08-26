@@ -1,5 +1,6 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { paginar } from "./paginar";
 import type { LinhaCruzada, RelatorioPrecoIdeal } from "@/mock/preco-ideal";
 
 /**
@@ -54,39 +55,42 @@ function precoNaComissao(
 export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
   const sb = await clienteServidor();
 
-  const [{ data: imports }, { data: itens }, { data: precos }, { data: anuncios }] =
-    await Promise.all([
-      sb
-        .from("importacoes")
-        .select("id,nome_arquivo,data_base,criado_em,linhas_validas")
-        .eq("tipo", "preco_ideal")
-        .order("criado_em", { ascending: false })
-        .limit(10),
+  const [{ data: imports }, itens, precos, anuncios] = await Promise.all([
+    sb
+      .from("importacoes")
+      .select("id,nome_arquivo,data_base,criado_em,linhas_validas")
+      .eq("tipo", "preco_ideal")
+      .order("criado_em", { ascending: false })
+      .limit(10),
+    paginar(() =>
       sb
         .from("formula_base_itens")
         .select("mlb,tipo_anuncio,comissao_padrao,vigente_de")
         .order("vigente_de", { ascending: false })
-        .limit(20000),
+    ),
+    // 24 mil linhas: sem paginar, chegavam mil — 4% da matriz de preços.
+    paginar(() =>
       sb
         .from("formula_base_precos")
         .select("chave_tipo,chave,comissao,preco,vigente_de")
         .order("vigente_de", { ascending: false })
-        .limit(60000),
+    ),
+    paginar(() =>
       sb
         .from("anuncios")
         .select("codigo_externo,titulo,sku_canal,tipo,status,preco_atual,comissao_atual")
-        .limit(5000),
-    ]);
+    ),
+  ]);
 
   const relatoriosBrutos = imports ?? [];
-  if (!relatoriosBrutos.length || !(itens ?? []).length) {
+  if (!relatoriosBrutos.length || !itens.length) {
     return { relatorios: [], cruzamentos: {}, categorias: [], vazio: true };
   }
 
   // Matriz de preços por chave.
   const porSku = new Map<string, Map<number, number>>();
   const porMlb = new Map<string, Map<number, number>>();
-  for (const p of precos ?? []) {
+  for (const p of precos) {
     const alvo = p.chave_tipo === "mlb" ? porMlb : porSku;
     const chave = String(p.chave).toUpperCase();
     const m = alvo.get(chave) ?? new Map<number, number>();
@@ -95,7 +99,7 @@ export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
   }
 
   const base = new Map(
-    (itens ?? []).map((i) => [
+    itens.map((i) => [
       String(i.mlb).toUpperCase(),
       { comissao: n(i.comissao_padrao), tipo: i.tipo_anuncio as string },
     ])
@@ -106,7 +110,7 @@ export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
     tipo: string; status: string; preco_atual: string | null; comissao_atual: string | null;
   };
   const catalogo = new Map(
-    ((anuncios ?? []) as unknown as Anuncio[]).map((a) => [a.codigo_externo.toUpperCase(), a])
+    (anuncios as unknown as Anuncio[]).map((a) => [a.codigo_externo.toUpperCase(), a])
   );
 
   const relatorios: RelatorioPrecoIdeal[] = relatoriosBrutos.map((i) => ({

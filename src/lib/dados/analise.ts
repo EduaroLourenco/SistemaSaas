@@ -1,5 +1,6 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { paginar } from "./paginar";
 import type { Anuncio, SemanaDesempenho, DiaVenda } from "@/lib/analise";
 
 /**
@@ -67,15 +68,16 @@ function categoriaDe(titulo: string): string {
 export async function carregarAnalise(): Promise<DadosAnalise> {
   const sb = await clienteServidor();
 
-  const [{ data: linhas }, { data: imports }] = await Promise.all([
-    sb
-      .from("anuncio_desempenho_semanal")
-      .select(
-        "ano_iso,semana_iso,inicio,fim,visitas,vendas,receita,preco_praticado,preco_anunciado,preco_ideal,comissao_negociada," +
-          "anuncios(codigo_externo,titulo,sku_canal,tipo,status,contas_canal(nome))"
-      )
-      .order("semana_iso", { ascending: true })
-      .limit(20000),
+  const [linhas, { data: imports }] = await Promise.all([
+    paginar(() =>
+      sb
+        .from("anuncio_desempenho_semanal")
+        .select(
+          "ano_iso,semana_iso,inicio,fim,visitas,vendas,receita,preco_praticado,preco_anunciado,preco_ideal,comissao_negociada," +
+            "anuncios(codigo_externo,titulo,sku_canal,tipo,status,contas_canal(nome))"
+        )
+        .order("semana_iso", { ascending: true })
+    ),
     sb
       .from("importacoes")
       .select("id,nome_arquivo,periodo_inicio,periodo_fim,linhas_validas,criado_em")
@@ -84,7 +86,7 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
       .limit(20),
   ]);
 
-  const dados = (linhas ?? []) as unknown as LinhaSemana[];
+  const dados = linhas as unknown as LinhaSemana[];
 
   if (!dados.length) {
     return { anuncios: [], semanas: [], categorias: [], importacoes: [], vazio: true };

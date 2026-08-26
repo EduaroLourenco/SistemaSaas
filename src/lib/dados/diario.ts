@@ -1,5 +1,6 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { paginar } from "./paginar";
 import type { DiaPeriodo, Periodo, PeriodoId } from "@/mock/diario";
 
 /**
@@ -55,15 +56,16 @@ const br = (iso: string) => iso.split("-").reverse().join("/");
 
 export async function carregarDiario(): Promise<DadosDiario> {
   const sb = await clienteServidor();
-  const { data } = await sb
-    .from("vendas_diarias")
-    .select(
-      "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados"
-    )
-    .order("data", { ascending: true })
-    .limit(20000);
+  const data = await paginar(() =>
+    sb
+      .from("vendas_diarias")
+      .select(
+        "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados"
+      )
+      .order("data", { ascending: true })
+  );
 
-  const linhas = (data ?? []) as unknown as Linha[];
+  const linhas = data as unknown as Linha[];
   if (!linhas.length) return { periodos: [], ultimaData: null, vazio: true };
 
   /* Soma os canais de um mesmo dia: a tela é a operação inteira. */

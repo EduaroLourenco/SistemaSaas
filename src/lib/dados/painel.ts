@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { carregarBaseVendas, chaveCanal } from "./vendas";
+import { paginar } from "./paginar";
 import type { Kpi, DiaFaturamento, Canal, Anuncio } from "@/mock";
 
 /**
@@ -251,17 +252,18 @@ type BrutoAnuncio = {
 async function carregarAnuncios(
   sb: Awaited<ReturnType<typeof clienteServidor>>
 ): Promise<Anuncio[]> {
-  const { data } = await sb
-    .from("anuncio_desempenho_semanal")
-    .select(
-      "visitas,vendas,receita,preco_praticado,semana_iso,anuncios(codigo_externo,titulo,sku_canal,tipo,status)"
-    )
-    .order("semana_iso", { ascending: true })
-    .limit(20000);
+  const data = await paginar(() =>
+    sb
+      .from("anuncio_desempenho_semanal")
+      .select(
+        "visitas,vendas,receita,preco_praticado,semana_iso,anuncios(codigo_externo,titulo,sku_canal,tipo,status)"
+      )
+      .order("semana_iso", { ascending: true })
+  );
 
   const mapa = new Map<string, Anuncio & { _receitas: number[] }>();
 
-  for (const r of (data ?? []) as unknown as BrutoAnuncio[]) {
+  for (const r of data as unknown as BrutoAnuncio[]) {
     const a = r.anuncios;
     if (!a) continue;
     const atual =

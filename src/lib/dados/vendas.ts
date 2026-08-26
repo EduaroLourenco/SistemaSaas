@@ -1,5 +1,6 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { paginar } from "./paginar";
 import type { SemanaVendas } from "@/mock/semanal";
 
 /**
@@ -68,14 +69,15 @@ export type BaseVendas = {
 export async function carregarBaseVendas(): Promise<BaseVendas> {
   const sb = await clienteServidor();
 
-  const [{ data: dias }, { data: contasBanco }] = await Promise.all([
-    sb
-      .from("vendas_diarias")
-      .select(
-        "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados,conta_canal_id"
-      )
-      .order("data", { ascending: true })
-      .limit(20000),
+  const [dias, { data: contasBanco }] = await Promise.all([
+    paginar(() =>
+      sb
+        .from("vendas_diarias")
+        .select(
+          "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados,conta_canal_id"
+        )
+        .order("data", { ascending: true })
+    ),
     sb
       .from("contas_canal")
       .select("id,nome,canal_id,canais(nome,cor_serie,ordem)")
@@ -137,7 +139,7 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
       })
   );
 
-  const linhas: LinhaVendaDia[] = (dias ?? []).map((l) => {
+  const linhas: LinhaVendaDia[] = dias.map((l) => {
     const i = info.get(l.conta_canal_id as string);
     const nome = i?.nome ?? "Outros";
     return {

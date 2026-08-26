@@ -1,5 +1,6 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { paginar } from "./paginar";
 import type { Termo } from "@/mock/sistema";
 
 /**
@@ -18,14 +19,15 @@ export type DadosGlossario = {
 
 export async function carregarGlossario(): Promise<DadosGlossario> {
   const sb = await clienteServidor();
-  const { data } = await sb
-    .from("glossario")
-    .select("id,secao,termo,sigla,definicao,calculo,onde_encontrar,ordem")
-    .order("ordem", { ascending: true })
-    .order("termo", { ascending: true })
-    .limit(2000);
-
-  const linhas = data ?? [];
+  // Hoje são 30 termos, mas paginar aqui também: a próxima tabela que passar
+  // de mil linhas não deve depender de alguém lembrar deste detalhe.
+  const linhas = await paginar(() =>
+    sb
+      .from("glossario")
+      .select("id,secao,termo,sigla,definicao,calculo,onde_encontrar,ordem")
+      .order("ordem", { ascending: true })
+      .order("termo", { ascending: true })
+  );
   if (!linhas.length) return { termos: [], secoes: [], vazio: true };
 
   const termos: Termo[] = linhas.map((t) => ({
