@@ -7,7 +7,7 @@ import { Sparkline } from "@/components/ui/stat-tile";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { type Canal } from "@/mock";
-import type { DadosPainel } from "@/lib/dados/painel";
+import type { DadosCanais } from "@/lib/dados/vendas";
 import { money, count, pct } from "@/lib/format";
 import {
   CartesianGrid,
@@ -22,15 +22,112 @@ import { CalendarDays, Download, SlidersHorizontal, X } from "lucide-react";
 
 const PERIODOS = ["7 dias", "30 dias", "90 dias", "Ano"];
 
-export default function VendasPorCanal({ dados }: { dados: DadosPainel }) {
-  const {
-    canais: CANAIS,
-    canaisSemanas: CANAIS_12_SEMANAS,
-    canalCores: CANAL_CORES,
-    canalNomes: CANAL_NOMES,
-  } = dados;
+/** Quantos dias com movimento cada opção do seletor cobre. */
+const DIAS_DO_PERIODO: Record<string, number> = {
+  "7 dias": 7,
+  "30 dias": 30,
+  "90 dias": 90,
+  Ano: 366,
+};
 
+const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
+export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
   const [periodo, setPeriodo] = React.useState("30 dias");
+
+  const CANAL_CORES = React.useMemo(
+    () => Object.fromEntries(dados.canais.map((c) => [c.id, c.cor])),
+    [dados.canais]
+  );
+  const CANAL_NOMES = React.useMemo(
+    () => Object.fromEntries(dados.canais.map((c) => [c.id, c.nome])),
+    [dados.canais]
+  );
+
+  /*
+   * O recorte é por DIAS COM MOVIMENTO, não por data de calendário. A
+   * planilha tem lacunas; contar o calendário faria "7 dias" cair numa
+   * faixa com três dias preenchidos e ler queda onde só falta dado.
+   */
+  const { CANAIS, intervalo } = React.useMemo(() => {
+    const datas = [...new Set(dados.linhas.map((l) => l.data))].sort();
+    const janela = new Set(datas.slice(-(DIAS_DO_PERIODO[periodo] ?? 30)));
+    const anteriores = DIAS_DO_PERIODO[periodo] ?? 30;
+    const base = new Set(datas.slice(-anteriores * 2, -anteriores));
+
+    const agr = new Map<string, { rec: number; ped: number; vis: number; ant: number }>();
+    for (const l of dados.linhas) {
+      const g = agr.get(l.canalId) ?? { rec: 0, ped: 0, vis: 0, ant: 0 };
+      if (janela.has(l.data)) {
+        g.rec += l.receita;
+        g.ped += l.pedidos;
+        g.vis += l.visitas;
+      } else if (base.has(l.data)) {
+        g.ant += l.receita;
+      }
+      agr.set(l.canalId, g);
+    }
+
+    const totalRec = [...agr.values()].reduce((s, g) => s + g.rec, 0);
+    const ordenadas = [...janela].sort();
+
+    const lista: Canal[] = dados.canais
+      .map((c) => {
+        const g = agr.get(c.id) ?? { rec: 0, ped: 0, vis: 0, ant: 0 };
+        return {
+          id: c.id,
+          nome: c.nome,
+          faturamento: g.rec,
+          pedidos: g.ped,
+          ticket: g.ped ? g.rec / g.ped : 0,
+          conversao: g.vis ? (g.ped * 100) / g.vis : 0,
+          // A planilha não traz custo por canal, então margem não existe.
+          margem: 0,
+          delta: g.ant ? ((g.rec - g.ant) / g.ant) * 100 : 0,
+          participacao: totalRec ? (g.rec * 100) / totalRec : 0,
+          spark: ordenadas.slice(-12).map((d) =>
+            Math.round(
+              dados.linhas
+                .filter((l) => l.data === d && l.canalId === c.id)
+                .reduce((s, l) => s + l.receita, 0) / 1000
+            )
+          ),
+        };
+      })
+      .filter((c) => c.faturamento > 0 || c.pedidos > 0)
+      .sort((a, b) => b.faturamento - a.faturamento);
+
+    return {
+      CANAIS: lista,
+      intervalo: ordenadas.length
+        ? `${dm(ordenadas[0])} – ${dm(ordenadas[ordenadas.length - 1])}`
+        : "sem dados",
+    };
+  }, [dados, periodo]);
+
+  const CANAIS_12_SEMANAS = React.useMemo(() => {
+    const porSemana = new Map<string, Record<string, number>>();
+    for (const l of dados.linhas) {
+      const d = new Date(`${l.data}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + 3);
+      const ano = d.getUTCFullYear();
+      const q = new Date(Date.UTC(ano, 0, 4));
+      q.setUTCDate(q.getUTCDate() - ((q.getUTCDay() + 6) % 7) + 3);
+      const s = `S${1 + Math.round((d.getTime() - q.getTime()) / (7 * 86400000))}`;
+      const linha = porSemana.get(s) ?? {};
+      linha[l.canalId] = (linha[l.canalId] ?? 0) + l.receita / 1000;
+      porSemana.set(s, linha);
+    }
+    return [...porSemana.entries()]
+      .sort((a, b) => Number(a[0].slice(1)) - Number(b[0].slice(1)))
+      .slice(-12)
+      .map(([semana, v]) => {
+        const o: Record<string, string | number> = { semana };
+        for (const [k, val] of Object.entries(v)) o[k] = Math.round(val);
+        return o;
+      });
+  }, [dados.linhas]);
+
   const [ocultos, setOcultos] = React.useState<string[]>([]);
   const [filtrosAbertos, setFiltrosAbertos] = React.useState(false);
 
@@ -165,7 +262,7 @@ export default function VendasPorCanal({ dados }: { dados: DadosPainel }) {
           <>
             <Button size="sm" className="hidden sm:inline-flex">
               <CalendarDays className="w-3.5 h-3.5" />
-              1 – 24 ago 2026
+              {intervalo}
             </Button>
             <Button
               size="sm"

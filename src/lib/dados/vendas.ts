@@ -487,3 +487,37 @@ export async function carregarLancamentos(): Promise<DadosLancamentos> {
 
   return { ano: base.ano, mesAtual, diaAtual, canais: base.canais, serie, vazio: false };
 }
+
+/* ── Vendas por canal ────────────────────────────────────────── */
+
+export type DadosCanais = {
+  /** Uma linha por canal por dia — o recorte por período é feito na tela. */
+  linhas: LinhaVendaDia[];
+  canais: CanalInfo[];
+  ultimaData: string;
+  vazio: boolean;
+};
+
+/**
+ * Manda a série diária para a tela em vez de um agregado pronto.
+ *
+ * O seletor de período (7 / 30 / 90 dias / ano) precisa recortar de
+ * verdade. Enviar só o agregado de 30 dias faria os botões mudarem de cor
+ * sem mudar o número — que é pior que não ter botão, porque parece que a
+ * conta foi refeita.
+ *
+ * São ~800 linhas pequenas, então mandar tudo é mais barato que uma ida ao
+ * servidor a cada clique.
+ */
+export async function carregarCanais(): Promise<DadosCanais> {
+  const base = await carregarBaseVendas();
+  if (base.vazio) {
+    return { linhas: [], canais: [], ultimaData: "", vazio: true };
+  }
+  return {
+    linhas: base.linhas,
+    canais: base.canais,
+    ultimaData: base.ultimaData!,
+    vazio: false,
+  };
+}
