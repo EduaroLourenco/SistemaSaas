@@ -180,15 +180,99 @@ async function importarDesempenho(pasta, { parsePerformanceReport }) {
   return totalSemanas;
 }
 
+
+/* ── Catálogo de anúncios ─────────────────────────────────── */
+
+/** Semana ISO de uma data, para carimbar o retrato da vitrine. */
+function semanaIso(iso) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + 3);
+  const ano = d.getUTCFullYear();
+  const q = new Date(Date.UTC(ano, 0, 4));
+  q.setUTCDate(q.getUTCDate() - ((q.getUTCDay() + 6) % 7) + 3);
+  return { ano, semana: 1 + Math.round((d.getTime() - q.getTime()) / (7 * 86400000)) };
+}
+
+async function importarCatalogo(caminho, { lerCatalogo }, dataBase) {
+  console.log(`
+=== Catálogo: ${basename(caminho)} ===`);
+  const bytes = readFileSync(caminho);
+  const r = await lerCatalogo(bytes);
+  console.log(`  ${r.itens.length} anúncios`);
+
+  const contas = await api("/contas_canal?select=id,nome,canal_id,canais(nome)");
+  const ml = contas.find(
+    (c) => c.canais.nome === "Mercado Livre" && c.nome.startsWith("São Paulo")
+  );
+  if (!ml) throw new Error("conta do Mercado Livre não encontrada");
+
+  // O export traz uma linha por VARIAÇÃO; o anúncio é o mesmo. Consolida
+  // ficando com o menor preço e somando o estoque das variações.
+  const porMlb = new Map();
+  for (const i of r.itens) {
+    const at = porMlb.get(i.mlb);
+    if (!at) { porMlb.set(i.mlb, { ...i }); continue; }
+    if (i.preco != null && (at.preco == null || i.preco < at.preco)) at.preco = i.preco;
+    at.estoque = (at.estoque ?? 0) + (i.estoque ?? 0);
+  }
+  const itens = [...porMlb.values()];
+  console.log(`  ${itens.length} anúncios distintos (variações consolidadas)`);
+
+  await enviar("anuncios", itens.map((i) => ({
+    operacao_id: OPERACAO,
+    canal_id: ml.canal_id,
+    conta_canal_id: ml.id,
+    codigo_externo: i.mlb,
+    titulo: i.titulo || i.mlb,
+    sku_canal: i.sku || null,
+    tipo: i.tipo,
+    status: i.status,
+    preco_atual: i.preco,
+    comissao_atual: i.tarifa,
+  })), "canal_id,codigo_externo");
+
+  const mapa = await api(`/anuncios?select=id,codigo_externo&canal_id=eq.${ml.canal_id}&limit=5000`);
+  const porCodigo = new Map(mapa.map((a) => [a.codigo_externo.toUpperCase(), a.id]));
+  const { ano, semana } = semanaIso(dataBase);
+
+  const retratos = [];
+  for (const i of itens) {
+    const id = porCodigo.get(i.mlb.toUpperCase());
+    if (!id || i.preco == null) continue;
+    retratos.push({
+      operacao_id: OPERACAO,
+      anuncio_id: id,
+      ano_iso: ano,
+      semana_iso: semana,
+      preco: i.preco,
+      status: i.status,
+      disponivel: i.estoque,
+    });
+  }
+  await registrar("catalogo", caminho, bytes, dataBase, dataBase, r.itens.length, itens.length);
+  await enviar("anuncio_precos_vitrine", retratos, "anuncio_id,ano_iso,semana_iso");
+  console.log(`  retrato da vitrine gravado em ${ano}-S${semana}`);
+  return itens.length;
+}
+
 /* ── Execução ─────────────────────────────────────────────── */
 
-const [pastaDesempenho, arquivoKpis] = process.argv.slice(2);
+const [pastaDesempenho, arquivoKpis, arquivoCatalogo, dataBase] = process.argv.slice(2);
 const desempenho = await import(new URL("lib/desempenho.mjs", import.meta.url).href);
 const kpis = await import(new URL("lib/kpis.mjs", import.meta.url).href);
+const catalogo = await import(new URL("lib/catalogo.mjs", import.meta.url).href);
 
 const linhasKpi = arquivoKpis ? await importarKpis(arquivoKpis, kpis) : 0;
 const linhasDes = pastaDesempenho ? await importarDesempenho(pastaDesempenho, desempenho) : 0;
+const linhasCat = arquivoCatalogo
+  ? await importarCatalogo(
+      arquivoCatalogo,
+      catalogo,
+      dataBase ?? new Date().toISOString().slice(0, 10)
+    )
+  : 0;
 
 console.log(`\n=== resumo ===`);
 console.log(`  vendas_diarias            : ${linhasKpi}`);
 console.log(`  anuncio_desempenho_semanal: ${linhasDes}`);
+console.log(`  catálogo / vitrine        : ${linhasCat}`);
