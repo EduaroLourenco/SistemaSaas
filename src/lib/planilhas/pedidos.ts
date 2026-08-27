@@ -85,11 +85,36 @@ function texto(v: unknown): string {
   return String(v);
 }
 
+/**
+ * Número que aceita os dois formatos que o arquivo mistura.
+ *
+ * As colunas de valor vêm como número, mas as de `dados_financeiros_*`
+ * vêm como TEXTO com ponto decimal ("450.48"). Tratar todo ponto como
+ * separador de milhar multiplicava esses valores por cem: R$ 450,48
+ * virava R$ 45.048, e o líquido do Mercado Livre somava R$ 319 milhões
+ * num total de R$ 4,3 milhões.
+ *
+ * A regra: vírgula presente significa decimal brasileiro. Só pontos, com
+ * um único ponto seguido de uma ou duas casas, é decimal americano.
+ * Qualquer outra combinação de pontos é separador de milhar.
+ */
 function numero(v: unknown): number {
   if (v == null || v === "") return 0;
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  const s = texto(v).replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".").trim();
-  const n = parseFloat(s);
+
+  const bruto = texto(v).replace(/R\$\s?/g, "").replace(/\s/g, "").trim();
+  if (!bruto) return 0;
+
+  let normalizado: string;
+  if (bruto.includes(",")) {
+    normalizado = bruto.replace(/\./g, "").replace(",", ".");
+  } else {
+    const pontos = (bruto.match(/\./g) ?? []).length;
+    const decimal = pontos === 1 && /\.\d{1,2}$/.test(bruto);
+    normalizado = decimal ? bruto : bruto.replace(/\./g, "");
+  }
+
+  const n = parseFloat(normalizado);
   return Number.isFinite(n) ? n : 0;
 }
 
