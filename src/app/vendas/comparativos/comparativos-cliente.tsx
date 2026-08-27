@@ -31,6 +31,7 @@ import {
   type Agregado,
 } from "@/mock/comparativos";
 import type { DadosComparativos, RegistroDia } from "@/lib/dados/vendas";
+import { Matriz, type IndicadorMatriz, type ColunaMatriz } from "@/components/ui/matriz";
 
 /** Escopo é o id de um canal, ou "todos" — vem do banco. */
 type EscopoComp = string;
@@ -226,6 +227,48 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
   /** No mobile só cabe o agrupamento por dia — 12 grupos × 7 barras não lê. */
   const modoEfetivo: "mes" | "dia" = estreito ? "dia" : modo;
 
+  /* ── dia da semana × mês, somado ──────────────────────────
+   *
+   * A tela já mostrava a MÉDIA por dia da semana. Faltava o TOTAL: "quanto
+   * todas as segundas de março venderam". A média esconde o mês com cinco
+   * segundas, que é justamente o que muda o fechamento.
+   *
+   * A contagem de ocorrências vai junto de propósito: comparar um mês de
+   * quatro segundas com outro de cinco, sem essa informação, faz ler
+   * crescimento onde houve só um dia a mais.
+   */
+
+  const colunasMes: ColunaMatriz[] = React.useMemo(
+    () => MESES.map((m, i) => ({ chave: String(i), rotulo: m })),
+    []
+  );
+
+  const mesesIdx = React.useMemo(() => MESES.map((_, i) => i), []);
+
+  const linhasDow: IndicadorMatriz<number>[] = React.useMemo(
+    () =>
+      DIAS_SEMANA.map((nome, dw) => {
+        const ocorrencias = MESES.map((_, m) => INDICES_DOW_MES[dw][m].length);
+        const min = Math.min(...ocorrencias);
+        const max = Math.max(...ocorrencias);
+        return {
+          chave: `dow-${dw}`,
+          rotulo: nome.charAt(0).toUpperCase() + nome.slice(1),
+          dica: min === max ? `${min} por mês` : `${min} a ${max} por mês`,
+          valor: (m: number) => {
+            const indices = INDICES_DOW_MES[dw][m];
+            if (!indices.length) return null;
+            const total = M.total(agregar(indices, escopo));
+            // Mês sem movimento devolve vazio, não zero: zero afirmaria que
+            // aquelas segundas não venderam, e o que houve foi mês futuro.
+            return total > 0 ? total : null;
+          },
+          formato: (v: number) => M.fmtTotal(v),
+        };
+      }),
+    [escopo, M, agregar]
+  );
+
   /* ── cartões por dia da semana ────────────────────────────── */
 
   const cartoes = React.useMemo(() => {
@@ -408,6 +451,22 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
       />
 
       <PageBody>
+        {/* ── Dia da semana × mês, somado ────────────────────── */}
+        <Panel className="overflow-hidden">
+          <PanelHeader
+            title="Total por dia da semana, mês a mês"
+            hint="soma de todas as segundas de cada mês · a seta compara com o mês à esquerda"
+            action={
+              <span className="text-[12px] text-ink-3">{nomeEscopo(escopo)}</span>
+            }
+          />
+          <Matriz
+            colunas={colunasMes}
+            periodos={mesesIdx}
+            indicadores={linhasDow}
+          />
+        </Panel>
+
         {/* ── Sete cartões, um por dia da semana ─────────────── */}
         <SectionTitle
           title="Desempenho por dia da semana"
