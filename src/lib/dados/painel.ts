@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { carregarBaseVendas, chaveCanal } from "./vendas";
 import { paginar } from "./paginar";
+import { carregarPainelNovo, type Recomendacao, type SkuEmQueda } from "./recomendacoes";
 import type { Kpi, DiaFaturamento, Canal, Anuncio } from "@/mock";
 
 /**
@@ -29,6 +30,10 @@ export type DadosPainel = {
   /** Série diária: a tela recorta por período sem voltar ao servidor. */
   linhas: import("@/lib/periodo").LinhaDia[];
   canaisInfo: import("@/lib/periodo").CanalInfo[];
+  /** Fila do dia: o que mudou e merece decisão. */
+  recomendacoes: Recomendacao[];
+  /** SKUs que caíram, com a evolução que explica. */
+  quedas: SkuEmQueda[];
   /** Última data com movimento — o painel diz a que dia se refere. */
   ultimaData: string | null;
   vazio: boolean;
@@ -66,6 +71,8 @@ export async function carregarPainel(): Promise<DadosPainel> {
       anuncios: [],
       linhas: [],
       canaisInfo: [],
+      recomendacoes: [],
+      quedas: [],
       ultimaData: null,
       vazio: true,
     };
@@ -217,9 +224,12 @@ export async function carregarPainel(): Promise<DadosPainel> {
   }
 
   const sb = await clienteServidor();
+  const novo = await carregarPainelNovo();
 
   return {
     kpis,
+    recomendacoes: novo.recomendacoes,
+    quedas: novo.quedas,
     faturamento30d,
     canais: listaCanais,
     canaisSemanas,

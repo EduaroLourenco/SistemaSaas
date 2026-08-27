@@ -12,6 +12,8 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { type Anuncio } from "@/mock";
 import type { DadosPainel } from "@/lib/dados/painel";
 import { recortar } from "@/lib/periodo";
+import { FilaRecomendacoes } from "@/components/painel/fila-recomendacoes";
+import { SkusEmQueda } from "@/components/painel/skus-em-queda";
 import { money, moneyShort, count, pct, shortDate } from "@/lib/format";
 import {
   Area,
@@ -169,12 +171,9 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       />
 
       <PageBody>
-        {/*
-          O bloco "Desde ontem" saiu daqui. Ele mostrava mudanças de preço de
-          concorrente e alertas que não têm fonte: viriam da API de
-          monitoramento, que ainda não existe. Volta quando houver o que
-          mostrar.
-        */}
+        {/* O que mudou e merece decisão — antes dos totais */}
+        <FilaRecomendacoes itens={dados.recomendacoes} />
+
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {KPIS.map((k) => (
@@ -335,6 +334,11 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
             ))}
           </div>
         </Panel>
+        {/*
+          Quedas por SKU no fim: os totais dizem QUANTO, esta seção diz
+          ONDE. Vem depois porque só faz sentido depois de saber que caiu.
+        */}
+        <SkusEmQueda itens={dados.quedas} />
       </PageBody>
     </>
   );
