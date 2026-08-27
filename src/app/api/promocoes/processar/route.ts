@@ -5,6 +5,8 @@ import { carregarFormulaBase } from "@/lib/dados/formula-base";
 import { processarPlanilha, type LinhaProcessada } from "@/lib/planilhas/processar";
 import { generateReport, type ReportItem } from "@/lib/planilhas/relatorio-gerencial";
 import { guardarPacote } from "@/lib/planilhas/pacotes";
+import { gravarProcessamento } from "@/lib/dados/gravar-promocoes";
+import { clienteServidor } from "@/lib/supabase/servidor";
 
 // exceljs e jszip precisam do runtime Node, não do Edge.
 export const runtime = "nodejs";
@@ -107,6 +109,31 @@ export async function POST(req: NextRequest) {
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
     const id = guardarPacote(zipBuffer);
 
+    /*
+     * Grava a decisão. Sem isto, o processamento decidia e esquecia:
+     * Campanhas e Histórico apareciam vazios porque não havia o que
+     * mostrar.
+     *
+     * Falha aqui não derruba o processamento — o arquivo já está pronto e
+     * o usuário precisa dele. O erro vai para a resposta, que a tela
+     * mostra: perder o registro é ruim, perder o arquivo é pior.
+     */
+    let gravacao = null;
+    let erroGravacao: string | null = null;
+    try {
+      const sb = await clienteServidor();
+      const { data: sessao } = await sb.auth.getUser();
+      gravacao = await gravarProcessamento({
+        linhas: todasLinhas,
+        arquivos: arquivos.map((a) => a.nome),
+        descontoExtra,
+        usuarioId: sessao.user?.id,
+      });
+    } catch (e) {
+      erroGravacao = e instanceof Error ? e.message : "falha ao gravar";
+      console.error("Promoções: processou mas não gravou:", e);
+    }
+
     const participam = todasLinhas.filter((l) => l.aprovado).length;
     const pendencias = todasLinhas.filter((l) => l.motivo).length;
 
@@ -142,6 +169,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       id,
+      gravacao,
+      erroGravacao,
       resumoBase,
       // De onde veio a base — a tela mostra, para ninguém processar uma
       // semana inteira com a versão errada sem perceber.
