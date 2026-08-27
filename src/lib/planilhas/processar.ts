@@ -1,6 +1,6 @@
 /* eslint-disable */
 import ExcelJS from "exceljs";
-import { processItem, FormulaBaseData } from "./motor-promocoes";
+import { precoPiso, precoComExtra, processItem, FormulaBaseData } from "./motor-promocoes";
 import { surgicallyEditExcel } from "./editor-xlsx";
 import { ReportItem } from "./relatorio-gerencial";
 
@@ -74,6 +74,21 @@ export type LinhaProcessada = {
   precoOferta: number | null;
   /** O preço que a Fórmula base diz que preserva a margem. */
   precoTabela: number;
+  /**
+   * Piso: o menor preço ofertável sem furar a margem (tabela − 5%).
+   *
+   * O canal recusa desconto abaixo de 5%, então a tabela cheia nunca é
+   * ofertável na prática — o piso é o ponto de partida real.
+   */
+  precoPiso: number;
+  /**
+   * Piso com o desconto extra aplicado, quando há.
+   *
+   * Nulo nas campanhas COM redução de tarifa: ali o preço é do canal, e
+   * não há preço nosso para descontar. Mostrar um número nesse caso
+   * sugeriria uma alavanca que não existe.
+   */
+  precoComExtra: number | null;
   reducaoTarifa: string;
   desconto: number | null;
   /**
@@ -381,6 +396,12 @@ export async function processarPlanilha(
       precoPropostoML: finalPrice,
       precoOferta: precoFinalAplicado,
       precoTabela: tabela,
+      precoPiso: tabela > 0 ? precoPiso(tabela) : 0,
+      // Só faz sentido onde existe preço nosso para descontar.
+      precoComExtra:
+        tabela > 0 && descontoExtra > 0 && tipoCampanha === "Sem Redução"
+          ? precoComExtra(tabela, descontoExtra)
+          : null,
       reducaoTarifa: sfStr || "Não",
       desconto:
         originalPrice && originalPrice > 0

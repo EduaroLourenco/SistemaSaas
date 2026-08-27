@@ -28,6 +28,31 @@ export interface FormulaBaseData {
   precosMLB: Map<string, Record<number, number>>;
 }
 
+/**
+ * Piso da tabela: o menor preço que ainda preserva a margem.
+ *
+ * O canal recusa desconto abaixo de 5%, então a tabela sozinha nunca é
+ * ofertável — o piso é o ponto de partida real de qualquer promoção.
+ */
+export const PISO = 0.95;
+
+/** Preço de tabela no piso de 5%. */
+export function precoPiso(tabela: number): number {
+  return Math.round(tabela * PISO * 100) / 100;
+}
+
+/**
+ * Preço com desconto extra, aplicado SOBRE O PISO.
+ *
+ * O desconto extra não parte da tabela cheia: parte do menor preço que a
+ * margem aguenta. Aplicar sobre a tabela deixaria o resultado 5% acima do
+ * pretendido — num item de mil reais, R$ 45 a mais em cada anúncio de uma
+ * campanha inteira.
+ */
+export function precoComExtra(tabela: number, extra: number): number {
+  return Math.round(precoPiso(tabela) * (1 - extra) * 100) / 100;
+}
+
 export function getPrecoTabela(data: FormulaBaseData, sku: string, mlb: string, comissao: number): number | null {
   const k = Math.round(comissao * 1000) / 1000;
   
@@ -86,11 +111,18 @@ export function processItem(
     
     if (p === null) return { action: negativeAction, pendencia: "sem preço de tabela", newPrice: null };
     
-    if (extraDiscount > 0) {
-      p = p * (1 - extraDiscount);
-    }
-    
-    const newPrice = Math.round((p + 1e-9) * 100) / 100;
+    /*
+     * Sem desconto extra, a oferta é a tabela cheia — comportamento que já
+     * vinha do sistema anterior e não foi pedido para mudar.
+     *
+     * COM desconto extra, ele parte do PISO, não da tabela. Partir da
+     * tabela deixaria o resultado 5% acima do pretendido: num item de mil
+     * reais, R$ 45 a mais em cada anúncio de uma campanha inteira.
+     */
+    const newPrice =
+      extraDiscount > 0
+        ? precoComExtra(p, extraDiscount)
+        : Math.round((p + 1e-9) * 100) / 100;
 
     // Preço de tabela ACIMA do preço já publicado: participar exigiria
     // AUMENTAR o preço, e promoção é desconto. O canal recusa qualquer

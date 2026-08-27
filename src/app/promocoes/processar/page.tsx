@@ -37,6 +37,10 @@ type Linha = {
   precoPropostoML: number | null;
   precoOferta: number | null;
   precoTabela: number;
+  /** Tabela menos 5% — o menor preço que ainda preserva a margem. */
+  precoPiso: number;
+  /** Piso com o desconto extra. Nulo em campanha com redução de tarifa. */
+  precoComExtra: number | null;
   reducaoTarifa: string;
   desconto: number | null;
   folga: number | null;
@@ -225,6 +229,37 @@ export default function ProcessarPromocoes() {
       cell: (l) =>
         l.precoTabela > 0 ? (
           <span className="num">{money(l.precoTabela)}</span>
+        ) : (
+          <span className="text-ink-3">—</span>
+        ),
+    },
+    {
+      key: "precoPiso",
+      header: "Piso (−5%)",
+      align: "right",
+      width: "130px",
+      sortValue: (l) => l.precoPiso,
+      cell: (l) =>
+        l.precoPiso > 0 ? (
+          <span className="num text-ink-2">{money(l.precoPiso)}</span>
+        ) : (
+          <span className="text-ink-3">—</span>
+        ),
+    },
+    {
+      key: "precoComExtra",
+      header: "Com desconto extra",
+      align: "right",
+      width: "150px",
+      sortValue: (l) => l.precoComExtra ?? 0,
+      /*
+       * Vazio em campanha COM redução de tarifa, e isso é intencional: ali
+       * o preço é do canal, não nosso. Mostrar um número sugeriria uma
+       * alavanca que não existe naquele caso.
+       */
+      cell: (l) =>
+        l.precoComExtra != null ? (
+          <span className="num text-brand font-medium">{money(l.precoComExtra)}</span>
         ) : (
           <span className="text-ink-3">—</span>
         ),
