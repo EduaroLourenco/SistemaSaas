@@ -6,6 +6,7 @@ import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
 import { SemFonte } from "@/components/ui/sem-fonte";
 import { Matriz, type IndicadorMatriz, type ColunaMatriz } from "@/components/ui/matriz";
+import { CompararPeriodo, type LinhaComparacao } from "@/components/ui/comparar-periodo";
 import { money, count, pct } from "@/lib/format";
 import type { DadosMetas } from "@/lib/dados/metas";
 
@@ -29,6 +30,7 @@ const MESES = [
 
 export default function VendasMetas({ dados }: { dados: DadosMetas }) {
   const [canal, setCanal] = React.useState("");
+  const [mesAberto, setMesAberto] = React.useState<number | null>(null);
 
   const porMes = React.useMemo(() => {
     const acc = Array.from({ length: 12 }, (_, m) => ({
@@ -136,9 +138,33 @@ export default function VendasMetas({ dados }: { dados: DadosMetas }) {
             title={dados.temMeta ? "Meta e realizado" : "Realizado, mês a mês"}
             hint="meses nas colunas · a seta compara com o mês à esquerda"
           />
-          <Matriz colunas={colunas} periodos={porMes} indicadores={indicadores} />
+          <Matriz
+            colunas={colunas}
+            periodos={porMes}
+            indicadores={indicadores}
+            onAbrirColuna={setMesAberto}
+          />
         </Panel>
       </PageBody>
+
+      {mesAberto != null && (
+        <CompararPeriodo
+          titulo={`${MESES[mesAberto]} de ${dados.ano}`}
+          rotuloAtual={MESES[mesAberto]}
+          rotuloAnterior={mesAberto > 0 ? MESES[mesAberto - 1] : "sem anterior"}
+          linhas={indicadores.map((ind) => ({
+            chave: ind.chave,
+            rotulo: ind.rotulo,
+            dica: ind.dica,
+            destaque: ind.destaque,
+            menorMelhor: ind.menorMelhor,
+            formato: ind.formato,
+            atual: ind.valor(porMes[mesAberto]),
+            anterior: mesAberto > 0 ? ind.valor(porMes[mesAberto - 1]) : null,
+          })) as LinhaComparacao[]}
+          onClose={() => setMesAberto(null)}
+        />
+      )}
     </>
   );
 }

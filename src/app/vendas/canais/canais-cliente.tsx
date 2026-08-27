@@ -8,6 +8,8 @@ import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { type Canal } from "@/mock";
 import type { DadosCanais } from "@/lib/dados/vendas";
+import { CompararPeriodo, type LinhaComparacao } from "@/components/ui/comparar-periodo";
+import { DIAS_DO_PERIODO as DIAS } from "@/lib/periodo";
 import { money, count, pct } from "@/lib/format";
 import {
   CartesianGrid,
@@ -134,6 +136,8 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
       });
   }, [dados.linhas]);
 
+  /** Canal aberto na comparação — clique na linha da tabela. */
+  const [canalAberto, setCanalAberto] = React.useState<string | null>(null);
   const [ocultos, setOcultos] = React.useState<string[]>([]);
   const [filtrosAbertos, setFiltrosAbertos] = React.useState(false);
 
@@ -437,9 +441,78 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
             rows={visiveis}
             rowKey={(r) => r.id}
             defaultSort={{ key: "faturamento", dir: "desc" }}
+            onRowClick={(r) => setCanalAberto(r.id)}
           />
         </Panel>
       </PageBody>
+
+      {canalAberto && (() => {
+        /*
+         * Recorta duas vezes a mesma série: a janela atual e a de mesmo
+         * tamanho logo antes. Comparar contra "o mês passado" seria mais
+         * simples e erraria — a janela é de dias COM movimento, não de
+         * calendário.
+         */
+        const n = DIAS[periodo] ?? 30;
+        const datas = [...new Set(dados.linhas.map((l) => l.data))].sort();
+        const janela = new Set(datas.slice(-n));
+        const antes = new Set(datas.slice(-n * 2, -n));
+
+        const somar = (filtro: Set<string>) => {
+          const t = { rec: 0, ped: 0, vis: 0, ads: 0, canc: 0, pedComVis: 0 };
+          for (const l of dados.linhas) {
+            if (l.canalId !== canalAberto || !filtro.has(l.data)) continue;
+            t.rec += l.receita;
+            t.ped += l.pedidos;
+            t.vis += l.visitas;
+            t.ads += l.ads;
+            t.canc += l.cancelado;
+            if (l.visitas > 0) t.pedComVis += l.pedidos;
+          }
+          return t;
+        };
+        const a = somar(janela);
+        const b = somar(antes);
+        const nome = CANAL_NOMES[canalAberto] ?? canalAberto;
+
+        const linha = (
+          chave: string,
+          rotulo: string,
+          f: (t: typeof a) => number | null,
+          formato: (v: number) => string,
+          extra: Partial<LinhaComparacao> = {}
+        ): LinhaComparacao => ({
+          chave, rotulo, formato, atual: f(a), anterior: f(b), ...extra,
+        });
+
+        return (
+          <CompararPeriodo
+            titulo={nome}
+            rotuloAtual={`últimos ${n}d`}
+            rotuloAnterior={`${n}d antes`}
+            linhas={[
+              linha("receita", "Receita", (t) => t.rec, money, { destaque: true }),
+              linha("pedidos", "Pedidos", (t) => t.ped, count, { destaque: true }),
+              linha("ticket", "Ticket médio", (t) => (t.ped ? t.rec / t.ped : null), money),
+              linha("visitas", "Visitas", (t) => (t.vis ? t.vis : null), count),
+              linha(
+                "conversao",
+                "Conversão",
+                (t) => (t.vis ? (t.pedComVis * 100) / t.vis : null),
+                (v) => pct(v, 2),
+                { dica: "só dias com visita registrada" }
+              ),
+              linha("ads", "Investimento em ADS", (t) => (t.ads ? t.ads : null), money, {
+                menorMelhor: true,
+              }),
+              linha("cancelado", "Valor cancelado", (t) => t.canc, money, {
+                menorMelhor: true,
+              }),
+            ]}
+            onClose={() => setCanalAberto(null)}
+          />
+        );
+      })()}
 
       {/* folha de filtros — mobile */}
       {filtrosAbertos && (

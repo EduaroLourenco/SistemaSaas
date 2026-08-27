@@ -9,6 +9,7 @@ import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Matriz, type IndicadorMatriz, type ColunaMatriz } from "@/components/ui/matriz";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
+import { CompararPeriodo, type LinhaComparacao } from "@/components/ui/comparar-periodo";
 import { agruparSemanas } from "@/lib/periodo";
 import { type SemanaVendas } from "@/mock/semanal";
 import type { DadosSemanal } from "@/lib/dados/vendas";
@@ -147,6 +148,8 @@ type Linha = SemanaVendas & {
 
 export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
   const [canal, setCanal] = React.useState("");
+  /** Índice da semana aberta na comparação — vem do clique na matriz. */
+  const [comparando, setComparando] = React.useState<number | null>(null);
 
   const {
     semanaAtual: SEMANA_ATUAL,
@@ -631,6 +634,7 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
             colunas={colunasMatriz}
             periodos={exibidas}
             indicadores={INDICADORES}
+            onAbrirColuna={setComparando}
           />
         </Panel>
 
@@ -648,6 +652,36 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
           />
         </Panel>
       </PageBody>
+
+      {comparando != null && exibidas[comparando] && (
+        <CompararPeriodo
+          titulo={`Semana ${exibidas[comparando].rotulo}`}
+          rotuloAtual={exibidas[comparando].rotulo}
+          rotuloAnterior={
+            comparando > 0 ? exibidas[comparando - 1].rotulo : "sem anterior"
+          }
+          linhas={INDICADORES.map((ind) => ({
+            chave: ind.chave,
+            rotulo: ind.rotulo,
+            dica: ind.dica,
+            destaque: ind.destaque,
+            menorMelhor: ind.menorMelhor,
+            formato: ind.formato,
+            atual: ind.valor(exibidas[comparando]),
+            anterior:
+              comparando > 0 ? ind.valor(exibidas[comparando - 1]) : null,
+          })) as LinhaComparacao[]}
+          rodape={
+            exibidas[comparando].parcial ? (
+              <p className="text-[12px] text-warn">
+                Esta semana está em curso — a comparação usa dias parciais
+                contra uma semana inteira.
+              </p>
+            ) : null
+          }
+          onClose={() => setComparando(null)}
+        />
+      )}
 
       {filtrosAbertos && (
         <FilterSheet

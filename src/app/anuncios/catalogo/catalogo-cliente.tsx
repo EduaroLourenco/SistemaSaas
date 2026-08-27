@@ -192,6 +192,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
       ) / (publicados.length || 1);
     return {
       total: CATALOGO.length,
+      publicados: publicados.length,
       ativos: ativos.length,
       pausados: pausados.length,
       finalizados: finalizados.length,
@@ -199,7 +200,6 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
       premium: CATALOGO.filter((i) => i.tipo === "Premium").length,
       comissao,
       negociada,
-      estoque: CATALOGO.reduce((s, i) => s + i.estoque, 0),
       semPrecoIdeal: publicados.filter((i) => !precoIdealVigente(i.mlb)).length,
     };
   }, []);
@@ -286,19 +286,13 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
       sortValue: (i) => i.comissaoAtual,
       cell: (i) => <span className="num text-ink-2">{pct(i.comissaoAtual)}</span>,
     },
-    {
-      key: "estoque",
-      header: "Estoque",
-      align: "right",
-      width: "100px",
-      sortValue: (i) => i.estoque,
-      cell: (i) =>
-        i.estoque === 0 ? (
-          <span className="text-ink-3">—</span>
-        ) : (
-          <span className="num text-ink-2">{count(i.estoque)}</span>
-        ),
-    },
+    /*
+     * Estoque saiu da tela a pedido: a operação não usa o número hoje, e o
+     * que vem do export do canal é o saldo do depósito no dia da
+     * exportação — envelhece rápido e induz decisão errada.
+     *
+     * O dado continua sendo importado e guardado; é só a exibição que sai.
+     */
     {
       key: "status",
       header: "Status",
@@ -519,7 +513,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
           <Panel>
             <PanelHeader
               title="Situação das publicações"
-              hint={`base de ${count(resumo.estoque)} unidades em estoque`}
+              hint={`${count(resumo.publicados)} anúncios publicados`}
             />
             <div className="px-4 py-4">
               <BarraComposicao
@@ -710,7 +704,6 @@ function FichaAnuncio({
         </Badge>
         <Badge tone="neutral">{item.categoria}</Badge>
         {item.freteGratis && <Badge tone="info">frete grátis</Badge>}
-        {item.estoque === 0 && <Badge tone="down">sem estoque</Badge>}
       </div>
 
       {/* números */}
@@ -718,7 +711,6 @@ function FichaAnuncio({
         {[
           { l: "Preço atual", v: money(item.precoAtual) },
           { l: "Comissão", v: pct(item.comissaoAtual) },
-          { l: "Estoque", v: count(item.estoque) },
           { l: "No ar há", v: `${count(Math.round(dias(item.criadoEm) / 30))} m` },
         ].map((x) => (
           <div key={x.l} className="px-4 py-3">

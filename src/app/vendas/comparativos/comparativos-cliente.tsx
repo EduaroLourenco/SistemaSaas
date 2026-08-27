@@ -32,6 +32,7 @@ import {
 } from "@/mock/comparativos";
 import type { DadosComparativos, RegistroDia } from "@/lib/dados/vendas";
 import { Matriz, type IndicadorMatriz, type ColunaMatriz } from "@/components/ui/matriz";
+import { CompararPeriodo, type LinhaComparacao } from "@/components/ui/comparar-periodo";
 
 /** Escopo é o id de um canal, ou "todos" — vem do banco. */
 type EscopoComp = string;
@@ -217,6 +218,8 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
     [serieDiaria]
   );
 
+  /** Mês aberto na comparação — vem do clique na matriz de dias da semana. */
+  const [mesComparado, setMesComparado] = React.useState<number | null>(null);
   const [metricaId, setMetricaId] = React.useState<MetricaId>("receita");
   const [escopo, setEscopo] = React.useState<EscopoComp>("todos");
   const [modo, setModo] = React.useState<"mes" | "dia">("mes");
@@ -464,6 +467,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
             colunas={colunasMes}
             periodos={mesesIdx}
             indicadores={linhasDow}
+            onAbrirColuna={setMesComparado}
           />
         </Panel>
 
@@ -788,6 +792,31 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
       </PageBody>
 
       {/* filtro de canal — mobile */}
+      {mesComparado != null && (
+        <CompararPeriodo
+          titulo={`${MESES_LONGOS[mesComparado]} · por dia da semana`}
+          rotuloAtual={MESES[mesComparado]}
+          rotuloAnterior={mesComparado > 0 ? MESES[mesComparado - 1] : "sem anterior"}
+          linhas={linhasDow.map((ind) => ({
+            chave: ind.chave,
+            rotulo: ind.rotulo,
+            dica: ind.dica,
+            menorMelhor: ind.menorMelhor,
+            formato: ind.formato,
+            atual: ind.valor(mesComparado),
+            anterior: mesComparado > 0 ? ind.valor(mesComparado - 1) : null,
+          })) as LinhaComparacao[]}
+          rodape={
+            <p className="text-[12px] text-ink-3">
+              Meses têm quantidades diferentes de cada dia da semana — quatro
+              segundas contra cinco muda o total sem nada ter mudado na
+              operação.
+            </p>
+          }
+          onClose={() => setMesComparado(null)}
+        />
+      )}
+
       {filtrosAbertos && (
         <FilterSheet
           title="Canal"
