@@ -25,6 +25,20 @@ export type Oferta = {
   campanha: string;
   temReducao: boolean;
   precoOferta: number | null;
+  /*
+   * Tabela e piso são da OFERTA, não do anúncio.
+   *
+   * Cada faixa tem uma comissão diferente, e a Fórmula base devolve um
+   * preço de tabela diferente para cada comissão. O mesmo anúncio com
+   * duas propostas de R$ 1.344,59 aparece com 4,2% e 1,2% de desconto
+   * porque as tabelas são outras — não porque a conta esteja errada.
+   *
+   * Guardar um valor só no anúncio fazia o cabeçalho contradizer as
+   * linhas: dizia piso R$ 1.460,47 enquanto a linha mostrava a mesma
+   * oferta R$ 11,65 ACIMA do piso.
+   */
+  precoTabela: number | null;
+  precoPiso: number | null;
   precoSugerido: number | null;
   participa: boolean;
   motivo: string | null;
@@ -41,8 +55,9 @@ export type AnuncioComOfertas = {
   mlb: string;
   sku: string;
   titulo: string;
-  precoTabela: number | null;
-  precoPiso: number | null;
+  /** Menor e maior tabela entre as ofertas. Iguais quando só há uma. */
+  tabelaDe: number | null;
+  tabelaAte: number | null;
   ofertas: Oferta[];
   /** Campanhas distintas em que este anúncio aparece. */
   campanhas: number;
@@ -166,10 +181,8 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
         mlb: anuncio.codigo_externo,
         sku: anuncio.sku_canal ?? "",
         titulo: anuncio.titulo ?? "",
-        // O preço de tabela vem por linha, mas é do anúncio: fica o
-        // primeiro que aparecer com valor.
-        precoTabela: null,
-        precoPiso: null,
+        tabelaDe: null,
+        tabelaAte: null,
         ofertas: [],
         campanhas: 0,
         participam: 0,
@@ -177,17 +190,14 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
         recusadaMaisProxima: null,
       } as AnuncioComOfertas);
 
-    if (grupo.precoTabela == null && precoTabela != null) {
-      grupo.precoTabela = precoTabela;
-      grupo.precoPiso = precoPiso;
-    }
-
     grupo.ofertas.push({
       id: i.id,
       campanhaId: i.campanha_id,
       campanha: campanha?.nome ?? "—",
       temReducao: campanha?.tem_reducao_tarifa ?? false,
       precoOferta,
+      precoTabela,
+      precoPiso,
       precoSugerido: n(i.preco_sugerido),
       participa: i.decisao === "participar",
       motivo: i.motivo,
@@ -211,6 +221,12 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     // comparação, que é a ordem em que a decisão é tomada.
     g.ofertas.sort((a, b) => (b.precoOferta ?? 0) - (a.precoOferta ?? 0));
 
+    const tabelas = g.ofertas
+      .map((o) => o.precoTabela)
+      .filter((v): v is number => v != null);
+    g.tabelaDe = tabelas.length ? Math.min(...tabelas) : null;
+    g.tabelaAte = tabelas.length ? Math.max(...tabelas) : null;
+
     g.campanhas = new Set(g.ofertas.map((o) => o.campanhaId)).size;
     g.participam = g.ofertas.filter((o) => o.participa).length;
     g.melhorAceitavel = g.ofertas.find((o) => o.participa) ?? null;
@@ -229,7 +245,7 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     if (b.ofertas.length !== a.ofertas.length) {
       return b.ofertas.length - a.ofertas.length;
     }
-    return (b.precoTabela ?? 0) - (a.precoTabela ?? 0);
+    return (b.tabelaAte ?? 0) - (a.tabelaAte ?? 0);
   });
 
   const usadas = new Set(lista.flatMap((g) => g.ofertas.map((o) => o.campanhaId)));

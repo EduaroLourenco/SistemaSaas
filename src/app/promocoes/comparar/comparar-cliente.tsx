@@ -226,17 +226,19 @@ function LinhaAnuncio({
           </span>
         </span>
 
-        <span className="hidden sm:block shrink-0 text-right w-24">
+        {/*
+          Faixa, não um valor só: cada oferta tem a sua tabela, porque a
+          comissão muda por faixa e a Fórmula base devolve outro preço.
+          Um número no cabeçalho contradiria as linhas de baixo.
+        */}
+        <span className="hidden sm:block shrink-0 text-right w-36">
           <span className="block label">Tabela</span>
           <span className="block num text-[12.5px] text-ink-2">
-            {a.precoTabela != null ? money(a.precoTabela) : "—"}
-          </span>
-        </span>
-
-        <span className="hidden md:block shrink-0 text-right w-24">
-          <span className="block label">Piso</span>
-          <span className="block num text-[12.5px] text-ink-2">
-            {a.precoPiso != null ? money(a.precoPiso) : "—"}
+            {a.tabelaDe == null
+              ? "—"
+              : a.tabelaDe === a.tabelaAte
+                ? money(a.tabelaDe)
+                : `${money(a.tabelaDe)} – ${money(a.tabelaAte!)}`}
           </span>
         </span>
 
@@ -256,6 +258,12 @@ function LinhaAnuncio({
                   </th>
                   <th className="text-right px-2 py-1.5">
                     <span className="label">Proposta</span>
+                  </th>
+                  <th className="text-right px-2 py-1.5">
+                    <span className="label">Tabela</span>
+                  </th>
+                  <th className="text-right px-2 py-1.5">
+                    <span className="label">Piso</span>
                   </th>
                   <th className="text-right px-2 py-1.5">
                     <span className="label">Desconto</span>
@@ -353,6 +361,14 @@ function LinhaOferta({
 
       <td className="px-2 py-1.5 text-right num text-ink">
         {o.precoOferta != null ? money(o.precoOferta) : "—"}
+      </td>
+
+      <td className="px-2 py-1.5 text-right num text-ink-3">
+        {o.precoTabela != null ? money(o.precoTabela) : "—"}
+      </td>
+
+      <td className="px-2 py-1.5 text-right num text-ink-3">
+        {o.precoPiso != null ? money(o.precoPiso) : "—"}
       </td>
 
       <td className="px-2 py-1.5 text-right num text-ink-2">
