@@ -18,7 +18,10 @@ import type { LinhaProcessada } from "@/lib/planilhas/processar";
 export type ResumoGravacao = {
   processamentoId: string;
   campanhas: number;
+  /** Linhas analisadas, com repetições — o registro completo. */
   itens: number;
+  /** Decisões vigentes, uma por anúncio por campanha. */
+  decisoes: number;
   semAnuncio: number;
 };
 
@@ -154,6 +157,8 @@ export async function gravarProcessamento({
   let semAnuncio = 0;
   const historico: Record<string, unknown>[] = [];
   const itens: Record<string, unknown>[] = [];
+  /** Uma decisão por (campanha, anúncio) — ver a escolha logo abaixo. */
+  const escolhidos = new Map<string, LinhaProcessada>();
 
   for (const l of linhas) {
     const anuncioId = anunciosPorCodigo.get(l.mlb.toUpperCase()) ?? null;
@@ -181,19 +186,52 @@ export async function gravarProcessamento({
     // `campanha_itens` exige anúncio cadastrado; o histórico aceita nulo.
     // Item de anúncio que ainda não está no catálogo fica só no histórico.
     const campanhaId = porNome.get(l.campanha);
-    if (anuncioId && campanhaId) {
-      itens.push({
-        operacao_id: OPERACAO,
-        campanha_id: campanhaId,
-        anuncio_id: anuncioId,
-        preco_tabela: l.precoTabela || null,
-        preco_oferta: l.precoOferta,
-        preco_sugerido: l.precoPropostoML,
-        decisao: l.aprovado ? "participar" : "nao_participar",
-        decidido_em: new Date().toISOString(),
-        motivo: l.motivo || null,
-      });
+    if (!anuncioId || !campanhaId) continue;
+
+    /*
+     * Um anúncio pode aparecer VÁRIAS vezes na mesma campanha: a planilha
+     * de redução de tarifa traz uma linha por faixa de desconto oferecida
+     * pelo canal — 549 linhas para 266 anúncios no arquivo de agosto.
+     *
+     * O histórico guarda todas, porque é o registro do que foi analisado.
+     * `campanha_itens` guarda a decisão vigente, uma por anúncio, e é isso
+     * que a chave única (campanha, anúncio) exige. Sem escolher aqui, a
+     * gravação inteira falhava com violação de chave — e o arquivo já
+     * gerado não chegava a ser mostrado.
+     *
+     * Entre ofertas repetidas fica a de MAIOR preço: das faixas que o canal
+     * propõe, é a que menos corta a margem. Aprovada ganha de reprovada
+     * independente do preço — participar de uma faixa é o resultado que
+     * importa.
+     */
+    const chave = `${campanhaId}|${anuncioId}`;
+    const jaEscolhida = escolhidos.get(chave);
+    if (jaEscolhida) {
+      const melhoraDecisao = l.aprovado && !jaEscolhida.aprovado;
+      const mesmaDecisao = l.aprovado === jaEscolhida.aprovado;
+      // Sem preço ofertado conta como zero: qualquer oferta com número
+      // é preferível a uma que o canal deixou em branco.
+      const maisAlta = (l.precoOferta ?? 0) > (jaEscolhida.precoOferta ?? 0);
+      if (!melhoraDecisao && !(mesmaDecisao && maisAlta)) {
+        continue;
+      }
     }
+    escolhidos.set(chave, l);
+  }
+
+  for (const [chave, l] of escolhidos) {
+    const [campanhaId, anuncioId] = chave.split("|");
+    itens.push({
+      operacao_id: OPERACAO,
+      campanha_id: campanhaId,
+      anuncio_id: anuncioId,
+      preco_tabela: l.precoTabela || null,
+      preco_oferta: l.precoOferta,
+      preco_sugerido: l.precoPropostoML,
+      decisao: l.aprovado ? "participar" : "nao_participar",
+      decidido_em: new Date().toISOString(),
+      motivo: l.motivo || null,
+    });
   }
 
   // As duas tabelas não dependem uma da outra: gravar em paralelo corta o
@@ -202,8 +240,17 @@ export async function gravarProcessamento({
     ...Array.from({ length: Math.ceil(historico.length / 400) }, (_, i) =>
       sb.from("historico_promocoes").insert(historico.slice(i * 400, (i + 1) * 400))
     ),
+    /*
+     * `upsert` e não `insert`: a mesma campanha é reprocessada quando o
+     * canal republica a planilha, e a decisão nova tem que substituir a
+     * antiga em vez de colidir com ela.
+     */
     ...Array.from({ length: Math.ceil(itens.length / 400) }, (_, i) =>
-      sb.from("campanha_itens").insert(itens.slice(i * 400, (i + 1) * 400))
+      sb
+        .from("campanha_itens")
+        .upsert(itens.slice(i * 400, (i + 1) * 400), {
+          onConflict: "campanha_id,anuncio_id",
+        })
     ),
   ];
   for (const { error } of await Promise.all(gravacoes)) {
@@ -214,6 +261,7 @@ export async function gravarProcessamento({
     processamentoId,
     campanhas: nomes.length,
     itens: historico.length,
+    decisoes: itens.length,
     semAnuncio,
   };
 }
