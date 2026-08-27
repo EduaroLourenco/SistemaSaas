@@ -24,6 +24,20 @@ export type ResumoGravacao = {
 
 const OPERACAO = "00000000-0000-0000-0000-000000000101";
 
+/**
+ * O supabase-js lança objeto simples, não Error. Sem esta conversão a
+ * mensagem se perde em qualquer `instanceof Error` acima e vira "erro
+ * desconhecido" — que não diz onde olhar.
+ */
+function erroDeVerdade(bruto: unknown, onde: string): Error {
+  const e = bruto as { message?: string; code?: string; details?: string; hint?: string };
+  const partes = [e?.message ?? "falha no banco"];
+  if (e?.code) partes.push(`(código ${e.code})`);
+  if (e?.details) partes.push(e.details);
+  if (e?.hint) partes.push(e.hint);
+  return new Error(`${onde}: ${partes.join(" ")}`);
+}
+
 export async function gravarProcessamento({
   linhas,
   arquivos,
@@ -62,7 +76,7 @@ export async function gravarProcessamento({
     .select("id")
     .single();
 
-  if (erroProc) throw erroProc;
+  if (erroProc) throw erroDeVerdade(erroProc, "ao registrar o processamento");
   const processamentoId = proc.id as string;
 
   /* ── Campanhas ─────────────────────────────────────────────
@@ -107,7 +121,7 @@ export async function gravarProcessamento({
       })
       .select("id")
       .single();
-    if (error) throw error;
+    if (error) throw erroDeVerdade(error, `ao criar a campanha "${nome}"`);
     porNome.set(nome, nova.id as string);
   }
 
@@ -193,7 +207,7 @@ export async function gravarProcessamento({
     ),
   ];
   for (const { error } of await Promise.all(gravacoes)) {
-    if (error) throw error;
+    if (error) throw erroDeVerdade(error, "ao gravar histórico e itens");
   }
 
   return {

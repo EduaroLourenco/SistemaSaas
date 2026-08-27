@@ -190,7 +190,26 @@ export async function POST(req: NextRequest) {
       linhas: todasLinhas,
     });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "Erro desconhecido";
+    /*
+     * "Erro desconhecido" escondia a causa real.
+     *
+     * O supabase-js lança objeto simples, não Error — então
+     * `e instanceof Error` era falso e a mensagem se perdia. Aqui o que
+     * não for Error é serializado, para a tela mostrar algo em que dê para
+     * agir em vez de um beco sem saída.
+     */
+    let msg: string;
+    if (e instanceof Error) {
+      msg = e.message;
+    } else if (e && typeof e === "object") {
+      const o = e as Record<string, unknown>;
+      msg =
+        [o.message, o.code && `(código ${o.code})`, o.details, o.hint]
+          .filter(Boolean)
+          .join(" ") || JSON.stringify(o).slice(0, 300);
+    } else {
+      msg = String(e);
+    }
     console.error("Falha ao processar promoções:", e);
     return NextResponse.json({ erro: msg }, { status: 400 });
   }
