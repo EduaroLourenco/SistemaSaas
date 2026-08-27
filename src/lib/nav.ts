@@ -55,6 +55,7 @@ export const NAV: NavGroup[] = [
     icon: Percent,
     items: [
       { label: "Campanhas", href: "/promocoes/campanhas" },
+      { label: "Comparar ofertas", href: "/promocoes/comparar" },
       { label: "Processar planilha", href: "/promocoes/processar" },
       { label: "Histórico", href: "/promocoes/historico" },
     ],

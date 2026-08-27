@@ -65,6 +65,16 @@ type Resultado = {
   };
   revisao: Record<Tag, Linha[]>;
   linhas: Linha[];
+  /** O que ficou guardado. Nulo quando a gravação falhou. */
+  gravacao: {
+    processamentoId: string;
+    campanhas: number;
+    itens: number;
+    ofertas: number;
+    semAnuncio: number;
+  } | null;
+  /** Por que não gravou. O arquivo sai mesmo assim. */
+  erroGravacao?: string | null;
 };
 
 /** Cada cenário de revisão, com o que ele significa e o que fazer. */
@@ -535,6 +545,50 @@ export default function ProcessarPromocoes() {
                 hint="sem base para calcular"
               />
             </div>
+
+            {resultado.gravacao && (
+              <Panel className="px-4 py-3 flex gap-2.5">
+                <Info className="w-4 h-4 text-ink-3 shrink-0 mt-px" strokeWidth={1.75} />
+                <p className="text-[12px] text-ink-2">
+                  Guardado:{" "}
+                  <span className="num">{count(resultado.gravacao.ofertas)}</span>{" "}
+                  propostas do canal em{" "}
+                  <span className="num">{count(resultado.gravacao.campanhas)}</span>{" "}
+                  campanha{resultado.gravacao.campanhas === 1 ? "" : "s"}.{" "}
+                  {/*
+                    As propostas ficam TODAS: o canal oferece várias faixas de
+                    desconto para o mesmo anúncio, e escolher uma aqui seria
+                    decidir qual importa antes de você poder comparar.
+                  */}
+                  <a
+                    href="/promocoes/comparar"
+                    className="text-brand underline underline-offset-2"
+                  >
+                    Comparar as ofertas
+                  </a>
+                  {resultado.gravacao.semAnuncio > 0 && (
+                    <>
+                      {" · "}
+                      <span className="num">
+                        {count(resultado.gravacao.semAnuncio)}
+                      </span>{" "}
+                      linhas de anúncios fora do catálogo ficaram só no histórico
+                    </>
+                  )}
+                </p>
+              </Panel>
+            )}
+
+            {resultado.erroGravacao && (
+              <Panel className="px-4 py-3 flex gap-2.5">
+                <Info className="w-4 h-4 text-down shrink-0 mt-px" strokeWidth={1.75} />
+                <p className="text-[12px] text-ink-2">
+                  O arquivo saiu, mas nada foi guardado: {resultado.erroGravacao}.
+                  Campanhas, Histórico e Comparar ofertas não vão mostrar esta
+                  rodada.
+                </p>
+              </Panel>
+            )}
 
             <Panel className="px-4 py-3 flex gap-2.5">
               <Info className="w-4 h-4 text-ink-3 shrink-0 mt-px" strokeWidth={1.75} />

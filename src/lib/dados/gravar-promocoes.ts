@@ -21,7 +21,8 @@ export type ResumoGravacao = {
   /** Linhas analisadas, com repetições — o registro completo. */
   itens: number;
   /** Decisões vigentes, uma por anúncio por campanha. */
-  decisoes: number;
+  /** Ofertas gravadas — várias por anúncio quando o canal propõe faixas. */
+  ofertas: number;
   semAnuncio: number;
 };
 
@@ -157,8 +158,6 @@ export async function gravarProcessamento({
   let semAnuncio = 0;
   const historico: Record<string, unknown>[] = [];
   const itens: Record<string, unknown>[] = [];
-  /** Uma decisão por (campanha, anúncio) — ver a escolha logo abaixo. */
-  const escolhidos = new Map<string, LinhaProcessada>();
 
   for (const l of linhas) {
     const anuncioId = anunciosPorCodigo.get(l.mlb.toUpperCase()) ?? null;
@@ -183,48 +182,28 @@ export async function gravarProcessamento({
       tags: l.tags,
     });
 
-    // `campanha_itens` exige anúncio cadastrado; o histórico aceita nulo.
-    // Item de anúncio que ainda não está no catálogo fica só no histórico.
+    /*
+     * `campanha_itens` exige anúncio cadastrado; o histórico aceita nulo.
+     * Item de anúncio que ainda não está no catálogo fica só no histórico.
+     */
     const campanhaId = porNome.get(l.campanha);
     if (!anuncioId || !campanhaId) continue;
 
     /*
-     * Um anúncio pode aparecer VÁRIAS vezes na mesma campanha: a planilha
-     * de redução de tarifa traz uma linha por faixa de desconto oferecida
-     * pelo canal — 549 linhas para 266 anúncios no arquivo de agosto.
+     * TODAS as ofertas do anúncio entram, não uma por anúncio.
      *
-     * O histórico guarda todas, porque é o registro do que foi analisado.
-     * `campanha_itens` guarda a decisão vigente, uma por anúncio, e é isso
-     * que a chave única (campanha, anúncio) exige. Sem escolher aqui, a
-     * gravação inteira falhava com violação de chave — e o arquivo já
-     * gerado não chegava a ser mostrado.
-     *
-     * Entre ofertas repetidas fica a de MAIOR preço: das faixas que o canal
-     * propõe, é a que menos corta a margem. Aprovada ganha de reprovada
-     * independente do preço — participar de uma faixa é o resultado que
-     * importa.
+     * O canal propõe várias faixas de desconto para o mesmo anúncio — o
+     * arquivo de 27/08 traz 549 linhas para 266 anúncios. Escolher uma
+     * aqui seria decidir pelo usuário qual proposta importa, e a decisão
+     * de entrar ou não sai justamente de comparar as faixas entre si.
      */
-    const chave = `${campanhaId}|${anuncioId}`;
-    const jaEscolhida = escolhidos.get(chave);
-    if (jaEscolhida) {
-      const melhoraDecisao = l.aprovado && !jaEscolhida.aprovado;
-      const mesmaDecisao = l.aprovado === jaEscolhida.aprovado;
-      // Sem preço ofertado conta como zero: qualquer oferta com número
-      // é preferível a uma que o canal deixou em branco.
-      const maisAlta = (l.precoOferta ?? 0) > (jaEscolhida.precoOferta ?? 0);
-      if (!melhoraDecisao && !(mesmaDecisao && maisAlta)) {
-        continue;
-      }
-    }
-    escolhidos.set(chave, l);
-  }
-
-  for (const [chave, l] of escolhidos) {
-    const [campanhaId, anuncioId] = chave.split("|");
     itens.push({
       operacao_id: OPERACAO,
+      processamento_id: processamentoId,
       campanha_id: campanhaId,
       anuncio_id: anuncioId,
+      arquivo: l.arquivo,
+      linha_planilha: l.linha,
       preco_tabela: l.precoTabela || null,
       preco_oferta: l.precoOferta,
       preco_sugerido: l.precoPropostoML,
@@ -234,23 +213,34 @@ export async function gravarProcessamento({
     });
   }
 
+  /*
+   * Apaga as ofertas anteriores das campanhas desta rodada antes de
+   * gravar as novas.
+   *
+   * Sem chave única não há nada impedindo duplicar, e a planilha nova é a
+   * verdade corrente sobre o que o canal oferece — não um acréscimo. Sem
+   * isto, reprocessar o mesmo arquivo dobraria a lista de ofertas e a
+   * tela de comparação mostraria cada faixa duas vezes.
+   */
+  const idsCampanha = [...porNome.values()];
+  if (idsCampanha.length) {
+    const { error: erroLimpeza } = await sb
+      .from("campanha_itens")
+      .delete()
+      .in("campanha_id", idsCampanha);
+    if (erroLimpeza) {
+      throw erroDeVerdade(erroLimpeza, "ao limpar as ofertas anteriores");
+    }
+  }
+
   // As duas tabelas não dependem uma da outra: gravar em paralelo corta o
   // tempo pela metade sem risco de ordem.
   const gravacoes = [
     ...Array.from({ length: Math.ceil(historico.length / 400) }, (_, i) =>
       sb.from("historico_promocoes").insert(historico.slice(i * 400, (i + 1) * 400))
     ),
-    /*
-     * `upsert` e não `insert`: a mesma campanha é reprocessada quando o
-     * canal republica a planilha, e a decisão nova tem que substituir a
-     * antiga em vez de colidir com ela.
-     */
     ...Array.from({ length: Math.ceil(itens.length / 400) }, (_, i) =>
-      sb
-        .from("campanha_itens")
-        .upsert(itens.slice(i * 400, (i + 1) * 400), {
-          onConflict: "campanha_id,anuncio_id",
-        })
+      sb.from("campanha_itens").insert(itens.slice(i * 400, (i + 1) * 400))
     ),
   ];
   for (const { error } of await Promise.all(gravacoes)) {
@@ -261,7 +251,7 @@ export async function gravarProcessamento({
     processamentoId,
     campanhas: nomes.length,
     itens: historico.length,
-    decisoes: itens.length,
+    ofertas: itens.length,
     semAnuncio,
   };
 }
