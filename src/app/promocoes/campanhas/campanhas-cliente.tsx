@@ -7,8 +7,9 @@ import { Segmented } from "@/components/ui/controls";
 import { SemFonte } from "@/components/ui/sem-fonte";
 import { money, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { DadosPromocoes } from "@/lib/dados/promocoes";
-import { Search } from "lucide-react";
+import type { DadosPromocoes, CampanhaResumo } from "@/lib/dados/promocoes";
+import { Search, Trash2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 /**
  * Campanhas, montadas do que foi processado.
@@ -27,6 +28,45 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
   const [reducao, setReducao] = React.useState("todas");
   const [de, setDe] = React.useState("");
   const [ate, setAte] = React.useState("");
+
+  /*
+   * A confirmação é um passo separado, e não um `confirm()` do navegador,
+   * porque o que se apaga não cabe numa frase: são as ofertas, o histórico
+   * e possivelmente a rodada de processamento. Quem confirma precisa ver
+   * os números antes, senão está clicando "ok" no escuro.
+   */
+  const [aApagar, setAApagar] = React.useState<CampanhaResumo | null>(null);
+  const [apagando, setApagando] = React.useState(false);
+  const [erro, setErro] = React.useState<string | null>(null);
+  const router = useRouter();
+
+  async function apagar(c: CampanhaResumo) {
+    setApagando(true);
+    setErro(null);
+    try {
+      const r = await fetch("/api/promocoes/limpar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ campanhaId: c.id }),
+      });
+      // Lê como texto antes: uma página de erro da hospedagem não é JSON,
+      // e `r.json()` estouraria escondendo o status que explica tudo.
+      const bruto = await r.text();
+      let dados: { erro?: string } = {};
+      try {
+        dados = JSON.parse(bruto);
+      } catch {
+        throw new Error(`o servidor respondeu ${r.status} sem JSON`);
+      }
+      if (!r.ok) throw new Error(dados.erro ?? `erro ${r.status}`);
+      setAApagar(null);
+      router.refresh();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "não deu para apagar");
+    } finally {
+      setApagando(false);
+    }
+  }
 
   const linhas = React.useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -145,6 +185,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                     <span className="label">Adesão</span>
                   </th>
                   <th className="text-right px-3 py-2"><span className="label">Processada em</span></th>
+                  <th className="px-3 py-2 w-8"></th>
                 </tr>
               </thead>
               <tbody>
@@ -198,6 +239,15 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                           ? c.ultimoProcessamento.split("-").reverse().join("/")
                           : "—"}
                       </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          onClick={() => { setAApagar(c); setErro(null); }}
+                          title="Apagar esta campanha e seu histórico"
+                          className="p-1 rounded-r1 text-ink-3 hover:text-down hover:bg-panel-3"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -205,6 +255,16 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
             </table>
           </div>
         </Panel>
+
+        {aApagar && (
+          <ConfirmarApagar
+            campanha={aApagar}
+            apagando={apagando}
+            erro={erro}
+            onCancelar={() => setAApagar(null)}
+            onConfirmar={() => apagar(aApagar)}
+          />
+        )}
 
         {/*
           Itens que ficaram de fora por pouco. É a lista acionável da tela:
@@ -247,5 +307,94 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
         </Panel>
       </PageBody>
     </>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────── */
+
+/**
+ * Confirmação de exclusão.
+ *
+ * Mostra os números antes de perguntar. "Tem certeza?" sem dizer o que
+ * sai é uma pergunta que não dá para responder — e aqui o que sai são
+ * três coisas diferentes: as ofertas, as linhas de histórico e, quando
+ * ninguém mais depende dela, a rodada de processamento.
+ *
+ * O nome da campanha vem inteiro, com o período. Duas campanhas do mesmo
+ * arquivo em datas diferentes só se distinguem por ele.
+ */
+function ConfirmarApagar({
+  campanha,
+  apagando,
+  erro,
+  onCancelar,
+  onConfirmar,
+}: {
+  campanha: CampanhaResumo;
+  apagando: boolean;
+  erro: string | null;
+  onCancelar: () => void;
+  onConfirmar: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onCancelar}
+    >
+      <div
+        className="w-full max-w-md rounded-r2 bg-panel border border-line shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-line">
+          <p className="text-[13px] font-semibold text-ink">Apagar esta campanha?</p>
+        </div>
+
+        <div className="px-4 py-3 space-y-3">
+          <p className="text-[12.5px] text-ink-2 break-words">{campanha.nome}</p>
+
+          <ul className="text-[12.5px] text-ink-2 space-y-1">
+            <li>
+              <span className="num text-ink">{count(campanha.itens)}</span> linhas de
+              histórico e suas ofertas
+            </li>
+            <li>
+              a rodada de processamento, se nenhuma outra campanha depender dela
+            </li>
+          </ul>
+
+          <p className="text-[11.5px] text-ink-3 leading-relaxed">
+            Não tem como desfazer. Para recuperar, processe a planilha de novo — e
+            é exatamente para isso que este botão existe: voltar ao ponto de
+            partida antes de reanalisar.
+          </p>
+
+          {erro && (
+            <p className="text-[12px] text-down bg-down-wash rounded-r1 px-2.5 py-2">
+              {erro}
+            </p>
+          )}
+        </div>
+
+        <div className="px-4 py-3 border-t border-line flex justify-end gap-2">
+          <button
+            onClick={onCancelar}
+            disabled={apagando}
+            className="h-7 px-3 rounded-r1 border border-line-2 text-[12.5px] text-ink-2
+                       hover:bg-panel-2 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirmar}
+            disabled={apagando}
+            className="h-7 px-3 rounded-r1 bg-down text-white text-[12.5px] font-medium
+                       inline-flex items-center gap-1.5 disabled:opacity-60"
+          >
+            {apagando && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {apagando ? "Apagando" : "Apagar"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

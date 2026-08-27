@@ -45,6 +45,31 @@ function arquivos(dir) {
 const RE_FROM = /\.from\(\s*["'`]([a-z_]+)["'`]\s*\)/g;
 const RE_LITERAL = /["'`]([^"'`]*)["'`]/g;
 
+/*
+ * Só o PRIMEIRO argumento do select é a lista de colunas. O segundo é o
+ * objeto de opções — `{ count: "exact", head: true }` — e juntar os
+ * literais dos dois formava "idexact", acusando duas consultas boas.
+ *
+ * O corte é na primeira vírgula de nível zero, ignorando as que estão
+ * dentro da própria lista de colunas.
+ */
+function primeiroArgumento(arg) {
+  let nivel = 0;
+  let aspas = null;
+  for (let i = 0; i < arg.length; i++) {
+    const c = arg[i];
+    if (aspas) {
+      if (c === aspas && arg[i - 1] !== "\\") aspas = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") { aspas = c; continue; }
+    if (c === "(" || c === "{" || c === "[") nivel++;
+    else if (c === ")" || c === "}" || c === "]") nivel--;
+    else if (c === "," && nivel === 0) return arg.slice(0, i);
+  }
+  return arg;
+}
+
 function selects(texto) {
   const saida = [];
   for (const m of texto.matchAll(RE_FROM)) {
@@ -73,7 +98,7 @@ function selects(texto) {
     }
     if (fim < 0) continue;
 
-    const arg = resto.slice(sel + ".select(".length, fim);
+    const arg = primeiroArgumento(resto.slice(sel + ".select(".length, fim));
     // Com interpolação não dá para saber as colunas sem executar.
     if (arg.includes("${")) continue;
 
