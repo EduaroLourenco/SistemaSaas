@@ -259,6 +259,9 @@ function LinhaAnuncio({
             preserva a margem naquela comissão — muda de faixa para faixa.{" "}
             <strong className="text-ink-2">Piso</strong> é tabela − 5%, o menor
             preço ofertável; com desconto extra ele desce de propósito.{" "}
+            <strong className="text-ink-2">Redução</strong> é a fatia da tarifa
+            que o canal abate nesta faixa — é ela que muda a comissão e, com
+            isso, o preço de tabela da linha.{" "}
             {a.ofertas.some((o) => !o.temReducao) && (
               <>
                 Nas campanhas <em>sem redução de tarifa</em> o preço do canal é
@@ -274,6 +277,9 @@ function LinhaAnuncio({
                 <tr className="border-b border-line">
                   <th className="text-left px-2 py-1.5 min-w-[200px]">
                     <span className="label">Campanha</span>
+                  </th>
+                  <th className="text-right px-2 py-1.5">
+                    <span className="label">Redução</span>
                   </th>
                   <th className="text-right px-2 py-1.5">
                     <span className="label">Canal pediu</span>
@@ -387,6 +393,34 @@ function LinhaOferta({
         base, e é aí que a diferença conta: o canal pediu R$ 2.235,35 e
         publicamos R$ 1.314,42. Mostrar um só escondia essa folga.
       */}
+      {/*
+        A redução é o que separa duas ofertas do mesmo anúncio: comissão
+        menor, preço de tabela menor. Sem ela, tabelas diferentes na mesma
+        linha de produto parecem inconsistência.
+
+        O percentual vem primeiro porque é assim que o canal comunica —
+        "reduzi 5% da sua tarifa"; os reais ficam embaixo, para conferir.
+      */}
+      <td className="px-2 py-1.5 text-right num">
+        {o.reducaoPercentual == null ? (
+          <span className="text-ink-3">—</span>
+        ) : (
+          <>
+            <span className="text-ink">
+              {o.reducaoPercentual.toLocaleString("pt-BR", {
+                maximumFractionDigits: 1,
+              })}
+              %
+            </span>
+            {o.reducaoTarifa != null && (
+              <span className="block text-[10.5px] text-ink-3">
+                {money(o.reducaoTarifa)}
+              </span>
+            )}
+          </>
+        )}
+      </td>
+
       <td className="px-2 py-1.5 text-right num text-ink-3">
         {o.precoCanal != null ? money(o.precoCanal) : "—"}
       </td>

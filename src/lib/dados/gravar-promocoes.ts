@@ -204,6 +204,9 @@ export async function gravarProcessamento({
       anuncio_id: anuncioId,
       arquivo: l.arquivo,
       linha_planilha: l.linha,
+      // Vem como texto da planilha: número nas campanhas com redução,
+      // "Não" nas outras. Só o número interessa aqui.
+      reducao_tarifa: Number(l.reducaoTarifa) || null,
       preco_tabela: l.precoTabela || null,
       preco_oferta: l.precoOferta,
       preco_sugerido: l.precoPropostoML,

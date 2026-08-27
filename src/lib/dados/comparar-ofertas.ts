@@ -65,6 +65,20 @@ export type Oferta = {
   pisoEfetivo: number | null;
   /** Desconto extra da rodada, quando pesou nesta oferta. */
   descontoExtra: number | null;
+  /** Quanto o canal abate da tarifa nesta oferta, em reais. */
+  reducaoTarifa: number | null;
+  /**
+   * A mesma redução como fatia do preço proposto.
+   *
+   * É o número que o canal comunica — "reduzi 5% da sua tarifa" — e o que
+   * explica por que duas ofertas do mesmo anúncio têm tabelas diferentes:
+   * comissão menor, preço de tabela menor.
+   *
+   * Calculado na leitura e não guardado: depende do preço proposto, e
+   * congelar a divisão deixaria o percentual desalinhado se o preço fosse
+   * corrigido.
+   */
+  reducaoPercentual: number | null;
   participa: boolean;
   motivo: string | null;
   arquivo: string | null;
@@ -103,8 +117,8 @@ export type DadosComparacao = {
   /** Nenhuma planilha processada ainda. */
   vazio: boolean;
   /**
-   * O banco ainda não tem as colunas da migração 09 — a tela não pode
-   * mostrar de onde cada oferta veio.
+   * O banco ainda não tem as colunas das migrações 09 e 11 — a tela não
+   * pode mostrar a origem de cada oferta nem a redução de tarifa.
    */
   semOrigem: boolean;
 };
@@ -118,20 +132,29 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
   const sb = await clienteServidor();
 
   /*
-   * `arquivo` e `linha_planilha` só existem depois da migração 09. Pedir
-   * uma coluna que não existe faz o PostgREST recusar a consulta INTEIRA
-   * com 42703 — a tela ficaria em branco em vez de mostrar o que já dá.
-   * Então tenta com as colunas novas e cai para o conjunto antigo.
+   * `arquivo` e `linha_planilha` vêm da migração 09; `reducao_tarifa` da
+   * 11. Pedir uma coluna que não existe faz o PostgREST recusar a consulta
+   * INTEIRA com 42703 — a tela ficaria em branco em vez de mostrar o que
+   * já dá. Então tenta com as colunas novas e cai para o conjunto antigo.
    */
   const camposBase =
-    "id,campanha_id,anuncio_id,processamento_id,preco_tabela,preco_oferta,preco_sugerido,decisao,motivo";
+    "id,campanha_id,anuncio_id,processamento_id,preco_tabela,preco_oferta," +
+    "preco_sugerido,decisao,motivo";
+
+  /*
+   * Colunas que só existem depois das migrações 09 e 11. Ficam juntas no
+   * grupo opcional de propósito: se `reducao_tarifa` entrasse no conjunto
+   * base, o desvio para o conjunto antigo pediria uma coluna inexistente
+   * do mesmo jeito e a tela quebraria em vez de degradar.
+   */
+  const camposNovos = "arquivo,linha_planilha,reducao_tarifa";
 
   let semOrigem = false;
   let itens: Record<string, unknown>[];
 
   try {
     itens = await paginar(() =>
-      sb.from("campanha_itens").select(`${camposBase},arquivo,linha_planilha`)
+      sb.from("campanha_itens").select(`${camposBase},${camposNovos}`)
     );
   } catch (e) {
     /*
@@ -189,6 +212,7 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     preco_tabela: string | null;
     preco_oferta: string | null;
     preco_sugerido: string | null;
+    reducao_tarifa?: string | null;
     decisao: string;
     motivo: string | null;
     arquivo?: string | null;
@@ -207,6 +231,9 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     const precoOferta = n(i.preco_oferta);
     const precoPiso =
       precoTabela != null ? Math.round(precoTabela * PISO * 100) / 100 : null;
+
+    const precoCanal = n(i.preco_sugerido);
+    const reducao = n(i.reducao_tarifa);
 
     const temReducao = campanha?.tem_reducao_tarifa ?? false;
     const extra = temReducao
@@ -238,12 +265,17 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
       campanhaId: i.campanha_id,
       campanha: campanha?.nome ?? "—",
       temReducao,
-      precoCanal: n(i.preco_sugerido),
+      precoCanal,
       precoOferta,
       precoTabela,
       precoPiso,
       pisoEfetivo,
       descontoExtra: extra > 0 ? extra : null,
+      reducaoTarifa: reducao,
+      reducaoPercentual:
+        reducao != null && precoCanal
+          ? Math.round((reducao / precoCanal) * 1000) / 10
+          : null,
       participa: i.decisao === "participar",
       motivo: i.motivo,
       arquivo: i.arquivo ?? null,
