@@ -113,11 +113,19 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
 
   const [campanhas, anuncios] = await Promise.all([
     paginar(() => sb.from("campanhas").select("id,nome,tem_reducao_tarifa")),
-    paginar(() => sb.from("anuncios").select("id,codigo_externo,sku,titulo")),
+    paginar(() => sb.from("anuncios").select("id,codigo_externo,sku_canal,titulo")),
   ]);
 
   type LinhaCampanha = { id: string; nome: string; tem_reducao_tarifa: boolean };
-  type LinhaAnuncio = { id: string; codigo_externo: string; sku: string | null; titulo: string | null };
+  // `sku_canal`, não `sku`: é o SKU como o canal o escreve. Pedir a
+  // coluna errada faz o PostgREST recusar a consulta inteira com 42703, e
+  // o render do servidor morre com um erro que produção não mostra.
+  type LinhaAnuncio = {
+    id: string;
+    codigo_externo: string;
+    sku_canal: string | null;
+    titulo: string | null;
+  };
 
   const porCampanha = new Map(
     (campanhas as LinhaCampanha[]).map((c) => [c.id, c])
@@ -156,7 +164,7 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
       ({
         anuncioId: i.anuncio_id,
         mlb: anuncio.codigo_externo,
-        sku: anuncio.sku ?? "",
+        sku: anuncio.sku_canal ?? "",
         titulo: anuncio.titulo ?? "",
         // O preço de tabela vem por linha, mas é do anúncio: fica o
         // primeiro que aparecer com valor.

@@ -203,29 +203,17 @@ try {
     }
   });
 
-  // Mesma escolha da aplicação: uma decisão por (campanha, anúncio).
-  const escolhidos = new Map();
-  for (const l of linhas) {
-    const anuncioId = porCodigo.get(l.mlb.toUpperCase());
-    const campanhaId = porNome.get(l.campanha);
-    if (!anuncioId || !campanhaId) continue;
-    const chave = `${campanhaId}|${anuncioId}`;
-    const ja = escolhidos.get(chave);
-    if (ja) {
-      const melhora = l.aprovado && !ja.aprovado;
-      const igual = l.aprovado === ja.aprovado;
-      const maisAlta = (l.precoOferta ?? 0) > (ja.precoOferta ?? 0);
-      if (!melhora && !(igual && maisAlta)) continue;
-    }
-    escolhidos.set(chave, l);
-  }
-
-  const itens = [...escolhidos.entries()]
-    .map(([chave, l]) => ({
-      _chave: chave,
+  // TODAS as ofertas, como a aplicação faz: o canal propõe várias faixas
+  // por anúncio e a comparação entre elas é o ponto.
+  const itens = linhas
+    .filter((l) => porCodigo.get(l.mlb.toUpperCase()) && porNome.get(l.campanha))
+    .map((l) => ({
       operacao_id: OPERACAO,
-      campanha_id: chave.split("|")[0],
-      anuncio_id: chave.split("|")[1],
+      processamento_id: procId,
+      campanha_id: porNome.get(l.campanha),
+      anuncio_id: porCodigo.get(l.mlb.toUpperCase()),
+      arquivo: l.arquivo,
+      linha_planilha: l.linha,
       preco_tabela: l.precoTabela || null,
       preco_oferta: l.precoOferta,
       preco_sugerido: l.precoPropostoML,
@@ -236,12 +224,10 @@ try {
 
   await etapa(`gravar ${itens.length} itens de campanha`, async () => {
     for (let i = 0; i < itens.length; i += 400) {
-      await api("/campanha_itens?on_conflict=campanha_id,anuncio_id", {
+      await api("/campanha_itens", {
         method: "POST",
-        headers: { Prefer: "return=minimal,resolution=merge-duplicates" },
-        body: JSON.stringify(
-          itens.slice(i, i + 400).map(({ _chave, ...resto }) => resto)
-        ),
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(itens.slice(i, i + 400)),
       });
     }
   });
@@ -250,9 +236,22 @@ try {
 } finally {
   if (procId) {
     process.stdout.write("\nlimpando o teste ... ");
+
+    /*
+     * As ofertas saem PRIMEIRO, e pelo processamento — não pela campanha.
+     *
+     * `processamento_id` é `on delete set null`: apagar o processamento
+     * antes deixa as ofertas vivas com o vínculo nulo, e elas somem do
+     * rastro sem sumir do banco. Foi assim que uma rodada de teste deixou
+     * 836 linhas órfãs penduradas nas campanhas reais, dobrando o que a
+     * tela de comparação mostrava.
+     *
+     * Por campanha também não bastava: quando a campanha já existia, ela
+     * não entrava em `campanhasCriadas` e as ofertas ficavam.
+     */
+    await api(`/campanha_itens?processamento_id=eq.${procId}`, { method: "DELETE" });
     await api(`/historico_promocoes?processamento_id=eq.${procId}`, { method: "DELETE" });
     for (const id of campanhasCriadas) {
-      await api(`/campanha_itens?campanha_id=eq.${id}`, { method: "DELETE" });
       await api(`/campanhas?id=eq.${id}`, { method: "DELETE" });
     }
     await api(`/processamentos_promocao?id=eq.${procId}`, { method: "DELETE" });
