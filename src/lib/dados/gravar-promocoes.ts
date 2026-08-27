@@ -116,20 +116,30 @@ export async function gravarProcessamento({
   const codigos = [...new Set(linhas.map((l) => l.mlb.toUpperCase()))];
   const anunciosPorCodigo = new Map<string, string>();
 
-  // Em lotes: uma cláusula `in` com centenas de códigos estoura a URL.
-  for (let i = 0; i < codigos.length; i += 200) {
-    const { data } = await sb
-      .from("anuncios")
-      .select("id,codigo_externo")
-      .in("codigo_externo", codigos.slice(i, i + 200));
+  /*
+   * Em lotes porque uma cláusula `in` com centenas de códigos estoura o
+   * tamanho da URL — e em PARALELO porque a aplicação roda nos Estados
+   * Unidos e o banco em São Paulo. Cada ida e volta custa mais de cem
+   * milissegundos, e em série isso se acumula até a função estourar o
+   * tempo limite.
+   */
+  const lotes = await Promise.all(
+    Array.from({ length: Math.ceil(codigos.length / 200) }, (_, i) =>
+      sb
+        .from("anuncios")
+        .select("id,codigo_externo")
+        .in("codigo_externo", codigos.slice(i * 200, (i + 1) * 200))
+    )
+  );
+  for (const { data } of lotes) {
     for (const a of data ?? []) {
       anunciosPorCodigo.set(String(a.codigo_externo).toUpperCase(), a.id as string);
     }
   }
 
   let semAnuncio = 0;
-  const historico = [];
-  const itens = [];
+  const historico: Record<string, unknown>[] = [];
+  const itens: Record<string, unknown>[] = [];
 
   for (const l of linhas) {
     const anuncioId = anunciosPorCodigo.get(l.mlb.toUpperCase()) ?? null;
@@ -172,15 +182,17 @@ export async function gravarProcessamento({
     }
   }
 
-  for (let i = 0; i < historico.length; i += 400) {
-    const { error } = await sb
-      .from("historico_promocoes")
-      .insert(historico.slice(i, i + 400));
-    if (error) throw error;
-  }
-
-  for (let i = 0; i < itens.length; i += 400) {
-    const { error } = await sb.from("campanha_itens").insert(itens.slice(i, i + 400));
+  // As duas tabelas não dependem uma da outra: gravar em paralelo corta o
+  // tempo pela metade sem risco de ordem.
+  const gravacoes = [
+    ...Array.from({ length: Math.ceil(historico.length / 400) }, (_, i) =>
+      sb.from("historico_promocoes").insert(historico.slice(i * 400, (i + 1) * 400))
+    ),
+    ...Array.from({ length: Math.ceil(itens.length / 400) }, (_, i) =>
+      sb.from("campanha_itens").insert(itens.slice(i * 400, (i + 1) * 400))
+    ),
+  ];
+  for (const { error } of await Promise.all(gravacoes)) {
     if (error) throw error;
   }
 

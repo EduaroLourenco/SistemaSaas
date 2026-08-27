@@ -151,17 +151,40 @@ export default function ProcessarPromocoes() {
 
     try {
       const r = await fetch("/api/promocoes/processar", { method: "POST", body: fd });
-      const json = await r.json();
 
-      if (!r.ok) {
-        setErro(json.erro ?? "Falha ao processar.");
+      /*
+       * Lê como TEXTO antes de tentar JSON.
+       *
+       * Quando a função estoura tempo ou memória, a Vercel devolve uma
+       * página de erro em HTML. `r.json()` estourava ali e caía no catch
+       * genérico — a tela dizia "não consegui falar com o servidor" e o
+       * motivo real ficava invisível. Agora o status e o começo da
+       * resposta aparecem, que é o que permite consertar.
+       */
+      const bruto = await r.text();
+      let json: { erro?: string } & Record<string, unknown>;
+      try {
+        json = JSON.parse(bruto);
+      } catch {
+        setErro(
+          `O servidor respondeu ${r.status} sem JSON. ` +
+            (r.status === 504
+              ? "Estourou o tempo limite — tente com menos planilhas de uma vez."
+              : bruto.slice(0, 160).replace(/<[^>]+>/g, " ").trim())
+        );
         return;
       }
 
-      setResultado(json as Resultado);
+      if (!r.ok) {
+        setErro(json.erro ?? `Falha ao processar (HTTP ${r.status}).`);
+        return;
+      }
+
+      setResultado(json as unknown as Resultado);
       setEtapa(2);
-    } catch {
-      setErro("Não consegui falar com o servidor. Tente de novo.");
+    } catch (e) {
+      const detalhe = e instanceof Error ? ` (${e.message})` : "";
+      setErro(`Não consegui falar com o servidor${detalhe}. Tente de novo.`);
     } finally {
       setProcessando(false);
     }
