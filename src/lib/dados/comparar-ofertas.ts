@@ -24,6 +24,19 @@ export type Oferta = {
   campanhaId: string;
   campanha: string;
   temReducao: boolean;
+  /**
+   * O preço que o CANAL propôs. Nas campanhas com redução de tarifa é o
+   * preço que vai valer; nas sem redução é só o pedido dele.
+   */
+  precoCanal: number | null;
+  /**
+   * O preço que vai de volta na planilha.
+   *
+   * Com redução: igual ao do canal — ali o preço é dele e a decisão é só
+   * entrar ou não. Sem redução: o sistema reescreve com o da Fórmula
+   * base, e os dois divergem. Mostrar só um dos dois escondia justamente
+   * o caso em que o canal pedia R$ 2.235,35 e nós publicamos R$ 1.314,42.
+   */
   precoOferta: number | null;
   /*
    * Tabela e piso são da OFERTA, não do anúncio.
@@ -39,14 +52,26 @@ export type Oferta = {
    */
   precoTabela: number | null;
   precoPiso: number | null;
-  precoSugerido: number | null;
+  /**
+   * O piso que vale de fato para esta oferta.
+   *
+   * O desconto extra existe para descer ABAIXO do piso de propósito — é a
+   * alavanca. Comparar com o piso cheio nesse caso acusava violação de
+   * uma regra que o próprio usuário mandou afrouxar.
+   *
+   * Só se aplica sem redução de tarifa: com redução o preço é do canal e
+   * não há preço nosso para descontar.
+   */
+  pisoEfetivo: number | null;
+  /** Desconto extra da rodada, quando pesou nesta oferta. */
+  descontoExtra: number | null;
   participa: boolean;
   motivo: string | null;
   arquivo: string | null;
   linhaPlanilha: number | null;
   /** Quanto a oferta corta do preço de tabela, em pontos percentuais. */
   descontoSobreTabela: number | null;
-  /** Distância até o piso: negativo fura a margem. */
+  /** Distância até o piso EFETIVO: negativo fura a margem de verdade. */
   folgaAtePiso: number | null;
 };
 
@@ -99,7 +124,7 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
    * Então tenta com as colunas novas e cai para o conjunto antigo.
    */
   const camposBase =
-    "id,campanha_id,anuncio_id,preco_tabela,preco_oferta,preco_sugerido,decisao,motivo";
+    "id,campanha_id,anuncio_id,processamento_id,preco_tabela,preco_oferta,preco_sugerido,decisao,motivo";
 
   let semOrigem = false;
   let itens: Record<string, unknown>[];
@@ -126,9 +151,11 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     return { anuncios: [], campanhasDisponiveis: [], vazio: true, semOrigem };
   }
 
-  const [campanhas, anuncios] = await Promise.all([
+  const [campanhas, anuncios, execucoes] = await Promise.all([
     paginar(() => sb.from("campanhas").select("id,nome,tem_reducao_tarifa")),
     paginar(() => sb.from("anuncios").select("id,codigo_externo,sku_canal,titulo")),
+    // O desconto extra é da RODADA, não da oferta — vem daqui.
+    paginar(() => sb.from("processamentos_promocao").select("id,desconto_extra")),
   ]);
 
   type LinhaCampanha = { id: string; nome: string; tem_reducao_tarifa: boolean };
@@ -148,6 +175,12 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
   const porAnuncio = new Map(
     (anuncios as LinhaAnuncio[]).map((a) => [a.id, a])
   );
+  const extraPorExecucao = new Map(
+    (execucoes as { id: string; desconto_extra: string | null }[]).map((e) => [
+      e.id,
+      Number(e.desconto_extra) || 0,
+    ])
+  );
 
   type LinhaItem = {
     id: string;
@@ -160,6 +193,7 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     motivo: string | null;
     arquivo?: string | null;
     linha_planilha?: number | null;
+    processamento_id?: string | null;
   };
 
   const agrupado = new Map<string, AnuncioComOfertas>();
@@ -173,6 +207,15 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     const precoOferta = n(i.preco_oferta);
     const precoPiso =
       precoTabela != null ? Math.round(precoTabela * PISO * 100) / 100 : null;
+
+    const temReducao = campanha?.tem_reducao_tarifa ?? false;
+    const extra = temReducao
+      ? 0
+      : (extraPorExecucao.get(i.processamento_id ?? "") ?? 0);
+    const pisoEfetivo =
+      precoPiso != null && extra > 0
+        ? Math.round(precoPiso * (1 - extra) * 100) / 100
+        : precoPiso;
 
     const grupo =
       agrupado.get(i.anuncio_id) ??
@@ -194,11 +237,13 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
       id: i.id,
       campanhaId: i.campanha_id,
       campanha: campanha?.nome ?? "—",
-      temReducao: campanha?.tem_reducao_tarifa ?? false,
+      temReducao,
+      precoCanal: n(i.preco_sugerido),
       precoOferta,
       precoTabela,
       precoPiso,
-      precoSugerido: n(i.preco_sugerido),
+      pisoEfetivo,
+      descontoExtra: extra > 0 ? extra : null,
       participa: i.decisao === "participar",
       motivo: i.motivo,
       arquivo: i.arquivo ?? null,
@@ -208,8 +253,8 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
           ? Math.round(((precoTabela - precoOferta) / precoTabela) * 1000) / 10
           : null,
       folgaAtePiso:
-        precoPiso != null && precoOferta != null
-          ? Math.round((precoOferta - precoPiso) * 100) / 100
+        pisoEfetivo != null && precoOferta != null
+          ? Math.round((precoOferta - pisoEfetivo) * 100) / 100
           : null,
     });
 

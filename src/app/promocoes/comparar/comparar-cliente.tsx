@@ -249,6 +249,25 @@ function LinhaAnuncio({
 
       {aberto && (
         <div className="bg-panel-2 px-3 py-2.5 border-t border-line">
+          {/*
+            A legenda mora aqui, junto das linhas, e não num canto da tela.
+            Sem ela "vs piso" negativo com decisão "participa" parece
+            contradição — e é a primeira coisa que se pergunta ao abrir.
+          */}
+          <p className="mb-2 text-[11px] text-ink-3 leading-relaxed">
+            <strong className="text-ink-2">Tabela</strong> é o preço que
+            preserva a margem naquela comissão — muda de faixa para faixa.{" "}
+            <strong className="text-ink-2">Piso</strong> é tabela − 5%, o menor
+            preço ofertável; com desconto extra ele desce de propósito.{" "}
+            {a.ofertas.some((o) => !o.temReducao) && (
+              <>
+                Nas campanhas <em>sem redução de tarifa</em> o preço do canal é
+                só um pedido: o sistema reescreve com o da Fórmula base, e é por
+                isso que as duas primeiras colunas divergem.{" "}
+              </>
+            )}
+          </p>
+
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-[12.5px]">
               <thead>
@@ -257,7 +276,10 @@ function LinhaAnuncio({
                     <span className="label">Campanha</span>
                   </th>
                   <th className="text-right px-2 py-1.5">
-                    <span className="label">Proposta</span>
+                    <span className="label">Canal pediu</span>
+                  </th>
+                  <th className="text-right px-2 py-1.5">
+                    <span className="label">Nosso preço</span>
                   </th>
                   <th className="text-right px-2 py-1.5">
                     <span className="label">Tabela</span>
@@ -266,10 +288,10 @@ function LinhaAnuncio({
                     <span className="label">Piso</span>
                   </th>
                   <th className="text-right px-2 py-1.5">
-                    <span className="label">Desconto</span>
+                    <span className="label">vs tabela</span>
                   </th>
                   <th className="text-right px-2 py-1.5">
-                    <span className="label">Contra o piso</span>
+                    <span className="label">vs piso</span>
                   </th>
                   <th className="text-left px-2 py-1.5 min-w-[140px]">
                     <span className="label">Decisão</span>
@@ -359,6 +381,16 @@ function LinhaOferta({
         </span>
       </td>
 
+      {/*
+        Os dois preços, sempre. Com redução de tarifa eles coincidem — o
+        preço é do canal. Sem redução o sistema reescreve com o da Fórmula
+        base, e é aí que a diferença conta: o canal pediu R$ 2.235,35 e
+        publicamos R$ 1.314,42. Mostrar um só escondia essa folga.
+      */}
+      <td className="px-2 py-1.5 text-right num text-ink-3">
+        {o.precoCanal != null ? money(o.precoCanal) : "—"}
+      </td>
+
       <td className="px-2 py-1.5 text-right num text-ink">
         {o.precoOferta != null ? money(o.precoOferta) : "—"}
       </td>
@@ -368,7 +400,12 @@ function LinhaOferta({
       </td>
 
       <td className="px-2 py-1.5 text-right num text-ink-3">
-        {o.precoPiso != null ? money(o.precoPiso) : "—"}
+        {o.pisoEfetivo != null ? money(o.pisoEfetivo) : "—"}
+        {o.descontoExtra != null && (
+          <span className="block text-[10.5px] text-ink-3">
+            piso −{Math.round(o.descontoExtra * 100)}%
+          </span>
+        )}
       </td>
 
       <td className="px-2 py-1.5 text-right num text-ink-2">
