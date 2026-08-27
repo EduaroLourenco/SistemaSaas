@@ -3,211 +3,169 @@
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Badge } from "@/components/ui/primitives";
-import { Toggle, SectionTitle } from "@/components/ui/controls";
-import { DataTable, type Column } from "@/components/ui/data-table";
-import {
-  FORMATOS_EXPORTACAO as __FORMATOS_EXPORTACAO,
-  HISTORICO_EXPORTACOES as __HISTORICO_EXPORTACOES,
-  AGENDAMENTOS as __AGENDAMENTOS,
-  type Exportacao,
-} from "@/mock/relatorios";
-import { CalendarDays, Download, FileSpreadsheet, RotateCw } from "lucide-react";
+import { Download, Loader2, AlertCircle } from "lucide-react";
 
-import { zerar } from "@/mock/zerar";
-
-/*
- * Esta tela ainda não tem fonte de dados. Os números vêm zerados de
- * propósito: com a maior parte da plataforma já lendo o banco, número
- * de exemplo com cara de real é pior que campo vazio — não há como
- * saber, olhando, se aquilo é a operação ou é enfeite.
+/**
+ * Exportações.
  *
- * A estrutura fica — rótulos, canais, colunas — para mostrar o que a
- * tela vai exibir quando o dado chegar.
+ * A versão anterior tinha seis botões que não faziam nada e tamanhos
+ * escritos à mão no código ("~2,4 MB", "~480 KB"). Botão de download que
+ * não baixa é pior que a ausência dele: a pessoa clica, nada acontece, e
+ * fica sem saber se o problema é o arquivo ou a conexão.
+ *
+ * Agora cada botão chama /api/exportar e o arquivo vem montado do banco.
+ * Não há tamanho estimado porque o tamanho depende do que existe no
+ * período — número inventado num rótulo é do mesmo tipo que o resto que
+ * saiu do sistema.
  */
-const FORMATOS_EXPORTACAO = zerar(__FORMATOS_EXPORTACAO);
-const HISTORICO_EXPORTACOES = zerar(__HISTORICO_EXPORTACOES);
-const AGENDAMENTOS = zerar(__AGENDAMENTOS);
 
+type Formato = {
+  id: string;
+  titulo: string;
+  descricao: string;
+  extensao: "CSV" | "XLSX";
+};
 
-const STATUS_TOM = {
-  Concluída: "up",
-  Processando: "info",
-  Falhou: "down",
-} as const;
+const FORMATOS: Formato[] = [
+  {
+    id: "vendas_diarias",
+    titulo: "Lançamentos diários",
+    descricao:
+      "Uma linha por canal por dia, com visitas, receita, pedidos, mídia, cancelamentos, ticket, ACOS e ROAS.",
+    extensao: "CSV",
+  },
+  {
+    id: "consolidado_mensal",
+    titulo: "Consolidado mensal",
+    descricao:
+      "Uma linha por canal por mês, com ticket, conversão e TACOS já calculados.",
+    extensao: "CSV",
+  },
+  {
+    id: "desempenho_anuncios",
+    titulo: "Desempenho de anúncios",
+    descricao:
+      "Histórico semanal por anúncio: visitas, unidades, receita, preço pago, comissão real e conversão.",
+    extensao: "XLSX",
+  },
+  {
+    id: "historico_promocoes",
+    titulo: "Histórico de promoções",
+    descricao:
+      "Cada decisão com os quatro preços — ofertado pelo canal, tabela, piso e com desconto extra.",
+    extensao: "CSV",
+  },
+];
 
 export default function Exportacoes() {
-  const [agendamentos, setAgendamentos] = React.useState(AGENDAMENTOS);
+  const [baixando, setBaixando] = React.useState<string | null>(null);
+  const [erro, setErro] = React.useState<string | null>(null);
 
-  function alternar(id: string) {
-    setAgendamentos((a) =>
-      a.map((x) => (x.id === id ? { ...x, ativo: !x.ativo } : x))
-    );
+  async function exportar(formato: Formato) {
+    setBaixando(formato.id);
+    setErro(null);
+    try {
+      const r = await fetch(`/api/exportar?formato=${formato.id}`);
+      if (!r.ok) {
+        const corpo = await r.json().catch(() => ({}));
+        setErro(corpo.erro ?? `Falha ao gerar (HTTP ${r.status})`);
+        return;
+      }
+
+      /*
+       * O nome vem do cabeçalho do servidor, não montado aqui: assim o
+       * arquivo baixado e o que o servidor registrou têm o mesmo nome.
+       */
+      const cd = r.headers.get("content-disposition") ?? "";
+      const nome = cd.match(/filename="([^"]+)"/)?.[1] ?? `${formato.id}.csv`;
+
+      const blob = await r.blob();
+      if (blob.size === 0) {
+        setErro("O arquivo veio vazio — não há dados no período.");
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Sem revoke, cada download deixa o arquivo inteiro na memória da aba.
+      URL.revokeObjectURL(url);
+    } catch {
+      setErro("Sem conexão — nada foi baixado.");
+    } finally {
+      setBaixando(null);
+    }
   }
-
-  const colunas: Column<Exportacao>[] = [
-    {
-      key: "arquivo",
-      header: "Arquivo",
-      mobile: "title",
-      sticky: true,
-      width: "300px",
-      sortValue: (e) => e.arquivo,
-      cell: (e) => (
-        <span className="flex items-center gap-2.5 min-w-0">
-          <FileSpreadsheet
-            className="w-4 h-4 text-ink-3 shrink-0"
-            strokeWidth={1.75}
-          />
-          <span className="num text-ink truncate">{e.arquivo}</span>
-        </span>
-      ),
-    },
-    {
-      key: "tipo",
-      header: "Tipo",
-      mobile: "subtitle",
-      width: "200px",
-      sortValue: (e) => e.tipo,
-      cell: (e) => <span className="text-ink-2 truncate">{e.tipo}</span>,
-    },
-    {
-      key: "periodo",
-      header: "Período",
-      width: "190px",
-      sortValue: (e) => e.periodo,
-      cell: (e) => <span className="num text-ink-2 truncate">{e.periodo}</span>,
-    },
-    {
-      key: "geradoEm",
-      header: "Gerado em",
-      align: "right",
-      mobile: "metric",
-      width: "160px",
-      sortValue: (e) => e.geradoEm,
-      cell: (e) => <span className="num text-ink-3">{e.geradoEm}</span>,
-    },
-    {
-      key: "tamanho",
-      header: "Tamanho",
-      align: "right",
-      width: "110px",
-      sortValue: (e) => e.tamanho,
-      cell: (e) => <span className="num text-ink-2">{e.tamanho}</span>,
-    },
-    {
-      key: "status",
-      header: "Status",
-      mobile: "metric",
-      width: "120px",
-      sortValue: (e) => e.status,
-      cell: (e) => <Badge tone={STATUS_TOM[e.status]}>{e.status}</Badge>,
-    },
-    {
-      key: "acao",
-      header: "",
-      align: "right",
-      width: "110px",
-      cell: (e) => (
-        <Button size="sm" variant="ghost">
-          {e.status === "Falhou" ? (
-            <>
-              <RotateCw className="w-3.5 h-3.5" />
-              Tentar
-            </>
-          ) : (
-            <>
-              <Download className="w-3.5 h-3.5" />
-              Baixar
-            </>
-          )}
-        </Button>
-      ),
-    },
-  ];
 
   return (
     <>
       <PageHeader
         title="Exportações"
         breadcrumb="Relatórios"
-        description="Gere um arquivo agora ou deixe agendado"
+        description="Gere um arquivo com o que está no banco"
       />
 
       <PageBody>
-        <SectionTitle
-          title="Formatos disponíveis"
-          hint="O período segue o filtro global da barra superior."
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {FORMATOS_EXPORTACAO.map((f) => (
-            <div key={f.id} className="panel panel-1 flex flex-col">
-              <div className="px-4 pt-3.5 pb-3 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-[13px] font-semibold text-ink">{f.nome}</p>
-                  <Badge tone="neutral">{f.extensao}</Badge>
-                </div>
-                <p className="text-[12px] text-ink-3 mt-1.5 leading-relaxed">
-                  {f.descricao}
-                </p>
-              </div>
-              <div className="px-4 pb-3.5 pt-3 border-t border-line flex items-center justify-between gap-3">
-                <span className="num text-[11px] text-ink-3">{f.tamanho}</span>
-                <Button size="sm" variant="primary">
-                  <Download className="w-3.5 h-3.5" />
-                  Exportar
+        {erro && (
+          <Panel className="px-4 py-3 flex items-start gap-2.5 border-down/30">
+            <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
+            <p className="text-[12.5px] text-ink-2">{erro}</p>
+          </Panel>
+        )}
+
+        <Panel className="overflow-hidden">
+          <PanelHeader
+            title="Formatos disponíveis"
+            hint="o arquivo é montado na hora, com tudo que existe no banco"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-line">
+            {FORMATOS.map((f) => (
+              <div key={f.id} className="bg-panel p-4 flex flex-col gap-3">
+                <span>
+                  <span className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[13.5px] font-semibold text-ink">
+                      {f.titulo}
+                    </span>
+                    <Badge tone="neutral">{f.extensao}</Badge>
+                  </span>
+                  <p className="text-[12.5px] text-ink-2 leading-relaxed">
+                    {f.descricao}
+                  </p>
+                </span>
+                <Button
+                  variant="primary"
+                  className="self-start"
+                  onClick={() => exportar(f)}
+                  disabled={baixando !== null}
+                >
+                  {baixando === f.id ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Gerando
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5" />
+                      Exportar
+                    </>
+                  )}
                 </Button>
               </div>
-            </div>
-          ))}
-        </div>
-
-        <Panel className="overflow-hidden">
-          <PanelHeader
-            title="Exportações agendadas"
-            hint="rodam no servidor e chegam por e-mail"
-            action={
-              <span className="num text-[12px] text-ink-2">
-                {agendamentos.filter((a) => a.ativo).length} ativas
-              </span>
-            }
-          />
-          <ul className="divide-y divide-line">
-            {agendamentos.map((a) => (
-              <li key={a.id} className="px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-medium text-ink truncate">
-                      {a.titulo}
-                    </span>
-                    <span className="block text-[11px] text-ink-3 truncate">
-                      {a.descricao}
-                    </span>
-                    <span className="flex items-center gap-1.5 mt-1">
-                      <CalendarDays
-                        className="w-3 h-3 text-ink-3 shrink-0"
-                        strokeWidth={2}
-                      />
-                      <span className="num text-[11px] text-ink-3">{a.quando}</span>
-                    </span>
-                  </span>
-                  <Toggle checked={a.ativo} onChange={() => alternar(a.id)} />
-                </div>
-              </li>
             ))}
-          </ul>
+          </div>
         </Panel>
 
-        <Panel className="overflow-hidden">
-          <PanelHeader
-            title="Histórico"
-            hint="arquivos ficam disponíveis por 90 dias"
-          />
-          <DataTable
-            columns={colunas}
-            rows={HISTORICO_EXPORTACOES}
-            rowKey={(e) => e.id}
-            defaultSort={{ key: "geradoEm", dir: "desc" }}
-          />
+        <Panel className="px-4 py-3">
+          <p className="text-[12.5px] text-ink-2 leading-relaxed">
+            <span className="font-semibold text-ink">Exportação agendada: </span>
+            ainda não existe. Precisa de um processo rodando fora da requisição
+            e de envio de e-mail configurado — hoje o SMTP do projeto é o
+            compartilhado do Supabase, que não entrega de forma confiável.
+          </p>
         </Panel>
       </PageBody>
     </>
