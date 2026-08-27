@@ -87,11 +87,22 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     "id,campanha_id,anuncio_id,preco_tabela,preco_oferta,preco_sugerido,decisao,motivo";
 
   let semOrigem = false;
-  let itens = await paginar(() =>
-    sb.from("campanha_itens").select(`${camposBase},arquivo,linha_planilha`)
-  ).catch(() => null);
+  let itens: Record<string, unknown>[];
 
-  if (!itens) {
+  try {
+    itens = await paginar(() =>
+      sb.from("campanha_itens").select(`${camposBase},arquivo,linha_planilha`)
+    );
+  } catch (e) {
+    /*
+     * Só cai para o conjunto antigo quando a coluna REALMENTE não existe
+     * (42703). Engolir qualquer erro faria um tempo limite virar "sem
+     * origem" na tela — o problema sumiria de vista e a segunda tentativa,
+     * mais leve, poderia até passar, deixando um sintoma silencioso no
+     * lugar de um erro.
+     */
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!msg.includes("42703")) throw e;
     semOrigem = true;
     itens = await paginar(() => sb.from("campanha_itens").select(camposBase));
   }
