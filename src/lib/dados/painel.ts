@@ -37,6 +37,10 @@ export type DadosPainel = {
   /** Última data com movimento — o painel diz a que dia se refere. */
   ultimaData: string | null;
   vazio: boolean;
+  /** Períodos fora da análise. O painel precisa dizer que os aplicou. */
+  exclusoes: import("./exclusoes").Exclusao[];
+  removidas: number;
+  canaisDisponiveis: { id: string; nome: string }[];
 };
 
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
@@ -75,6 +79,9 @@ export async function carregarPainel(): Promise<DadosPainel> {
       quedas: [],
       ultimaData: null,
       vazio: true,
+      exclusoes: base.exclusoes,
+      removidas: base.removidas,
+      canaisDisponiveis: base.canaisDisponiveis,
     };
   }
 
@@ -240,6 +247,9 @@ export async function carregarPainel(): Promise<DadosPainel> {
     canaisInfo: base.canais,
     ultimaData,
     vazio: false,
+    exclusoes: base.exclusoes,
+    removidas: base.removidas,
+    canaisDisponiveis: base.canaisDisponiveis,
   };
 }
 

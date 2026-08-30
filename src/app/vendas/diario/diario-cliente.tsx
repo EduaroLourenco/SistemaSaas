@@ -4,6 +4,8 @@ import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Delta, Badge } from "@/components/ui/primitives";
 import { Select, Segmented } from "@/components/ui/controls";
+import { useRouter } from "next/navigation";
+import { PainelExclusoes } from "@/components/ui/exclusoes";
 import { SERIES, AXIS, GRID, ChartTooltip, Legend } from "@/components/ui/chart";
 import {
   COLUNAS_INICIAIS,
@@ -203,7 +205,20 @@ const ROTULOS_COLUNA = ["Coluna 1", "Coluna 2", "Coluna 3", "Coluna 4"];
 
 /* ══ Tela ════════════════════════════════════════════════════ */
 
-export default function ComparativoDiario({ dados }: { dados: DadosDiario }) {
+export default function ComparativoDiario({
+  dados,
+  canalAtual,
+}: {
+  dados: DadosDiario;
+  canalAtual: string;
+}) {
+  const router = useRouter();
+
+  function trocarCanal(id: string) {
+    const url = id ? `/vendas/diario?canal=${id}` : "/vendas/diario";
+    router.push(url);
+  }
+
   const PERIODOS = dados.periodos;
   const PERIODO_POR_ID = React.useMemo(
     () => Object.fromEntries(PERIODOS.map((p) => [p.id, p])) as Record<PeriodoId, Periodo>,
@@ -306,9 +321,34 @@ export default function ComparativoDiario({ dados }: { dados: DadosDiario }) {
             className="max-md:hidden"
           />
         }
+        filters={
+          <label className="flex items-center gap-2 shrink-0">
+            <span className="label">Canal</span>
+            <Select
+              value={canalAtual}
+              onChange={(e) => trocarCanal(e.target.value)}
+              aria-label="Filtrar por canal"
+            >
+              <option value="">Todos os canais</option>
+              {dados.canais.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </Select>
+          </label>
+        }
       />
 
       <PageBody>
+        <div className="mb-3">
+          <PainelExclusoes
+            exclusoes={dados.exclusoes}
+            canais={dados.canais}
+            removidas={dados.removidas}
+          />
+        </div>
+
         {/* ── seleção de períodos ───────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {ROTULOS_COLUNA.map((rotulo, i) => {

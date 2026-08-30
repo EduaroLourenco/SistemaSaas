@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { carregarExclusoes, aplicar, type Exclusao } from "./exclusoes";
 import type { SemanaVendas } from "@/mock/semanal";
 
 /**
@@ -70,12 +71,22 @@ export type BaseVendas = {
   ano: number;
   ultimaData: string | null;
   vazio: boolean;
+  /**
+   * Aplicadas aqui, e não em cada tela, de propósito: todas as telas de
+   * vendas leem desta função, então excluir num lugar só garante que
+   * semanal, anual, comparativos e painel contem a mesma coisa. Telas que
+   * discordam entre si sobre o mesmo período destroem a confiança mais
+   * rápido que qualquer número errado.
+   */
+  exclusoes: Exclusao[];
+  removidas: number;
+  canaisDisponiveis: { id: string; nome: string }[];
 };
 
 export async function carregarBaseVendas(): Promise<BaseVendas> {
   const sb = await clienteServidor();
 
-  const [dias, { data: contasBanco }] = await Promise.all([
+  const [dias, { data: contasBanco }, exclusoes] = await Promise.all([
     paginar(() =>
       sb
         .from("vendas_diarias")
@@ -88,6 +99,7 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
       .from("contas_canal")
       .select("id,nome,canal_id,canais(nome,cor_serie,ordem)")
       .limit(200),
+    carregarExclusoes(),
   ]);
 
   type Conta = {
@@ -146,8 +158,13 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
       })
   );
 
-  const linhas: LinhaVendaDia[] = dias.map((l) => {
-    const i = info.get(l.conta_canal_id as string);
+  // O id real do canal, para testar as exclusões. `canalId` da linha é um
+  // slug do nome, feito para agrupar na tela — não serve de chave.
+  const canalDaConta = new Map(contas.map((c) => [c.id, c.canal_id]));
+
+  const todas = dias.map((l) => {
+    const conta = l.conta_canal_id as string;
+    const i = info.get(conta);
     const nome = i?.nome ?? "Outros";
     return {
       data: l.data as string,
@@ -159,11 +176,41 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
       ads: n(l.investimento_ads),
       cancelado: n(l.valor_cancelado),
       pedidosCancelados: (l.pedidos_cancelados as number) ?? 0,
+      // Só para o teste de exclusão; não entram no tipo público.
+      _canalReal: canalDaConta.get(conta) ?? null,
+      _contaCanalId: conta,
     };
   });
 
+  const { mantidas, removidas } = aplicar(
+    todas.map((l) => ({ ...l, canalId: l._canalReal, contaCanalId: l._contaCanalId })),
+    exclusoes
+  );
+
+  // Devolve o `canalId` de tela (o slug), que é o que as telas agrupam por.
+  const linhas: LinhaVendaDia[] = mantidas.map((l) => ({
+    data: l.data,
+    canal: l.canal,
+    canalId: chaveCanal(l.canal),
+    receita: l.receita,
+    pedidos: l.pedidos,
+    visitas: l.visitas,
+    ads: l.ads,
+    cancelado: l.cancelado,
+    pedidosCancelados: l.pedidosCancelados,
+  }));
+
+  const canaisDisponiveis = [
+    ...new Map(
+      contas.map((c) => [c.canal_id, { id: c.canal_id, nome: c.canais?.nome ?? "Outros" }])
+    ).values(),
+  ].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
   if (!linhas.length) {
-    return { linhas: [], canais: [], ano: new Date().getFullYear(), ultimaData: null, vazio: true };
+    return {
+      linhas: [], canais: [], ano: new Date().getFullYear(), ultimaData: null,
+      vazio: true, exclusoes, removidas, canaisDisponiveis,
+    };
   }
 
   // Só contas com movimento entram nas telas. Listar conta cadastrada e
@@ -186,7 +233,10 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
     });
 
   const ultimaData = linhas[linhas.length - 1].data;
-  return { linhas, canais, ano: Number(ultimaData.slice(0, 4)), ultimaData, vazio: false };
+  return {
+    linhas, canais, ano: Number(ultimaData.slice(0, 4)), ultimaData,
+    vazio: false, exclusoes, removidas, canaisDisponiveis,
+  };
 }
 
 export type DadosSemanal = {

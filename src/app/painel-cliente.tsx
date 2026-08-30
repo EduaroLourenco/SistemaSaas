@@ -13,6 +13,7 @@ import { type Anuncio } from "@/mock";
 import type { DadosPainel } from "@/lib/dados/painel";
 import { recortar } from "@/lib/periodo";
 import { FilaRecomendacoes } from "@/components/painel/fila-recomendacoes";
+import { PainelExclusoes } from "@/components/ui/exclusoes";
 import { SkusEmQueda } from "@/components/painel/skus-em-queda";
 import { money, moneyShort, count, pct, shortDate } from "@/lib/format";
 import {
@@ -173,6 +174,12 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       <PageBody>
         {/* O que mudou e merece decisão — antes dos totais */}
         <FilaRecomendacoes itens={dados.recomendacoes} />
+
+        <PainelExclusoes
+          exclusoes={dados.exclusoes}
+          canais={dados.canaisDisponiveis}
+          removidas={dados.removidas}
+        />
 
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

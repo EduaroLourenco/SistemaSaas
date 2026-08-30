@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { carregarExclusoes, aplicar, type Exclusao } from "./exclusoes";
 import type { DiaPeriodo, Periodo, PeriodoId } from "@/mock/diario";
 
 /**
@@ -20,7 +21,13 @@ export type DadosDiario = {
   periodos: Periodo[];
   ultimaData: string | null;
   vazio: boolean;
+  /** Canais com movimento no recorte, para a tela montar o filtro. */
+  canais: { id: string; nome: string }[];
+  exclusoes: Exclusao[];
+  removidas: number;
 };
+
+export type Canal = { id: string; nome: string };
 
 type Linha = {
   data: string;
@@ -54,19 +61,55 @@ function ultimoDoMes(iso: string): string {
 
 const br = (iso: string) => iso.split("-").reverse().join("/");
 
-export async function carregarDiario(): Promise<DadosDiario> {
+/**
+ * @param canalId Filtra por canal. Sem ele, soma todos.
+ *
+ * O filtro roda no banco e não na tela: filtrar depois obrigaria a trazer
+ * todo o histórico de todos os canais para descartar quase tudo, e a
+ * consulta cresce com a operação enquanto a resposta não.
+ */
+export async function carregarDiario(canalId?: string): Promise<DadosDiario> {
   const sb = await clienteServidor();
-  const data = await paginar(() =>
-    sb
-      .from("vendas_diarias")
-      .select(
-        "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados"
-      )
-      .order("data", { ascending: true })
-  );
 
-  const linhas = data as unknown as Linha[];
-  if (!linhas.length) return { periodos: [], ultimaData: null, vazio: true };
+  // Os canais vêm sempre, mesmo com filtro ativo: senão, ao escolher um
+  // canal a lista encolheria para ele só e não haveria como voltar.
+  const { data: canaisRaw } = await sb
+    .from("canais")
+    .select("id, nome")
+    .eq("ativo", true)
+    .order("ordem");
+  const canais = (canaisRaw ?? []).map((c) => ({
+    id: c.id as string,
+    nome: c.nome as string,
+  }));
+
+  const [data, exclusoes] = await Promise.all([
+    paginar(() => {
+      let q = sb
+        .from("vendas_diarias")
+        // canal_id entra na projeção porque a exclusão pergunta por canal,
+        // não por conta.
+        .select(
+          "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados,canal_id,conta_canal_id"
+        )
+        .order("data", { ascending: true });
+      if (canalId) q = q.eq("canal_id", canalId);
+      return q;
+    }),
+    carregarExclusoes(),
+  ]);
+
+  const { mantidas, removidas } = aplicar(
+    (data as unknown as (Linha & { canal_id: string; conta_canal_id: string })[]).map((l) => ({
+      ...l,
+      canalId: l.canal_id,
+      contaCanalId: l.conta_canal_id,
+    })),
+    exclusoes
+  );
+  const linhas = mantidas as unknown as Linha[];
+  if (!linhas.length)
+    return { periodos: [], ultimaData: null, vazio: true, canais, exclusoes, removidas };
 
   /* Soma os canais de um mesmo dia: a tela é a operação inteira. */
   const porDia = new Map<string, DiaPeriodo>();
@@ -157,5 +200,5 @@ export async function carregarDiario(): Promise<DadosDiario> {
     ),
   ];
 
-  return { periodos, ultimaData: fim, vazio: false };
+  return { periodos, ultimaData: fim, vazio: false, canais, exclusoes, removidas };
 }

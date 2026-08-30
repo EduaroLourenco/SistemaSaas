@@ -8,6 +8,9 @@ import {
   FileBarChart,
   Plug,
   BookMarked,
+  Bell,
+  MessagesSquare,
+  Upload,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -28,6 +31,9 @@ export type NavGroup = {
 /** Estrutura de no máximo 2 níveis. */
 export const NAV: NavGroup[] = [
   { label: "Visão geral", icon: LayoutDashboard, href: "/" },
+  { label: "Conversar", icon: MessagesSquare, href: "/conversa" },
+  { label: "Alertas", icon: Bell, href: "/alertas" },
+  { label: "Importar", icon: Upload, href: "/importar" },
   {
     label: "Vendas",
     icon: TrendingUp,
@@ -37,6 +43,7 @@ export const NAV: NavGroup[] = [
       { label: "Semanal", href: "/vendas/semanal" },
       { label: "Diário", href: "/vendas/diario" },
       { label: "Comparativos", href: "/vendas/comparativos" },
+      { label: "Cancelamentos", href: "/vendas/cancelamentos" },
       { label: "Metas", href: "/vendas/metas" },
       { label: "Lançamentos", href: "/vendas/lancamentos" },
     ],
@@ -48,6 +55,7 @@ export const NAV: NavGroup[] = [
       { label: "Análise de anúncios", href: "/anuncios/analise" },
       { label: "Catálogo", href: "/anuncios/catalogo" },
       { label: "Preço ideal", href: "/anuncios/preco-ideal" },
+      { label: "Clássico vs Premium", href: "/anuncios/tipo" },
     ],
   },
   {
