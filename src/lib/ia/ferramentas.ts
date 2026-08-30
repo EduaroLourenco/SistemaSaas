@@ -50,7 +50,9 @@ export const FERRAMENTAS: Ferramenta[] = [
     name: "vendas_por_periodo",
     description:
       "Receita, pedidos, ticket médio e cancelamento em um intervalo, agrupados por dia, " +
-      "semana, mês ou canal. Use para tendência, comparação entre períodos e ranking de canal.",
+      "semana, mês, canal ou CONTA. Use 'conta' quando a pergunta separar as duas contas do " +
+      "Mercado Livre — São Paulo (pronta entrega) e a 2ª conta (venda a prazo), que vendem " +
+      "de formas diferentes. Use para tendência, comparação de períodos e ranking.",
     input_schema: {
       type: "object",
       properties: {
@@ -58,12 +60,18 @@ export const FERRAMENTAS: Ferramenta[] = [
         ate: { type: "string", description: "Data final, aaaa-mm-dd" },
         agrupar: {
           type: "string",
-          enum: ["dia", "semana", "mes", "canal"],
-          description: "Como agrupar o resultado",
+          enum: ["dia", "semana", "mes", "canal", "conta"],
+          description:
+            "Como agrupar. 'conta' separa as contas de vendedor dentro de cada canal.",
         },
         canal: {
           type: "string",
           description: "Nome do canal para filtrar. Omita para todos.",
+        },
+        conta: {
+          type: "string",
+          description:
+            "Nome da conta de vendedor para filtrar, ex.: 'São Paulo'. Aceita parte do nome.",
         },
       },
       required: ["de", "ate", "agrupar"],
@@ -115,14 +123,15 @@ export const FERRAMENTAS: Ferramenta[] = [
   {
     name: "cancelamentos",
     description:
-      "Cancelamento por canal ou por SKU num intervalo: quantidade, valor e taxa. " +
-      "Use quando a pergunta for sobre pedido cancelado, devolução ou faturamento que voltou.",
+      "Cancelamento por canal, por conta de vendedor ou por SKU num intervalo: quantidade, " +
+      "valor e taxa. Use quando a pergunta for sobre pedido cancelado, devolução ou " +
+      "faturamento que voltou.",
     input_schema: {
       type: "object",
       properties: {
         de: { type: "string", description: "Data inicial, aaaa-mm-dd" },
         ate: { type: "string", description: "Data final, aaaa-mm-dd" },
-        por: { type: "string", enum: ["canal", "sku"] },
+        por: { type: "string", enum: ["canal", "conta", "sku"] },
       },
       required: ["de", "ate"],
       additionalProperties: false,
@@ -227,9 +236,18 @@ async function contexto() {
     canais: [...porCanal.entries()]
       .map(([canal, qtd]) => ({ canal, pedidos: qtd }))
       .sort((a, b) => b.pedidos - a.pedidos),
-    contas_mercado_livre: contas
-      .filter((c) => c.canais?.nome === "Mercado Livre")
-      .map((c) => c.nome),
+    // Todas as contas, agrupadas por canal. Antes só as do Mercado Livre
+    // apareciam, e o modelo concluía — corretamente — que não havia como
+    // separar contas em canal nenhum.
+    contas_por_canal: [
+      ...contas.reduce((mapa, c) => {
+        const canal = c.canais?.nome ?? "Outros";
+        mapa.set(canal, [...(mapa.get(canal) ?? []), c.nome]);
+        return mapa;
+      }, new Map<string, string[]>()),
+    ]
+      .map(([canal, nomes]) => ({ canal, contas: nomes }))
+      .filter((x) => x.contas.length > 1 || x.canal === "Mercado Livre"),
     fora_da_analise: exclusoes.map((e) => ({
       de: e.dataInicio,
       ate: e.dataFim,
@@ -237,6 +255,8 @@ async function contexto() {
       motivo: e.motivo,
     })),
     aviso:
+      "Para separar as duas contas do Mercado Livre, use agrupar='conta' em " +
+      "vendas_por_periodo ou por='conta' em cancelamentos. " +
       "Visitas só existem para o Mercado Livre. Os demais canais não têm esse dado, " +
       "então conversão não é calculável para eles. Custo de produto não está cadastrado, " +
       "então margem não é calculável em canal nenhum.",
@@ -256,13 +276,18 @@ function chaveGrupo(data: string, agrupar: string): string {
 async function vendas(a: {
   de: string;
   ate: string;
-  agrupar: "dia" | "semana" | "mes" | "canal";
+  agrupar: "dia" | "semana" | "mes" | "canal" | "conta";
   canal?: string;
+  conta?: string;
 }) {
   const { pedidos, removidas } = await pedidosLimpos(a.de, a.ate);
-  const filtrados = a.canal
-    ? pedidos.filter((p) => p.canal.toLowerCase().includes(a.canal!.toLowerCase()))
-    : pedidos;
+
+  const contem = (alvo: string, busca?: string) =>
+    !busca || alvo.toLowerCase().includes(busca.toLowerCase());
+
+  const filtrados = pedidos.filter(
+    (p) => contem(p.canal, a.canal) && contem(p.conta, a.conta)
+  );
 
   type G = {
     chave: string;
@@ -274,8 +299,14 @@ async function vendas(a: {
   const grupos = new Map<string, G>();
 
   for (const p of filtrados) {
+    // Na visão por conta o rótulo leva o canal junto: várias contas se
+    // chamam "Conta principal", e sem o canal a linha não diz de quem é.
     const chave =
-      a.agrupar === "canal" ? p.canal : chaveGrupo(String(p.data).slice(0, 10), a.agrupar);
+      a.agrupar === "canal"
+        ? p.canal
+        : a.agrupar === "conta"
+        ? `${p.canal} · ${p.conta}`
+        : chaveGrupo(String(p.data).slice(0, 10), a.agrupar);
     const g =
       grupos.get(chave) ??
       { chave, pedidos: 0, receita: 0, cancelados: 0, valorCancelado: 0 };
@@ -298,7 +329,9 @@ async function vendas(a: {
       taxaCancelamento: g.receita ? r2((g.valorCancelado * 100) / g.receita) : 0,
     }))
     .sort((x, y) =>
-      a.agrupar === "canal" ? y.receita - x.receita : x.chave.localeCompare(y.chave)
+      a.agrupar === "canal" || a.agrupar === "conta"
+        ? y.receita - x.receita
+        : x.chave.localeCompare(y.chave)
     );
 
   return {
@@ -520,7 +553,11 @@ async function anuncios(a: {
   };
 }
 
-async function cancelamentos(a: { de: string; ate: string; por?: "canal" | "sku" }) {
+async function cancelamentos(a: {
+  de: string;
+  ate: string;
+  por?: "canal" | "conta" | "sku";
+}) {
   const { pedidos, sb } = await pedidosLimpos(a.de, a.ate);
 
   if (a.por === "sku") {
@@ -551,21 +588,27 @@ async function cancelamentos(a: { de: string; ate: string; por?: "canal" | "sku"
     };
   }
 
+  // Por conta o rótulo leva o canal junto: várias contas se chamam
+  // "Conta principal", e sem o canal a linha não diz de quem é.
+  const rotulo = (p: { canal: string; conta: string }) =>
+    a.por === "conta" ? `${p.canal} · ${p.conta}` : p.canal;
+
   const porCanal = new Map<
     string,
     { canal: string; pedidos: number; cancelados: number; receita: number; valorCancelado: number }
   >();
   for (const p of pedidos) {
+    const chave = rotulo(p);
     const g =
-      porCanal.get(p.canal) ??
-      { canal: p.canal, pedidos: 0, cancelados: 0, receita: 0, valorCancelado: 0 };
+      porCanal.get(chave) ??
+      { canal: chave, pedidos: 0, cancelados: 0, receita: 0, valorCancelado: 0 };
     g.pedidos += 1;
     g.receita += n(p.total);
     if (p.cancelado) {
       g.cancelados += 1;
       g.valorCancelado += n(p.total);
     }
-    porCanal.set(p.canal, g);
+    porCanal.set(chave, g);
   }
 
   return {
