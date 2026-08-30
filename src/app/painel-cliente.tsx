@@ -14,6 +14,7 @@ import type { DadosPainel } from "@/lib/dados/painel";
 import { recortar } from "@/lib/periodo";
 import { FilaRecomendacoes } from "@/components/painel/fila-recomendacoes";
 import { PainelExclusoes } from "@/components/ui/exclusoes";
+import { FontesDados } from "@/components/painel/fontes-dados";
 import { SkusEmQueda } from "@/components/painel/skus-em-queda";
 import { money, moneyShort, count, pct, shortDate } from "@/lib/format";
 import {
@@ -173,6 +174,10 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
 
       <PageBody>
         {/* O que mudou e merece decisão — antes dos totais */}
+        {/* Antes dos números: até onde o dado vai decide se dá para
+            confiar no que vem abaixo. */}
+        <FontesDados dados={dados.fontes} />
+
         <FilaRecomendacoes itens={dados.recomendacoes} />
 
         <PainelExclusoes

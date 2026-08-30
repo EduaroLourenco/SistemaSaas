@@ -3,6 +3,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { carregarBaseVendas, chaveCanal } from "./vendas";
 import { paginar } from "./paginar";
 import { carregarPainelNovo, type Recomendacao, type SkuEmQueda } from "./recomendacoes";
+import { carregarFontes } from "./fontes";
 import type { Kpi, DiaFaturamento, Canal, Anuncio } from "@/mock";
 
 /**
@@ -37,6 +38,8 @@ export type DadosPainel = {
   /** Última data com movimento — o painel diz a que dia se refere. */
   ultimaData: string | null;
   vazio: boolean;
+  /** Até quando cada fonte vai — a pergunta que vem antes dos números. */
+  fontes: import("./fontes").DadosFontes;
   /** Períodos fora da análise. O painel precisa dizer que os aplicou. */
   exclusoes: import("./exclusoes").Exclusao[];
   removidas: number;
@@ -79,6 +82,7 @@ export async function carregarPainel(): Promise<DadosPainel> {
       quedas: [],
       ultimaData: null,
       vazio: true,
+      fontes: await carregarFontes(),
       exclusoes: base.exclusoes,
       removidas: base.removidas,
       canaisDisponiveis: base.canaisDisponiveis,
@@ -231,7 +235,10 @@ export async function carregarPainel(): Promise<DadosPainel> {
   }
 
   const sb = await clienteServidor();
-  const novo = await carregarPainelNovo();
+  const [novo, fontes] = await Promise.all([
+    carregarPainelNovo(),
+    carregarFontes(),
+  ]);
 
   return {
     kpis,
@@ -247,6 +254,7 @@ export async function carregarPainel(): Promise<DadosPainel> {
     canaisInfo: base.canais,
     ultimaData,
     vazio: false,
+    fontes,
     exclusoes: base.exclusoes,
     removidas: base.removidas,
     canaisDisponiveis: base.canaisDisponiveis,
