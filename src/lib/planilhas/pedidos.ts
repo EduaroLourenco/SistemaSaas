@@ -22,6 +22,17 @@ export type ItemPedido = {
   titulo: string;
   quantidade: number;
   precoUnitario: number;
+  /**
+   * Frete e desconto DO ITEM, quando o hub os informa.
+   *
+   * Nulo não é zero. Nulo diz "este canal não conta por item" e manda a
+   * tela cair no rateio, avisando que é rateio; zero diz "não houve
+   * frete", que é um fato. Apagar essa diferença faria um item sem
+   * informação parecer um item sem custo — e frete grátis inventado
+   * estraga qualquer conta de margem.
+   */
+  frete: number | null;
+  desconto: number | null;
 };
 
 export type Pedido = {
@@ -71,7 +82,7 @@ const ACEITOS = [
 ];
 
 /** Item N: os sufixos aceitos dentro de cada bloco item_pedido_N_*. */
-const ITEM_ACEITOS = ["sku", "id_produto", "id_item_pedido_marketplace", "nome", "quantidade", "preco", "total"];
+const ITEM_ACEITOS = ["sku", "id_produto", "id_item_pedido_marketplace", "nome", "quantidade", "preco", "total", "frete", "desconto"];
 
 function texto(v: unknown): string {
   if (v == null) return "";
@@ -209,6 +220,14 @@ export async function lerPedidos(buffer: Buffer): Promise<LeituraPedidos> {
       // total do item para não perder a linha.
       const unit = numero(ler("preco")) || numero(ler("total")) / qtd;
 
+      // Preserva a ausência: `numero()` devolveria 0 para célula vazia, e
+      // aqui a diferença entre "sem frete" e "sem informação" importa.
+      const opcional = (campo: string): number | null => {
+        const v = ler(campo);
+        if (v === null || v === undefined || texto(v).trim() === "") return null;
+        return numero(v);
+      };
+
       itens.push({
         codigoExterno:
           texto(ler("id_item_pedido_marketplace")).trim() ||
@@ -218,6 +237,8 @@ export async function lerPedidos(buffer: Buffer): Promise<LeituraPedidos> {
         titulo: nome,
         quantidade: Math.round(qtd),
         precoUnitario: Number(unit.toFixed(2)),
+        frete: opcional("frete"),
+        desconto: opcional("desconto"),
       });
     }
 

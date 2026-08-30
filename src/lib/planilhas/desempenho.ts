@@ -32,12 +32,31 @@ const MESES = [
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
 
+const MES_RE = `(${MESES.join("|")})`;
+
+function paraIso(dia: string, nomeMes: string, ano: string): string | null {
+  const idx = MESES.indexOf(nomeMes.toLowerCase());
+  if (idx < 0) return null;
+  return `${ano}-${String(idx + 1).padStart(2, "0")}-${dia.padStart(2, "0")}`;
+}
+
 /**
- * Extrai as duas datas de "…de 17 de agosto de 2026 até 23 de agosto de 2026".
+ * Extrai o período da frase de cabeçalho do relatório.
  *
- * O banco guarda desempenho por semana ISO, então a frase precisa virar
- * data de verdade: sem isso não há como dizer a que semana a linha pertence,
- * nem impedir que o mesmo arquivo entre duas vezes.
+ * O Mercado Livre escreve de duas formas, e a diferença não é cosmética:
+ *
+ *   intervalo → "…de 17 de agosto de 2026 até 23 de agosto de 2026"
+ *   dia único → "…no dia 27 de agosto de 2026"
+ *
+ * A segunda é a do relatório diário, e era ignorada aqui: só o intervalo
+ * estava previsto. O efeito era silencioso e caro — todo relatório diário
+ * virava "Período Indefinido", e sem data as linhas se empilham num balde
+ * só. Quatro relatórios viram um borrão, e ninguém desconfia porque a
+ * importação não reclama de nada.
+ *
+ * No dia único, início e fim são a mesma data. A semana ISO sai dela, e a
+ * agregação semanal passa a ser soma de dias — que é como o dado
+ * realmente chega.
  */
 export function extrairIntervalo(texto: string): {
   inicio: string;
@@ -45,26 +64,37 @@ export function extrairIntervalo(texto: string): {
   anoIso: number;
   semanaIso: number;
 } | null {
-  const mes = `(${MESES.join("|")})`;
-  const re = new RegExp(
-    `de\\s+(\\d{1,2})\\s+de\\s+${mes}\\s+de\\s+(\\d{4})\\s+at[ée]\\s+(\\d{1,2})\\s+de\\s+${mes}\\s+de\\s+(\\d{4})`,
+  const intervalo = new RegExp(
+    `(\\d{1,2})\\s+de\\s+${MES_RE}\\s+de\\s+(\\d{4})\\s+at[ée]\\s+(\\d{1,2})\\s+de\\s+${MES_RE}\\s+de\\s+(\\d{4})`,
     "iu"
   );
-  const m = texto.match(re);
-  if (!m) return null;
 
-  const iso = (dia: string, nomeMes: string, ano: string) => {
-    const idx = MESES.indexOf(nomeMes.toLowerCase());
-    if (idx < 0) return null;
-    return `${ano}-${String(idx + 1).padStart(2, "0")}-${dia.padStart(2, "0")}`;
-  };
+  const m = texto.match(intervalo);
+  if (m) {
+    const inicio = paraIso(m[1], m[2], m[3]);
+    const fim = paraIso(m[4], m[5], m[6]);
+    if (inicio && fim) {
+      const { ano, semana } = semanaIsoDe(inicio);
+      return { inicio, fim, anoIso: ano, semanaIso: semana };
+    }
+    return null;
+  }
 
-  const inicio = iso(m[1], m[2], m[3]);
-  const fim = iso(m[4], m[5], m[6]);
-  if (!inicio || !fim) return null;
+  // Dia único. Vem depois do intervalo de propósito: a frase de intervalo
+  // também contém uma data isolada, e casar com ela primeiro reduziria a
+  // semana inteira ao seu primeiro dia.
+  const unico = new RegExp(
+    `(\\d{1,2})\\s+de\\s+${MES_RE}\\s+de\\s+(\\d{4})`,
+    "iu"
+  );
+  const u = texto.match(unico);
+  if (!u) return null;
 
-  const { ano, semana } = semanaIsoDe(inicio);
-  return { inicio, fim, anoIso: ano, semanaIso: semana };
+  const data = paraIso(u[1], u[2], u[3]);
+  if (!data) return null;
+
+  const { ano, semana } = semanaIsoDe(data);
+  return { inicio: data, fim: data, anoIso: ano, semanaIso: semana };
 }
 
 /**
@@ -123,7 +153,10 @@ export async function parsePerformanceReport(buffer: Buffer, fileName: string, c
     busca: for (let r = 1; r <= 6; r++) {
       for (let c = 1; c <= 4; c++) {
         const t = extractText(worksheet.getRow(r).getCell(c).value);
-        if (t && /\bde\s+\d{1,2}\s+de\s+\p{L}+\s+de\s+\d{4}/iu.test(t)) {
+        // Sem exigir "de" antes do dia: o relatório diário escreve "no
+        // dia 27 de agosto de 2026", e o "de" só aparece depois do
+        // número. Pedir o prefixo fazia a frase inteira passar batido.
+        if (t && /\d{1,2}\s+de\s+\p{L}+\s+de\s+\d{4}/iu.test(t)) {
           periodoStr = t.trim();
           break busca;
         }
