@@ -15,7 +15,7 @@ import type { DadosLancamentos, LancamentoDia } from "@/lib/dados/vendas";
 
 /** O canal é o id vindo do banco, ou "todos". */
 type CanalLancamentoId = string;
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Lock } from "lucide-react";
 
 /* ══ Números da grade ════════════════════════════════════════
    A grade digita em português: "1.284,50" entra e sai igual.
@@ -100,6 +100,7 @@ function CelulaNumerica({
   registrar,
   aoConfirmar,
   aoMover,
+  bloqueada,
 }: {
   valor: number;
   tipo: TipoCampo;
@@ -107,6 +108,15 @@ function CelulaNumerica({
   registrar: (el: HTMLInputElement | null) => void;
   aoConfirmar: (v: number) => void;
   aoMover: (passo: number) => void;
+  /**
+   * Bloqueada no consolidado.
+   *
+   * A linha do banco é por conta de vendedor. Um número lançado em "Todos
+   * os canais" não teria a que conta pertencer, e a gravação recusaria —
+   * depois de a pessoa preencher o mês inteiro. Impedir a digitação é
+   * mais honesto que aceitar e recusar no fim.
+   */
+  bloqueada?: boolean;
 }) {
   const [texto, setTexto] = React.useState(() => formatarEdicao(valor, tipo));
 
@@ -126,6 +136,8 @@ function CelulaNumerica({
       ref={registrar}
       value={texto}
       aria-label={rotulo}
+      disabled={bloqueada}
+      title={bloqueada ? "Escolha um canal para lançar" : undefined}
       inputMode="decimal"
       autoComplete="off"
       placeholder="—"
@@ -265,6 +277,14 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
   const meta = React.useMemo(() => metaDoMes(canal, mes), [canal, mes]);
   const nomeCanal =
     CANAIS_LANCAMENTO.find((c) => c.id === canal)?.nome ?? "Canal";
+
+  /*
+   * O consolidado não grava: a linha do banco é por conta de vendedor, e
+   * um número em "Todos os canais" não teria a que conta pertencer.
+   * Bloquear a digitação é mais honesto que aceitar o mês inteiro e
+   * recusar no Salvar.
+   */
+  const semConta = !CANAIS_LANCAMENTO.find((c) => c.id === canal)?.contaCanalId;
 
   /* ── linhas com valor efetivo e estado de cada célula ────── */
 
@@ -553,6 +573,27 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
       />
 
       <PageBody>
+        {/* Antes de tudo: sem isso a pessoa preenche o mês e descobre no
+            Salvar que não dava. */}
+        {semConta && (
+          <Panel className="p-3.5 mb-3 border-warn/30">
+            <div className="flex items-start gap-2.5">
+              <Lock className="w-4 h-4 text-warn mt-[1px] shrink-0" strokeWidth={2.25} />
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-ink">
+                  Escolha um canal para lançar
+                </p>
+                <p className="text-[12.5px] text-ink-2 leading-relaxed mt-0.5">
+                  No consolidado os campos ficam travados. Cada linha gravada
+                  pertence a uma conta de vendedor, e um número lançado em
+                  &ldquo;Todos os canais&rdquo; não teria a qual delas pertencer
+                  — o Mercado Livre sozinho tem duas.
+                </p>
+              </div>
+            </div>
+          </Panel>
+        )}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatTile
             label="Receita bruta do mês"
@@ -707,6 +748,7 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                               if (el) inputs.current.set(k, el);
                               else inputs.current.delete(k);
                             }}
+                            bloqueada={semConta}
                             aoConfirmar={(v) => editar(l.base.dia, c.campo, v)}
                             aoMover={(passo) => mover(l.base.dia, c.campo, passo)}
                           />
