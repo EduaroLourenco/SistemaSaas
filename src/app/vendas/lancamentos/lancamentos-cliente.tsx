@@ -409,10 +409,20 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
     // As chaves do rascunho são "canal|mes|dia|campo". Reagrupa por dia,
     // porque a gravação é uma linha por dia.
     const porDia = new Map<string, Record<string, number>>();
+    /*
+     * Edições que não acharam conta. Antes eram descartadas em silêncio, e
+     * o resultado era o pior possível: a gravação dizia "3 dias gravados"
+     * enquanto outros sumiam, ou não dizia nada. Agora saem nomeadas.
+     */
+    const semDestino = new Set<string>();
+
     for (const [k, valor] of Object.entries(rascunho)) {
       const [canalK, mesK, diaK, campo] = k.split("|");
       const conta = CANAIS_LANCAMENTO.find((c) => c.id === canalK)?.contaCanalId;
-      if (!conta) continue;
+      if (!conta) {
+        semDestino.add(canalK);
+        continue;
+      }
       const data = `${ANO}-${String(Number(mesK) + 1).padStart(2, "0")}-${String(diaK).padStart(2, "0")}`;
       const chaveDia = `${conta}|${data}`;
       const at = porDia.get(chaveDia) ?? {};
@@ -427,7 +437,11 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
     });
 
     if (!edicoes.length) {
-      setAviso("Escolha um canal com conta cadastrada para gravar");
+      setAviso(
+        semDestino.size
+          ? `Nada gravado: ${[...semDestino].join(", ")} não tem conta de vendedor cadastrada.`
+          : "Nada para gravar — nenhuma alteração pendente."
+      );
       return;
     }
 
@@ -445,8 +459,15 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
       }
       setSalvos((s) => ({ ...s, ...rascunho }));
       setRascunho({});
+      const gravados = `${edicoes.length} ${
+        edicoes.length === 1 ? "dia gravado" : "dias gravados"
+      }`;
+      // Gravar parte e não dizer qual parte ficou de fora é como o número
+      // errado entra na planilha sem ninguém notar.
       setAviso(
-        `${edicoes.length} ${edicoes.length === 1 ? "dia gravado" : "dias gravados"}`
+        semDestino.size
+          ? `${gravados}. Fora: ${[...semDestino].join(", ")} — sem conta cadastrada.`
+          : gravados
       );
     } catch {
       // Falha de rede não pode limpar o rascunho: o que foi digitado
