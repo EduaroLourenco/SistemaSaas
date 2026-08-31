@@ -3,7 +3,7 @@
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Badge } from "@/components/ui/primitives";
-import { Download, Loader2, AlertCircle } from "lucide-react";
+import { Download, Loader2, AlertCircle, Package, Sparkles } from "lucide-react";
 
 /**
  * Exportações.
@@ -62,10 +62,14 @@ export default function Exportacoes() {
   const [erro, setErro] = React.useState<string | null>(null);
 
   async function exportar(formato: Formato) {
-    setBaixando(formato.id);
+    return baixarDe(`/api/exportar?formato=${formato.id}`, formato.id, `${formato.id}.csv`);
+  }
+
+  async function baixarDe(rota: string, id: string, nomePadrao: string) {
+    setBaixando(id);
     setErro(null);
     try {
-      const r = await fetch(`/api/exportar?formato=${formato.id}`);
+      const r = await fetch(rota);
       if (!r.ok) {
         const corpo = await r.json().catch(() => ({}));
         setErro(corpo.erro ?? `Falha ao gerar (HTTP ${r.status})`);
@@ -77,7 +81,7 @@ export default function Exportacoes() {
        * arquivo baixado e o que o servidor registrou têm o mesmo nome.
        */
       const cd = r.headers.get("content-disposition") ?? "";
-      const nome = cd.match(/filename="([^"]+)"/)?.[1] ?? `${formato.id}.csv`;
+      const nome = cd.match(/filename="([^"]+)"/)?.[1] ?? nomePadrao;
 
       const blob = await r.blob();
       if (blob.size === 0) {
@@ -110,6 +114,57 @@ export default function Exportacoes() {
       />
 
       <PageBody>
+        {/* O pacote fica antes da lista: é o que a maioria quer quando
+            chega aqui, e os arquivos avulsos são o caso específico. */}
+        <Panel className="p-4 mb-3">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0 flex-1">
+              <span className="flex items-center gap-2 mb-1.5">
+                <Package className="w-4 h-4 text-brand shrink-0" strokeWidth={2} />
+                <p className="text-[14px] font-semibold text-ink">
+                  Pacote completo da operação
+                </p>
+                <span className="inline-flex items-center gap-1 text-[11px] text-ink-3">
+                  <Sparkles className="w-3 h-3" strokeWidth={2} />
+                  para IA
+                </span>
+              </span>
+              <p className="text-[12.5px] text-ink-2 leading-relaxed max-w-xl">
+                Um zip com seis CSVs — pedidos, itens, anúncios, desempenho
+                semanal, KPIs diários e o de/para dos canais. Já com as
+                exclusões de análise aplicadas, então bate com o que as telas
+                mostram.
+              </p>
+              <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-xl mt-1.5">
+                Vem em formato de máquina — vírgula, decimal com ponto, data
+                aaaa-mm-dd. E um <span className="num">LEIA-ME.md</span> que diz
+                o que os dados <span className="font-medium text-ink-2">não</span>{" "}
+                permitem concluir: margem não é calculável sem custo, e visita
+                fora do Mercado Livre é desconhecida, não zero. Sem isso, quem
+                analisar inventa os dois.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              disabled={baixando !== null}
+              onClick={() => baixarDe("/api/exportar/pacote", "pacote", "operacao.zip")}
+              className="shrink-0 max-sm:w-full max-sm:h-11"
+            >
+              {baixando === "pacote" ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Montando
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  Baixar pacote
+                </>
+              )}
+            </Button>
+          </div>
+        </Panel>
+
         {erro && (
           <Panel className="px-4 py-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
