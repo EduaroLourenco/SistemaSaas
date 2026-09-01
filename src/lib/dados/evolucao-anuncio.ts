@@ -109,7 +109,7 @@ export async function carregarEvolucao(
       paginar(() =>
         sb
           .from("pedidos")
-          .select("id,data,cancelado,total,comissao,conta_canal_id")
+          .select("id,data,cancelado,total,comissao,comissao_derivada,conta_canal_id")
           .order("data", { ascending: true })
       ),
       carregarExclusoes(),
@@ -132,6 +132,7 @@ export async function carregarEvolucao(
     cancelado: boolean;
     total: string | number;
     comissao: string | number | null;
+    comissao_derivada: boolean;
     conta_canal_id: string;
   };
 
@@ -206,7 +207,8 @@ export async function carregarEvolucao(
 
     // Zero não é tarifa: é ausência gravada como número por uma
     // importação antiga. Entrar na conta puxaria a média para baixo.
-    if (p.comissao != null && n(p.comissao) > 0) {
+    // Derivada fica de fora: ver a nota no topo do arquivo.
+    if (p.comissao != null && n(p.comissao) > 0 && !p.comissao_derivada) {
       const totalPed = totalDoPedido.get(it.pedido_id) ?? 0;
       // Rateio pelo valor do item. Em pedido de um item só — a maioria —
       // não há rateio nenhum, é o número exato.

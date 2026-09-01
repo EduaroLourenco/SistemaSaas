@@ -48,7 +48,7 @@ export async function carregarTarifasCobradas(
     paginar(() =>
       sb
         .from("pedidos")
-        .select("id,data,cancelado,total,comissao,conta_canal_id")
+        .select("id,data,cancelado,total,comissao,comissao_derivada,conta_canal_id")
         .order("data", { ascending: true })
     ),
     carregarExclusoes(),
@@ -61,6 +61,7 @@ export async function carregarTarifasCobradas(
     cancelado: boolean;
     total: string | number;
     comissao: string | number | null;
+    comissao_derivada: boolean;
     conta_canal_id: string;
   };
 
@@ -90,8 +91,34 @@ export async function carregarTarifasCobradas(
    * Tratá-lo como valor real diluía a tarifa da semana para baixo — um
    * anúncio que cobrou 11% aparecia com 3%.
    */
+  /*
+   * Só a comissão INFORMADA pelo canal entra aqui.
+   *
+   * A derivação por `total − a receber − frete − juros` foi construída e
+   * depois descartada para este uso, por evidência de que não sustenta o
+   * nível do pedido. No anúncio MLB5397764684:
+   *
+   *   total 2.028,90 − líquido 1.840,95 − frete 187,95 = 0,00
+   *   total 2.834,91 − líquido 1.840,95 − frete 187,95 = 596,99 (= o frete)
+   *
+   * Zero de tarifa numa venda de R$ 2 mil não existe, e o segundo caso
+   * capturou o frete e o chamaria de comissão — 21% num anúncio de
+   * tabela 11,5%.
+   *
+   * O "valor a receber" não tem significado constante entre pedidos: em
+   * uns já desconta a tarifa, em outros não. Sem saber qual é qual, a
+   * reconstrução é chute com aparência de conta.
+   *
+   * Cobrir 100% com número errado é pior que cobrir 43% com número certo:
+   * quem decide preço com tarifa inflada erra para o lado caro e não
+   * descobre. O que falta aparece como traço, que é a verdade.
+   */
   const comComissao = pedidos.filter(
-    (p) => !p.cancelado && p.comissao != null && n(p.comissao) > 0
+    (p) =>
+      !p.cancelado &&
+      p.comissao != null &&
+      n(p.comissao) > 0 &&
+      !(p as { comissao_derivada?: boolean }).comissao_derivada
   );
   if (!comComissao.length) return new Map();
 

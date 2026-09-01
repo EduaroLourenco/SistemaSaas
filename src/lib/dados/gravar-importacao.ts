@@ -203,10 +203,19 @@ async function pedidos(
      * que trazem as duas informações, a fórmula sem juros acertava 68%;
      * com juros, 92,4%.
      *
-     * NÃO é exata. Os ~8% restantes são casos em que o frete do comprador
-     * entra de outra forma na conta, e não achei a regra. Por isso
-     * `comissao_derivada` existe: quem lê precisa saber que aquele número
-     * é reconstrução, não extrato.
+     * NÃO É CONFIÁVEL NO NÍVEL DO PEDIDO, e isso foi demonstrado depois
+     * de construída. No anúncio MLB5397764684:
+     *
+     *   2.028,90 − 1.840,95 − 187,95 = 0,00      (tarifa zero não existe)
+     *   2.834,91 − 1.840,95 − 187,95 = 596,99    (= o frete, não a tarifa)
+     *
+     * O "valor a receber" não tem significado constante: em uns pedidos
+     * já desconta a tarifa, em outros não. Por isso as telas usam SÓ a
+     * comissão informada, e `comissao_derivada` marca o que não deve ser
+     * apresentado como tarifa.
+     *
+     * O valor continua sendo gravado porque as parcelas estão no banco e
+     * alguém pode achar a regra que faltou. Mas nada o exibe como custo.
      *
      * Deriva só quando falta, nunca por cima do informado — o número do
      * canal é a verdade; o nosso é a melhor aproximação dela.
