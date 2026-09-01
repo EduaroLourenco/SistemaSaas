@@ -2,6 +2,7 @@ import "server-only";
 import type { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
+import { comissaoUtilizavel } from "./comissao-plausivel";
 
 /**
  * A tarifa que o canal realmente cobrou, por anúncio e por semana.
@@ -114,19 +115,8 @@ export async function carregarTarifasCobradas(
    * descobre. O que falta aparece como traço, que é a verdade.
    */
   const comComissao = pedidos.filter(
-    (p) =>
-      !p.cancelado &&
-      p.comissao != null &&
-      n(p.comissao) > 0 &&
-      // Derivada entra de volta, agora que a faixa de plausibilidade a
-      // filtra na importação: 1–15% do total, onde o acerto é ~97%.
-      plausivel(p)
+    (p) => !p.cancelado && comissaoUtilizavel(p.comissao, p.total)
   );
-
-  function plausivel(p: { comissao: string | number | null; total: string | number }) {
-    const pct = n(p.total) > 0 ? (n(p.comissao) * 100) / n(p.total) : 0;
-    return pct >= 1 && pct <= 15;
-  }
   if (!comComissao.length) return new Map();
 
   const porId = new Map(comComissao.map((p) => [p.id, p]));

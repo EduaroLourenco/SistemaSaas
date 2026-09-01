@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
+import { comissaoUtilizavel } from "./comissao-plausivel";
 
 /**
  * Evolução semanal por anúncio: quanto vendeu, a quanto, e quanto custou.
@@ -210,8 +211,7 @@ export async function carregarEvolucao(
     // Derivada fica de fora: ver a nota no topo do arquivo.
     // A faixa vale também na leitura: linhas gravadas antes da guarda
     // continuam no banco e não podem envenenar a tarifa da semana.
-    const pctCom = n(p.total) > 0 ? (n(p.comissao) * 100) / n(p.total) : 0;
-    if (p.comissao != null && pctCom >= 1 && pctCom <= 15) {
+    if (comissaoUtilizavel(p.comissao, p.total)) {
       const totalPed = totalDoPedido.get(it.pedido_id) ?? 0;
       // Rateio pelo valor do item. Em pedido de um item só — a maioria —
       // não há rateio nenhum, é o número exato.

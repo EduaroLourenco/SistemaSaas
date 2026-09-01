@@ -265,6 +265,13 @@ async function pedidos(
       comissao_derivada: derivada,
       liquido_recebido: p.liquidoRecebido,
       frete_vendedor: p.freteVendedor,
+      /*
+       * O juro era usado na derivação da comissão e jogado fora. Agora
+       * fica: é um custo real do pedido — repasse ao canal, não receita —
+       * e sem ele gravado ninguém consegue conferir a derivação nem
+       * separar faturamento de dinheiro que só passou.
+       */
+      juros: p.juros,
       origem: "planilha",
     });
     itensPorChave.set(`${res.canalId}|${p.codigoExterno}`, p.itens);

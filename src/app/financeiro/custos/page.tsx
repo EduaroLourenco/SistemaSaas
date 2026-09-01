@@ -1,23 +1,29 @@
-import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { SemFonte } from "@/components/ui/sem-fonte";
+import { carregarCustos, carregarDespesasCanal } from "@/lib/dados/custos";
+import CustosCliente from "./custos-cliente";
 
-/*
- * O dado de exemplo saiu daqui.
+export const dynamic = "force-dynamic";
+
+/**
+ * Custos.
  *
- * Zerar os números mantinha os gráficos desenhados, o que passa a
- * impressão de operação parada — e não é isso: é ausência de fonte. A
- * tela agora diz o que precisa acontecer para ter conteúdo.
+ * A tela existia como aviso de ausência: "sem custo por produto não dá
+ * para calcular margem, que é o que falta hoje". Agora ela é o lugar
+ * onde esse custo entra.
  */
-export default function Pagina() {
+export default async function Pagina() {
+  const [custos, canal] = await Promise.all([
+    carregarCustos(),
+    carregarDespesasCanal(),
+  ]);
+
   return (
-    <>
-      <PageHeader title="Custos" breadcrumb="Financeiro" />
-      <PageBody>
-        <SemFonte
-          titulo="Sem dados para mostrar"
-          origem="Não há planilha de custos importada. Sem custo por produto não dá para calcular margem, que é o que falta hoje na análise de anúncios."
-        />
-      </PageBody>
-    </>
+    <CustosCliente
+      linhas={custos.linhas}
+      faixas={custos.faixas}
+      completos={custos.completos}
+      despesas={canal.despesas}
+      canais={canal.canais}
+      adsPorMes={canal.adsPorMes}
+    />
   );
 }
