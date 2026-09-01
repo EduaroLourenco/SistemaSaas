@@ -204,7 +204,9 @@ export async function carregarEvolucao(
     at.somaPreco += n(it.preco_unitario) * qtd;
     at.valor += n(it.total);
 
-    if (p.comissao != null) {
+    // Zero não é tarifa: é ausência gravada como número por uma
+    // importação antiga. Entrar na conta puxaria a média para baixo.
+    if (p.comissao != null && n(p.comissao) > 0) {
       const totalPed = totalDoPedido.get(it.pedido_id) ?? 0;
       // Rateio pelo valor do item. Em pedido de um item só — a maioria —
       // não há rateio nenhum, é o número exato.

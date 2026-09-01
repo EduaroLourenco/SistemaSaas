@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { carregarTarifasCobradas, chaveSemana } from "./tarifa-cobrada";
 import type { Anuncio, SemanaDesempenho, DiaVenda } from "@/lib/analise";
 
 /**
@@ -68,7 +69,7 @@ function categoriaDe(titulo: string): string {
 export async function carregarAnalise(): Promise<DadosAnalise> {
   const sb = await clienteServidor();
 
-  const [linhas, { data: imports }] = await Promise.all([
+  const [linhas, { data: imports }, tarifas] = await Promise.all([
     paginar(() =>
       sb
         .from("anuncio_desempenho_semanal")
@@ -84,6 +85,7 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
       .eq("tipo", "desempenho_anuncios")
       .order("criado_em", { ascending: false })
       .limit(20),
+    carregarTarifasCobradas(sb),
   ]);
 
   const dados = linhas as unknown as LinhaSemana[];
@@ -154,6 +156,9 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
             : null,
       precoIdeal: n(l.preco_ideal),
       comissao: n(l.comissao_negociada),
+      // A de tabela vem do catálogo; esta vem do que foi cobrado de fato.
+      // Null quando não houve venda com comissão conhecida na semana.
+      tarifaCobrada: tarifas.get(chaveSemana(a.codigo_externo, l.inicio)) ?? null,
       dias,
       campanhas: [],
     };

@@ -21,6 +21,7 @@ type ColunaSemana =
   | "realizado"
   | "anunciado"
   | "comissao"
+  | "cobrada"
   | "desvio";
 
 const COLUNAS: {
@@ -49,9 +50,15 @@ const COLUNAS: {
   {
     id: "comissao",
     rotulo: "Tarifa tabela",
+    dica: "Alíquota cheia do anúncio, do catálogo. Referência, não custo.",
+    align: "right",
+  },
+  {
+    id: "cobrada",
+    rotulo: "Tarifa cobrada",
     dica:
-      "Alíquota de tabela do anúncio — NÃO é o que foi cobrado. " +
-      "Campanha com redução cobra menos; o valor real está na exportação da evolução.",
+      "O que o canal reteve de fato na semana. Menor que a de tabela quando " +
+      "houve redução por campanha. Vazio quando não houve venda com comissão conhecida.",
     align: "right",
   },
   { id: "desvio", rotulo: "vs. ideal", align: "right" },
@@ -91,6 +98,8 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
           return w.precoAnunciado;
         case "comissao":
           return w.comissao;
+        case "cobrada":
+          return w.tarifaCobrada ?? -1;
         case "desvio":
           return w.precoIdeal ? ((pago - w.precoIdeal) / w.precoIdeal) * 100 : 0;
       }
@@ -221,8 +230,25 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
                     <td className="num h-8 px-2 text-right text-ink-3">
                       {money(w.precoAnunciado)}
                     </td>
-                    <td className="num h-8 px-2 text-right text-ink-2">
-                      {w.comissao > 0 ? pct(w.comissao) : <span className="text-ink-3">—</span>}
+                    <td className="num h-8 px-2 text-right text-ink-3">
+                      {w.comissao > 0 ? pct(w.comissao) : "—"}
+                    </td>
+                    <td className="num h-8 px-2 text-right">
+                      {w.tarifaCobrada == null ? (
+                        <span className="text-ink-3">—</span>
+                      ) : (
+                        <span
+                          className={
+                            // Verde quando ficou abaixo da tabela: é campanha
+                            // que valeu, e o olho precisa achar isso rápido.
+                            w.comissao > 0 && w.tarifaCobrada < w.comissao - 0.5
+                              ? "text-up font-semibold"
+                              : "text-ink"
+                          }
+                        >
+                          {pct(w.tarifaCobrada)}
+                        </span>
+                      )}
                     </td>
                     <td className="h-8 px-2 text-right">
                       <Badge tone={tomDesvio(desvio)}>

@@ -52,6 +52,8 @@ export type SemanaDesempenho = {
   precoIdeal: number;
   /** Comissão negociada, em pontos percentuais (16.5 = 16,5%). */
   comissao: number;
+  /** Alíquota que o canal realmente cobrou na semana. Null quando não há venda com comissão conhecida. */
+  tarifaCobrada?: number | null;
   /** Quebra por dia: quando vendeu e a quanto. */
   dias: DiaVenda[];
   campanhas: { nome: string; preco: number }[];
