@@ -4,6 +4,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { detectar, NOME_TIPO, type TipoPlanilha } from "@/lib/planilhas/detectar";
 import { parsePerformanceReport } from "@/lib/planilhas/desempenho";
 import { lerPedidos } from "@/lib/planilhas/pedidos";
+import { lerVendasMeli } from "@/lib/planilhas/vendas-ml";
 import { lerCatalogo } from "@/lib/planilhas/catalogo";
 import {
   resolver,
@@ -157,12 +158,83 @@ export async function previsualizar(
 
   const canais = await carregarCanais(operacaoId);
 
+  if (det.tipo === "vendas_ml") return previaVendasMeli(buffer, base, sb);
   if (det.tipo === "pedidos") return previaPedidos(buffer, base, canais, sb);
   if (det.tipo === "catalogo") return previaCatalogo(buffer, base, canais, sb);
   return previaDesempenho(buffer, nomeArquivo, base, sb);
 }
 
 type Sb = Awaited<ReturnType<typeof clienteServidor>>;
+
+/**
+ * Prévia do relatório de vendas do próprio Mercado Livre.
+ *
+ * Não resolve canal por apelido: o arquivo é do Meli por definição, e
+ * pedir para o usuário confirmar o óbvio é atrito sem informação.
+ *
+ * Ele também não CRIA pedidos — só melhora os que já existem, trocando a
+ * comissão estimada pela cobrada. Um pedido que não veio na listagem do
+ * hub aparece como órfão, porque criar cabeça de pedido a partir de um
+ * relatório de tarifas produziria pedido sem item nem canal resolvido.
+ */
+async function previaVendasMeli(
+  buffer: Buffer,
+  base: Previa,
+  sb: Sb
+): Promise<Previa> {
+  const r = await lerVendasMeli(buffer);
+  base.linhas = r.vendas.length;
+
+  const codigos = r.vendas.map((v) => v.codigoExterno);
+  const existentes = new Set<string>();
+  // Em lotes: a lista de códigos entra na URL, e 681 de uma vez estoura
+  // o limite de tamanho do PostgREST.
+  for (let i = 0; i < codigos.length; i += 200) {
+    const { data } = await sb
+      .from("pedidos")
+      .select("codigo_externo")
+      .in("codigo_externo", codigos.slice(i, i + 200));
+    for (const p of data ?? []) existentes.add(p.codigo_externo as string);
+  }
+
+  base.atualizadas = r.vendas.filter((v) => existentes.has(v.codigoExterno)).length;
+  base.novas = 0;
+  const semPedido = r.vendas.filter((v) => !existentes.has(v.codigoExterno));
+  base.orfaos = semPedido.length
+    ? [
+        {
+          descricao: "Vendas sem pedido correspondente na base",
+          exemplos: semPedido.slice(0, 5).map((v) => v.codigoExterno),
+          total: semPedido.length,
+        },
+      ]
+    : [];
+
+  base.avisos.push(
+    `Tarifa cobrada em ${r.comTarifa} das ${r.linhasLidas} vendas, ` +
+      `desconto de campanha em ${r.comDesconto} e juros em ${r.comJuros}.`
+  );
+  if (semPedido.length) {
+    base.avisos.push(
+      `${semPedido.length} vendas não têm pedido correspondente e serão ` +
+        "ignoradas. Importe a listagem de pedidos do período antes."
+    );
+  }
+  if (r.conferem < r.linhasLidas) {
+    base.avisos.push(
+      `Em ${r.linhasLidas - r.conferem} vendas a soma das tarifas não fecha com o ` +
+        "total a receber — são tarifas faturadas em outro mês. A comissão delas continua válida."
+    );
+  }
+  if (r.colunasDescartadas) {
+    base.avisos.push(
+      `${r.colunasDescartadas} colunas do arquivo não foram lidas, incluindo nome, ` +
+        "CPF e endereço do comprador."
+    );
+  }
+
+  return base;
+}
 
 async function previaPedidos(
   buffer: Buffer,

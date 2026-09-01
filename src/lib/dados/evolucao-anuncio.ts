@@ -122,7 +122,7 @@ export async function carregarEvolucao(
       paginar(() =>
         sb
           .from("pedidos")
-          .select("id,data,cancelado,total,comissao,comissao_derivada,conta_canal_id")
+          .select("id,data,cancelado,total,comissao,comissao_derivada,comissao_origem,conta_canal_id")
           .order("data", { ascending: true })
       ),
       carregarExclusoes(),
@@ -147,6 +147,7 @@ export async function carregarEvolucao(
     total: string | number;
     comissao: string | number | null;
     comissao_derivada: boolean;
+    comissao_origem: string | null;
     conta_canal_id: string;
   };
 
@@ -229,7 +230,7 @@ export async function carregarEvolucao(
     // Derivada fica de fora: ver a nota no topo do arquivo.
     // A faixa vale também na leitura: linhas gravadas antes da guarda
     // continuam no banco e não podem envenenar a tarifa da semana.
-    if (comissaoUtilizavel(p.comissao, p.total, tarifaDoMlb.get(mlb))) {
+    if (comissaoUtilizavel(p.comissao, p.total, tarifaDoMlb.get(mlb), p.comissao_origem)) {
       const totalPed = totalDoPedido.get(it.pedido_id) ?? 0;
       // Rateio pelo valor do item. Em pedido de um item só — a maioria —
       // não há rateio nenhum, é o número exato.

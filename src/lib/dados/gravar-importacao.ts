@@ -3,6 +3,7 @@ import { FAIXA_MIN, FAIXA_MAX_GRAVACAO } from "./comissao-plausivel";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { parsePerformanceReport } from "@/lib/planilhas/desempenho";
 import { lerPedidos } from "@/lib/planilhas/pedidos";
+import { lerVendasMeli } from "@/lib/planilhas/vendas-ml";
 import { lerCatalogo } from "@/lib/planilhas/catalogo";
 import type { TipoPlanilha } from "@/lib/planilhas/detectar";
 import {
@@ -42,6 +43,7 @@ const LOTE = 400;
 const TIPO_RELATORIO: Record<string, string> = {
   desempenho: "desempenho_anuncios",
   pedidos: "pedidos",
+  vendas_ml: "pedidos",
   catalogo: "catalogo",
 };
 
@@ -105,6 +107,9 @@ export async function gravar(
     if (!contaCanalId) throw new Error("Escolha a conta do Mercado Livre.");
     return catalogo(buffer, sb, operacaoId, contaCanalId, canais, previa, nomeArquivo);
   }
+  if (previa.tipo === "vendas_ml") {
+    return vendasMeli(buffer, sb, operacaoId, previa, nomeArquivo);
+  }
   if (previa.tipo === "pedidos") {
     return pedidos(buffer, sb, operacaoId, canais, previa, nomeArquivo);
   }
@@ -158,6 +163,135 @@ async function catalogo(
     atualizadas: previa.atualizadas,
     ignoradas: 0,
     avisos: [],
+  };
+}
+
+/* ── Vendas e tarifas do Mercado Livre ───────────────────────── */
+
+/**
+ * O relatório do próprio canal, que corrige a comissão dos pedidos.
+ *
+ * ── Por que ele não cria pedido ──
+ *
+ * Porque não tem o que um pedido precisa: canal resolvido por apelido,
+ * itens com SKU e quantidade, status de cancelamento. Criar cabeça de
+ * pedido a partir de um relatório de tarifas produziria pedido sem item,
+ * que entra em toda soma de receita como zero e some das telas de
+ * anúncio. Vendas sem pedido correspondente são contadas e ignoradas.
+ *
+ * ── A precedência ──
+ *
+ *   canal    > hub    > derivada
+ *
+ * O relatório do Mercado Livre é a fonte mais confiável que existe para
+ * tarifa: é o extrato de quem cobrou. Ele sobrescreve tanto a comissão do
+ * hub quanto a reconstruída.
+ *
+ * O caminho contrário é bloqueado em `pedidos()`: reimportar a listagem
+ * do hub depois disto não pode rebaixar uma comissão do canal para a do
+ * hub — e a listagem é reimportada com frequência.
+ *
+ * ── O que mais entra junto ──
+ *
+ * O juro do parcelamento, que a listagem do hub traz mas nunca era
+ * gravado, e o desconto de campanha, que só existe aqui. É o desconto que
+ * explica por que a tarifa cobrada (6,5%) fica abaixo da de tabela
+ * (11,5%) — antes disso a diferença aparecia sem valor em reais.
+ */
+async function vendasMeli(
+  buffer: Buffer,
+  sb: Sb,
+  operacaoId: string,
+  previa: Previa,
+  nomeArquivo: string
+): Promise<Gravacao> {
+  const r = await lerVendasMeli(buffer);
+  const importacaoId = await registrar(
+    sb, operacaoId, "vendas_ml", nomeArquivo, previa.hash,
+    { inicio: null, fim: null }, r.linhasLidas, r.vendas.length
+  );
+
+  // Uma venda por pedido no relatório, mas pedido com vários anúncios
+  // aparece em linhas separadas: soma antes de gravar.
+  type Acumulado = {
+    bruta: number; desconto: number; liquida: number;
+    juros: number; frete: number; temTarifa: boolean;
+  };
+  const porPedido = new Map<string, Acumulado>();
+
+  for (const v of r.vendas) {
+    const at = porPedido.get(v.codigoExterno) ??
+      { bruta: 0, desconto: 0, liquida: 0, juros: 0, frete: 0, temTarifa: false };
+    at.bruta += v.tarifaBruta ?? 0;
+    at.desconto += v.descontoTarifa;
+    at.liquida += v.tarifaLiquida ?? 0;
+    at.juros += v.juros;
+    at.frete += v.freteVendedor ?? 0;
+    if (v.tarifaBruta != null) at.temTarifa = true;
+    porPedido.set(v.codigoExterno, at);
+  }
+
+  const codigos = [...porPedido.keys()];
+  const idPorCodigo = new Map<string, string>();
+  for (let i = 0; i < codigos.length; i += 200) {
+    const { data, error } = await sb
+      .from("pedidos")
+      .select("id,codigo_externo")
+      .in("codigo_externo", codigos.slice(i, i + 200));
+    if (error) throw new Error(`Falha ao localizar pedidos: ${error.message}`);
+    for (const p of data ?? []) {
+      idPorCodigo.set(p.codigo_externo as string, p.id as string);
+    }
+  }
+
+  const linhas: Record<string, unknown>[] = [];
+  let semPedido = 0;
+
+  for (const [codigo, a] of porPedido) {
+    const id = idPorCodigo.get(codigo);
+    if (!id) { semPedido += 1; continue; }
+    if (!a.temTarifa) continue;
+
+    linhas.push({
+      id,
+      comissao: Number(a.liquida.toFixed(2)),
+      comissao_bruta: Number(a.bruta.toFixed(2)),
+      desconto_tarifa: Number(a.desconto.toFixed(2)),
+      comissao_derivada: false,
+      comissao_origem: "canal",
+      juros: Number(a.juros.toFixed(2)),
+      // O frete do vendedor daqui não sobrescreve o do hub quando o hub
+      // já trouxe: os dois batem nos casos conferidos, e trocar um dado
+      // que já confere só adiciona chance de regressão.
+      atualizado_em: new Date().toISOString(),
+    });
+  }
+
+  for (let i = 0; i < linhas.length; i += LOTE) {
+    const { error } = await sb
+      .from("pedidos")
+      .upsert(linhas.slice(i, i + LOTE), { onConflict: "id" });
+    if (error) throw new Error(`Falha ao gravar tarifas: ${error.message}`);
+  }
+
+  const avisos: string[] = [];
+  if (semPedido) {
+    avisos.push(
+      `${semPedido} vendas não têm pedido na base e foram ignoradas. ` +
+        "Importe a listagem de pedidos do período e suba este arquivo de novo."
+    );
+  }
+  avisos.push(
+    `Tarifa cobrada gravada em ${linhas.length} pedidos, com desconto de ` +
+      `campanha em ${r.comDesconto} e juros em ${r.comJuros}.`
+  );
+
+  return {
+    importacaoId,
+    criadas: 0,
+    atualizadas: linhas.length,
+    ignoradas: semPedido,
+    avisos,
   };
 }
 
@@ -264,6 +398,7 @@ async function pedidos(
       frete: p.frete,
       comissao,
       comissao_derivada: derivada,
+      comissao_origem: comissao == null ? null : derivada ? "derivada" : "hub",
       liquido_recebido: p.liquidoRecebido,
       frete_vendedor: p.freteVendedor,
       /*
@@ -285,11 +420,57 @@ async function pedidos(
     });
   }
 
-  for (let i = 0; i < cabecas.length; i += LOTE) {
-    const { error } = await sb
+  /*
+   * A comissão vinda do canal não é rebaixada por esta importação.
+   *
+   * O relatório "Vendas BR" do Mercado Livre traz a tarifa cobrada em
+   * 99% dos pedidos; a listagem do hub, em 39%. Como a listagem é
+   * reimportada com frequência — todo dia, às vezes cobrindo dias
+   * anteriores — sem esta trava a segunda subida trocaria o número do
+   * extrato do canal por uma estimativa nossa, e nada avisaria.
+   *
+   * Não dá para resolver isso num upsert só: o PostgREST preenche com
+   * nulo toda coluna ausente do payload, então "não mexer na comissão"
+   * exige um lote com um conjunto de colunas diferente.
+   */
+  const protegidos = new Set<string>();
+  const chaves = cabecas.map((c) => String(c.codigo_externo));
+  for (let i = 0; i < chaves.length; i += 200) {
+    const { data } = await sb
       .from("pedidos")
-      .upsert(cabecas.slice(i, i + LOTE), { onConflict: "canal_id,codigo_externo" });
-    if (error) throw new Error(`Falha ao gravar pedidos: ${error.message}`);
+      .select("codigo_externo")
+      .eq("comissao_origem", "canal")
+      .in("codigo_externo", chaves.slice(i, i + 200));
+    for (const p of data ?? []) protegidos.add(p.codigo_externo as string);
+  }
+
+  const CAMPOS_COMISSAO = [
+    "comissao", "comissao_derivada", "comissao_origem",
+    "comissao_bruta", "desconto_tarifa", "juros",
+  ];
+
+  const normais = cabecas.filter((c) => !protegidos.has(String(c.codigo_externo)));
+  const preservados = cabecas
+    .filter((c) => protegidos.has(String(c.codigo_externo)))
+    .map((c) => {
+      const copia = { ...c };
+      for (const campo of CAMPOS_COMISSAO) delete copia[campo];
+      return copia;
+    });
+
+  for (const grupo of [normais, preservados]) {
+    for (let i = 0; i < grupo.length; i += LOTE) {
+      const { error } = await sb
+        .from("pedidos")
+        .upsert(grupo.slice(i, i + LOTE), { onConflict: "canal_id,codigo_externo" });
+      if (error) throw new Error(`Falha ao gravar pedidos: ${error.message}`);
+    }
+  }
+  if (preservados.length) {
+    avisos.push(
+      `${preservados.length} pedidos mantiveram a tarifa do relatório do canal, ` +
+        "que é mais confiável que a da listagem."
+    );
   }
 
   // Descobre o id de cada pedido para prender os itens.

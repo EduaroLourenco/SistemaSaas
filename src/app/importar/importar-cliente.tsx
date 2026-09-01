@@ -30,7 +30,7 @@ import {
  */
 
 type Previa = {
-  tipo: "desempenho" | "pedidos" | "catalogo" | "desconhecido";
+  tipo: "desempenho" | "pedidos" | "catalogo" | "vendas_ml" | "desconhecido";
   evidencia: string;
   nomeArquivo: string;
   jaImportado: { em: string; linhas: number } | null;
@@ -54,6 +54,7 @@ const ROTULO: Record<Previa["tipo"], string> = {
   desempenho: "Desempenho de anúncios",
   pedidos: "Pedidos",
   catalogo: "Catálogo de anúncios",
+  vendas_ml: "Vendas e tarifas do Mercado Livre",
   desconhecido: "Formato não reconhecido",
 };
 
@@ -61,6 +62,8 @@ const OQUE_ALIMENTA: Record<string, string> = {
   desempenho: "visitas, vendas e conversão por anúncio",
   pedidos: "faturamento, comissão e frete por canal e por SKU",
   catalogo: "preço de vitrine, tarifa, tipo e estoque dos anúncios",
+  vendas_ml:
+    "a tarifa que o Meli cobrou de verdade, o desconto de campanha e o juro do parcelamento",
 };
 
 function dataBr(iso: string | null) {

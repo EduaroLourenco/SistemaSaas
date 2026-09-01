@@ -78,12 +78,28 @@ export function tetoPara(
 export function comissaoUtilizavel(
   comissao: string | number | null | undefined,
   total: string | number | null | undefined,
-  tabelaPct?: string | number | null
+  tabelaPct?: string | number | null,
+  origem?: string | null
 ): boolean {
   if (comissao == null) return false;
   const c = Number(comissao) || 0;
   const t = Number(total) || 0;
   if (c <= 0 || t <= 0) return false;
+
+  /*
+   * A faixa existe para a comissão RECONSTRUÍDA, não para a informada.
+   *
+   * Quando o número vem do relatório do próprio canal ou da listagem do
+   * hub, ele é o extrato de quem cobrou — filtrá-lo por plausibilidade é
+   * discutir com a fonte. Foi assim que nove tarifas premium de verdade,
+   * entre 15,3% e 17,5%, quase foram descartadas.
+   *
+   * A faixa continua valendo onde é a nossa conta que produziu o número.
+   * Sem origem gravada (dado anterior a esta coluna), aplica a faixa: era
+   * o comportamento anterior, e o mais conservador dos dois.
+   */
+  if (origem === "canal" || origem === "hub") return true;
+
   const pct = (c * 100) / t;
   return pct >= FAIXA_MIN && pct <= tetoPara(tabelaPct);
 }

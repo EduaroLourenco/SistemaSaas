@@ -18,6 +18,7 @@ export type TipoPlanilha =
   | "desempenho"
   | "pedidos"
   | "catalogo"
+  | "vendas_ml"
   | "desconhecido";
 
 export type Deteccao = {
@@ -51,6 +52,21 @@ const ASSINATURAS: {
     linhas: [5, 6, 7],
     exigidos: ["id do anúncio", "visitas únicas"],
     rotulo: "Desempenho de anúncios do Mercado Livre",
+  },
+  {
+    /*
+     * O relatório de vendas do próprio Meli. Vem antes de "pedidos" na
+     * lista porque os dois falam de pedido, e este tem a marca mais
+     * específica — se ficasse depois, um empate de aba decidiria por
+     * ordem de chegada.
+     */
+    tipo: "vendas_ml",
+    aba: /vendas/i,
+    // O cabeçalho fica na linha 6; as cinco primeiras são apresentação.
+    // As vizinhas entram porque o Meli já mudou esse offset antes.
+    linhas: [5, 6, 7],
+    exigidos: ["n.º de venda", "tarifa de venda e impostos"],
+    rotulo: "Relatório de vendas do Mercado Livre",
   },
   {
     tipo: "pedidos",
@@ -112,6 +128,7 @@ export async function detectar(buffer: Buffer): Promise<Deteccao> {
 
 export const NOME_TIPO: Record<TipoPlanilha, string> = {
   desempenho: "Desempenho de anúncios",
+  vendas_ml: "Vendas e tarifas do Mercado Livre",
   pedidos: "Pedidos",
   catalogo: "Catálogo de anúncios",
   desconhecido: "Formato não reconhecido",
