@@ -174,24 +174,25 @@ export default function Exportacoes() {
                 Evolução semanal por anúncio
               </p>
               <p className="text-[12.5px] text-ink-2 leading-relaxed max-w-xl">
-                Uma linha por anúncio por semana: SKU, MLB, visitas, vendas,
-                conversão, preço praticado e comissão. Quanto vendeu, a quanto,
-                e quanto custou.
+                Um anúncio por linha, e as semanas andam para o lado. Cada
+                semana traz visitas, vendas, unidades, conversão, receita,
+                preço praticado e o retido pelo canal — a queda aparece lendo
+                da esquerda para a direita.
               </p>
               <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-xl mt-1.5">
                 A comissão vem em duas colunas —{" "}
                 <span className="font-medium text-ink-2">tarifa de tabela</span>{" "}
-                e <span className="font-medium text-ink-2">tarifa cobrada</span>.
-                Elas discordam quando houve redução por campanha, e a diferença
-                entre as duas é o que a campanha economizou. A cobrada só existe
-                onde o canal informou.
+                e <span className="font-medium text-ink-2">retido</span>. Elas
+                discordam quando houve redução por campanha, e a diferença entre
+                as duas é o que a campanha economizou. Célula vazia significa
+                sem informação, nunca zero.
               </p>
             </div>
             <Button
               variant="default"
               disabled={baixando !== null}
               onClick={() =>
-                baixarDe("/api/exportar/evolucao", "evolucao", "evolucao-anuncios.csv")
+                baixarDe("/api/exportar/evolucao", "evolucao", "evolucao-anuncios.xlsx")
               }
               className="shrink-0 max-sm:w-full max-sm:h-11"
             >
@@ -203,7 +204,7 @@ export default function Exportacoes() {
               ) : (
                 <>
                   <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
-                  Baixar CSV
+                  Baixar Excel
                 </>
               )}
             </Button>
