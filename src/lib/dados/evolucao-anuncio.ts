@@ -208,7 +208,10 @@ export async function carregarEvolucao(
     // Zero não é tarifa: é ausência gravada como número por uma
     // importação antiga. Entrar na conta puxaria a média para baixo.
     // Derivada fica de fora: ver a nota no topo do arquivo.
-    if (p.comissao != null && n(p.comissao) > 0 && !p.comissao_derivada) {
+    // A faixa vale também na leitura: linhas gravadas antes da guarda
+    // continuam no banco e não podem envenenar a tarifa da semana.
+    const pctCom = n(p.total) > 0 ? (n(p.comissao) * 100) / n(p.total) : 0;
+    if (p.comissao != null && pctCom >= 1 && pctCom <= 15) {
       const totalPed = totalDoPedido.get(it.pedido_id) ?? 0;
       // Rateio pelo valor do item. Em pedido de um item só — a maioria —
       // não há rateio nenhum, é o número exato.

@@ -225,9 +225,26 @@ async function pedidos(
     if (comissao == null && p.liquidoRecebido != null) {
       const calculada =
         p.total - p.liquidoRecebido - (p.freteVendedor ?? 0) - (p.juros ?? 0);
-      // Negativo significa que a conta não fecha para este pedido: melhor
-      // deixar vazio do que gravar um custo impossível.
-      if (calculada >= 0) {
+      const pct = p.total > 0 ? (calculada * 100) / p.total : 0;
+
+      /*
+       * A faixa de plausibilidade é o que separa reconstrução de lixo.
+       *
+       * Medido contra os 1.169 pedidos que trazem a comissão informada:
+       *
+       *   ≤ 0%      2.017 pedidos   0/5 exatos    ("a receber" ainda sem a
+       *                                             tarifa descontada)
+       *   1–5%        206           97% exatos
+       *   5–10%       777           99% exatos
+       *   10–15%      364           93% exatos
+       *   15–20%      107           53% exatos
+       *   acima de 20% 69            0% exatos    (é o frete, não a tarifa)
+       *
+       * Dentro de 1–15% o acerto é ~97%; fora, a conta capturou outra
+       * coisa. Sem a faixa, um frete de R$ 597 virava "tarifa de 21%" num
+       * anúncio cuja tabela é 11,5% — e ninguém teria como desconfiar.
+       */
+      if (pct >= 1 && pct <= 15) {
         comissao = Number(calculada.toFixed(2));
         derivada = true;
       }

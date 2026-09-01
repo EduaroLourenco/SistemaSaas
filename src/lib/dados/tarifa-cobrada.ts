@@ -118,8 +118,15 @@ export async function carregarTarifasCobradas(
       !p.cancelado &&
       p.comissao != null &&
       n(p.comissao) > 0 &&
-      !(p as { comissao_derivada?: boolean }).comissao_derivada
+      // Derivada entra de volta, agora que a faixa de plausibilidade a
+      // filtra na importação: 1–15% do total, onde o acerto é ~97%.
+      plausivel(p)
   );
+
+  function plausivel(p: { comissao: string | number | null; total: string | number }) {
+    const pct = n(p.total) > 0 ? (n(p.comissao) * 100) / n(p.total) : 0;
+    return pct >= 1 && pct <= 15;
+  }
   if (!comComissao.length) return new Map();
 
   const porId = new Map(comComissao.map((p) => [p.id, p]));
