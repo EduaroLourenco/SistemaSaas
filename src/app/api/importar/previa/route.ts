@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { previsualizar } from "@/lib/dados/importar";
 import { operacaoPadrao } from "@/lib/dados/operacao";
+import { lerArquivoEnviado } from "@/lib/dados/arquivo-enviado";
 
 /**
  * Diz o que ACONTECERIA, sem tocar no banco.
@@ -15,12 +16,9 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
-    const arquivo = form.get("arquivo");
-    if (!(arquivo instanceof File)) {
-      return NextResponse.json(
-        { erro: "Nenhum arquivo enviado." },
-        { status: 400 }
-      );
+    const lido = await lerArquivoEnviado(form);
+    if ("erro" in lido) {
+      return NextResponse.json({ erro: lido.erro }, { status: 400 });
     }
 
     let operacaoId = String(form.get("operacao") ?? "");
@@ -35,8 +33,7 @@ export async function POST(req: Request) {
       operacaoId = op.id;
     }
 
-    const buffer = Buffer.from(await arquivo.arrayBuffer());
-    const previa = await previsualizar(buffer, arquivo.name, operacaoId);
+    const previa = await previsualizar(lido.buffer, lido.nome, operacaoId);
     return NextResponse.json({ previa, operacaoId });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Falha ao ler a planilha.";

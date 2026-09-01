@@ -7,6 +7,7 @@ import { FileDrop } from "@/components/ui/controls";
 import { Leitura, TudoCerto, ErroComSaida } from "@/components/ui/leitura";
 import { Metrica } from "@/components/ui/metrica";
 import { count } from "@/lib/format";
+import { clienteNavegador } from "@/lib/supabase/navegador";
 import {
   FileSpreadsheet,
   Loader2,
@@ -66,6 +67,65 @@ function dataBr(iso: string | null) {
   return iso ? new Date(iso + "T12:00:00").toLocaleDateString("pt-BR") : "—";
 }
 
+/**
+ * Acima disto o arquivo não passa pelo servidor.
+ *
+ * A Vercel corta o corpo da requisição em 4,5 MB e o limite não é
+ * configurável. Fica bem abaixo porque o `multipart` embrulha o arquivo
+ * e o que trafega é maior que ele.
+ */
+const LIMITE_DIRETO = 3 * 1024 * 1024;
+
+/**
+ * Sobe ao Storage e devolve o caminho.
+ *
+ * A primeira pasta é o id da operação — é o que o RLS lê para decidir se
+ * você pode escrever. Caminho fora desse formato é recusado pelo banco,
+ * não por uma checagem daqui que alguém poderia esquecer.
+ */
+async function enviarAoStorage(
+  arquivo: File,
+  operacaoId: string
+): Promise<string> {
+  const sb = clienteNavegador();
+  const carimbo = Date.now();
+  const limpo = arquivo.name.replace(/[^A-Za-z0-9._-]+/g, "_");
+  const caminho = `${operacaoId}/${carimbo}-${limpo}`;
+
+  const { error } = await sb.storage
+    .from("importacoes")
+    .upload(caminho, arquivo, { upsert: false });
+
+  if (error) throw new Error(`Falha ao enviar o arquivo: ${error.message}`);
+  return caminho;
+}
+
+/**
+ * Descobre a operação pelo servidor, não por conta própria.
+ *
+ * A regra é "a que tem mais canais", e já mordeu uma vez: pegar a
+ * primeira em ordem alfabética levava a uma operação sem canal nenhum, e
+ * toda importação era recusada por "canal desconhecido". Mantendo a regra
+ * num lugar só, front e back não discordam.
+ */
+async function descobrirOperacao(): Promise<string | null> {
+  try {
+    const r = await fetch("/api/operacao");
+    if (!r.ok) return null;
+    return (await r.json()).id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function safeJson(t: string): { erro?: string } | null {
+  try {
+    return JSON.parse(t);
+  } catch {
+    return null;
+  }
+}
+
 export default function ImportarCliente() {
   const [arquivo, setArquivo] = React.useState<File | null>(null);
   const [previa, setPrevia] = React.useState<Previa | null>(null);
@@ -74,6 +134,9 @@ export default function ImportarCliente() {
     null
   );
   const [conta, setConta] = React.useState("");
+  const [caminho, setCaminho] = React.useState<string | null>(null);
+  const [operacaoId, setOperacaoId] = React.useState<string | null>(null);
+  const [enviando, setEnviando] = React.useState(false);
   const [gravando, setGravando] = React.useState(false);
   const [feito, setFeito] = React.useState<{
     criadas: number;
@@ -88,20 +151,51 @@ export default function ImportarCliente() {
     setErro(null);
     setFeito(null);
     setConta("");
+    setCaminho(null);
     setCarregando(true);
 
     try {
       const fd = new FormData();
-      fd.append("arquivo", f);
+      let caminhoUsado: string | null = null;
+
+      if (f.size > LIMITE_DIRETO) {
+        // Grande demais para o corpo da requisição: vai direto ao
+        // Storage, e o servidor recebe só o endereço.
+        setEnviando(true);
+        const op = operacaoId ?? (await descobrirOperacao());
+        if (!op) {
+          setErro({ msg: "Não consegui identificar a operação para enviar o arquivo." });
+          return;
+        }
+        caminhoUsado = await enviarAoStorage(f, op);
+        setCaminho(caminhoUsado);
+        setEnviando(false);
+        fd.append("caminho", caminhoUsado);
+        fd.append("nome", f.name);
+      } else {
+        fd.append("arquivo", f);
+      }
+
       const res = await fetch("/api/importar/previa", {
         method: "POST",
         body: fd,
       });
-      const json = await res.json();
+
       if (!res.ok) {
-        setErro({ msg: json.erro ?? `O servidor respondeu ${res.status}.` });
+        // 413 não devolve JSON: a plataforma corta antes do código rodar.
+        const texto = await res.text();
+        setErro({
+          msg:
+            res.status === 413
+              ? "O arquivo passou do limite da plataforma. Tente de novo — ele será enviado por outro caminho."
+              : (safeJson(texto)?.erro ?? `O servidor respondeu ${res.status}.`),
+          tec: texto.slice(0, 200),
+        });
         return;
       }
+
+      const json = await res.json();
+      setOperacaoId(json.operacaoId ?? null);
       setPrevia(json.previa as Previa);
     } catch (e) {
       setErro({
@@ -109,6 +203,7 @@ export default function ImportarCliente() {
         tec: e instanceof Error ? e.message : String(e),
       });
     } finally {
+      setEnviando(false);
       setCarregando(false);
     }
   }
@@ -119,7 +214,14 @@ export default function ImportarCliente() {
     setErro(null);
     try {
       const fd = new FormData();
-      fd.append("arquivo", arquivo);
+      // Reaproveita o que já subiu na prévia: enviar 19 MB duas vezes
+      // seria puro desperdício de espera.
+      if (caminho) {
+        fd.append("caminho", caminho);
+        fd.append("nome", arquivo.name);
+      } else {
+        fd.append("arquivo", arquivo);
+      }
       if (conta) fd.append("conta", conta);
       const res = await fetch("/api/importar/gravar", { method: "POST", body: fd });
       const json = await res.json();
@@ -174,9 +276,20 @@ export default function ImportarCliente() {
 
           {carregando && (
             <Panel className="p-6">
-              <div className="flex items-center justify-center gap-2 text-ink-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-[13px]">Lendo a planilha…</span>
+              <div className="flex flex-col items-center gap-1.5 text-ink-2">
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-[13px]">
+                    {enviando ? "Enviando o arquivo…" : "Lendo a planilha…"}
+                  </span>
+                </span>
+                {enviando && (
+                  <span className="text-[11.5px] text-ink-3 text-center max-w-sm">
+                    Arquivo grande vai direto para o armazenamento, sem passar
+                    pelo servidor — é o que permite passar do limite de 4,5 MB
+                    da plataforma.
+                  </span>
+                )}
               </div>
             </Panel>
           )}

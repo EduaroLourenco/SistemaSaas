@@ -192,20 +192,30 @@ async function pedidos(
     /*
      * A comissão, quando o canal não informa.
      *
-     * O hub preenche essa coluna em 31% dos pedidos do Mercado Livre —
+     * O hub preenche essa coluna em 33% dos pedidos do Mercado Livre —
      * conferido na planilha de origem, não aqui. Mas "valor a receber"
-     * vem em todos, e a conta fecha ao centavo:
+     * vem em ~100%, e o resto se reconstrói:
      *
-     *   total − a receber − frete do vendedor = comissão
+     *   total − a receber − frete do vendedor − juros = comissão
      *
-     * Verificado contra os pedidos que trazem as duas: 2 de 2, sem
-     * diferença. Deriva-se só quando falta, nunca por cima do informado —
-     * o número do canal é a verdade, o nosso é a melhor reconstrução.
+     * Os juros do parcelamento entram no `total` e são repasse, não
+     * comissão. Sem descontá-los a derivação inflava: em 1.169 pedidos
+     * que trazem as duas informações, a fórmula sem juros acertava 68%;
+     * com juros, 92,4%.
+     *
+     * NÃO é exata. Os ~8% restantes são casos em que o frete do comprador
+     * entra de outra forma na conta, e não achei a regra. Por isso
+     * `comissao_derivada` existe: quem lê precisa saber que aquele número
+     * é reconstrução, não extrato.
+     *
+     * Deriva só quando falta, nunca por cima do informado — o número do
+     * canal é a verdade; o nosso é a melhor aproximação dela.
      */
     let comissao = p.comissao;
     let derivada = false;
     if (comissao == null && p.liquidoRecebido != null) {
-      const calculada = p.total - p.liquidoRecebido - (p.freteVendedor ?? 0);
+      const calculada =
+        p.total - p.liquidoRecebido - (p.freteVendedor ?? 0) - (p.juros ?? 0);
       // Negativo significa que a conta não fecha para este pedido: melhor
       // deixar vazio do que gravar um custo impossível.
       if (calculada >= 0) {

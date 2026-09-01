@@ -48,6 +48,8 @@ export type Pedido = {
   comissao: number | null;
   /** Frete bancado pelo vendedor, quando o canal informa. */
   freteVendedor: number | null;
+  /** Juro do parcelamento embutido no total. Repasse, não receita. */
+  juros: number | null;
   /** O que sobra depois de tudo que o canal retém. */
   liquidoRecebido: number | null;
   itens: ItemPedido[];
@@ -74,6 +76,9 @@ const ACEITOS = [
   "status",
   "total",
   "total_frete",
+  // Juro do parcelamento: entra no `total` mas é repasse, não receita
+  // nem comissão. Sem ele, a comissão derivada fica inflada.
+  "total_juros",
   "envio_total",
   "dados_financeiros_comissão mercado livre",
   "dados_financeiros_custo de frete (vendedor)",
@@ -257,6 +262,7 @@ export async function lerPedidos(buffer: Buffer): Promise<LeituraPedidos> {
       total: numero(pega(r, "total")),
       frete: numero(pega(r, "total_frete")) || numero(pega(r, "envio_total")),
       comissao: comissao || null,
+      juros: numero(pega(r, "total_juros")) || null,
       freteVendedor: freteVendedor || null,
       liquidoRecebido: liquido || null,
       itens,

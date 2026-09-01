@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { gravar } from "@/lib/dados/gravar-importacao";
 import { operacaoPadrao } from "@/lib/dados/operacao";
+import { lerArquivoEnviado } from "@/lib/dados/arquivo-enviado";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -8,9 +9,9 @@ export const maxDuration = 120;
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
-    const arquivo = form.get("arquivo");
-    if (!(arquivo instanceof File)) {
-      return NextResponse.json({ erro: "Nenhum arquivo enviado." }, { status: 400 });
+    const lido = await lerArquivoEnviado(form);
+    if ("erro" in lido) {
+      return NextResponse.json({ erro: lido.erro }, { status: 400 });
     }
 
     let operacaoId = String(form.get("operacao") ?? "");
@@ -26,8 +27,7 @@ export async function POST(req: Request) {
     }
 
     const conta = String(form.get("conta") ?? "") || undefined;
-    const buffer = Buffer.from(await arquivo.arrayBuffer());
-    const resultado = await gravar(buffer, arquivo.name, operacaoId, conta);
+    const resultado = await gravar(lido.buffer, lido.nome, operacaoId, conta);
     return NextResponse.json({ resultado });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Falha ao gravar.";
