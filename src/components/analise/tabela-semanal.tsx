@@ -20,6 +20,7 @@ type ColunaSemana =
   | "receita"
   | "realizado"
   | "anunciado"
+  | "comissao"
   | "desvio";
 
 const COLUNAS: {
@@ -43,6 +44,12 @@ const COLUNAS: {
     id: "anunciado",
     rotulo: "Na vitrine",
     dica: "Preço que estava publicado no anúncio naquela semana",
+    align: "right",
+  },
+  {
+    id: "comissao",
+    rotulo: "Tarifa",
+    dica: "Alíquota do canal na semana. Campanha com redução cobra menos que a tabela.",
     align: "right",
   },
   { id: "desvio", rotulo: "vs. ideal", align: "right" },
@@ -80,6 +87,8 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
           return pago;
         case "anunciado":
           return w.precoAnunciado;
+        case "comissao":
+          return w.comissao;
         case "desvio":
           return w.precoIdeal ? ((pago - w.precoIdeal) / w.precoIdeal) * 100 : 0;
       }
@@ -209,6 +218,9 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
                     </td>
                     <td className="num h-8 px-2 text-right text-ink-3">
                       {money(w.precoAnunciado)}
+                    </td>
+                    <td className="num h-8 px-2 text-right text-ink-2">
+                      {w.comissao > 0 ? pct(w.comissao) : <span className="text-ink-3">—</span>}
                     </td>
                     <td className="h-8 px-2 text-right">
                       <Badge tone={tomDesvio(desvio)}>

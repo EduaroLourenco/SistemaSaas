@@ -165,6 +165,51 @@ export default function Exportacoes() {
           </div>
         </Panel>
 
+        {/* Evolução por anúncio: a planilha que responde "por que caiu"
+            sem precisar cruzar três exportações à mão. */}
+        <Panel className="p-4 mb-3">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold text-ink mb-1.5">
+                Evolução semanal por anúncio
+              </p>
+              <p className="text-[12.5px] text-ink-2 leading-relaxed max-w-xl">
+                Uma linha por anúncio por semana: SKU, MLB, visitas, vendas,
+                conversão, preço praticado e comissão. Quanto vendeu, a quanto,
+                e quanto custou.
+              </p>
+              <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-xl mt-1.5">
+                A comissão vem em duas colunas —{" "}
+                <span className="font-medium text-ink-2">tarifa de tabela</span>{" "}
+                e <span className="font-medium text-ink-2">tarifa cobrada</span>.
+                Elas discordam quando houve redução por campanha, e a diferença
+                entre as duas é o que a campanha economizou. A cobrada só existe
+                onde o canal informou.
+              </p>
+            </div>
+            <Button
+              variant="default"
+              disabled={baixando !== null}
+              onClick={() =>
+                baixarDe("/api/exportar/evolucao", "evolucao", "evolucao-anuncios.csv")
+              }
+              className="shrink-0 max-sm:w-full max-sm:h-11"
+            >
+              {baixando === "evolucao" ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Montando
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  Baixar CSV
+                </>
+              )}
+            </Button>
+          </div>
+        </Panel>
+
         {erro && (
           <Panel className="px-4 py-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
