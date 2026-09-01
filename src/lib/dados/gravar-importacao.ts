@@ -189,6 +189,31 @@ async function pedidos(
       ignoradas += 1;
       continue;
     }
+    /*
+     * A comissão, quando o canal não informa.
+     *
+     * O hub preenche essa coluna em 31% dos pedidos do Mercado Livre —
+     * conferido na planilha de origem, não aqui. Mas "valor a receber"
+     * vem em todos, e a conta fecha ao centavo:
+     *
+     *   total − a receber − frete do vendedor = comissão
+     *
+     * Verificado contra os pedidos que trazem as duas: 2 de 2, sem
+     * diferença. Deriva-se só quando falta, nunca por cima do informado —
+     * o número do canal é a verdade, o nosso é a melhor reconstrução.
+     */
+    let comissao = p.comissao;
+    let derivada = false;
+    if (comissao == null && p.liquidoRecebido != null) {
+      const calculada = p.total - p.liquidoRecebido - (p.freteVendedor ?? 0);
+      // Negativo significa que a conta não fecha para este pedido: melhor
+      // deixar vazio do que gravar um custo impossível.
+      if (calculada >= 0) {
+        comissao = Number(calculada.toFixed(2));
+        derivada = true;
+      }
+    }
+
     cabecas.push({
       operacao_id: operacaoId,
       canal_id: res.canalId,
@@ -200,7 +225,10 @@ async function pedidos(
       cancelado: p.cancelado,
       total: p.total,
       frete: p.frete,
-      comissao: p.comissao,
+      comissao,
+      comissao_derivada: derivada,
+      liquido_recebido: p.liquidoRecebido,
+      frete_vendedor: p.freteVendedor,
       origem: "planilha",
     });
     itensPorChave.set(`${res.canalId}|${p.codigoExterno}`, p.itens);
