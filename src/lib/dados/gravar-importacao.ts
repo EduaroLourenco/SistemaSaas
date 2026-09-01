@@ -1,4 +1,5 @@
 import "server-only";
+import { FAIXA_MIN, FAIXA_MAX_GRAVACAO } from "./comissao-plausivel";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { parsePerformanceReport } from "@/lib/planilhas/desempenho";
 import { lerPedidos } from "@/lib/planilhas/pedidos";
@@ -244,7 +245,7 @@ async function pedidos(
        * coisa. Sem a faixa, um frete de R$ 597 virava "tarifa de 21%" num
        * anúncio cuja tabela é 11,5% — e ninguém teria como desconfiar.
        */
-      if (pct >= 1 && pct <= 15) {
+      if (pct >= FAIXA_MIN && pct <= FAIXA_MAX_GRAVACAO) {
         comissao = Number(calculada.toFixed(2));
         derivada = true;
       }

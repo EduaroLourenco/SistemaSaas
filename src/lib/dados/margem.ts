@@ -342,7 +342,7 @@ export async function carregarBaseMargem(
 
     if (!pedidosVistos.has(p.id)) {
       pedidosVistos.add(p.id);
-      if (comissaoUtilizavel(p.comissao, p.total)) comComissaoPraticada += 1;
+      if (comissaoUtilizavel(p.comissao, p.total, a?.comissao_atual)) comComissaoPraticada += 1;
       if (n(p.frete_vendedor) > 0) comFretePraticado += 1;
       if (n(p.juros) > 0) comJuros += 1;
     }
@@ -350,7 +350,9 @@ export async function carregarBaseMargem(
     /* Comissão: praticada quando passa na faixa, senão a alíquota do anúncio. */
     let comissao: number | null = null;
     let comissaoOrigem: OrigemCusto | null = null;
-    if (comissaoUtilizavel(p.comissao, p.total)) {
+    // A alíquota do anúncio define o teto: 12,65% no clássico,
+    // 18,15% no premium. Ver comissao-plausivel.ts.
+    if (comissaoUtilizavel(p.comissao, p.total, a?.comissao_atual)) {
       comissao = r2(n(p.comissao) * fatia);
       comissaoOrigem = "praticado";
     } else if (a?.comissao_atual != null) {

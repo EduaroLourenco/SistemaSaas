@@ -151,6 +151,11 @@ export async function carregarEvolucao(
   };
 
   const anuncios = anunciosRaw as unknown as Anuncio[];
+  // Alíquota por MLB: o teto da faixa plausível sai dela — 12,65% no
+  // clássico, 18,15% no premium. Ver comissao-plausivel.ts.
+  const tarifaDoMlb = new Map(
+    anuncios.map((a) => [a.codigo_externo, a.comissao_atual])
+  );
   const contas = (contasRaw ?? []) as unknown as Conta[];
   const porConta = new Map(contas.map((c) => [c.id, c]));
   const porAnuncioId = new Map(anuncios.map((a) => [a.id, a]));
@@ -224,7 +229,7 @@ export async function carregarEvolucao(
     // Derivada fica de fora: ver a nota no topo do arquivo.
     // A faixa vale também na leitura: linhas gravadas antes da guarda
     // continuam no banco e não podem envenenar a tarifa da semana.
-    if (comissaoUtilizavel(p.comissao, p.total)) {
+    if (comissaoUtilizavel(p.comissao, p.total, tarifaDoMlb.get(mlb))) {
       const totalPed = totalDoPedido.get(it.pedido_id) ?? 0;
       // Rateio pelo valor do item. Em pedido de um item só — a maioria —
       // não há rateio nenhum, é o número exato.

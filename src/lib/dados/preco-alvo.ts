@@ -34,8 +34,10 @@ export type ComissaoCanal = {
 
 export type CenarioSku = {
   tipo: TipoAnuncio | null;
-  /** Alíquota usada, e de onde saiu. */
+  /** Alíquota de tabela — é ela que define o preço-alvo. */
   comissaoPct: number;
+  /** A que o canal de fato reteve, quando medida. Move a margem de hoje. */
+  comissaoCobrada: number | null;
   /** Preço médio praticado hoje nesse tipo, quando houve venda. */
   precoAtual: number | null;
   unidades: number;
@@ -186,9 +188,14 @@ export async function carregarPrecoAlvo(
   type Ac = {
     receita: number;
     unidades: number;
+    comissao: number;
+    receitaComComissao: number;
     frete: number;
     unidadesComFrete: number;
-    porTipo: Map<string, { receita: number; unidades: number }>;
+    porTipo: Map<
+      string,
+      { receita: number; unidades: number; comissao: number; receitaComComissao: number }
+    >;
   };
   const acum = new Map<string, Ac>();
 
@@ -198,18 +205,33 @@ export async function carregarPrecoAlvo(
 
     const at =
       acum.get(it.produtoId) ??
-      { receita: 0, unidades: 0, frete: 0, unidadesComFrete: 0, porTipo: new Map() };
+      {
+        receita: 0, unidades: 0, comissao: 0, receitaComComissao: 0,
+        frete: 0, unidadesComFrete: 0, porTipo: new Map(),
+      };
 
     at.receita += it.receita;
     at.unidades += it.quantidade;
+    if (it.comissaoOrigem === "praticado" && it.comissao != null) {
+      at.comissao += it.comissao;
+      at.receitaComComissao += it.receita;
+    }
     if (it.freteOrigem === "praticado" && it.frete != null) {
       at.frete += it.frete;
       at.unidadesComFrete += it.quantidade;
     }
 
-    const t = at.porTipo.get(it.anuncioTipo) ?? { receita: 0, unidades: 0 };
+    const t =
+      at.porTipo.get(it.anuncioTipo) ??
+      { receita: 0, unidades: 0, comissao: 0, receitaComComissao: 0 };
     t.receita += it.receita;
     t.unidades += it.quantidade;
+    // Só a comissão MEDIDA: a estimada por tabela repetiria a tabela e
+    // apagaria a diferença entre as duas.
+    if (it.comissaoOrigem === "praticado" && it.comissao != null) {
+      t.comissao += it.comissao;
+      t.receitaComComissao += it.receita;
+    }
     at.porTipo.set(it.anuncioTipo, t);
 
     acum.set(it.produtoId, at);
@@ -249,16 +271,44 @@ export async function carregarPrecoAlvo(
         const t = c.tipo ? ac?.porTipo.get(c.tipo) : undefined;
         // Sem tipo cadastrado, o praticado é o do SKU inteiro: o canal
         // não separa, então separar aqui seria inventar distinção.
-        const vendas = c.tipo ? t : ac ? { receita: ac.receita, unidades: ac.unidades } : undefined;
+        const vendas = c.tipo
+          ? t
+          : ac
+            ? {
+                receita: ac.receita,
+                unidades: ac.unidades,
+                comissao: ac.comissao,
+                receitaComComissao: ac.receitaComComissao,
+              }
+            : undefined;
         const precoAtual =
           vendas && vendas.unidades > 0 ? r2(vendas.receita / vendas.unidades) : null;
 
         const podeCalcular =
           mercadoria != null && embalagem != null && impostoPct != null && frete != null;
 
+        /*
+         * Duas comissões, e cada uma serve a uma coluna.
+         *
+         * A margem de HOJE usa a cobrada — é o que o canal de fato reteve
+         * nesses pedidos, medida em 6,12% no clássico contra 11,5% de
+         * tabela. Usar a tabela aqui faria esta tela mostrar uma margem
+         * diferente da do Financeiro para o mesmo SKU.
+         *
+         * O preço-ALVO usa a de tabela, e isso não é inconsistência: a
+         * cobrada baixa vem de campanha com redução, que pode acabar
+         * amanhã. Precificar contando com ela é apostar que a promoção
+         * não termina.
+         */
+        const cobrada = vendas && vendas.receitaComComissao > 0
+          ? r2((vendas.comissao * 100) / vendas.receitaComComissao)
+          : null;
+        const comissaoParaMargemAtual = cobrada ?? c.comissao;
+
         return {
           tipo: c.tipo,
           comissaoPct: c.comissao,
+          comissaoCobrada: cobrada,
           precoAtual,
           unidades: vendas?.unidades ?? 0,
           atual:
@@ -268,7 +318,7 @@ export async function carregarPrecoAlvo(
                     mercadoria: mercadoria!,
                     embalagem: embalagem!,
                     frete: frete!,
-                    comissaoPct: c.comissao,
+                    comissaoPct: comissaoParaMargemAtual,
                     impostoPct: impostoPct!,
                   },
                   precoAtual

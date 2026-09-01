@@ -183,12 +183,15 @@ export async function carregarCustos(): Promise<DadosCustos> {
     unidadesComFrete: number;
     juros: number;
     unidadesComJuros: number;
+    /** Unidades por tipo de anúncio: pondera a tarifa de tabela do SKU. */
+    unidadesPorTipo: Map<string, number>;
   };
   const novo = (): Acum => ({
     unidades: 0, receita: 0,
     comissao: 0, receitaComComissao: 0,
     frete: 0, unidadesComFrete: 0,
     juros: 0, unidadesComJuros: 0,
+    unidadesPorTipo: new Map(),
   });
   const porProduto = new Map<string, Acum>();
 
@@ -198,6 +201,10 @@ export async function carregarCustos(): Promise<DadosCustos> {
 
     at.unidades += it.quantidade;
     at.receita += it.receita;
+    at.unidadesPorTipo.set(
+      it.anuncioTipo,
+      (at.unidadesPorTipo.get(it.anuncioTipo) ?? 0) + it.quantidade
+    );
 
     /*
      * Só o custo MEDIDO entra na média do praticado.
@@ -249,12 +256,35 @@ export async function carregarCustos(): Promise<DadosCustos> {
     const meus = anunciosPorProduto.get(prod.id) ?? [];
     const agregada = margemPorSku.get(prod.sku);
 
+    /*
+     * A tarifa de tabela do SKU, ponderada pelo que cada tipo vendeu.
+     *
+     * A média simples entre os anúncios estava errada: 138 dos 142 SKUs
+     * vivem em clássico E premium, e a média de 11,5% com 16,5% dá 14% —
+     * uma alíquota que não existe em anúncio nenhum. Se o SKU vende
+     * quase tudo no clássico, a tabela dele é 11,5%, não 14%.
+     *
+     * Sem venda registrada, cai na média simples: não há peso para
+     * aplicar, e aí a média entre os tipos é o menos pior.
+     */
     const comTarifa = meus.filter((a) => a.comissao_atual != null);
-    const comissaoTabela = comTarifa.length
-      ? r2(
-          comTarifa.reduce((s, a) => s + n(a.comissao_atual), 0) / comTarifa.length
-        )
-      : null;
+    let comissaoTabela: number | null = null;
+    if (comTarifa.length) {
+      let peso = 0;
+      let soma = 0;
+      for (const a of comTarifa) {
+        const un = ac?.unidadesPorTipo.get(a.tipo) ?? 0;
+        peso += un;
+        soma += n(a.comissao_atual) * un;
+      }
+      comissaoTabela =
+        peso > 0
+          ? r2(soma / peso)
+          : r2(
+              comTarifa.reduce((s, a) => s + n(a.comissao_atual), 0) /
+                comTarifa.length
+            );
+    }
 
     const comissaoPraticada =
       ac && ac.receitaComComissao > 0
