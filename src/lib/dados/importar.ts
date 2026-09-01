@@ -187,14 +187,21 @@ async function previaVendasMeli(
 
   const codigos = r.vendas.map((v) => v.codigoExterno);
   const existentes = new Set<string>();
-  // Em lotes: a lista de códigos entra na URL, e 681 de uma vez estoura
-  // o limite de tamanho do PostgREST.
+  /*
+   * Procura pelos dois identificadores do pedido, e em lotes.
+   *
+   * Dois porque o Meli numera o mesmo pedido de duas formas e este
+   * relatório usa a segunda; em lotes porque a lista de códigos entra na
+   * URL e 681 de uma vez estoura o limite do PostgREST.
+   */
   for (let i = 0; i < codigos.length; i += 200) {
-    const { data } = await sb
-      .from("pedidos")
-      .select("codigo_externo")
-      .in("codigo_externo", codigos.slice(i, i + 200));
-    for (const p of data ?? []) existentes.add(p.codigo_externo as string);
+    const lote = codigos.slice(i, i + 200);
+    const [a, b] = await Promise.all([
+      sb.from("pedidos").select("codigo_externo").in("codigo_externo", lote),
+      sb.from("pedidos").select("codigo_secundario").in("codigo_secundario", lote),
+    ]);
+    for (const p of a.data ?? []) existentes.add(p.codigo_externo as string);
+    for (const p of b.data ?? []) existentes.add(p.codigo_secundario as string);
   }
 
   base.atualizadas = r.vendas.filter((v) => existentes.has(v.codigoExterno)).length;

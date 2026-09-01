@@ -37,6 +37,8 @@ export type ItemPedido = {
 
 export type Pedido = {
   codigoExterno: string;
+  /** Segundo identificador do canal, quando difere do primeiro. */
+  codigoSecundario: string | null;
   marketplace: string;
   conta: string;
   data: string;
@@ -69,6 +71,19 @@ export type LeituraPedidos = {
 /** Cabeçalhos aceitos. Nada fora desta lista é lido. */
 const ACEITOS = [
   "id_pedido_marketplace",
+  /*
+   * O MESMO pedido, com outro número.
+   *
+   * O Mercado Livre identifica um pedido por dois códigos, e cada
+   * relatório escolhe um: a listagem traz o primeiro, o painel de ERP e o
+   * relatório de tarifas do Meli trazem o segundo. Acontece em ~22% dos
+   * pedidos do Meli.
+   *
+   * Sem ele, o relatório de tarifas do canal não encontra esses pedidos —
+   * eram 178 de 681 que não casavam. Não é dado pessoal: é identificador
+   * de pedido, como o primeiro.
+   */
+  "id_pedido_secundario",
   "marketplace",
   "conta",
   "data_criacao",
@@ -251,8 +266,13 @@ export async function lerPedidos(buffer: Buffer): Promise<LeituraPedidos> {
     const freteVendedor = numero(pega(r, "dados_financeiros_custo de frete (vendedor)"));
     const liquido = numero(pega(r, "dados_financeiros_valor a receber (vendedor)"));
 
+    const secundario = texto(pega(r, "id_pedido_secundario")).trim();
+
     pedidos.push({
       codigoExterno: codigo,
+      // Só quando difere: guardar o mesmo número duas vezes não ajuda a
+      // achar nada e sugere que há duas identidades onde há uma.
+      codigoSecundario: secundario && secundario !== codigo ? secundario : null,
       marketplace,
       conta: texto(pega(r, "conta")).trim(),
       data: criacao,

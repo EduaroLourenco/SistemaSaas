@@ -232,15 +232,30 @@ async function vendasMeli(
   }
 
   const codigos = [...porPedido.keys()];
+  /*
+   * Procura pelos DOIS números.
+   *
+   * O Meli identifica o mesmo pedido por dois códigos e este relatório
+   * usa o segundo; a listagem da Vtrina grava o primeiro. Em ~22% dos
+   * pedidos eles diferem, e procurar só por um deixava 178 das 681
+   * vendas sem pedido — que apareciam como "sem correspondência" quando
+   * o pedido estava lá, com o outro número.
+   */
   const idPorCodigo = new Map<string, string>();
   for (let i = 0; i < codigos.length; i += 200) {
-    const { data, error } = await sb
-      .from("pedidos")
-      .select("id,codigo_externo")
-      .in("codigo_externo", codigos.slice(i, i + 200));
-    if (error) throw new Error(`Falha ao localizar pedidos: ${error.message}`);
-    for (const p of data ?? []) {
+    const lote = codigos.slice(i, i + 200);
+    const [porPrimeiro, porSegundo] = await Promise.all([
+      sb.from("pedidos").select("id,codigo_externo").in("codigo_externo", lote),
+      sb.from("pedidos").select("id,codigo_secundario").in("codigo_secundario", lote),
+    ]);
+    if (porPrimeiro.error) {
+      throw new Error(`Falha ao localizar pedidos: ${porPrimeiro.error.message}`);
+    }
+    for (const p of porPrimeiro.data ?? []) {
       idPorCodigo.set(p.codigo_externo as string, p.id as string);
+    }
+    for (const p of porSegundo.data ?? []) {
+      idPorCodigo.set(p.codigo_secundario as string, p.id as string);
     }
   }
 
@@ -390,6 +405,7 @@ async function pedidos(
       canal_id: res.canalId,
       conta_canal_id: res.contaCanalId,
       codigo_externo: p.codigoExterno,
+      codigo_secundario: p.codigoSecundario,
       data: p.data,
       fechado_em: p.fechadoEm,
       status: p.status,
