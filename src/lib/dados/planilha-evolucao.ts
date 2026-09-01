@@ -78,6 +78,14 @@ const METRICAS: Metrica[] = [
   { nome: "Preço", largura: 11, formato: DIN, valor: (l) => l.precoPraticado },
   { nome: "Retido %", largura: 9, formato: PCT, valor: (l) => l.tarifaCobrada },
   { nome: "Retido R$", largura: 11, formato: DIN, valor: (l) => l.comissaoReais },
+  /*
+   * Margem só aparece onde o custo do SKU está cadastrado. Vazio aqui
+   * não é "margem zero" — é "ainda não se sabe". A coluna de cobertura
+   * ao lado diz quanto da receita da semana entrou na conta, porque uma
+   * margem de 30% sobre 8% da receita não é uma margem de 30%.
+   */
+  { nome: "Margem R$", largura: 12, formato: DIN, valor: (l) => l.margem },
+  { nome: "Margem %", largura: 9, formato: PCT, valor: (l) => l.margemPct },
 ];
 
 const IDENT = [
@@ -272,6 +280,19 @@ export async function montarPlanilhaEvolucao(
     ["", false],
     ["Retido costuma ficar abaixo da Tarifa tabela: campanha com redução de tarifa", false],
     ["cobra menos, e a diferença entre as duas é o que a campanha economizou.", false],
+    ["", false],
+    ["Margem R$ e Margem %", true],
+    ["O que a venda daquela semana deixou depois de comissão, frete, juros, imposto,", false],
+    ["embalagem e mercadoria. Só existe onde o custo do SKU está cadastrado em", false],
+    ["Financeiro › Custos; enquanto faltar, a célula fica vazia.", false],
+    ["", false],
+    ["Vazio aqui não é margem zero. Zero seria a afirmação de que a venda não deixou", false],
+    ["nada; vazio diz que ainda não se sabe quanto deixou — que é a verdade enquanto o", false],
+    ["custo não foi informado.", false],
+    ["", false],
+    ["A margem é calculada item a item, não sobre a média da semana. Preço e comissão", false],
+    ["variam entre pedidos do mesmo anúncio, e a margem da média não é a média das", false],
+    ["margens.", false],
     ["", false],
     ["Vendas x Unidades", true],
     ["Vendas vem do relatório de desempenho do canal. Unidades vem dos seus", false],

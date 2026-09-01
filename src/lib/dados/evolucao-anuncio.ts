@@ -3,6 +3,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
 import { comissaoUtilizavel } from "./comissao-plausivel";
+import { carregarBaseMargem, agregarAnuncioSemana } from "./margem";
 
 /**
  * Evolução semanal por anúncio: quanto vendeu, a quanto, e quanto custou.
@@ -70,6 +71,17 @@ export type SemanaAnuncio = {
   /** Alíquota efetivamente cobrada, quando o canal informou. */
   tarifaCobrada: number | null;
   comissaoReais: number | null;
+  /*
+   * Margem da semana daquele anúncio, vinda de margem.ts.
+   *
+   * Nula enquanto faltar custo do SKU — nunca zero. Zero seria a
+   * afirmação de que a venda não deixou nada, e a verdade é que ainda
+   * não se sabe quanto deixou.
+   */
+  margem: number | null;
+  margemPct: number | null;
+  /** Quanto da receita da semana entrou na margem. */
+  coberturaMargem: number;
 };
 
 export type DadosEvolucao = {
@@ -93,7 +105,7 @@ export async function carregarEvolucao(
 ): Promise<DadosEvolucao> {
   const sb = await clienteServidor();
 
-  const [desempenho, anunciosRaw, pedidosRaw, exclusoes, { data: contasRaw }] =
+  const [desempenho, anunciosRaw, pedidosRaw, exclusoes, { data: contasRaw }, baseMargem] =
     await Promise.all([
       paginar(() =>
         sb
@@ -115,6 +127,7 @@ export async function carregarEvolucao(
       ),
       carregarExclusoes(),
       sb.from("contas_canal").select("id,nome,canal_id,canais(codigo)").limit(200),
+      carregarBaseMargem(),
     ]);
 
   type Anuncio = {
@@ -236,6 +249,10 @@ export async function carregarEvolucao(
     receita: string | number;
   };
 
+  // Margem por anúncio e semana, do motor. A evolução não a recalcula:
+  // duas contas da mesma margem divergiriam no primeiro ajuste.
+  const margemPorChave = agregarAnuncioSemana(baseMargem);
+
   const linhas: SemanaAnuncio[] = [];
 
   for (const d of desempenho as unknown as Des[]) {
@@ -246,6 +263,7 @@ export async function carregarEvolucao(
 
     const chave = `${a.codigo_externo}|${segundaDe(String(d.inicio))}`;
     const v = vendasPorChave.get(chave);
+    const celula = margemPorChave.get(chave);
 
     const tarifaTabela = a.comissao_atual == null ? null : n(a.comissao_atual);
     const tarifaCobrada =
@@ -272,6 +290,9 @@ export async function carregarEvolucao(
       tarifaTabela,
       tarifaCobrada,
       comissaoReais: v && v.comissao > 0 ? r2(v.comissao) : null,
+      margem: celula?.margem ?? null,
+      margemPct: celula?.margemPct ?? null,
+      coberturaMargem: celula?.cobertura ?? 0,
     });
   }
 
