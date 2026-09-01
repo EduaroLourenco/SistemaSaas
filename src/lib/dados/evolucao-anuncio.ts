@@ -15,6 +15,18 @@ import { carregarExclusoes, aplicar } from "./exclusoes";
  * O item de pedido guarda o MLB em `codigo_externo` (3.532 de 3.532 itens
  * do Mercado Livre), então a ligação é direta e sem ambiguidade.
  *
+ * ── O que a segunda coluna é, e o que ela NÃO é ──
+ *
+ * "Tarifa de venda" é o que o canal cobra pelo anúncio. Onde o hub a
+ * informa, é esse número — média de 7,4% nos pedidos do Mercado Livre.
+ *
+ * Onde ele não informa, o sistema reconstrói de
+ * `total − a receber − frete − juros`. Isso é TUDO QUE O CANAL RETEVE
+ * menos as parcelas que dá para identificar — pode conter retenções que
+ * não são tarifa de venda. Por isso a coluna se chama "retido pelo
+ * canal", não "tarifa cobrada": nomear o resíduo de tarifa seria afirmar
+ * mais do que o dado sustenta.
+ *
  * ── Por que a comissão vem em duas colunas ──
  *
  * Comparando a comissão cobrada com a alíquota do catálogo, elas

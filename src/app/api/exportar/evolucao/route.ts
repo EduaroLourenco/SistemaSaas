@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       "Ano ISO", "Semana", "Início", "Fim",
       "Visitas", "Vendas", "Unidades", "Conversão %",
       "Receita", "Preço praticado",
-      "Tarifa tabela %", "Tarifa cobrada %", "Comissão R$",
+      "Tarifa tabela %", "Retido pelo canal %", "Retido R$",
     ];
 
     const corpo = linhas.map((l) => [

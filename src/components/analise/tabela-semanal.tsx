@@ -48,8 +48,10 @@ const COLUNAS: {
   },
   {
     id: "comissao",
-    rotulo: "Tarifa",
-    dica: "Alíquota do canal na semana. Campanha com redução cobra menos que a tabela.",
+    rotulo: "Tarifa tabela",
+    dica:
+      "Alíquota de tabela do anúncio — NÃO é o que foi cobrado. " +
+      "Campanha com redução cobra menos; o valor real está na exportação da evolução.",
     align: "right",
   },
   { id: "desvio", rotulo: "vs. ideal", align: "right" },
