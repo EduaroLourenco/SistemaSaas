@@ -43,6 +43,7 @@ export const NAV: NavGroup[] = [
       { label: "Semanal", href: "/vendas/semanal" },
       { label: "Diário", href: "/vendas/diario" },
       { label: "Comparativos", href: "/vendas/comparativos" },
+      { label: "Análise de SKU", href: "/vendas/skus" },
       { label: "Cancelamentos", href: "/vendas/cancelamentos" },
       { label: "Metas", href: "/vendas/metas" },
       { label: "Lançamentos", href: "/vendas/lancamentos" },
