@@ -6,6 +6,7 @@ import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select, Field, Segmented } from "@/components/ui/controls";
 import { money, moneyShort, pct, count } from "@/lib/format";
+import { Download, Loader2, AlertCircle } from "lucide-react";
 import type { DadosAnaliseSku, LinhaSku } from "@/lib/dados/analise-sku";
 
 /**
@@ -62,6 +63,56 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
     ate: periodo.fim,
     canal: dados.canalId ?? "",
   });
+
+  const [baixando, setBaixando] = React.useState(false);
+  const [erro, setErro] = React.useState<string | null>(null);
+
+  /**
+   * Exporta o recorte APLICADO, não o rascunho dos campos.
+   *
+   * `periodo` e `canalId` vêm do servidor e descrevem o que está na
+   * tela; `filtro` é o que a pessoa está digitando e pode ainda não ter
+   * sido aplicado. Exportar o rascunho entregaria uma planilha diferente
+   * da tabela que a pessoa está olhando.
+   */
+  async function exportar() {
+    setBaixando(true);
+    setErro(null);
+    try {
+      const q = new URLSearchParams({ de: periodo.inicio, ate: periodo.fim });
+      if (dados.canalId) q.set("canal", dados.canalId);
+
+      const r = await fetch(`/api/exportar/skus?${q}`);
+      if (!r.ok) {
+        const corpo = await r.json().catch(() => ({}));
+        setErro(corpo.erro ?? `Falha ao gerar (HTTP ${r.status})`);
+        return;
+      }
+
+      // O nome vem do servidor: assim o arquivo baixado e o que o
+      // servidor montou têm o mesmo nome, com o recorte dentro dele.
+      const cd = r.headers.get("content-disposition") ?? "";
+      const nome = cd.match(/filename="([^"]+)"/)?.[1] ?? "skus.xlsx";
+
+      const blob = await r.blob();
+      if (blob.size === 0) {
+        setErro("O arquivo veio vazio.");
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setErro("Sem conexão — nada foi baixado.");
+    } finally {
+      setBaixando(false);
+    }
+  }
 
   function aplicar() {
     const q = new URLSearchParams({ de: filtro.de, ate: filtro.ate });
@@ -153,6 +204,19 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
             <Button variant="primary" onClick={aplicar}>
               Aplicar
             </Button>
+            <Button disabled={baixando} onClick={exportar}>
+              {baixando ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Montando
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  Exportar Excel
+                </>
+              )}
+            </Button>
             <div className="flex-1" />
             <Segmented
               options={[
@@ -164,6 +228,13 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
             />
           </div>
         </Panel>
+
+        {erro && (
+          <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
+            <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
+            <p className="text-[13px] text-ink-2">{erro}</p>
+          </Panel>
+        )}
 
         {/* ── Resumo ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
