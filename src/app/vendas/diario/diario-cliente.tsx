@@ -201,6 +201,11 @@ const METRICAS_GRAFICO = [
 ] as const;
 type MetricaGrafico = (typeof METRICAS_GRAFICO)[number]["value"];
 
+/** yyyy-mm-dd → dd/mm, sem passar por fuso. */
+function brData(iso: string) {
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+}
+
 const ROTULOS_COLUNA = ["Coluna 1", "Coluna 2", "Coluna 3", "Coluna 4"];
 
 /* ══ Tela ════════════════════════════════════════════════════ */
@@ -220,9 +225,34 @@ export default function ComparativoDiario({
   }
 
   const PERIODOS = dados.periodos;
-  const PERIODO_POR_ID = React.useMemo(
-    () => Object.fromEntries(PERIODOS.map((p) => [p.id, p])) as Record<PeriodoId, Periodo>,
-    [PERIODOS]
+
+  /**
+   * Resolve um id de período — preset ou intervalo do calendário.
+   *
+   * O intervalo livre é montado aqui, fatiando os dias que o servidor já
+   * mandou. Sem isso cada troca de data pediria uma consulta nova, e a
+   * comparação de quatro colunas seria quatro idas ao banco a cada clique.
+   */
+  const resolverPeriodo = React.useCallback(
+    (id: PeriodoId | ""): Periodo | null => {
+      if (!id) return null;
+      if (!id.startsWith("livre:")) {
+        return PERIODOS.find((p) => p.id === id) ?? null;
+      }
+      const [, de, ate] = id.split(":");
+      if (!de || !ate || de > ate) return null;
+      const dias = dados.dias.filter((d) => d.data != null && d.data >= de && d.data <= ate);
+      // Sem dia nenhum no intervalo a coluna ficaria com zero em tudo, o
+      // que se lê como "vendeu nada" em vez de "não há dado no período".
+      if (!dias.length) return null;
+      return {
+        id,
+        rotulo: de === ate ? brData(de) : `${brData(de)} — ${brData(ate)}`,
+        intervalo: de === ate ? brData(de) : `${brData(de)} — ${brData(ate)}`,
+        dias,
+      };
+    },
+    [PERIODOS, dados.dias]
   );
 
   const [rascunho, setRascunho] =
@@ -235,6 +265,22 @@ export default function ComparativoDiario({
 
   const pendente = rascunho.some((v, i) => v !== aplicado[i]);
 
+  /** As datas de uma coluna em modo calendário, ou null se for preset. */
+  const livreDe = React.useCallback((id: PeriodoId | "") => {
+    if (!id || !id.startsWith("livre:")) return null;
+    const [, de, ate] = id.split(":");
+    return { de, ate };
+  }, []);
+
+  function trocarLivre(i: number, de: string, ate: string) {
+    // O fim nunca fica antes do início: em vez de recusar a digitação, o
+    // que trava o campo, arrasta o outro extremo junto.
+    const fim = ate < de ? de : ate;
+    setRascunho((r) =>
+      r.map((v, j) => (j === i ? (`livre:${de}:${fim}` as PeriodoId) : v))
+    );
+  }
+
   /* colunas ativas — a cor acompanha a posição, não o período */
   const colunas = React.useMemo(
     () =>
@@ -242,15 +288,18 @@ export default function ComparativoDiario({
         .map((id, i) => ({ id, slot: i }))
         .filter((c): c is { id: PeriodoId; slot: number } => c.id !== "")
         .map((c) => {
-          const periodo = PERIODO_POR_ID[c.id];
-          return {
-            slot: c.slot,
-            periodo,
-            resumo: resumir(periodo),
-            cor: SERIES[c.slot],
-          };
-        }),
-    [aplicado]
+          const periodo = resolverPeriodo(c.id);
+          return periodo
+            ? {
+                slot: c.slot,
+                periodo,
+                resumo: resumir(periodo),
+                cor: SERIES[c.slot],
+              }
+            : null;
+        })
+        .filter((c): c is NonNullable<typeof c> => c !== null),
+    [aplicado, resolverPeriodo]
   );
 
   /** Valor exibido, já ajustado pela base escolhida. */
@@ -353,7 +402,8 @@ export default function ComparativoDiario({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {ROTULOS_COLUNA.map((rotulo, i) => {
             const valor = rascunho[i];
-            const periodo = valor ? PERIODO_POR_ID[valor] : null;
+            const livre = livreDe(valor);
+            const periodo = resolverPeriodo(valor);
             return (
               <Panel key={rotulo} className="px-3 py-2.5 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1.5">
@@ -371,14 +421,18 @@ export default function ComparativoDiario({
                 <Select
                   aria-label={rotulo}
                   className="h-11 md:h-8"
-                  value={valor}
-                  onChange={(e) =>
-                    setRascunho((r) =>
-                      r.map((v, j) =>
-                        j === i ? (e.target.value as PeriodoId | "") : v
-                      )
-                    )
-                  }
+                  value={livre ? "livre" : valor}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    // Ao escolher "Escolher no calendário", começa no
+                    // último dia com dado — um intervalo vazio deixaria a
+                    // coluna sem período e a tela sem explicar por quê.
+                    const novo =
+                      v === "livre"
+                        ? (`livre:${dados.ultimaData}:${dados.ultimaData}` as PeriodoId)
+                        : (v as PeriodoId | "");
+                    setRascunho((r) => r.map((x, j) => (j === i ? novo : x)));
+                  }}
                 >
                   {i > 0 && <option value="">Nenhum</option>}
                   {PERIODOS.map((p) => (
@@ -386,10 +440,41 @@ export default function ComparativoDiario({
                       {p.rotulo}
                     </option>
                   ))}
+                  <option value="livre">Escolher no calendário…</option>
                 </Select>
-                <p className="num text-[11px] text-ink-3 mt-1.5 truncate">
-                  {periodo ? periodo.intervalo : "—"}
-                </p>
+
+                {livre ? (
+                  <div className="flex items-center gap-1 mt-1.5">
+                    <input
+                      type="date"
+                      aria-label={`${rotulo}: data inicial`}
+                      value={livre.de}
+                      min={dados.primeiraData ?? undefined}
+                      max={dados.ultimaData ?? undefined}
+                      onChange={(e) => trocarLivre(i, e.target.value, livre.ate)}
+                      className="num h-8 px-1.5 rounded-r1 border border-line bg-panel text-[11.5px] text-ink w-full min-w-0"
+                    />
+                    <span className="text-[11px] text-ink-3 shrink-0">a</span>
+                    <input
+                      type="date"
+                      aria-label={`${rotulo}: data final`}
+                      value={livre.ate}
+                      min={livre.de}
+                      max={dados.ultimaData ?? undefined}
+                      onChange={(e) => trocarLivre(i, livre.de, e.target.value)}
+                      className="num h-8 px-1.5 rounded-r1 border border-line bg-panel text-[11.5px] text-ink w-full min-w-0"
+                    />
+                  </div>
+                ) : (
+                  <p className="num text-[11px] text-ink-3 mt-1.5 truncate">
+                    {periodo ? periodo.intervalo : "—"}
+                  </p>
+                )}
+                {livre && !periodo && (
+                  <p className="text-[10.5px] text-down mt-1">
+                    Sem dado nesse intervalo.
+                  </p>
+                )}
               </Panel>
             );
           })}

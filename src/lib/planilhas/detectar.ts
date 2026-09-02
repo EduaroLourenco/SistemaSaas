@@ -19,6 +19,7 @@ export type TipoPlanilha =
   | "pedidos"
   | "catalogo"
   | "vendas_ml"
+  | "ads_ml"
   | "desconhecido";
 
 export type Deteccao = {
@@ -52,6 +53,14 @@ const ASSINATURAS: {
     linhas: [5, 6, 7],
     exigidos: ["id do anúncio", "visitas únicas"],
     rotulo: "Desempenho de anúncios do Mercado Livre",
+  },
+  {
+    tipo: "ads_ml",
+    aba: /patrocinad|an[úu]ncio/i,
+    // Cabeçalho na linha 2; as vizinhas cobrem mudança de layout.
+    linhas: [1, 2, 3],
+    exigidos: ["código do anúncio", "investimento"],
+    rotulo: "Relatório de anúncios patrocinados do Mercado Livre",
   },
   {
     /*
@@ -129,6 +138,7 @@ export async function detectar(buffer: Buffer): Promise<Deteccao> {
 export const NOME_TIPO: Record<TipoPlanilha, string> = {
   desempenho: "Desempenho de anúncios",
   vendas_ml: "Vendas e tarifas do Mercado Livre",
+  ads_ml: "Anúncios patrocinados (Ads)",
   pedidos: "Pedidos",
   catalogo: "Catálogo de anúncios",
   desconhecido: "Formato não reconhecido",

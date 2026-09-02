@@ -7,6 +7,14 @@
 export type DiaPeriodo = {
   /** Índice do dia dentro do período: 1 = primeiro dia. */
   dia: number;
+  /**
+   * A data real, aaaa-mm-dd.
+   *
+   * O índice sozinho posiciona o dia no gráfico mas não diz QUE dia é —
+   * e o calendário precisa saber, para recortar um intervalo qualquer.
+   * Opcional porque o gerador de exemplo não tem datas reais.
+   */
+  data?: string;
   receita: number;
   pedidos: number;
   visitas: number;
@@ -21,7 +29,18 @@ export type PeriodoId =
   | "d7"
   | "mesAtual"
   | "mesAnterior"
-  | "mesAnoPassado";
+  | "mesAnoPassado"
+  /*
+   * Intervalo escolhido no calendário, com as datas no próprio id:
+   * "livre:2026-08-01:2026-08-15".
+   *
+   * Carregar o intervalo no id, em vez de num estado paralelo, mantém a
+   * seleção das quatro colunas sendo uma lista de strings — que é o que
+   * o rascunho, o aplicado e a comparação já esperam. Um estado separado
+   * para "a coluna 2 é personalizada" precisaria ser mantido em sincronia
+   * com o resto em todo lugar que mexe nas colunas.
+   */
+  | `livre:${string}:${string}`;
 
 export type Periodo = {
   id: PeriodoId;
@@ -160,6 +179,7 @@ function gerar(c: Config): Periodo {
 
     dias.push({
       dia: i + 1,
+      data: undefined,
       receita,
       pedidos,
       visitas,

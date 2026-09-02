@@ -5,6 +5,7 @@ import { detectar, NOME_TIPO, type TipoPlanilha } from "@/lib/planilhas/detectar
 import { parsePerformanceReport } from "@/lib/planilhas/desempenho";
 import { lerPedidos } from "@/lib/planilhas/pedidos";
 import { lerVendasMeli } from "@/lib/planilhas/vendas-ml";
+import { lerAdsMeli } from "@/lib/planilhas/ads-meli";
 import { lerCatalogo } from "@/lib/planilhas/catalogo";
 import {
   resolver,
@@ -158,6 +159,7 @@ export async function previsualizar(
 
   const canais = await carregarCanais(operacaoId);
 
+  if (det.tipo === "ads_ml") return previaAds(buffer, base, sb);
   if (det.tipo === "vendas_ml") return previaVendasMeli(buffer, base, sb);
   if (det.tipo === "pedidos") return previaPedidos(buffer, base, canais, sb);
   if (det.tipo === "catalogo") return previaCatalogo(buffer, base, canais, sb);
@@ -165,6 +167,59 @@ export async function previsualizar(
 }
 
 type Sb = Awaited<ReturnType<typeof clienteServidor>>;
+
+/**
+ * Prévia do relatório de anúncios patrocinados.
+ *
+ * Ele não cria nem altera anúncio: só registra o gasto de mídia por
+ * anúncio e campanha. Anúncio que ainda não está no catálogo tem a linha
+ * guardada mesmo assim, pelo código — o catálogo pode chegar depois, e
+ * perder o gasto seria pior que guardá-lo sem vínculo.
+ */
+async function previaAds(buffer: Buffer, base: Previa, sb: Sb): Promise<Previa> {
+  const r = await lerAdsMeli(buffer);
+  base.linhas = r.linhas.length;
+  base.periodo = { inicio: r.inicio, fim: r.fim };
+
+  const mlbs = [...new Set(r.linhas.map((l) => l.mlb))];
+  const conhecidos = new Set<string>();
+  for (let i = 0; i < mlbs.length; i += 200) {
+    const { data } = await sb
+      .from("anuncios")
+      .select("codigo_externo")
+      .in("codigo_externo", mlbs.slice(i, i + 200));
+    for (const a of data ?? []) conhecidos.add(a.codigo_externo as string);
+  }
+
+  const fora = mlbs.filter((m) => !conhecidos.has(m));
+  base.novas = r.linhas.length;
+  base.atualizadas = 0;
+  base.orfaos = fora.length
+    ? [
+        {
+          descricao: "Anúncios com gasto de mídia que não estão no catálogo",
+          exemplos: fora.slice(0, 5),
+          total: fora.length,
+        },
+      ]
+    : [];
+
+  base.avisos.push(
+    `${mlbs.length} anúncios em ${r.campanhas.length} campanhas, ` +
+      `R$ ${r.investimentoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} investidos.`
+  );
+  base.avisos.push(
+    "A receita deste relatório é a que o canal ATRIBUI ao ads e inclui venda " +
+      "indireta — não entra como faturamento, só no cálculo de ACOS e ROAS."
+  );
+  if (fora.length) {
+    base.avisos.push(
+      `${fora.length} anúncios não estão no catálogo. O gasto deles é guardado ` +
+        "mesmo assim e se liga sozinho quando o catálogo for importado."
+    );
+  }
+  return base;
+}
 
 /**
  * Prévia do relatório de vendas do próprio Mercado Livre.

@@ -19,6 +19,9 @@ import type { DiaPeriodo, Periodo, PeriodoId } from "@/mock/diario";
 
 export type DadosDiario = {
   periodos: Periodo[];
+  /** Todos os dias com dado, para o calendário montar qualquer recorte. */
+  dias: DiaPeriodo[];
+  primeiraData: string | null;
   ultimaData: string | null;
   vazio: boolean;
   /** Canais com movimento no recorte, para a tela montar o filtro. */
@@ -109,7 +112,7 @@ export async function carregarDiario(canalId?: string): Promise<DadosDiario> {
   );
   const linhas = mantidas as unknown as Linha[];
   if (!linhas.length)
-    return { periodos: [], ultimaData: null, vazio: true, canais, exclusoes, removidas };
+    return { periodos: [], dias: [], primeiraData: null, ultimaData: null, vazio: true, canais, exclusoes, removidas };
 
   /* Soma os canais de um mesmo dia: a tela é a operação inteira. */
   const porDia = new Map<string, DiaPeriodo>();
@@ -148,9 +151,10 @@ export async function carregarDiario(canalId?: string): Promise<DadosDiario> {
       const achado = porDia.get(cursor);
       out.push(
         achado
-          ? { ...achado, dia: i }
+          ? { ...achado, dia: i, data: cursor }
           : {
               dia: i,
+              data: cursor,
               receita: 0,
               pedidos: 0,
               visitas: 0,
@@ -200,5 +204,18 @@ export async function carregarDiario(canalId?: string): Promise<DadosDiario> {
     ),
   ];
 
-  return { periodos, ultimaData: fim, vazio: false, canais, exclusoes, removidas };
+  /*
+   * Todos os dias vão junto, e não só os dos seis períodos prontos.
+   *
+   * O calendário monta o recorte no navegador a partir daqui: sem isso,
+   * cada mudança de data exigiria uma ida ao servidor, e a comparação de
+   * quatro colunas viraria quatro consultas.
+   */
+  const inicio = [...porDia.keys()].sort()[0] ?? fim;
+  const todosOsDias = faixa(inicio, fim);
+
+  return {
+    periodos, dias: todosOsDias, primeiraData: inicio,
+    ultimaData: fim, vazio: false, canais, exclusoes, removidas,
+  };
 }

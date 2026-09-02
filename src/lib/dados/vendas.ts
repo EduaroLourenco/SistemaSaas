@@ -31,6 +31,14 @@ export type CanalInfo = {
   cor: string;
   /** Conta de vendedor no banco — é o destino de qualquer gravação. */
   contaCanalId?: string;
+  /**
+   * As contas que este item soma.
+   *
+   * Vazio numa conta isolada; preenchido no item de CANAL, que existe só
+   * onde o canal tem mais de uma conta. É o que permite ler "Mercado
+   * Livre" inteiro sem escolher entre pronta entrega e venda a prazo.
+   */
+  agrupa?: string[];
 };
 
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
@@ -232,9 +240,44 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
       return true;
     });
 
+  /*
+   * O canal inteiro, onde ele tem mais de uma conta.
+   *
+   * A unidade das telas continua sendo a conta — é nela que se grava e é
+   * ela que separa pronta entrega de venda a prazo. Mas quem pergunta
+   * "quanto o Mercado Livre fez no dia 31" não quer escolher entre as
+   * duas antes de ver o total, e sem esta linha a resposta que aparece é
+   * a de uma conta só, sem nada indicando que falta a outra.
+   *
+   * Vem antes das contas na lista, e as contas seguem logo abaixo: a
+   * ordem sugere a relação sem precisar de rótulo explicando.
+   */
+  const porCanalNome = new Map<string, CanalInfo[]>();
+  for (const c of canais) {
+    const canal = c.nome.includes(" — ") ? c.nome.split(" — ")[0] : c.nome;
+    const lista = porCanalNome.get(canal) ?? [];
+    lista.push(c);
+    porCanalNome.set(canal, lista);
+  }
+
+  const comGrupos: CanalInfo[] = [];
+  for (const [nome, contasDoCanal] of porCanalNome) {
+    if (contasDoCanal.length > 1) {
+      comGrupos.push({
+        id: `grupo:${chaveCanal(nome)}`,
+        nome,
+        cor: contasDoCanal[0].cor,
+        // Sem contaCanalId de propósito: linha de canal não tem onde
+        // gravar, e a tela já recusa gravação em item sem conta.
+        agrupa: contasDoCanal.map((c) => c.id),
+      });
+    }
+    comGrupos.push(...contasDoCanal);
+  }
+
   const ultimaData = linhas[linhas.length - 1].data;
   return {
-    linhas, canais, ano: Number(ultimaData.slice(0, 4)), ultimaData,
+    linhas, canais: comGrupos, ano: Number(ultimaData.slice(0, 4)), ultimaData,
     vazio: false, exclusoes, removidas, canaisDisponiveis,
   };
 }
@@ -568,8 +611,14 @@ export async function carregarLancamentos(): Promise<DadosLancamentos> {
         const dow = new Date(`${iso}T00:00:00Z`).getUTCDay();
 
         let v = { visitas: 0, receita: 0, pedidos: 0, ads: 0, pc: 0, vc: 0 };
-        if (id === "todos") {
-          for (const c of base.canais) {
+        // O grupo soma as contas que ele reúne; "todos" soma as contas
+        // isoladas — somar os grupos junto contaria cada conta duas vezes.
+        const grupo = base.canais.find((c) => c.id === id)?.agrupa;
+        if (id === "todos" || grupo) {
+          const alvo = grupo
+            ? base.canais.filter((c) => grupo.includes(c.id))
+            : base.canais.filter((c) => !c.agrupa);
+          for (const c of alvo) {
             const l = porCanalData.get(`${c.id}|${iso}`);
             if (!l) continue;
             v = {

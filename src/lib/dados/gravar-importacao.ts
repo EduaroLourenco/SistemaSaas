@@ -4,6 +4,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { parsePerformanceReport } from "@/lib/planilhas/desempenho";
 import { lerPedidos } from "@/lib/planilhas/pedidos";
 import { lerVendasMeli } from "@/lib/planilhas/vendas-ml";
+import { lerAdsMeli } from "@/lib/planilhas/ads-meli";
 import { lerCatalogo } from "@/lib/planilhas/catalogo";
 import type { TipoPlanilha } from "@/lib/planilhas/detectar";
 import {
@@ -44,6 +45,7 @@ const TIPO_RELATORIO: Record<string, string> = {
   desempenho: "desempenho_anuncios",
   pedidos: "pedidos",
   vendas_ml: "pedidos",
+  ads_ml: "desempenho_anuncios",
   catalogo: "catalogo",
 };
 
@@ -107,6 +109,9 @@ export async function gravar(
     if (!contaCanalId) throw new Error("Escolha a conta do Mercado Livre.");
     return catalogo(buffer, sb, operacaoId, contaCanalId, canais, previa, nomeArquivo);
   }
+  if (previa.tipo === "ads_ml") {
+    return ads(buffer, sb, operacaoId, previa, nomeArquivo);
+  }
   if (previa.tipo === "vendas_ml") {
     return vendasMeli(buffer, sb, operacaoId, previa, nomeArquivo);
   }
@@ -163,6 +168,95 @@ async function catalogo(
     atualizadas: previa.atualizadas,
     ignoradas: 0,
     avisos: [],
+  };
+}
+
+/* ── Anúncios patrocinados ───────────────────────────────────── */
+
+/**
+ * O gasto de mídia por anúncio e campanha.
+ *
+ * Upsert pela chave natural (anúncio, campanha, início, fim): subir o
+ * mesmo período de novo sobrescreve, subir o mês seguinte acrescenta.
+ * Com insert, reimportar um mês dobraria o investimento e o ACOS cairia
+ * pela metade sem que nada avisasse.
+ *
+ * A ligação com `anuncios` é resolvida aqui, mas o código do anúncio fica
+ * gravado de qualquer jeito: 3 dos 277 anúncios do relatório medido não
+ * estavam no catálogo, e descartar o gasto deles esconderia mídia que
+ * saiu do caixa.
+ */
+async function ads(
+  buffer: Buffer,
+  sb: Sb,
+  operacaoId: string,
+  previa: Previa,
+  nomeArquivo: string
+): Promise<Gravacao> {
+  const r = await lerAdsMeli(buffer);
+  const importacaoId = await registrar(
+    sb, operacaoId, "ads_ml", nomeArquivo, previa.hash,
+    { inicio: r.inicio, fim: r.fim }, r.linhasLidas, r.linhas.length
+  );
+
+  const mlbs = [...new Set(r.linhas.map((l) => l.mlb))];
+  const idPorMlb = new Map<string, string>();
+  for (let i = 0; i < mlbs.length; i += 200) {
+    const { data, error } = await sb
+      .from("anuncios")
+      .select("id,codigo_externo")
+      .in("codigo_externo", mlbs.slice(i, i + 200));
+    if (error) throw new Error(`Falha ao localizar anúncios: ${error.message}`);
+    for (const a of data ?? []) idPorMlb.set(a.codigo_externo as string, a.id as string);
+  }
+
+  const linhas = r.linhas.map((l) => ({
+    operacao_id: operacaoId,
+    anuncio_id: idPorMlb.get(l.mlb) ?? null,
+    codigo_externo: l.mlb,
+    campanha: l.campanha,
+    inicio: l.inicio,
+    fim: l.fim,
+    status: l.status || null,
+    impressoes: l.impressoes,
+    cliques: l.cliques,
+    investimento: l.investimento,
+    receita: l.receita,
+    vendas_diretas: l.vendasDiretas,
+    vendas_indiretas: l.vendasIndiretas,
+    receita_direta: l.receitaDireta,
+    receita_indireta: l.receitaIndireta,
+    importacao_id: importacaoId,
+    atualizado_em: new Date().toISOString(),
+  }));
+
+  for (let i = 0; i < linhas.length; i += LOTE) {
+    const { error } = await sb
+      .from("anuncio_ads")
+      .upsert(linhas.slice(i, i + LOTE), {
+        onConflict: "operacao_id,codigo_externo,campanha,inicio,fim",
+      });
+    if (error) throw new Error(`Falha ao gravar mídia: ${error.message}`);
+  }
+
+  const semCatalogo = linhas.filter((l) => !l.anuncio_id).length;
+  const avisos = [
+    `R$ ${r.investimentoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} ` +
+      `em ${mlbs.length} anúncios e ${r.campanhas.length} campanhas.`,
+  ];
+  if (semCatalogo) {
+    avisos.push(
+      `${semCatalogo} linhas são de anúncios fora do catálogo — guardadas pelo ` +
+        "código, e se ligam sozinhas quando o catálogo for importado."
+    );
+  }
+
+  return {
+    importacaoId,
+    criadas: linhas.length,
+    atualizadas: 0,
+    ignoradas: r.ignoradas,
+    avisos,
   };
 }
 

@@ -30,7 +30,7 @@ import {
  */
 
 type Previa = {
-  tipo: "desempenho" | "pedidos" | "catalogo" | "vendas_ml" | "desconhecido";
+  tipo: "desempenho" | "pedidos" | "catalogo" | "vendas_ml" | "ads_ml" | "desconhecido";
   evidencia: string;
   nomeArquivo: string;
   jaImportado: { em: string; linhas: number } | null;
@@ -55,6 +55,7 @@ const ROTULO: Record<Previa["tipo"], string> = {
   pedidos: "Pedidos",
   catalogo: "Catálogo de anúncios",
   vendas_ml: "Vendas e tarifas do Mercado Livre",
+  ads_ml: "Anúncios patrocinados (Ads)",
   desconhecido: "Formato não reconhecido",
 };
 
@@ -64,6 +65,8 @@ const OQUE_ALIMENTA: Record<string, string> = {
   catalogo: "preço de vitrine, tarifa, tipo e estoque dos anúncios",
   vendas_ml:
     "a tarifa que o Meli cobrou de verdade, o desconto de campanha e o juro do parcelamento",
+  ads_ml:
+    "investimento, cliques e ACOS por anúncio e por campanha de Product Ads",
 };
 
 function dataBr(iso: string | null) {
