@@ -1,49 +1,109 @@
+import "server-only";
+import { clienteServidor } from "@/lib/supabase/servidor";
+
 /**
- * Guarda temporária dos arquivos gerados.
+ * Guarda temporária do .zip gerado pelo processamento de promoções.
  *
- * Enquanto o Supabase Storage não está ligado, o .zip do processamento fica
- * em memória por 15 minutos, só até o usuário clicar em baixar. É deliberado
- * e provisório: no momento em que a rota passar a subir para o bucket
- * `exportacoes`, este arquivo inteiro sai do projeto.
+ * ── Por que saiu da memória ──
  *
- * Limitação conhecida: memória do processo não sobrevive a restart nem é
- * compartilhada entre instâncias. Para um único servidor de desenvolvimento
- * resolve; em produção com mais de uma instância, não.
+ * A versão anterior guardava o buffer num `Map` do processo, com uma nota
+ * dizendo que isso não sobrevive a restart nem funciona com mais de uma
+ * instância. Funcionava no servidor de desenvolvimento e quebrava em
+ * produção — que é onde o usuário está.
+ *
+ * Na Vercel cada requisição pode cair numa instância diferente: o
+ * processamento guardava o pacote na instância A e o clique em baixar
+ * chegava na B, que não tinha nada. A resposta 404 vinha em JSON, e o
+ * `<a download>` salvava o próprio erro como arquivo — daí o
+ * `pac_xxx.json` aparecendo na pasta de downloads.
+ *
+ * Cada deploy também zerava a memória, e o sistema recebeu vários deploys
+ * por dia. O pacote sumia entre processar e baixar sem nada explicar.
+ *
+ * ── Agora ──
+ *
+ * O zip vai para o bucket `exportacoes` do Storage, que já existia para
+ * isso. Sobrevive a restart, é o mesmo para todas as instâncias, e o RLS
+ * decide quem lê — a mesma trava das tabelas, aplicada a arquivo.
+ *
+ * ── Por que apaga depois de baixar ──
+ *
+ * O pacote é passagem, não arquivo morto: o que interessa fica no
+ * histórico de processamento, no banco. Guardar cada zip encheria o
+ * bucket, e ninguém volta para baixar o mesmo pacote duas vezes — quem
+ * precisa de novo processa de novo, que leva segundos.
  */
 
-type Pacote = { buffer: Buffer; criadoEm: number };
+const BUCKET = "exportacoes";
+const PREFIXO = "pacotes";
 
-const VALIDADE_MS = 15 * 60 * 1000;
-const TETO = 20;
+/** Coerente com o texto que a tela mostra ao usuário. */
+export const VALIDADE_MS = 15 * 60 * 1000;
 
-// Sobrevive ao hot reload do Next em desenvolvimento.
-const g = globalThis as unknown as { __pacotes?: Map<string, Pacote> };
-const pacotes: Map<string, Pacote> = g.__pacotes ?? new Map();
-g.__pacotes = pacotes;
-
-function limpar() {
-  const agora = Date.now();
-  for (const [id, p] of pacotes) {
-    if (agora - p.criadoEm > VALIDADE_MS) pacotes.delete(id);
-  }
-  // Teto de segurança: se algo escapar da validade, o mais antigo sai.
-  while (pacotes.size > TETO) {
-    const maisAntigo = [...pacotes.entries()].sort(
-      (a, b) => a[1].criadoEm - b[1].criadoEm
-    )[0];
-    if (!maisAntigo) break;
-    pacotes.delete(maisAntigo[0]);
-  }
+function caminho(id: string) {
+  return `${PREFIXO}/${id}.zip`;
 }
 
-export function guardarPacote(buffer: Buffer): string {
-  limpar();
+export async function guardarPacote(buffer: Buffer): Promise<string> {
+  const sb = await clienteServidor();
   const id = `pac_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-  pacotes.set(id, { buffer, criadoEm: Date.now() });
+
+  const { error } = await sb.storage
+    .from(BUCKET)
+    .upload(caminho(id), buffer, {
+      contentType: "application/zip",
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(
+      `Não consegui guardar o pacote processado: ${error.message}`
+    );
+  }
+
+  // Sem esperar: pacote velho é sujeira, não erro. Falhar a limpeza não
+  // pode derrubar um processamento que deu certo.
+  void limpar(sb).catch(() => {});
+
   return id;
 }
 
-export function pegarPacote(id: string): Buffer | null {
-  limpar();
-  return pacotes.get(id)?.buffer ?? null;
+export async function pegarPacote(id: string): Promise<Buffer | null> {
+  // Id vem da URL. Sem esta checagem, "../" no meio dele sairia da pasta
+  // de pacotes e alcançaria outros arquivos do bucket.
+  if (!/^pac_[a-z0-9]+_[a-z0-9]+$/i.test(id)) return null;
+
+  const sb = await clienteServidor();
+  const { data, error } = await sb.storage.from(BUCKET).download(caminho(id));
+  if (error || !data) return null;
+
+  return Buffer.from(await data.arrayBuffer());
+}
+
+export async function descartarPacote(id: string): Promise<void> {
+  if (!/^pac_[a-z0-9]+_[a-z0-9]+$/i.test(id)) return;
+  try {
+    const sb = await clienteServidor();
+    await sb.storage.from(BUCKET).remove([caminho(id)]);
+  } catch {
+    /* arquivo órfão é sujeira, não erro */
+  }
+}
+
+type Sb = Awaited<ReturnType<typeof clienteServidor>>;
+
+/** Apaga o que passou da validade. */
+async function limpar(sb: Sb): Promise<void> {
+  const { data } = await sb.storage.from(BUCKET).list(PREFIXO, { limit: 100 });
+  if (!data?.length) return;
+
+  const corte = Date.now() - VALIDADE_MS;
+  const velhos = data
+    .filter((f) => {
+      const criado = f.created_at ? Date.parse(f.created_at) : NaN;
+      return Number.isFinite(criado) && criado < corte;
+    })
+    .map((f) => `${PREFIXO}/${f.name}`);
+
+  if (velhos.length) await sb.storage.from(BUCKET).remove(velhos);
 }

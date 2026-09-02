@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     }
 
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
-    const id = guardarPacote(zipBuffer);
+    const id = await guardarPacote(zipBuffer);
 
     /*
      * Grava a decisão. Sem isto, o processamento decidia e esquecia:

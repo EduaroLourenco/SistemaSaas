@@ -147,6 +147,56 @@ export default function ProcessarPromocoes() {
   const [processando, setProcessando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [resultado, setResultado] = React.useState<Resultado | null>(null);
+  const [baixando, setBaixando] = React.useState(false);
+
+  /**
+   * Baixa o pacote conferindo a resposta antes de salvar.
+   *
+   * Era um `<a download>` apontando direto para a rota. Um link não
+   * distingue sucesso de erro: quando o pacote não era encontrado, o
+   * navegador salvava a resposta 404 — um JSON — como arquivo chamado
+   * "pac_xxx.json", e o usuário via um download quebrado sem explicação.
+   *
+   * Agora o erro vira mensagem na tela, com o texto que o servidor mandou.
+   */
+  async function baixarPacote(id: string) {
+    setBaixando(true);
+    setErro(null);
+    try {
+      const r = await fetch(`/api/promocoes/baixar/${id}`);
+      if (!r.ok) {
+        const corpo = await r.json().catch(() => ({}));
+        setErro(
+          corpo.erro ??
+            `Não consegui baixar o pacote (HTTP ${r.status}). Processe de novo.`
+        );
+        return;
+      }
+
+      const blob = await r.blob();
+      if (blob.size === 0) {
+        setErro("O pacote veio vazio. Processe as planilhas de novo.");
+        return;
+      }
+
+      const cd = r.headers.get("content-disposition") ?? "";
+      const nome =
+        cd.match(/filename="([^"]+)"/)?.[1] ?? "promocoes-processadas.zip";
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setErro("Sem conexão — o pacote não foi baixado.");
+    } finally {
+      setBaixando(false);
+    }
+  }
 
   async function processar() {
     setProcessando(true);
@@ -704,12 +754,24 @@ export default function ProcessarPromocoes() {
               </ul>
 
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                <a href={`/api/promocoes/baixar/${resultado.id}`} download>
-                  <Button variant="primary" className="max-sm:h-11 max-sm:w-full">
-                    <Download className="w-3.5 h-3.5" />
-                    Baixar planilhas processadas
-                  </Button>
-                </a>
+                <Button
+                  variant="primary"
+                  className="max-sm:h-11 max-sm:w-full"
+                  disabled={baixando}
+                  onClick={() => baixarPacote(resultado.id)}
+                >
+                  {baixando ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Baixando
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5" />
+                      Baixar planilhas processadas
+                    </>
+                  )}
+                </Button>
                 <Button className="max-sm:h-11">
                   <History className="w-3.5 h-3.5" />
                   Ver no histórico
@@ -718,7 +780,7 @@ export default function ProcessarPromocoes() {
 
               <p className="text-[11px] text-ink-3 mt-3">
                 O pacote inclui uma planilha processada por campanha mais o relatório
-                gerencial. Fica disponível por 15 minutos.
+                gerencial. Fica disponível por 15 minutos e sai depois de baixado — se precisar de novo, é só processar outra vez.
               </p>
 
               {resultado.resumo.pendencias > 0 && (
