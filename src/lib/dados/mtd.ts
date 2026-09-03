@@ -2,7 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
-import { pesosDaSemana } from "./ratear-meta";
+import { pesosDaSemana, primeiroDiaDoMes, ultimoDiaDoMes } from "./ratear-meta";
 
 /**
  * Mês até aqui: onde a meta está sendo perdida.
@@ -98,8 +98,8 @@ export async function carregarMtd(
 ): Promise<DadosMtd> {
   const sb = await clienteServidor();
 
-  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-  const fimMes = `${ano}-${String(mes).padStart(2, "0")}-31`;
+  const inicio = primeiroDiaDoMes(ano, mes);
+  const fimMes = ultimoDiaDoMes(ano, mes);
 
   const [diariasRaw, contasRaw, canaisRaw, metasRaw, metasDiariasRaw, exclusoes] =
     await Promise.all([
@@ -353,8 +353,8 @@ export async function redistribuirRestante(
   const sb = await clienteServidor();
   const { ratearNoMes } = await import("./ratear-meta");
 
-  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-  const fimMes = `${ano}-${String(mes).padStart(2, "0")}-31`;
+  const inicio = primeiroDiaDoMes(ano, mes);
+  const fimMes = ultimoDiaDoMes(ano, mes);
   const totalDias = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
 
   const mtd = await carregarMtd(ano, mes, canaisSelecionados);

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "@/lib/dados/operacao";
-import { ratearNoMes, pesosDaSemana } from "@/lib/dados/ratear-meta";
+import {
+  ratearNoMes,
+  pesosDaSemana,
+  primeiroDiaDoMes,
+  ultimoDiaDoMes,
+} from "@/lib/dados/ratear-meta";
 
 export const runtime = "nodejs";
 
@@ -68,8 +73,8 @@ export async function POST(req: Request) {
 
   const ano = Number(data.slice(0, 4));
   const mes = Number(data.slice(5, 7));
-  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-  const fim = `${ano}-${String(mes).padStart(2, "0")}-31`;
+  const inicio = primeiroDiaDoMes(ano, mes);
+  const fim = ultimoDiaDoMes(ano, mes);
 
   /* A meta do mês daquele canal é o teto a respeitar. */
   const { data: metaMes } = await sb

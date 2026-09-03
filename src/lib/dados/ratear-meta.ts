@@ -173,3 +173,22 @@ export function pesosDaSemana(
   // ausência pode ser do recorte, não do comportamento.
   return medias.map((m) => (m > 0 ? m / referencia : 1));
 }
+
+/**
+ * O último dia do mês, em aaaa-mm-dd.
+ *
+ * Existe porque `${ano}-${mes}-31` como limite superior parecia inofensivo
+ * e derrubava a tela inteira: o Postgres recusa "2026-09-31" com
+ * "date/time field value out of range", e a consulta morre antes de
+ * devolver qualquer linha. Setembro, abril, junho, novembro e fevereiro —
+ * sete meses do ano quebram.
+ */
+export function ultimoDiaDoMes(ano: number, mes: number): string {
+  const dia = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+  return `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
+/** O primeiro dia do mês, em aaaa-mm-dd. */
+export function primeiroDiaDoMes(ano: number, mes: number): string {
+  return `${ano}-${String(mes).padStart(2, "0")}-01`;
+}

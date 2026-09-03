@@ -2,7 +2,13 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
-import { ratearPorPeso, ratearNoMes, pesosDaSemana } from "./ratear-meta";
+import {
+  ratearPorPeso,
+  ratearNoMes,
+  pesosDaSemana,
+  primeiroDiaDoMes,
+  ultimoDiaDoMes,
+} from "./ratear-meta";
 
 /**
  * Planejamento de metas: o que a tela precisa para distribuir um número.
@@ -101,8 +107,8 @@ export async function carregarPlanejamento(
         sb
           .from("metas_diarias")
           .select("canal_id,data,receita_meta,manual")
-          .gte("data", `${ano}-${String(mes).padStart(2, "0")}-01`)
-          .lte("data", `${ano}-${String(mes).padStart(2, "0")}-31`)
+          .gte("data", primeiroDiaDoMes(ano, mes))
+          .lte("data", ultimoDiaDoMes(ano, mes))
       ),
       carregarExclusoes(),
     ]);
@@ -324,8 +330,8 @@ export async function definirMeta(
           .filter((m) => !canaisSelecionados.includes(m.canal_id as string))
           .map((m) => m.canal_id as string)
       )
-      .gte("data", `${ano}-${String(mes).padStart(2, "0")}-01`)
-      .lte("data", `${ano}-${String(mes).padStart(2, "0")}-31`);
+      .gte("data", primeiroDiaDoMes(ano, mes))
+      .lte("data", ultimoDiaDoMes(ano, mes));
   }
 
   if (linhasMes.length) {
@@ -337,8 +343,8 @@ export async function definirMeta(
 
   /* Metas diárias, por canal */
 
-  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-  const fim = `${ano}-${String(mes).padStart(2, "0")}-31`;
+  const inicio = primeiroDiaDoMes(ano, mes);
+  const fim = ultimoDiaDoMes(ano, mes);
 
   const { data: manuaisRaw } = await sb
     .from("metas_diarias")
