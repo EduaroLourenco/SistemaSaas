@@ -50,6 +50,18 @@ import { carregarExclusoes, aplicar } from "./exclusoes";
  * lista pegava o premium por acaso. Agora escolhe a do anúncio que MAIS
  * VENDEU no período — a vitrine que a maioria dos compradores viu.
  *
+ * ── Último preço e média: os dois, e cada um serve a uma coisa ──
+ *
+ * A média de 14 dias é estável mas dilui: um preço mudado anteontem
+ * aparece misturado com doze dias do preço anterior, e a variação sai
+ * menor do que é. O ÚLTIMO preço vendido é o que está valendo agora, e é
+ * ele que a comparação usa.
+ *
+ * A média fica ao lado porque uma venda isolada pode ser atípica —
+ * negociação, frete embutido, erro de digitação no anúncio. Ver os dois
+ * juntos mostra na hora se o último preço é o novo patamar ou um ponto
+ * fora da curva.
+ *
  * A primeira versão comparava a vitrine com a faixa de melhor praticado e
  * anunciava "+126%, subiu o preço" — comparando duas réguas diferentes.
  * A comparação usa o PRATICADO recente, na mesma janela em que o ritmo de
@@ -112,8 +124,12 @@ export type LinhaPreco = {
   melhor: FaixaPreco | null;
   /** Preço de vitrine do catálogo. Não é o que o cliente pagou. */
   precoVitrine: number | null;
-  /** Praticado na janela recente — é o que se compara com o melhor. */
+  /** Média ponderada praticada na janela recente. */
   precoRecente: number | null;
+  /** O preço do último pedido — é o que se compara com o melhor. */
+  precoUltimo: number | null;
+  /** Data desse último pedido. */
+  dataUltimo: string | null;
   /** Média ponderada praticada nos últimos 7 dias. */
   preco7: number | null;
   /** Média ponderada do período inteiro. */
@@ -363,6 +379,18 @@ export async function carregarPerformancePreco(filtro: {
     /* Efeito recente */
     const vendasRecentes = vendas.filter((v) => v.data >= desdeRecente);
     const precoRecente = media(vendasRecentes);
+
+    /*
+     * O último preço vendido, do pedido mais recente do SKU.
+     *
+     * Sem recorte de janela: se o SKU não vende há 40 dias, o último
+     * preço ainda é a informação certa — é o preço com que ele parou.
+     * Vazio ali diria "não se sabe", quando se sabe.
+     */
+    const ordenadas = [...vendas].sort((a, b) => a.data.localeCompare(b.data));
+    const ultima = ordenadas[ordenadas.length - 1];
+    const precoUltimo = ultima ? r2(ultima.preco) : null;
+    const dataUltimo = ultima ? ultima.data : null;
     const diasRecentes = new Set(vendasRecentes.map((v) => v.data)).size;
     const unDiaRecente =
       diasRecentes > 0
@@ -370,24 +398,25 @@ export async function carregarPerformancePreco(filtro: {
         : null;
 
     /*
-     * A referência é o praticado recente, nunca a vitrine.
+     * A referência é o ÚLTIMO preço vendido, nunca a vitrine.
      *
-     * Sem venda recente não há comparação: o SKU parou, e inventar uma
-     * variação a partir da vitrine diria "subiu o preço" sobre um número
+     * A média de 14 dias dilui uma mudança recente; o último preço é o
+     * que está valendo. E a vitrine está fora porque é preço de lista —
+     * dizer "subiu o preço" comparando com ela seria falar de um número
      * que nenhum cliente pagou.
      */
-    const referencia = precoRecente;
+    const referencia = precoUltimo;
     const variacao =
       melhor && referencia != null && melhor.preco > 0
         ? r2(((referencia - melhor.preco) / melhor.preco) * 100)
         : null;
     // A faixa em que o preço recente cai, para o gráfico marcar onde a
     // operação está agora.
-    if (precoRecente != null && faixas.length) {
+    if (precoUltimo != null && faixas.length) {
       const perto = faixas.reduce((m, f) =>
-        Math.abs(f.preco - precoRecente) < Math.abs(m.preco - precoRecente) ? f : m
+        Math.abs(f.preco - precoUltimo) < Math.abs(m.preco - precoUltimo) ? f : m
       );
-      if (Math.abs(perto.preco - precoRecente) <= passo) perto.atual = true;
+      if (Math.abs(perto.preco - precoUltimo) <= passo) perto.atual = true;
     }
 
     const impacto =
@@ -423,6 +452,8 @@ export async function carregarPerformancePreco(filtro: {
       melhor,
       precoVitrine: precoAtual,
       precoRecente,
+      precoUltimo,
+      dataUltimo,
       preco7,
       precoPeriodo,
       variacao,

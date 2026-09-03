@@ -233,9 +233,9 @@ export default function PerformancePrecoCliente({
                       <ChartTooltip formatter={(v: number) => `${v} un/dia`} />
                     }
                   />
-                  {detalhe.precoRecente != null && (
+                  {detalhe.precoUltimo != null && (
                     <ReferenceLine
-                      x={detalhe.precoRecente}
+                      x={detalhe.precoUltimo}
                       stroke="var(--brand)"
                       strokeDasharray="4 3"
                       label={{
@@ -270,7 +270,7 @@ export default function PerformancePrecoCliente({
             <p className="text-[11px] text-ink-3 mt-2 leading-relaxed">
               Verde é a faixa de melhor desempenho. Cinza são faixas com menos
               de 3 dias ou 3 unidades — aparecem porque houve venda, mas não
-              disputam o melhor preço. A linha tracejada é o preço praticado nos últimos 14 dias.
+              disputam o melhor preço. A linha tracejada é o preço do último pedido.
             </p>
           </Panel>
         )}
@@ -310,7 +310,8 @@ export default function PerformancePrecoCliente({
                   <th className={`${th} text-right`}>Un.</th>
                   <th className={`${th} text-right`}>Melhor preço</th>
                   <th className={`${th} text-right`}>Un/dia nele</th>
-                  <th className={`${th} text-right`}>Praticado agora</th>
+                  <th className={`${th} text-right`}>Último preço</th>
+                  <th className={`${th} text-right`}>Média 14 dias</th>
                   <th className={`${th} text-right`}>Vitrine / desconto</th>
                   <th className={`${th} text-right`}>Variação</th>
                   <th className={`${th} text-right`}>Impacto na venda</th>
@@ -365,18 +366,34 @@ export default function PerformancePrecoCliente({
                       <td className={`${td} text-right num text-[12.5px] text-ink-2`}>
                         {l.melhor ? l.melhor.unDia : "—"}
                       </td>
+                      {/* O último preço é o que a comparação usa: a média
+                          dilui uma mudança recente, e é ele que está
+                          valendo agora. */}
                       <td className={`${td} text-right`}>
-                        {l.precoRecente != null ? (
+                        {l.precoUltimo != null ? (
                           <div className="flex flex-col items-end leading-tight">
                             <span className="num text-[13px] text-ink font-medium">
-                              {money(l.precoRecente)}
+                              {money(l.precoUltimo)}
                             </span>
                             <span className="num text-[10.5px] text-ink-3">
-                              últimos 14 dias
+                              {l.dataUltimo
+                                ? `${l.dataUltimo.slice(8, 10)}/${l.dataUltimo.slice(5, 7)}`
+                                : ""}
                             </span>
                           </div>
                         ) : (
                           <span className="text-[11px] text-ink-3">sem venda</span>
+                        )}
+                      </td>
+                      {/* A média ao lado mostra se o último preço é o novo
+                          patamar ou um ponto fora da curva. */}
+                      <td className={`${td} text-right`}>
+                        {l.precoRecente != null ? (
+                          <span className="num text-[12.5px] text-ink-2">
+                            {money(l.precoRecente)}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-ink-3">—</span>
                         )}
                       </td>
                       {/* A vitrine fica ao lado e nunca vira base de
@@ -388,10 +405,10 @@ export default function PerformancePrecoCliente({
                             <span className="num text-[12.5px] text-ink-2">
                               {money(l.precoVitrine)}
                             </span>
-                            {l.precoRecente != null && l.precoVitrine > 0 && (
+                            {l.precoUltimo != null && l.precoVitrine > 0 && (
                               <span className="num text-[10.5px] text-ink-3">
                                 {pct(
-                                  ((l.precoRecente - l.precoVitrine) / l.precoVitrine) * 100,
+                                  ((l.precoUltimo - l.precoVitrine) / l.precoVitrine) * 100,
                                   0
                                 )}
                               </span>
