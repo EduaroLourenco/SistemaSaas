@@ -45,6 +45,11 @@ import { carregarExclusoes, aplicar } from "./exclusoes";
  * divergem muito: o PA65751 tem vitrine de R$ 1.179 e nunca foi vendido
  * acima de R$ 759 em 144 vendas.
  *
+ * A vitrine também não é UMA: o PA85351 tem quatro anúncios, dois
+ * clássicos a R$ 4.211 e dois premium a R$ 5.229. Escolher o primeiro da
+ * lista pegava o premium por acaso. Agora escolhe a do anúncio que MAIS
+ * VENDEU no período — a vitrine que a maioria dos compradores viu.
+ *
  * A primeira versão comparava a vitrine com a faixa de melhor praticado e
  * anunciava "+126%, subiu o preço" — comparando duas réguas diferentes.
  * A comparação usa o PRATICADO recente, na mesma janela em que o ritmo de
@@ -300,10 +305,29 @@ export async function carregarPerformancePreco(filtro: {
     }
 
     const catalogo = catalogoPorSku.get(sku) ?? [];
-    const precoAtual =
-      catalogo.find((a) => a.preco_atual != null)?.preco_atual != null
-        ? r2(n(catalogo.find((a) => a.preco_atual != null)!.preco_atual))
-        : null;
+
+    /*
+     * A vitrine do anúncio que mais vendeu, não a do primeiro da lista.
+     *
+     * Um SKU costuma ter quatro anúncios — dois clássicos e dois premium —
+     * com preços de lista diferentes. Pegar qualquer um mistura a vitrine
+     * do premium com o praticado do clássico, e a diferença entre os dois
+     * vira ruído em cima da comparação que interessa.
+     */
+    const unPorMlb = new Map<string, number>();
+    for (const v of vendas) {
+      unPorMlb.set(v.mlb, (unPorMlb.get(v.mlb) ?? 0) + v.un);
+    }
+    const comPreco = catalogo.filter((a) => a.preco_atual != null);
+    const escolhido =
+      comPreco.length > 1
+        ? comPreco.reduce((m, a) =>
+            (unPorMlb.get(a.codigo_externo) ?? 0) > (unPorMlb.get(m.codigo_externo) ?? 0)
+              ? a
+              : m
+          )
+        : comPreco[0];
+    const precoAtual = escolhido ? r2(n(escolhido.preco_atual)) : null;
 
     const faixas: FaixaPreco[] = [...brutas.values()]
       .map((b) => ({

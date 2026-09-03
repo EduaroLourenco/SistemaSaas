@@ -311,7 +311,7 @@ export default function PerformancePrecoCliente({
                   <th className={`${th} text-right`}>Melhor preço</th>
                   <th className={`${th} text-right`}>Un/dia nele</th>
                   <th className={`${th} text-right`}>Praticado agora</th>
-                  <th className={`${th} text-right`}>Vitrine</th>
+                  <th className={`${th} text-right`}>Vitrine / desconto</th>
                   <th className={`${th} text-right`}>Variação</th>
                   <th className={`${th} text-right`}>Impacto na venda</th>
                   <th className={`${th} text-left`}>Situação</th>
