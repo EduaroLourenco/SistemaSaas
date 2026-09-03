@@ -40,6 +40,7 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Por canal", href: "/vendas/canais" },
       { label: "Anual", href: "/vendas/anual" },
+      { label: "Mês até aqui", href: "/vendas/mtd" },
       { label: "Semanal", href: "/vendas/semanal" },
       { label: "Diário", href: "/vendas/diario" },
       { label: "Comparativos", href: "/vendas/comparativos" },
