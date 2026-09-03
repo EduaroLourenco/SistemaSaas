@@ -17,6 +17,14 @@ export type LinhaVendaDia = {
   data: string;
   canal: string;
   canalId: string;
+  /**
+   * O id real do canal no banco.
+   *
+   * `canalId` é um slug do nome, feito para agrupar na tela — duas contas
+   * do mesmo canal têm slugs diferentes. As metas são gravadas por canal
+   * de verdade, então precisam desta chave para casar.
+   */
+  canalReal: string | null;
   receita: number;
   pedidos: number;
   visitas: number;
@@ -42,6 +50,45 @@ export type CanalInfo = {
 };
 
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
+
+/**
+ * As metas gravadas, por canal e por dia.
+ *
+ * Uma consulta só, usada por todas as telas que precisam de alvo. Antes
+ * cada uma preenchia `meta: 0` com uma nota dizendo que a planilha vinha
+ * em branco — agora a meta se define no sistema, e ler de um lugar só é o
+ * que garante que o anual, o diário e a tela de metas mostrem o mesmo
+ * alvo.
+ */
+async function carregarMetasGravadas(ano: number): Promise<{
+  porCanalMes: Map<string, number>;
+  porCanalDia: Map<string, number>;
+}> {
+  const sb = await clienteServidor();
+  const [mensais, diarias] = await Promise.all([
+    sb.from("metas").select("canal_id,mes,receita_meta").eq("ano", ano),
+    paginar(() =>
+      sb
+        .from("metas_diarias")
+        .select("canal_id,data,receita_meta")
+        .gte("data", `${ano}-01-01`)
+        .lte("data", `${ano}-12-31`)
+    ),
+  ]);
+
+  const porCanalMes = new Map<string, number>();
+  for (const m of (mensais.data ?? []) as { canal_id: string | null; mes: number; receita_meta: string | number }[]) {
+    if (!m.canal_id) continue;
+    porCanalMes.set(`${m.canal_id}|${m.mes}`, n(m.receita_meta));
+  }
+
+  const porCanalDia = new Map<string, number>();
+  for (const d of diarias as unknown as { canal_id: string; data: string; receita_meta: string | number }[]) {
+    porCanalDia.set(`${d.canal_id}|${String(d.data).slice(0, 10)}`, n(d.receita_meta));
+  }
+
+  return { porCanalMes, porCanalDia };
+}
 
 export function chaveCanal(nome: string) {
   return nome
@@ -200,6 +247,7 @@ export async function carregarBaseVendas(): Promise<BaseVendas> {
     data: l.data,
     canal: l.canal,
     canalId: chaveCanal(l.canal),
+    canalReal: l.canalId,
     receita: l.receita,
     pedidos: l.pedidos,
     visitas: l.visitas,
@@ -440,6 +488,20 @@ export async function carregarAnual(): Promise<DadosAnual> {
     return { ano: base.ano, canais: [], series: { todos: [] }, anoAnterior: {}, vazio: true };
   }
 
+  const metas = await carregarMetasGravadas(base.ano);
+
+  /*
+   * A meta do canal entra na série dele e na consolidada.
+   *
+   * Somada a partir das linhas de venda, um canal com meta e sem venda
+   * nenhuma no mês ficaria de fora — que é justamente o caso em que o
+   * alvo importa. Por isso o laço percorre os canais, não as vendas.
+   */
+  const slugPorCanalReal = new Map<string, string>();
+  for (const l of base.linhas) {
+    if (l.canalReal) slugPorCanalReal.set(l.canalReal, l.canalId);
+  }
+
   const series: Record<string, MesAnual[]> = {
     todos: Array.from({ length: 12 }, (_, m) => mesVazio(m)),
   };
@@ -472,6 +534,15 @@ export async function carregarAnual(): Promise<DadosAnual> {
       const a = anterior[l.canalId];
       if (a) { a.receita += l.receita; a.pedidos += l.pedidos; }
     }
+  }
+
+  for (const [chave, valor] of metas.porCanalMes) {
+    const [canalReal, mesStr] = chave.split("|");
+    const m = Number(mesStr) - 1;
+    if (m < 0 || m > 11) continue;
+    series.todos[m].meta += valor;
+    const slug = slugPorCanalReal.get(canalReal);
+    if (slug && series[slug]) series[slug][m].meta += valor;
   }
 
   return { ano: base.ano, canais: base.canais, series, anoAnterior: anterior, vazio: false };
@@ -595,6 +666,30 @@ export async function carregarLancamentos(): Promise<DadosLancamentos> {
   const mesAtual = Number(ultima.slice(5, 7)) - 1;
   const diaAtual = Number(ultima.slice(8, 10));
 
+  const metas = await carregarMetasGravadas(base.ano);
+
+  // A meta é gravada por canal de verdade; a tela agrupa por slug de
+  // conta. Uma conta herda a meta do canal dela dividida entre as contas
+  // daquele canal — senão as duas contas do Meli mostrariam, cada uma, a
+  // meta inteira do canal.
+  const contasPorCanalReal = new Map<string, Set<string>>();
+  const canalRealDoSlug = new Map<string, string>();
+  for (const l of base.linhas) {
+    if (!l.canalReal) continue;
+    canalRealDoSlug.set(l.canalId, l.canalReal);
+    const s = contasPorCanalReal.get(l.canalReal) ?? new Set<string>();
+    s.add(l.canalId);
+    contasPorCanalReal.set(l.canalReal, s);
+  }
+
+  const metaDoSlugNoDia = (slug: string, iso: string): number => {
+    const real = canalRealDoSlug.get(slug);
+    if (!real) return 0;
+    const total = metas.porCanalDia.get(`${real}|${iso}`) ?? 0;
+    const quantas = contasPorCanalReal.get(real)?.size ?? 1;
+    return quantas > 1 ? Number((total / quantas).toFixed(2)) : total;
+  };
+
   const porCanalData = new Map<string, LinhaVendaDia>();
   for (const l of base.linhas) porCanalData.set(`${l.canalId}|${l.data}`, l);
 
@@ -654,7 +749,10 @@ export async function carregarLancamentos(): Promise<DadosLancamentos> {
           ads: v.ads,
           pedidosCancelados: v.pc,
           valorCancelado: v.vc,
-          metaDia: 0,
+          metaDia:
+            id === "todos"
+              ? base.canais.reduce((s, c) => s + metaDoSlugNoDia(c.id, iso), 0)
+              : metaDoSlugNoDia(id, iso),
         });
       }
       meses.push(dias);
