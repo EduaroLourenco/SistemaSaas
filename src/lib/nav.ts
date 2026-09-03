@@ -56,6 +56,7 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Análise de anúncios", href: "/anuncios/analise" },
       { label: "Catálogo", href: "/anuncios/catalogo" },
+      { label: "Performance de preço", href: "/anuncios/preco-performance" },
       { label: "Tráfego pago", href: "/anuncios/trafego-pago" },
       { label: "Preço-alvo", href: "/anuncios/preco-alvo" },
       { label: "Preço ideal", href: "/anuncios/preco-ideal" },
