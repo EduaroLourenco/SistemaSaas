@@ -77,12 +77,29 @@ export type Oferta = {
    * Calculado na leitura e não guardado: depende do preço proposto, e
    * congelar a divisão deixaria o percentual desalinhado se o preço fosse
    * corrigido.
+   *
+   * DUAS casas, e não uma. Com uma, a redução saía 3,4% e a comissão
+   * resultante 8,07% — quem confere de cabeça faz 11,5 − 3,4 = 8,1, não
+   * bate, e desconfia do número certo. A precisão aqui não é preciosismo:
+   * é o que deixa a subtração verificável a olho.
    */
   reducaoPercentual: number | null;
   participa: boolean;
   motivo: string | null;
   arquivo: string | null;
   linhaPlanilha: number | null;
+  /**
+   * A comissão que sobra depois da redução, em pontos percentuais.
+   *
+   * O canal comunica o rebate como uma fatia da tarifa: clássico paga
+   * 11,5% e premium 16,5%, e a redução SUBTRAI daí. Um premium com 4% de
+   * rebate paga 12,5%.
+   *
+   * É o número que decide entrar ou não, e ele não estava em lugar
+   * nenhum: a tela mostrava a redução em porcentagem e deixava a
+   * subtração para a cabeça de quem lê.
+   */
+  comissaoResultante: number | null;
   /** Quanto a oferta corta do preço de tabela, em pontos percentuais. */
   descontoSobreTabela: number | null;
   /** Distância até o piso EFETIVO: negativo fura a margem de verdade. */
@@ -94,6 +111,9 @@ export type AnuncioComOfertas = {
   mlb: string;
   sku: string;
   titulo: string;
+  tipo: string;
+  /** Alíquota cheia do anúncio, de onde a redução é descontada. */
+  comissaoTabela: number;
   /** Menor e maior tabela entre as ofertas. Iguais quando só há uma. */
   tabelaDe: number | null;
   tabelaAte: number | null;
@@ -176,7 +196,9 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
 
   const [campanhas, anuncios, execucoes] = await Promise.all([
     paginar(() => sb.from("campanhas").select("id,nome,tem_reducao_tarifa")),
-    paginar(() => sb.from("anuncios").select("id,codigo_externo,sku_canal,titulo")),
+    paginar(() =>
+      sb.from("anuncios").select("id,codigo_externo,sku_canal,titulo,tipo,comissao_atual")
+    ),
     // O desconto extra é da RODADA, não da oferta — vem daqui.
     paginar(() => sb.from("processamentos_promocao").select("id,desconto_extra")),
   ]);
@@ -190,6 +212,8 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     codigo_externo: string;
     sku_canal: string | null;
     titulo: string | null;
+    tipo: string;
+    comissao_atual: string | null;
   };
 
   const porCampanha = new Map(
@@ -235,6 +259,18 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
     const precoCanal = n(i.preco_sugerido);
     const reducao = n(i.reducao_tarifa);
 
+    /*
+     * A alíquota cheia vem do catálogo quando existe; 11,5% e 16,5% são o
+     * padrão do tipo. O catálogo ganha porque tarifa negociada existe, e
+     * usar o padrão nesse caso erraria a comissão para menos.
+     */
+    const comissaoTabela =
+      Number(anuncio.comissao_atual) > 0
+        ? Number(anuncio.comissao_atual)
+        : anuncio.tipo === "premium"
+          ? 16.5
+          : 11.5;
+
     const temReducao = campanha?.tem_reducao_tarifa ?? false;
     const extra = temReducao
       ? 0
@@ -251,6 +287,8 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
         mlb: anuncio.codigo_externo,
         sku: anuncio.sku_canal ?? "",
         titulo: anuncio.titulo ?? "",
+        tipo: anuncio.tipo,
+        comissaoTabela,
         tabelaDe: null,
         tabelaAte: null,
         ofertas: [],
@@ -274,8 +312,16 @@ export async function carregarComparacao(): Promise<DadosComparacao> {
       reducaoTarifa: reducao,
       reducaoPercentual:
         reducao != null && precoCanal
-          ? Math.round((reducao / precoCanal) * 1000) / 10
+          ? Math.round((reducao / precoCanal) * 10000) / 100
           : null,
+      // Da MESMA redução arredondada que a tela mostra: senão os dois
+      // números se contradizem na segunda casa.
+      comissaoResultante:
+        reducao != null && precoCanal
+          ? Math.round(
+              (comissaoTabela - Math.round((reducao / precoCanal) * 10000) / 100) * 100
+            ) / 100
+          : comissaoTabela,
       participa: i.decisao === "participar",
       motivo: i.motivo,
       arquivo: i.arquivo ?? null,

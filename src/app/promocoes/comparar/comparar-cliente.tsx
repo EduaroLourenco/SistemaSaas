@@ -12,7 +12,8 @@ import type {
   AnuncioComOfertas,
   Oferta,
 } from "@/lib/dados/comparar-ofertas";
-import { Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, ChevronDown, ChevronRight, Download, Loader2, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/primitives";
 
 /**
  * Comparação de ofertas por anúncio.
@@ -39,6 +40,53 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
   const [filtro, setFiltro] = React.useState<Filtro>("varias");
   const [campanha, setCampanha] = React.useState("todas");
   const [abertos, setAbertos] = React.useState<Set<string>>(new Set());
+  const [baixando, setBaixando] = React.useState(false);
+  const [erro, setErro] = React.useState<string | null>(null);
+
+  /**
+   * Exporta as ofertas RECUSADAS do recorte, para decidir fora da tela.
+   *
+   * O motor recusa o que fura o piso, e está certo na regra geral. Mas a
+   * regra não sabe que um SKU parado há três semanas vale entrar com
+   * margem menor. Essa decisão é de quem opera, e a planilha leva os
+   * números — inclusive a comissão que sobra depois da redução, que é o
+   * número que decide e que a tela deixava para a cabeça de quem lê.
+   */
+  async function exportarRecusadas() {
+    setBaixando(true);
+    setErro(null);
+    try {
+      const q = campanha !== "todas" ? `?campanha=${campanha}` : "";
+      const r = await fetch(`/api/exportar/recusadas${q}`);
+      if (!r.ok) {
+        const corpo = await r.json().catch(() => ({}));
+        setErro(corpo.erro ?? `Falha ao gerar (HTTP ${r.status})`);
+        return;
+      }
+
+      const cd = r.headers.get("content-disposition") ?? "";
+      const nome =
+        cd.match(/filename="([^"]+)"/)?.[1] ?? "ofertas-recusadas.xlsx";
+
+      const blob = await r.blob();
+      if (blob.size === 0) {
+        setErro("O arquivo veio vazio.");
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setErro("Sem conexão — nada foi baixado.");
+    } finally {
+      setBaixando(false);
+    }
+  }
 
   const alternar = (id: string) =>
     setAbertos((atual) => {
@@ -127,6 +175,24 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
               ))}
             </select>
 
+            <Button
+              disabled={baixando}
+              onClick={exportarRecusadas}
+              className="shrink-0"
+            >
+              {baixando ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Montando
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  Exportar recusadas
+                </>
+              )}
+            </Button>
+
             <span className="relative shrink-0 w-full sm:w-56">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3" />
               <input
@@ -142,6 +208,13 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
       />
 
       <PageBody>
+        {erro && (
+          <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
+            <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
+            <p className="text-[13px] text-ink-2">{erro}</p>
+          </Panel>
+        )}
+
         <Panel className="overflow-hidden">
           <PanelHeader
             title={`${count(linhas.length)} anúncios`}
