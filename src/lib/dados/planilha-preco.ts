@@ -108,6 +108,8 @@ export async function montarPlanilhaPreco(
     { n: "Mais receita: preço", w: 16, f: DIN },
     { n: "Un/dia nele", w: 11, f: NUM2 },
     { n: "Receita/dia nele", w: 15, f: DIN },
+    { n: "Comissão agora", w: 13, f: PCT },
+    { n: "Comissão no melhor", w: 15, f: PCT },
     { n: "Ganho R$/dia", w: 13, f: DIN },
     { n: "Ganho de receita/dia", w: 17, f: PCT },
     { n: "Elasticidade", w: 12, f: NUM2 },
@@ -146,6 +148,8 @@ export async function montarPlanilhaPreco(
       l.melhorReceita?.preco ?? null,
       l.melhorReceita?.unDia ?? null,
       l.melhorReceita?.receitaDia ?? null,
+      atual?.comissaoPct ?? null,
+      l.melhorReceita?.comissaoPct ?? null,
       ganhoReais(l),
       l.ganhoReceitaDia,
       l.elasticidade,
@@ -169,7 +173,7 @@ export async function montarPlanilhaPreco(
      * semanas diferentes; pintá-lo daria a mesma urgência de um de 60%.
      */
     if (l.ganhoReceitaDia != null && l.ganhoReceitaDia >= 15) {
-      r.getCell(15).fill = {
+      r.getCell(17).fill = {
         type: "pattern",
         pattern: "solid",
         fgColor: { argb: l.ganhoReceitaDia >= 40 ? VERDE : AMARELO },
@@ -200,6 +204,8 @@ export async function montarPlanilhaPreco(
     { n: "Un/dia", w: 10, f: NUM2 },
     { n: "Receita", w: 14, f: DIN },
     { n: "Receita/dia", w: 14, f: DIN },
+    { n: "Comissão praticada", w: 15, f: PCT },
+    { n: "Medida em", w: 14 },
     { n: "Marca", w: 20 },
   ];
 
@@ -248,6 +254,12 @@ export async function montarPlanilhaPreco(
         f.unDia,
         f.receita,
         f.receitaDia,
+        f.comissaoPct,
+        // A amostra anda junto com o percentual: "2 de 27 un" avisa que
+        // aquele número não sustenta uma decisão sozinho.
+        f.unidadesComComissao > 0
+          ? `${f.unidadesComComissao} de ${f.unidades} un`
+          : null,
         marcas.length ? marcas.join(" · ") : semLastro ? "pouco dado" : null,
       ];
 
@@ -332,6 +344,20 @@ export async function montarPlanilhaPreco(
     ["", false],
     ["Linhas em cinza têm menos de 3 dias ou 3 unidades. Aparecem porque houve venda", false],
     ["ali, mas não disputam o melhor preço e não devem orientar decisão.", false],
+    ["", false],
+    ["Comissão praticada", true],
+    ["A comissão média dos pedidos daquela faixa, ponderada pela receita. É o que", false],
+    ["torna visível o confundidor em vez de só avisar sobre ele: se o melhor preço", false],
+    ["teve 6,09% de comissão e o preço acima dele teve 9,38%, aquele preço coincidiu", false],
+    ["com redução de tarifa — e parte do volume veio da campanha, não do preço.", false],
+    ["", false],
+    ["\"Medida em\" diz quantas unidades da faixa trazem comissão conhecida. Costuma ser", false],
+    ["pouco: 13 de 59 numa faixa, 2 de 27 noutra. Abaixo de 3 unidades o percentual", false],
+    ["nem aparece — um número sem lastro apresentado como \"a comissão daquele preço\"", false],
+    ["seria pior que a ausência.", false],
+    ["", false],
+    ["Cobre 45% das faixas qualificadas. Fora do Mercado Livre não há comissão nenhuma,", false],
+    ["e dentro dele nem todo pedido a traz.", false],
     ["", false],
     ["O que isto NÃO prova", true],
     ["Correlação. As faixas foram praticadas em semanas diferentes, e o preço mais", false],

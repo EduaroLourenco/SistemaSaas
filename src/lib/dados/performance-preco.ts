@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
+import { comissaoUtilizavel } from "./comissao-plausivel";
 
 /**
  * Performance de preço: a que preço cada SKU vende melhor.
@@ -69,6 +70,23 @@ import { carregarExclusoes, aplicar } from "./exclusoes";
  * vitrine fica numa coluna à parte, porque a distância entre ela e o
  * praticado é informação própria: é o desconto que a operação vem dando.
  *
+ * ── A comissão praticada em cada faixa ──
+ *
+ * É o que torna visível o confundidor em vez de só avisar sobre ele. Se a
+ * faixa de melhor desempenho teve 6,09% de comissão e a de cima teve
+ * 9,38%, o preço mais baixo coincidiu com redução de tarifa — e parte do
+ * volume veio da campanha, não do preço.
+ *
+ * Vem da comissão informada nos pedidos daquela faixa, ponderada pela
+ * receita. Cobre 45% das faixas qualificadas: fora do Mercado Livre não
+ * há comissão nenhuma, e dentro dele nem todo pedido a traz.
+ *
+ * A amostra costuma ser fina — 13 de 59 unidades numa faixa, 2 de 27
+ * noutra. Por isso o percentual só aparece com pelo menos 3 unidades
+ * medidas, e o tamanho da amostra anda junto com ele: um número sem
+ * lastro apresentado como "a comissão daquele preço" seria pior que a
+ * ausência.
+ *
  * ── O que isto NÃO prova ──
  *
  * Correlação. O preço mais barato costuma coincidir com campanha, e
@@ -103,6 +121,14 @@ export type FaixaPreco = {
    * nem sempre sobe: metade das unidades a dois terços do preço perde.
    */
   receitaDia: number;
+  /**
+   * Comissão média praticada nesta faixa, ponderada pela receita.
+   *
+   * Nula quando menos de 3 unidades da faixa trazem comissão conhecida.
+   */
+  comissaoPct: number | null;
+  /** Unidades da faixa com comissão conhecida. */
+  unidadesComComissao: number;
   /** É a faixa vencedora do período. */
   melhor: boolean;
   /** O preço de hoje cai nesta faixa. */
@@ -200,7 +226,10 @@ export async function carregarPerformancePreco(filtro: {
   const [pedidosRaw, itensRaw, anunciosRaw, contasRaw, canaisRaw, exclusoes] =
     await Promise.all([
       paginar(() =>
-        sb.from("pedidos").select("id,data,cancelado,canal_id,conta_canal_id").order("data")
+        sb
+          .from("pedidos")
+          .select("id,data,cancelado,total,comissao,comissao_origem,canal_id,conta_canal_id")
+          .order("data")
       ),
       paginar(() =>
         sb
@@ -211,7 +240,7 @@ export async function carregarPerformancePreco(filtro: {
       paginar(() =>
         sb
           .from("anuncios")
-          .select("codigo_externo,sku_canal,tipo,preco_atual,canal_id")
+          .select("codigo_externo,sku_canal,tipo,preco_atual,comissao_atual,canal_id")
           .order("codigo_externo")
       ),
       sb.from("contas_canal").select("id,canal_id").limit(200),
@@ -219,7 +248,16 @@ export async function carregarPerformancePreco(filtro: {
       carregarExclusoes(),
     ]);
 
-  type Ped = { id: string; data: string; cancelado: boolean; canal_id: string; conta_canal_id: string };
+  type Ped = {
+    id: string;
+    data: string;
+    cancelado: boolean;
+    total: string | number;
+    comissao: string | number | null;
+    comissao_origem: string | null;
+    canal_id: string;
+    conta_canal_id: string;
+  };
   type Item = {
     pedido_id: string;
     sku: string | null;
@@ -234,6 +272,7 @@ export async function carregarPerformancePreco(filtro: {
     sku_canal: string | null;
     tipo: string;
     preco_atual: string | number | null;
+    comissao_atual: string | number | null;
     canal_id: string;
   };
 
@@ -282,7 +321,23 @@ export async function carregarPerformancePreco(filtro: {
 
   /* ── Vendas por SKU ── */
 
-  type Venda = { data: string; preco: number; un: number; total: number; canal: string; mlb: string };
+  type Venda = {
+    data: string;
+    preco: number;
+    un: number;
+    total: number;
+    canal: string;
+    mlb: string;
+    /** Comissão do pedido em %, quando conhecida e plausível. */
+    comissaoPct: number | null;
+  };
+  const anuncios = anunciosRaw as unknown as Anun[];
+  // Alíquota por MLB, antes do laço: define o teto de plausibilidade da
+  // comissão de cada pedido.
+  const tarifaDoMlb = new Map(
+    anuncios.map((a) => [a.codigo_externo, a.comissao_atual])
+  );
+
   const porSku = new Map<string, { titulo: string; vendas: Venda[] }>();
 
   for (const it of itensRaw as unknown as Item[]) {
@@ -293,6 +348,23 @@ export async function carregarPerformancePreco(filtro: {
 
     const at = porSku.get(sku) ?? { titulo: it.titulo ?? "", vendas: [] };
     if (!at.titulo && it.titulo) at.titulo = it.titulo;
+    /*
+     * A comissão vem do PEDIDO, em reais, e vira percentual sobre o total
+     * dele. O item herda esse percentual — ratear os reais e redividir
+     * pelo valor do item daria o mesmo número com duas divisões a mais.
+     *
+     * O filtro de plausibilidade é o mesmo do resto do sistema: a
+     * reconstruída fora da faixa da alíquota do anúncio não entra.
+     */
+    const comissaoPct = comissaoUtilizavel(
+      p.comissao,
+      p.total,
+      tarifaDoMlb.get(it.codigo_externo),
+      p.comissao_origem
+    )
+      ? r2((n(p.comissao) * 100) / n(p.total))
+      : null;
+
     at.vendas.push({
       data: String(p.data).slice(0, 10),
       preco: n(it.preco_unitario),
@@ -300,13 +372,13 @@ export async function carregarPerformancePreco(filtro: {
       total: n(it.total),
       canal: p.canalId,
       mlb: it.codigo_externo,
+      comissaoPct,
     });
     porSku.set(sku, at);
   }
 
   /* ── Catálogo: preço de hoje e MLBs do SKU ── */
 
-  const anuncios = anunciosRaw as unknown as Anun[];
   const catalogoPorSku = new Map<string, Anun[]>();
   for (const a of anuncios) {
     const sku = (a.sku_canal ?? "").trim();
@@ -333,12 +405,26 @@ export async function carregarPerformancePreco(filtro: {
     const mediana = precos[Math.floor(precos.length / 2)] || 1;
     const passo = Math.max(1, mediana * FAIXA_PCT);
 
-    type Bruta = { un: number; dias: Set<string>; soma: number; qtd: number; receita: number };
+    type Bruta = {
+      un: number;
+      dias: Set<string>;
+      soma: number;
+      qtd: number;
+      receita: number;
+      /** Comissão ponderada pela receita, e a base que a sustenta. */
+      comSoma: number;
+      comPeso: number;
+      comUn: number;
+    };
     const brutas = new Map<number, Bruta>();
     for (const v of vendas) {
       const chave = Math.round(v.preco / passo);
       const b =
-        brutas.get(chave) ?? { un: 0, dias: new Set<string>(), soma: 0, qtd: 0, receita: 0 };
+        brutas.get(chave) ??
+        {
+          un: 0, dias: new Set<string>(), soma: 0, qtd: 0, receita: 0,
+          comSoma: 0, comPeso: 0, comUn: 0,
+        };
       b.un += v.un;
       b.dias.add(v.data);
       // O preço da faixa é a média ponderada do que se vendeu nela, não o
@@ -346,6 +432,13 @@ export async function carregarPerformancePreco(filtro: {
       b.soma += v.preco * v.un;
       b.qtd += v.un;
       b.receita += v.total;
+      // Ponderada pela receita do item, não pela contagem: um item de
+      // R$ 2.000 e outro de R$ 200 na mesma faixa não pesam igual.
+      if (v.comissaoPct != null) {
+        b.comSoma += v.comissaoPct * v.total;
+        b.comPeso += v.total;
+        b.comUn += v.un;
+      }
       brutas.set(chave, b);
     }
 
@@ -382,6 +475,9 @@ export async function carregarPerformancePreco(filtro: {
         unDia: r2(b.un / b.dias.size),
         receita: r2(b.receita),
         receitaDia: r2(b.receita / b.dias.size),
+        // Menos de 3 unidades medidas não sustenta um percentual: some.
+        comissaoPct: b.comUn >= 3 && b.comPeso > 0 ? r2(b.comSoma / b.comPeso) : null,
+        unidadesComComissao: b.comUn,
         melhor: false,
         atual: false,
       }))
