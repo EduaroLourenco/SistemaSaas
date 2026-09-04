@@ -11,7 +11,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { AlertCircle, Info, X } from "lucide-react";
+import { AlertCircle, Info, X, Download, Loader2 } from "lucide-react";
 import type {
   DadosPerformancePreco, LinhaPreco, Situacao,
 } from "@/lib/dados/performance-preco";
@@ -72,6 +72,52 @@ export default function PerformancePrecoCliente({
   const [so, setSo] = React.useState<"" | "problema" | "evidencia">("");
   const [aberto, setAberto] = React.useState<string | null>(null);
 
+  const [baixando, setBaixando] = React.useState(false);
+  const [erro, setErro] = React.useState<string | null>(null);
+
+  /**
+   * Exporta preço × volume × receita no recorte que está na tela.
+   *
+   * A tela mostra a faixa de mais volume; a planilha traz também a de
+   * mais RECEITA por dia, que é a que decide se baixar compensa — e que
+   * quase nunca é a mesma faixa.
+   */
+  async function exportar() {
+    setBaixando(true);
+    setErro(null);
+    try {
+      const q = new URLSearchParams({ dias: String(dias) });
+      if (dados.canalId) q.set("canal", dados.canalId);
+
+      const r = await fetch(`/api/exportar/preco?${q}`);
+      if (!r.ok) {
+        const corpo = await r.json().catch(() => ({}));
+        setErro(corpo.erro ?? `Falha ao gerar (HTTP ${r.status})`);
+        return;
+      }
+      const cd = r.headers.get("content-disposition") ?? "";
+      const nome = cd.match(/filename="([^"]+)"/)?.[1] ?? "preco.xlsx";
+
+      const blob = await r.blob();
+      if (blob.size === 0) {
+        setErro("O arquivo veio vazio.");
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setErro("Sem conexão — nada foi baixado.");
+    } finally {
+      setBaixando(false);
+    }
+  }
+
   function ir(novoDias: number, canal: string | null) {
     const q = new URLSearchParams({ dias: String(novoDias) });
     if (canal) q.set("canal", canal);
@@ -111,6 +157,13 @@ export default function PerformancePrecoCliente({
       />
 
       <PageBody>
+        {erro && (
+          <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
+            <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
+            <p className="text-[13px] text-ink-2">{erro}</p>
+          </Panel>
+        )}
+
         {/* ── Recorte ── */}
         <Panel className="p-3 mb-3">
           <div className="flex items-end gap-2 flex-wrap">
@@ -135,6 +188,19 @@ export default function PerformancePrecoCliente({
               </Select>
             </Field>
             <div className="flex-1" />
+            <Button disabled={baixando} onClick={exportar}>
+              {baixando ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Montando
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  Exportar Excel
+                </>
+              )}
+            </Button>
             <Input
               placeholder="Buscar SKU, título ou MLB"
               value={busca}

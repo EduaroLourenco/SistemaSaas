@@ -95,6 +95,14 @@ export type FaixaPreco = {
   /** Unidades por dia em que este preço esteve valendo. */
   unDia: number;
   receita: number;
+  /**
+   * Receita por dia nesta faixa.
+   *
+   * É o número que decide baixar preço ou não. Mais unidades por dia a um
+   * preço menor só compensa se o produto de preço × volume subir — e ele
+   * nem sempre sobe: metade das unidades a dois terços do preço perde.
+   */
+  receitaDia: number;
   /** É a faixa vencedora do período. */
   melhor: boolean;
   /** O preço de hoje cai nesta faixa. */
@@ -120,8 +128,29 @@ export type LinhaPreco = {
   receita: number;
   participacao: number;
 
-  /** A faixa de melhor desempenho no período. */
+  /** A faixa que mais vendeu por dia, em unidades. */
   melhor: FaixaPreco | null;
+  /**
+   * A faixa que mais fez receita por dia.
+   *
+   * Quase sempre é outra: a de maior volume costuma ser a mais barata, e
+   * a de maior receita fica acima dela. Mostrar só uma responde metade da
+   * pergunta.
+   */
+  melhorReceita: FaixaPreco | null;
+  /**
+   * Quanto a faixa de melhor receita renderia a mais por dia que o preço
+   * de agora, em %.
+   */
+  ganhoReceitaDia: number | null;
+  /**
+   * Elasticidade entre o preço de agora e a faixa de melhor receita.
+   *
+   * Variação % do volume dividida pela variação % do preço. Acima de 1 em
+   * módulo, o volume reage mais que o preço — e aí baixar tende a
+   * compensar. Abaixo, não.
+   */
+  elasticidade: number | null;
   /** Preço de vitrine do catálogo. Não é o que o cliente pagou. */
   precoVitrine: number | null;
   /** Média ponderada praticada na janela recente. */
@@ -352,6 +381,7 @@ export async function carregarPerformancePreco(filtro: {
         dias: b.dias.size,
         unDia: r2(b.un / b.dias.size),
         receita: r2(b.receita),
+        receitaDia: r2(b.receita / b.dias.size),
         melhor: false,
         atual: false,
       }))
@@ -365,6 +395,11 @@ export async function carregarPerformancePreco(filtro: {
         ? qualificadas.reduce((m, f) => (f.unDia > m.unDia ? f : m))
         : null;
     if (melhor) melhor.melhor = true;
+
+    const melhorReceita =
+      qualificadas.length > 0
+        ? qualificadas.reduce((m, f) => (f.receitaDia > m.receitaDia ? f : m))
+        : null;
 
 
 
@@ -425,6 +460,35 @@ export async function carregarPerformancePreco(filtro: {
         : null;
 
     /*
+     * O ganho e a elasticidade comparam a faixa de melhor receita com a
+     * faixa em que o preço de agora está — não com o preço solto.
+     *
+     * Sem achar a faixa atual não há como saber quanto se vende hoje
+     * naquele patamar, e a comparação viraria "receita/dia da melhor
+     * faixa contra receita/dia do período inteiro", que mistura preços.
+     */
+    const faixaAtual = faixas.find((f) => f.atual) ?? null;
+    const ganhoReceitaDia =
+      melhorReceita && faixaAtual && faixaAtual.receitaDia > 0
+        ? r2(
+            ((melhorReceita.receitaDia - faixaAtual.receitaDia) /
+              faixaAtual.receitaDia) *
+              100
+          )
+        : null;
+
+    const elasticidade =
+      melhorReceita && faixaAtual && faixaAtual.preco > 0 && faixaAtual.unDia > 0
+        ? (() => {
+            const dPreco = (melhorReceita.preco - faixaAtual.preco) / faixaAtual.preco;
+            const dVolume = (melhorReceita.unDia - faixaAtual.unDia) / faixaAtual.unDia;
+            // Preço igual não tem elasticidade: dividir por zero devolveria
+            // infinito e a planilha mostraria um número sem significado.
+            return Math.abs(dPreco) < 0.001 ? null : r2(dVolume / dPreco);
+          })()
+        : null;
+
+    /*
      * A situação é o que transforma duas colunas de número numa decisão.
      *
      * "subiu_e_caiu" é a que o usuário pediu: o preço saiu do de melhor
@@ -450,6 +514,9 @@ export async function carregarPerformancePreco(filtro: {
       receita: r2(receita),
       participacao: receitaTotal > 0 ? r2((receita * 100) / receitaTotal) : 0,
       melhor,
+      melhorReceita,
+      ganhoReceitaDia,
+      elasticidade,
       precoVitrine: precoAtual,
       precoRecente,
       precoUltimo,
