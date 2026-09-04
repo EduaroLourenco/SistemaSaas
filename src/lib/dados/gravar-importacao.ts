@@ -335,21 +335,46 @@ async function vendasMeli(
    * vendas sem pedido — que apareciam como "sem correspondência" quando
    * o pedido estava lá, com o outro número.
    */
-  const idPorCodigo = new Map<string, string>();
+  /*
+   * A identidade do pedido vem junto, e não só o id.
+   *
+   * O upsert é um INSERT ... ON CONFLICT DO UPDATE, e o Postgres avalia a
+   * política de INSERT sobre a linha PROPOSTA — mesmo quando o conflito
+   * resolve em update. Mandando só `{ id, comissao }`, `operacao_id` vinha
+   * nulo, `pode_editar_operacao(null)` dava falso, e a gravação inteira
+   * voltava com "new row violates row-level security policy".
+   *
+   * Carregar as colunas obrigatórias e devolvê-las intactas satisfaz a
+   * política e os NOT NULL sem alterar nada delas.
+   */
+  type Identidade = {
+    id: string;
+    operacao_id: string;
+    canal_id: string;
+    conta_canal_id: string;
+    codigo_externo: string;
+    codigo_secundario: string | null;
+    data: string;
+    status: string;
+  };
+  const CAMPOS_IDENTIDADE =
+    "id,operacao_id,canal_id,conta_canal_id,codigo_externo,codigo_secundario,data,status";
+
+  const pedidoPorCodigo = new Map<string, Identidade>();
   for (let i = 0; i < codigos.length; i += 200) {
     const lote = codigos.slice(i, i + 200);
     const [porPrimeiro, porSegundo] = await Promise.all([
-      sb.from("pedidos").select("id,codigo_externo").in("codigo_externo", lote),
-      sb.from("pedidos").select("id,codigo_secundario").in("codigo_secundario", lote),
+      sb.from("pedidos").select(CAMPOS_IDENTIDADE).in("codigo_externo", lote),
+      sb.from("pedidos").select(CAMPOS_IDENTIDADE).in("codigo_secundario", lote),
     ]);
     if (porPrimeiro.error) {
       throw new Error(`Falha ao localizar pedidos: ${porPrimeiro.error.message}`);
     }
-    for (const p of porPrimeiro.data ?? []) {
-      idPorCodigo.set(p.codigo_externo as string, p.id as string);
+    for (const p of (porPrimeiro.data ?? []) as unknown as Identidade[]) {
+      pedidoPorCodigo.set(p.codigo_externo, p);
     }
-    for (const p of porSegundo.data ?? []) {
-      idPorCodigo.set(p.codigo_secundario as string, p.id as string);
+    for (const p of (porSegundo.data ?? []) as unknown as Identidade[]) {
+      if (p.codigo_secundario) pedidoPorCodigo.set(p.codigo_secundario, p);
     }
   }
 
@@ -357,12 +382,19 @@ async function vendasMeli(
   let semPedido = 0;
 
   for (const [codigo, a] of porPedido) {
-    const id = idPorCodigo.get(codigo);
-    if (!id) { semPedido += 1; continue; }
+    const pedido = pedidoPorCodigo.get(codigo);
+    if (!pedido) { semPedido += 1; continue; }
     if (!a.temTarifa) continue;
 
     linhas.push({
-      id,
+      // Devolvidas como estão: são o que a política de INSERT confere.
+      id: pedido.id,
+      operacao_id: pedido.operacao_id,
+      canal_id: pedido.canal_id,
+      conta_canal_id: pedido.conta_canal_id,
+      codigo_externo: pedido.codigo_externo,
+      data: pedido.data,
+      status: pedido.status,
       comissao: Number(a.liquida.toFixed(2)),
       comissao_bruta: Number(a.bruta.toFixed(2)),
       desconto_tarifa: Number(a.desconto.toFixed(2)),

@@ -41,6 +41,33 @@ function extractText(val: any): string {
 }
 
 /**
+ * Acha a coluna cujo cabeçalho casa.
+ *
+ * `exatos` casa o rótulo inteiro e tem prioridade; `contem` é o plano B,
+ * por substring. As duas listas são separadas de propósito: com uma lista
+ * só aceitando substring, o termo "ação" escolhia "Avaliação do desconto"
+ * — que é uma FÓRMULA — em vez de "O que você quer fazer com este
+ * anúncio?", e nas campanhas sem redução de tarifa a decisão ia parar na
+ * coluna errada.
+ *
+ * Fora da função de processar porque serve a dois usos: localizar a
+ * coluna e pontuar qual linha é o cabeçalho.
+ */
+function localizar(
+  linha: unknown[],
+  exatos: string[],
+  contem: string[] = []
+): number {
+  const norm = (v: unknown) => extractText(v).toLowerCase().trim();
+
+  const exato = linha.findIndex((v) => exatos.includes(norm(v)));
+  if (exato !== -1) return exato;
+
+  if (!contem.length) return -1;
+  return linha.findIndex((v) => contem.some((termo) => norm(v).includes(termo)));
+}
+
+/**
  * Cenários de revisão. Um item pode carregar mais de um.
  *
  *  tabela_acima_ml       o preço de tabela é maior que o que o canal propôs
@@ -126,6 +153,29 @@ export async function processarPlanilha(
   let targetWorksheet: ExcelJS.Worksheet | null = null;
   let headerRowIndex = 0;
 
+  /*
+   * As quatro colunas sem as quais a planilha não é processável. Ficam
+   * numa constante porque servem a dois usos: pontuar qual linha é o
+   * cabeçalho, e recusar o arquivo quando nenhuma linha as tem.
+   */
+  const OBRIGATORIAS = [
+    { exatos: ["sku"], contem: ["sku"] },
+    {
+      exatos: ["item_id", "mlb", "número do anúncio", "código do anúncio"],
+      contem: ["item_id", "número do anúncio", "código do anúncio"],
+    },
+    {
+      // "precio final" e "recibes": o Meli exporta rótulos em espanhol
+      // mesmo em conta portuguesa, e o nome técnico é o que não muda.
+      exatos: ["final_price", "preço final", "precio final"],
+      contem: ["preço final", "precio final"],
+    },
+    {
+      exatos: ["action", "o que você quer fazer com este anúncio?", "ação"],
+      contem: ["o que você quer fazer"],
+    },
+  ];
+
   for (const worksheet of workbook.worksheets) {
     const foundHeaders: number[] = [];
     for (let i = 1; i <= Math.min(100, worksheet.rowCount); i++) {
@@ -147,8 +197,35 @@ export async function processarPlanilha(
     }
 
     if (foundHeaders.length > 0) {
-      // cabeçalho mais profundo — planilhas do Meli têm cabeçalho mesclado
-      headerRowIndex = foundHeaders[foundHeaders.length - 1];
+      /*
+       * A linha de cabeçalho é a que RESOLVE MAIS colunas obrigatórias,
+       * não a mais profunda.
+       *
+       * A planilha do Meli repete o cabeçalho em três alturas: nomes
+       * técnicos em cima (ITEM_ID, FINAL_PRICE) e rótulos traduzidos
+       * embaixo. Pegar a mais profunda funcionou até o Meli exportar a
+       * coluna 9 como "Precio final" — em espanhol, numa conta em
+       * português. O leitor não achava "preço final", e a planilha inteira
+       * era recusada por "faltam colunas obrigatórias" enquanto a coluna
+       * estava lá, com outro nome.
+       *
+       * Os nomes técnicos não mudam com o idioma da conta. Pontuando cada
+       * candidata, a linha técnica ganha sozinha quando os rótulos vêm
+       * traduzidos, e a lógica antiga continua valendo no empate — que é o
+       * caso do cabeçalho mesclado que motivou a regra original.
+       */
+      let melhor = { linha: 0, pontos: -1 };
+      for (const candidata of foundHeaders) {
+        const vals = worksheet.getRow(candidata).values as any[];
+        const pontos = OBRIGATORIAS.reduce(
+          (s, alvo) => s + (localizar(vals, alvo.exatos, alvo.contem) === -1 ? 0 : 1),
+          0
+        );
+        // >= e não >: no empate fica a mais profunda, como antes.
+        if (pontos >= melhor.pontos) melhor = { linha: candidata, pontos };
+      }
+
+      headerRowIndex = melhor.linha;
       targetWorksheet = worksheet;
       break;
     }
@@ -174,15 +251,8 @@ export async function processarPlanilha(
    * Nas campanhas sem redução de tarifa a decisão ia parar na coluna errada e
    * a coluna certa ficava vazia. Por isso "ação" nunca entra em `contem`.
    */
-  const findCol = (exatos: string[], contem: string[] = []) => {
-    const norm = (v: unknown) => extractText(v).toLowerCase().trim();
-
-    const exato = headerRow.findIndex((v) => exatos.includes(norm(v)));
-    if (exato !== -1) return exato;
-
-    if (!contem.length) return -1;
-    return headerRow.findIndex((v) => contem.some((t) => norm(v).includes(t)));
-  };
+  const findCol = (exatos: string[], contem: string[] = []) =>
+    localizar(headerRow, exatos, contem);
 
   const skuColIndex = findCol(["sku"], ["sku"]);
   const mlbColIndex = findCol(
@@ -193,7 +263,10 @@ export async function processarPlanilha(
     ["original_price", "preço original"],
     ["preço original"]
   );
-  const finalPriceColIndex = findCol(["final_price", "preço final"], ["preço final"]);
+  const finalPriceColIndex = findCol(
+    ["final_price", "preço final", "precio final"],
+    ["preço final", "precio final"]
+  );
   const saleFeeColIndex = findCol(
     ["sale_fee", "redução nas suas tarifas de venda"],
     ["redução nas suas tarifas", "tarifa de venda"]
