@@ -14,6 +14,7 @@ import {
 } from "@/mock/diario";
 import type { DadosDiario } from "@/lib/dados/diario";
 import { money, moneyShort, count, pct } from "@/lib/format";
+import { ticketMedio, pedidosValidos } from "@/lib/ticket";
 import { cn } from "@/lib/utils";
 import {
   CartesianGrid,
@@ -33,6 +34,8 @@ type Resumo = {
   receita: number;
   receitaLiquida: number;
   pedidos: number;
+  /** Pedidos menos cancelados. É o divisor do ticket. */
+  pedidosValidos: number;
   ticket: number;
   visitas: number;
   conversao: number;
@@ -50,8 +53,9 @@ function resumir(p: Periodo): Resumo {
       visitas: a.visitas + d.visitas,
       ads: a.ads + d.ads,
       cancelado: a.cancelado + d.cancelado,
+      pedidosCancelados: a.pedidosCancelados + d.pedidosCancelados,
     }),
-    { receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0 }
+    { receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedidosCancelados: 0 }
   );
 
   return {
@@ -59,7 +63,8 @@ function resumir(p: Periodo): Resumo {
     receita: s.receita,
     receitaLiquida: s.receita - s.cancelado,
     pedidos: s.pedidos,
-    ticket: s.pedidos ? s.receita / s.pedidos : 0,
+    pedidosValidos: pedidosValidos(s.pedidos, s.pedidosCancelados),
+    ticket: ticketMedio(s.receita, s.cancelado, s.pedidos, s.pedidosCancelados) ?? 0,
     visitas: s.visitas,
     conversao: s.visitas ? (s.pedidos / s.visitas) * 100 : 0,
     ads: s.ads,
@@ -116,6 +121,18 @@ const LINHAS: Linha[] = [
     melhor: "maior",
   },
   {
+    tipo: "metrica",
+    id: "pedidosValidos",
+    nome: "Pedidos válidos",
+    valor: (r) => r.pedidosValidos,
+    fmt: count,
+    escala: "soma",
+    melhor: "maior",
+  },
+  {
+    // Receita líquida ÷ pedidos válidos — as duas linhas logo acima.
+    // Deixar o par visível é o que permite conferir o ticket contra o ERP
+    // sem abrir o código.
     tipo: "metrica",
     id: "ticket",
     nome: "Ticket médio",

@@ -1,4 +1,5 @@
 import type { Kpi, DiaFaturamento, Canal } from "@/mock";
+import { ticketMedio } from "./ticket";
 
 /**
  * Agregação por período, no navegador.
@@ -90,7 +91,8 @@ export function recortar(
   const a = somar(janela);
   const b = somar(antes);
 
-  const ticket = (t: typeof a) => (t.pedidos ? t.receita / t.pedidos : 0);
+  const ticket = (t: typeof a) =>
+    ticketMedio(t.receita, t.cancelado, t.pedidos, t.pedCanc) ?? 0;
   const conv = (t: typeof a) =>
     t.visitas ? (t.pedidosComVisita * 100) / t.visitas : 0;
 
@@ -129,16 +131,18 @@ export function recortar(
       spark: spark((l) => l.cancelado) },
   ];
 
-  const agr = new Map<
-    string,
-    { rec: number; ped: number; vis: number; ant: number; pedComVis: number }
-  >();
+  const zeroCanal = {
+    rec: 0, ped: 0, vis: 0, ant: 0, pedComVis: 0, canc: 0, pedCanc: 0,
+  };
+  const agr = new Map<string, typeof zeroCanal>();
   for (const l of linhas) {
-    const g = agr.get(l.canalId) ?? { rec: 0, ped: 0, vis: 0, ant: 0, pedComVis: 0 };
+    const g = agr.get(l.canalId) ?? { ...zeroCanal };
     if (janela.has(l.data)) {
       g.rec += l.receita;
       g.ped += l.pedidos;
       g.vis += l.visitas;
+      g.canc += l.cancelado;
+      g.pedCanc += l.pedidosCancelados;
       if (l.visitas > 0) g.pedComVis += l.pedidos;
     } else if (antes.has(l.data)) {
       g.ant += l.receita;
@@ -149,13 +153,13 @@ export function recortar(
 
   const canais: Canal[] = canaisInfo
     .map((c) => {
-      const g = agr.get(c.id) ?? { rec: 0, ped: 0, vis: 0, ant: 0, pedComVis: 0 };
+      const g = agr.get(c.id) ?? { ...zeroCanal };
       return {
         id: c.id,
         nome: c.nome,
         faturamento: g.rec,
         pedidos: g.ped,
-        ticket: g.ped ? g.rec / g.ped : 0,
+        ticket: ticketMedio(g.rec, g.canc, g.ped, g.pedCanc) ?? 0,
         conversao: g.vis ? (g.pedComVis * 100) / g.vis : 0,
         // Sem custo por canal em nenhuma planilha, margem não existe ainda.
         margem: 0,
@@ -307,7 +311,7 @@ export function agruparSemanas(
       receitaLiquida: rec - canc,
       pedidos: ped,
       pedidosCancelados: g?.pc ?? 0,
-      ticket: ped ? rec / ped : 0,
+      ticket: ticketMedio(rec, canc, ped, g?.pc ?? 0) ?? 0,
       visitas: vis,
       conversao: vis ? (ped * 100) / vis : 0,
       visitasIncompletas: (g?.furos ?? 0) > 0,

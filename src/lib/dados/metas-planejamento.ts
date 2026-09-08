@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
+import { ticketMedio } from "@/lib/ticket";
 import {
   ratearPorPeso,
   ratearNoMes,
@@ -97,7 +98,7 @@ export async function carregarPlanejamento(
       paginar(() =>
         sb
           .from("vendas_diarias")
-          .select("data,receita,valor_cancelado,pedidos,canal_id,conta_canal_id")
+          .select("data,receita,valor_cancelado,pedidos,pedidos_cancelados,canal_id,conta_canal_id")
           .order("data")
       ),
       sb.from("contas_canal").select("id,canal_id").limit(200),
@@ -118,6 +119,7 @@ export async function carregarPlanejamento(
     receita: string | number;
     valor_cancelado: string | number;
     pedidos: number;
+    pedidos_cancelados: number;
     canal_id: string;
     conta_canal_id: string;
   };
@@ -161,13 +163,16 @@ export async function carregarPlanejamento(
     (d) => String(d.data).slice(0, 10) >= janelaInicio
   );
 
-  type Ac = { receita: number; pedidos: number };
+  type Ac = { receita: number; pedidos: number; pedidosCancelados: number };
   const porCanal = new Map<string, Ac>();
   for (const d of recentes) {
-    const at = porCanal.get(d.canalId) ?? { receita: 0, pedidos: 0 };
+    const at = porCanal.get(d.canalId) ?? {
+      receita: 0, pedidos: 0, pedidosCancelados: 0,
+    };
     // Líquida: o canal que cancela muito não puxa meta como se entregasse.
     at.receita += n(d.receita) - n(d.valor_cancelado);
     at.pedidos += d.pedidos ?? 0;
+    at.pedidosCancelados += d.pedidos_cancelados ?? 0;
     porCanal.set(d.canalId, at);
   }
 
@@ -185,15 +190,20 @@ export async function carregarPlanejamento(
   const canais: CanalPlanejamento[] = ((canaisRaw.data ?? []) as Canal[])
     .filter((c) => porCanal.has(c.id) || metaPorCanal.has(c.id))
     .map((c) => {
-      const a = porCanal.get(c.id) ?? { receita: 0, pedidos: 0 };
+      const a = porCanal.get(c.id) ?? {
+        receita: 0, pedidos: 0, pedidosCancelados: 0,
+      };
       const receita = Math.max(0, a.receita);
+      // `receita` já é líquida aqui, então o cancelado entra como zero: o
+      // desconto não pode ser aplicado duas vezes.
+      const t = ticketMedio(receita, 0, a.pedidos, a.pedidosCancelados);
       return {
         id: c.id,
         nome: c.nome,
         cor: `var(--s${c.cor_serie ?? 1})`,
         receitaRecente: r2(receita),
         peso: totalRecente > 0 ? r2((receita * 100) / totalRecente) : 0,
-        ticket: a.pedidos > 0 ? r2(receita / a.pedidos) : null,
+        ticket: t == null ? null : r2(t),
         metaAtual: metaPorCanal.get(c.id) ?? null,
         // Sem meta gravada, a sugestão é participar de quem tem peso: um
         // canal que vende hoje quase sempre entra, e desmarcar é um

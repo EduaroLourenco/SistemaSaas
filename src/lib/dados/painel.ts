@@ -4,6 +4,7 @@ import { carregarBaseVendas, chaveCanal } from "./vendas";
 import { paginar } from "./paginar";
 import { carregarPainelNovo, type Recomendacao, type SkuEmQueda } from "./recomendacoes";
 import { carregarFontes } from "./fontes";
+import { ticketMedio } from "@/lib/ticket";
 import type { Kpi, DiaFaturamento, Canal, Anuncio } from "@/mock";
 
 /**
@@ -103,7 +104,9 @@ export async function carregarPainel(): Promise<DadosPainel> {
   const anterior = new Set(datas.slice(-60, -30));
 
   const somar = (filtro: Set<string>) => {
-    const t = { receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0 };
+    const t = {
+      receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedCanc: 0,
+    };
     for (const l of linhas) {
       if (!filtro.has(l.data)) continue;
       t.receita += l.receita;
@@ -111,6 +114,7 @@ export async function carregarPainel(): Promise<DadosPainel> {
       t.visitas += l.visitas;
       t.ads += l.ads;
       t.cancelado += l.cancelado;
+      t.pedCanc += l.pedidosCancelados;
     }
     return t;
   };
@@ -123,7 +127,8 @@ export async function carregarPainel(): Promise<DadosPainel> {
       Math.round(linhas.filter((l) => l.data === d).reduce((s, l) => s + campo(l), 0))
     );
 
-  const ticket = (t: typeof a) => (t.pedidos ? t.receita / t.pedidos : 0);
+  const ticket = (t: typeof a) =>
+    ticketMedio(t.receita, t.cancelado, t.pedidos, t.pedCanc) ?? 0;
   const conv = (t: typeof a) => (t.visitas ? (t.pedidos * 100) / t.visitas : 0);
 
   const kpis: Kpi[] = [
@@ -171,13 +176,16 @@ export async function carregarPainel(): Promise<DadosPainel> {
     .map((d) => porDia.get(d))
     .filter((d): d is DiaFaturamento => Boolean(d));
 
-  const agr = new Map<string, { rec: number; ped: number; vis: number; recAnt: number }>();
+  const zeroCanal = { rec: 0, ped: 0, vis: 0, recAnt: 0, canc: 0, pedCanc: 0 };
+  const agr = new Map<string, typeof zeroCanal>();
   for (const l of linhas) {
-    const g = agr.get(l.canalId) ?? { rec: 0, ped: 0, vis: 0, recAnt: 0 };
+    const g = agr.get(l.canalId) ?? { ...zeroCanal };
     if (janela.has(l.data)) {
       g.rec += l.receita;
       g.ped += l.pedidos;
       g.vis += l.visitas;
+      g.canc += l.cancelado;
+      g.pedCanc += l.pedidosCancelados;
     } else if (anterior.has(l.data)) {
       g.recAnt += l.receita;
     }
@@ -187,13 +195,13 @@ export async function carregarPainel(): Promise<DadosPainel> {
 
   const listaCanais: Canal[] = base.canais
     .map((c) => {
-      const g = agr.get(c.id) ?? { rec: 0, ped: 0, vis: 0, recAnt: 0 };
+      const g = agr.get(c.id) ?? { ...zeroCanal };
       return {
         id: c.id,
         nome: c.nome,
         faturamento: g.rec,
         pedidos: g.ped,
-        ticket: g.ped ? g.rec / g.ped : 0,
+        ticket: ticketMedio(g.rec, g.canc, g.ped, g.pedCanc) ?? 0,
         conversao: g.vis ? (g.ped * 100) / g.vis : 0,
         // A planilha não traz custo por canal, então margem ainda não existe.
         margem: 0,

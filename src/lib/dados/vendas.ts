@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar, type Exclusao } from "./exclusoes";
+import { ticketMedio } from "@/lib/ticket";
 import type { SemanaVendas } from "@/mock/semanal";
 
 /**
@@ -409,7 +410,7 @@ export async function carregarSemanal(): Promise<DadosSemanal> {
       receitaLiquida: receita - cancelado,
       pedidos,
       pedidosCancelados: a?.pedCanc ?? 0,
-      ticket: pedidos ? receita / pedidos : 0,
+      ticket: ticketMedio(receita, cancelado, pedidos, a?.pedCanc ?? 0) ?? 0,
       visitas,
       conversao: visitas ? (pedidos * 100) / visitas : 0,
       ads,

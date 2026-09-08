@@ -1,4 +1,5 @@
 import type { LinhaDia, CanalInfo } from "./periodo";
+import { ticketMedio } from "./ticket";
 
 /**
  * Monta o roteiro da apresentação a partir dos números do recorte.
@@ -67,12 +68,14 @@ type Soma = {
   visitas: number;
   ads: number;
   cancelado: number;
+  pedidosCancelados: number;
   pedidosComVisita: number;
 };
 
 function somar(linhas: LinhaDia[], de: string, ate: string, canal?: string): Soma {
   const t: Soma = {
-    receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedidosComVisita: 0,
+    receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0,
+    pedidosCancelados: 0, pedidosComVisita: 0,
   };
   for (const l of linhas) {
     if (l.data < de || l.data > ate) continue;
@@ -82,6 +85,7 @@ function somar(linhas: LinhaDia[], de: string, ate: string, canal?: string): Som
     t.visitas += l.visitas;
     t.ads += l.ads;
     t.cancelado += l.cancelado;
+    t.pedidosCancelados += l.pedidosCancelados;
     // Só pedido com visita registrada entra na conversão — ver periodo.ts.
     if (l.visitas > 0) t.pedidosComVisita += l.pedidos;
   }
@@ -135,7 +139,8 @@ export function montarRoteiro(
 
   /* ── comentários derivados ── */
 
-  const ticket = (t: Soma) => (t.pedidos ? t.receita / t.pedidos : 0);
+  const ticket = (t: Soma) =>
+    ticketMedio(t.receita, t.cancelado, t.pedidos, t.pedidosCancelados) ?? 0;
   const conv = (t: Soma) => (t.visitas ? (t.pedidosComVisita * 100) / t.visitas : 0);
   const tacos = (t: Soma) => (t.receita ? (t.ads * 100) / t.receita : 0);
 

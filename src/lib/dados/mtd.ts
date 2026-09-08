@@ -3,6 +3,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
 import { pesosDaSemana, primeiroDiaDoMes, ultimoDiaDoMes } from "./ratear-meta";
+import { ticketMedio } from "@/lib/ticket";
 
 /**
  * Mês até aqui: onde a meta está sendo perdida.
@@ -233,7 +234,12 @@ export async function carregarMtd(
   /* ── As três alavancas ── */
 
   const conversao = visitas > 0 ? r2((pedidos * 100) / visitas) : null;
-  const ticket = pedidos > 0 ? r2(receitaPaga / pedidos) : null;
+  // receitaPaga já é líquida, então o divisor também precisa ser líquido:
+  // dividir o que sobrou por quem cancelou junto derruba o ticket.
+  const ticketBruto = ticketMedio(
+    receitaBruta, receitaCancelada, pedidos, pedidosCancelados
+  );
+  const ticket = ticketBruto == null ? null : r2(ticketBruto);
 
   /*
    * O necessário é para o MÊS INTEIRO, não para o que falta.
