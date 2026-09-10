@@ -3,7 +3,7 @@ import {
   TrendingUp,
   Tags,
   Percent,
-  Radar,
+  Radar, // eslint-disable-line @typescript-eslint/no-unused-vars -- volta com Monitoramento
   Wallet,
   FileBarChart,
   Plug,
@@ -73,20 +73,28 @@ export const NAV: NavGroup[] = [
       { label: "Histórico", href: "/promocoes/historico" },
     ],
   },
-  {
-    label: "Monitoramento",
-    icon: Radar,
-    items: [
-      { label: "Preços", href: "/monitoramento/precos" },
-      { label: "Fretes", href: "/monitoramento/fretes" },
-    ],
-  },
+  /*
+   * Monitoramento sai do menu enquanto não está sendo desenvolvido.
+   *
+   * As rotas continuam de pé — só não são anunciadas. Apagar as telas
+   * obrigaria a reescrevê-las depois; deixá-las no menu enche a lista de
+   * coisa que não responde. Para trazer de volta, descomente.
+   */
+  // {
+  //   label: "Monitoramento",
+  //   icon: Radar,
+  //   items: [
+  //     { label: "Preços", href: "/monitoramento/precos" },
+  //     { label: "Fretes", href: "/monitoramento/fretes" },
+  //   ],
+  // },
   {
     label: "Financeiro",
     icon: Wallet,
     items: [
       { label: "Painel", href: "/financeiro" },
       { label: "Custos", href: "/financeiro/custos" },
+      { label: "Categorias", href: "/financeiro/categorias" },
       { label: "Folha de pagamento", href: "/financeiro/folha" },
       { label: "Fornecedores", href: "/financeiro/fornecedores" },
       { label: "Contas a pagar", href: "/financeiro/contas" },

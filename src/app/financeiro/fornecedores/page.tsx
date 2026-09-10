@@ -1,21 +1,35 @@
+import { carregarFornecedores } from "@/lib/dados/financeiro";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { SemFonte } from "@/components/ui/sem-fonte";
+import FornecedoresCliente from "./fornecedores-cliente";
 
-/*
- * O dado de exemplo saiu daqui.
+export const dynamic = "force-dynamic";
+
+/**
+ * Fornecedores.
  *
- * Zerar os números mantinha os gráficos desenhados, o que passa a
- * impressão de operação parada — e não é isso: é ausência de fonte. A
- * tela agora diz o que precisa acontecer para ter conteúdo.
+ * A tela era um aviso de ausência: "a tabela existe no banco e espera a
+ * primeira carga". Agora ela é onde a carga acontece.
+ *
+ * O cadastro guarda quem é o fornecedor e como ele cobra — condição de
+ * pagamento, dia de vencimento. O boleto em si é uma CONTA, e vive em
+ * "Contas a pagar" apontando para aqui: um fornecedor tem muitos boletos,
+ * e misturar os dois faria cada nova fatura virar um cadastro novo.
  */
-export default function Pagina() {
+export default async function Pagina() {
+  const dados = await carregarFornecedores();
+
   return (
     <>
-      <PageHeader title="Fornecedores" breadcrumb="Financeiro" />
+      <PageHeader
+        title="Fornecedores"
+        breadcrumb="Financeiro"
+        description="Quem cobra, e como cobra"
+      />
       <PageBody>
-        <SemFonte
-          titulo="Sem dados para mostrar"
-          origem="Nenhum fornecedor cadastrado. A tabela existe no banco e espera a primeira carga."
+        <FornecedoresCliente
+          linhas={dados.linhas}
+          categorias={dados.categorias}
+          faltaMigracao={dados.faltaMigracao}
         />
       </PageBody>
     </>

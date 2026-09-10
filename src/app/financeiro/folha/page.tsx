@@ -1,21 +1,39 @@
+import { carregarFuncionarios } from "@/lib/dados/financeiro";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { SemFonte } from "@/components/ui/sem-fonte";
+import FolhaCliente from "./folha-cliente";
 
-/*
- * O dado de exemplo saiu daqui.
+export const dynamic = "force-dynamic";
+
+/**
+ * Folha de pagamento.
  *
- * Zerar os números mantinha os gráficos desenhados, o que passa a
- * impressão de operação parada — e não é isso: é ausência de fonte. A
- * tela agora diz o que precisa acontecer para ter conteúdo.
+ * Duas coisas diferentes moram aqui, e a tela separa: o FUNCIONÁRIO, que
+ * é cadastro e muda pouco, e a COMPETÊNCIA, que é o mês fechado e muda
+ * todo mês.
+ *
+ * O cadastro guarda o padrão — salário, benefícios, encargos, dia de
+ * pagamento. A competência é o que de fato saiu naquele mês, que quase
+ * sempre é o padrão e às vezes não é: férias, rescisão, bônus.
+ *
+ * Guardar só o cadastro faria a DRE de março usar o salário de hoje. É o
+ * mesmo erro do frete de tabela reescrevendo a margem de julho.
  */
-export default function Pagina() {
+export default async function Pagina() {
+  const dados = await carregarFuncionarios();
+
   return (
     <>
-      <PageHeader title="Folha de pagamento" breadcrumb="Financeiro" />
+      <PageHeader
+        title="Folha de pagamento"
+        breadcrumb="Financeiro"
+        description="Quem está na equipe e quanto custa por mês"
+      />
       <PageBody>
-        <SemFonte
-          titulo="Sem dados para mostrar"
-          origem="Nenhuma folha foi importada. A tabela existe no banco (funcionarios e folha_pagamento) e espera a primeira carga."
+        <FolhaCliente
+          linhas={dados.linhas}
+          categorias={dados.categorias}
+          folha={dados.folha}
+          faltaMigracao={dados.faltaMigracao}
         />
       </PageBody>
     </>
