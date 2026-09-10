@@ -81,6 +81,17 @@ const PERMITIDOS = [
   // multiget de anúncios e detalhe de um anúncio
   /^\/items$/,
   /^\/items\/[A-Z]{3}\d+(\/shipping_options)?$/i,
+  /*
+   * Visitas POR ANÚNCIO, dia a dia.
+   *
+   * É outro endpoint que `/users/{id}/items_visits`, e a diferença custou
+   * uma conclusão errada: o de usuário devolve só o total da conta e
+   * ignora `item_ids` — a quebra por anúncio vem daqui, um anúncio por
+   * chamada ("maximum amount of items to query is 1").
+   */
+  /^\/items\/[A-Z]{3}\d+\/visits\/time_window$/i,
+  // custo real do envio: `senders[].cost` é o que o vendedor paga
+  /^\/shipments\/\d+(\/costs)?$/,
   // o site é parâmetro: MLB no Brasil, mas não fica preso a ele
   /^\/sites\/[A-Z]{3}\/search$/,
   // /orders/search e /orders/search/recent

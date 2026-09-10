@@ -69,8 +69,24 @@ export type CustoSku = {
   receita: number;
   precoMedio: number | null;
 
-  /** Em pontos percentuais sobre o preço. */
+  /**
+   * Em pontos percentuais sobre o preço.
+   *
+   * `tabela` aqui é a alíquota DO ANÚNCIO (`anuncios.comissao_atual`),
+   * ponderada pelo que cada tipo vendeu. É a mais específica que existe.
+   */
   comissao: ValorComOrigem;
+  /**
+   * A alíquota cadastrada para o CANAL, em `comissoes_canal`.
+   *
+   * Fica separada da do anúncio de propósito: são duas perguntas
+   * diferentes. "Quanto o Meli cobra de clássico?" é do canal e vale para
+   * tudo. "Quanto este anúncio paga?" é do anúncio, e pode divergir por
+   * categoria, por catálogo ou por acordo. Quando as duas discordam, é a
+   * do anúncio que a margem usa — e ver a diferença é o que revela um
+   * anúncio fora da alíquota que você acha que está pagando.
+   */
+  comissaoCanal: number | null;
   /** Em reais por unidade. */
   frete: ValorComOrigem;
   /** Juro do parcelamento, em reais por unidade. */
@@ -104,32 +120,72 @@ export type DadosCustos = {
   /** Quantos SKUs já têm margem calculável. */
   completos: number;
   vazio: boolean;
+  /** O recorte que produziu estes números. */
+  periodo: { inicio: string | null; fim: string | null };
+  canais: { id: string; nome: string }[];
 };
 
-export async function carregarCustos(): Promise<DadosCustos> {
+export type FiltroCustos = {
+  inicio?: string;
+  fim?: string;
+  canalId?: string;
+};
+
+/**
+ * @param filtro Recorta o PRATICADO — comissão, frete, juros e preço médio
+ * passam a valer só para o período e o canal escolhidos.
+ *
+ * O cadastro (mercadoria, embalagem, alíquota, peso) não é recortado: ele
+ * é do produto, não do período. Filtrar por julho e ver a embalagem mudar
+ * não faria sentido — o que muda com o recorte é o que a venda revelou.
+ */
+export async function carregarCustos(
+  filtro: FiltroCustos = {}
+): Promise<DadosCustos> {
   const sb = await clienteServidor();
 
-  const [produtosRaw, anunciosRaw, faixasRaw, base] = await Promise.all([
-    paginar(() =>
+  const [produtosRaw, anunciosRaw, faixasRaw, base, comissoesRaw, canaisRaw] =
+    await Promise.all([
+      paginar(() =>
+        sb
+          .from("produtos")
+          .select("id,sku,titulo,custo_unitario,embalagem,aliquota_impostos,peso_kg")
+          .order("sku")
+      ),
+      paginar(() =>
+        sb
+          .from("anuncios")
+          .select("id,produto_id,codigo_externo,tipo,comissao_atual,canal_id")
+          .order("codigo_externo")
+      ),
+      paginar(() =>
+        sb
+          .from("faixas_frete")
+          .select("id,canal_id,peso_min_kg,peso_max_kg,valor,vigencia_inicio,canais(nome)")
+          .order("peso_min_kg")
+      ),
+      carregarBaseMargem(filtro),
       sb
-        .from("produtos")
-        .select("id,sku,titulo,custo_unitario,embalagem,aliquota_impostos,peso_kg")
-        .order("sku")
-    ),
-    paginar(() =>
-      sb
-        .from("anuncios")
-        .select("id,produto_id,codigo_externo,tipo,comissao_atual,canal_id")
-        .order("codigo_externo")
-    ),
-    paginar(() =>
-      sb
-        .from("faixas_frete")
-        .select("id,canal_id,peso_min_kg,peso_max_kg,valor,vigencia_inicio,canais(nome)")
-        .order("peso_min_kg")
-    ),
-    carregarBaseMargem(),
-  ]);
+        .from("comissoes_canal")
+        .select("canal_id,tipo,comissao,vigencia_inicio")
+        .order("vigencia_inicio", { ascending: false }),
+      sb.from("canais").select("id,nome").eq("ativo", true).order("nome"),
+    ]);
+
+  /*
+   * A alíquota do canal, por tipo de anúncio. Fica a mais recente vigente:
+   * a consulta já vem em ordem decrescente de vigência, então a primeira
+   * de cada par (canal, tipo) é a que vale.
+   */
+  const comissaoDoCanal = new Map<string, number>();
+  for (const c of (comissoesRaw.data ?? []) as {
+    canal_id: string;
+    tipo: string | null;
+    comissao: string | number;
+  }[]) {
+    const chave = `${c.canal_id}|${c.tipo ?? "geral"}`;
+    if (!comissaoDoCanal.has(chave)) comissaoDoCanal.set(chave, n(c.comissao));
+  }
 
   type Prod = {
     id: string;
@@ -291,6 +347,32 @@ export async function carregarCustos(): Promise<DadosCustos> {
         ? r2((ac.comissao * 100) / ac.receitaComComissao)
         : null;
 
+    /*
+     * A alíquota do canal para este SKU, ponderada como a do anúncio.
+     *
+     * Um SKU que vende 90% em clássico tem alíquota de canal perto de
+     * 11,5%, não a média de 11,5 com 16,5. Sem venda, cai na média simples
+     * dos tipos que o SKU publica — é o único peso disponível.
+     */
+    let comissaoCanal: number | null = null;
+    {
+      const taxas: { taxa: number; unidades: number }[] = [];
+      for (const a of meus) {
+        const taxa =
+          comissaoDoCanal.get(`${a.canal_id}|${a.tipo}`) ??
+          comissaoDoCanal.get(`${a.canal_id}|geral`);
+        if (taxa == null) continue;
+        taxas.push({ taxa, unidades: ac?.unidadesPorTipo.get(a.tipo) ?? 0 });
+      }
+      if (taxas.length) {
+        const peso = taxas.reduce((s, t) => s + t.unidades, 0);
+        comissaoCanal =
+          peso > 0
+            ? r2(taxas.reduce((s, t) => s + t.taxa * t.unidades, 0) / peso)
+            : r2(taxas.reduce((s, t) => s + t.taxa, 0) / taxas.length);
+      }
+    }
+
     const pesoKg = prod.peso_kg == null ? null : n(prod.peso_kg);
     const freteTabela = freteDaFaixa(pesoKg);
     const fretePraticado =
@@ -354,6 +436,7 @@ export async function carregarCustos(): Promise<DadosCustos> {
       receita: r2(ac?.receita ?? 0),
       precoMedio,
       comissao,
+      comissaoCanal,
       frete,
       jurosUnidade,
       custoMercadoria,
@@ -374,6 +457,11 @@ export async function carregarCustos(): Promise<DadosCustos> {
     faixas,
     completos: linhas.filter((l) => l.margemUnidade != null).length,
     vazio: !linhas.length,
+    periodo: { inicio: filtro.inicio ?? null, fim: filtro.fim ?? null },
+    canais: ((canaisRaw.data ?? []) as { id: string; nome: string }[]).map((c) => ({
+      id: c.id,
+      nome: c.nome,
+    })),
   };
 }
 

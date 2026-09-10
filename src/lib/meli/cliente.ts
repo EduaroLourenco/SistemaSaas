@@ -316,6 +316,16 @@ export type ItemPedido = {
   quantidade: number;
   /** O preço que o cliente pagou por unidade. É a fonte do histórico. */
   precoUnitario: number;
+  /**
+   * A comissão que o canal reteve NESTE item, em reais.
+   *
+   * É a comissão PRATICADA, não a de tabela: quando há campanha com
+   * rebate, ela vem já reduzida. Medido na conta de São Paulo em 09/09:
+   * itens a 11,50%, 6,50%, 5,50% e 4,50% no mesmo dia, batendo com as
+   * taxas da planilha de campanha.
+   */
+  comissao: number | null;
+  tipoAnuncio: string | null;
 };
 
 export type Pedido = {
@@ -325,6 +335,21 @@ export type Pedido = {
   cancelado: boolean;
   total: number;
   itens: ItemPedido[];
+  /** Soma das comissões dos itens. Nulo se nenhum item informou. */
+  comissao: number | null;
+  /**
+   * Juro do parcelamento embutido no total.
+   *
+   * É repasse: entra no que o comprador pagou e sai para a financeira.
+   * Sem separá-lo, o juro vira faturamento e infla a base de todo
+   * percentual calculado em cima.
+   */
+  juros: number;
+  parcelas: number | null;
+  /** Id do envio, para buscar o frete real depois. */
+  envioId: number | null;
+  /** Preenchido por `completarFretes`, não pela busca de pedidos. */
+  fretePago: number | null;
 };
 
 type OrdemBruta = {
@@ -334,20 +359,31 @@ type OrdemBruta = {
   date_closed?: string;
   total_amount?: number;
   paid_amount?: number;
+  shipping?: { id?: number } | null;
+  payments?: {
+    installments?: number;
+    transaction_amount?: number;
+    total_paid_amount?: number;
+    status?: string;
+  }[];
   order_items?: {
     quantity?: number;
     unit_price?: number;
+    sale_fee?: number;
+    listing_type_id?: string;
     item?: { id?: string; title?: string; seller_sku?: string | null };
   }[];
 };
 
 function normalizarPedido(o: OrdemBruta): Pedido {
-  const itens = (o.order_items ?? []).map((i) => ({
+  const itens: ItemPedido[] = (o.order_items ?? []).map((i) => ({
     mlb: i.item?.id ?? "",
     titulo: i.item?.title ?? "",
     sku: i.item?.seller_sku ?? null,
     quantidade: Number(i.quantity ?? 0),
     precoUnitario: Number(i.unit_price ?? 0),
+    comissao: i.sale_fee == null ? null : +Number(i.sale_fee).toFixed(2),
+    tipoAnuncio: i.listing_type_id ?? null,
   }));
 
   // Prioriza total_amount; se faltar, soma item a item — mesma regra do CLI.
@@ -357,6 +393,31 @@ function normalizarPedido(o: OrdemBruta): Pedido {
 
   const status = String(o.status ?? "").toLowerCase();
 
+  const comItem = itens.filter((i) => i.comissao != null);
+  const comissao = comItem.length
+    ? +comItem.reduce((s, i) => s + (i.comissao ?? 0), 0).toFixed(2)
+    : null;
+
+  /*
+   * Juro = o que foi pago menos o valor da transação.
+   *
+   * Só conta pagamento aprovado: um pagamento recusado tem valor e não
+   * tem juro nenhum, e somá-lo criaria juro do nada. Diferença negativa
+   * vira zero — desconto não é juro negativo, é outra coisa.
+   */
+  const aprovados = (o.payments ?? []).filter(
+    (p) => String(p.status ?? "").toLowerCase() === "approved"
+  );
+  const juros = aprovados.reduce((s, p) => {
+    const pago = Number(p.total_paid_amount ?? 0);
+    const base = Number(p.transaction_amount ?? 0);
+    return s + Math.max(0, pago - base);
+  }, 0);
+
+  const parcelas = aprovados.length
+    ? Math.max(...aprovados.map((p) => Number(p.installments ?? 1)))
+    : null;
+
   return {
     id: o.id,
     data: (o.date_closed ?? o.date_created ?? "").slice(0, 10),
@@ -364,7 +425,48 @@ function normalizarPedido(o: OrdemBruta): Pedido {
     cancelado: status === "cancelled" || status === "canceled",
     total: +total.toFixed(2),
     itens,
+    comissao,
+    juros: +juros.toFixed(2),
+    parcelas,
+    envioId: o.shipping?.id ?? null,
+    fretePago: null,
   };
+}
+
+/**
+ * O frete que o VENDEDOR pagou, por envio.
+ *
+ * `/shipments/{id}/costs` separa os dois lados: `receiver` é o comprador
+ * (com o desconto do frete grátis) e `senders[]` é quem banca. O número
+ * que interessa à margem é `senders[0].cost` — o resto é o que o Meli
+ * subsidiou, e subsídio do canal não é custo seu.
+ *
+ * Uma chamada por envio. Falha vira `null`, não exceção: envio recém-criado
+ * ainda não tem custo fechado, e isso não é motivo para perder o pedido.
+ */
+export async function completarFretes(
+  lista: Pedido[],
+  conta: Conta = "principal",
+  concorrencia = 6
+): Promise<Pedido[]> {
+  const comEnvio = lista.filter((p) => p.envioId != null);
+
+  async function um(p: Pedido) {
+    try {
+      const data = await meliGet<{
+        senders?: { cost?: number }[];
+      }>(`/shipments/${p.envioId}/costs`, conta);
+      const custo = data.senders?.[0]?.cost;
+      p.fretePago = custo == null ? null : +Number(custo).toFixed(2);
+    } catch {
+      p.fretePago = null;
+    }
+  }
+
+  for (let i = 0; i < comEnvio.length; i += concorrencia) {
+    await Promise.all(comEnvio.slice(i, i + concorrencia).map(um));
+  }
+  return lista;
 }
 
 /**
@@ -502,50 +604,93 @@ export async function pedidos({
 /* ── Visitas ─────────────────────────────────────────────────── */
 
 export type VisitaAnuncio = { mlb: string; visitas: number };
+export type VisitaDia = { mlb: string; data: string; visitas: number };
 
 /**
- * Visitas por anúncio no intervalo. A API aceita no máximo 50 ids por
- * chamada, então os lotes são fatiados.
+ * Visitas totais da CONTA no intervalo.
+ *
+ * `/users/{id}/items_visits` devolve só o agregado. Aceitar `item_ids` ele
+ * aceita, mas devolve `items: []` — a quebra por anúncio NÃO sai daqui.
+ * Para isso existe `visitasPorAnuncio`, logo abaixo.
  */
-export async function visitas({
+export async function visitasDaConta({
   de,
   ate,
-  mlbs = [],
   conta = "principal",
 }: {
   de: string;
   ate: string;
-  mlbs?: string[];
   conta?: Conta;
-}): Promise<{ total: number; itens: VisitaAnuncio[] }> {
+}): Promise<number> {
   const v = await vendedor(conta);
-  const itens: VisitaAnuncio[] = [];
-  const lotes = mlbs.length
-    ? Array.from({ length: Math.ceil(mlbs.length / 50) }, (_, i) =>
-        mlbs.slice(i * 50, i * 50 + 50)
-      )
-    : [[]];
+  const qs = new URLSearchParams({ date_from: de, date_to: ate, limit: "50" });
+  const data = await meliGet<{ total_visits?: number }>(
+    `/users/${encodeURIComponent(String(v.id))}/items_visits?${qs}`,
+    conta
+  );
+  return Number(data.total_visits ?? 0);
+}
 
-  for (const lote of lotes) {
-    const qs = new URLSearchParams({ date_from: de, date_to: ate, limit: "50" });
-    if (lote.length) qs.set("item_ids", lote.join(","));
+/**
+ * Visitas dia a dia, POR ANÚNCIO.
+ *
+ * Um anúncio por chamada — a API recusa lista com
+ * "maximum amount of items to query is 1". Medido: 24 anúncios em 1,6 s,
+ * o que põe o catálogo inteiro (433) em torno de meio minuto. O freio de
+ * `limite.ts` já espaça as chamadas; aqui só se controla a concorrência.
+ *
+ * `last` conta dias para trás a partir de hoje, e é o único recorte que o
+ * endpoint aceita — não há `date_from`. Vai até 150 dias; acima disso a
+ * resposta simplesmente devolve menos dias do que se pediu.
+ *
+ * Anúncio que falha não derruba o lote: a coleta é parcial e quem chama
+ * decide o que fazer. Um 404 aqui costuma ser anúncio encerrado, e
+ * interromper 400 anúncios por causa de um seria pior.
+ */
+export async function visitasPorAnuncio({
+  mlbs,
+  dias = 30,
+  conta = "principal",
+  concorrencia = 6,
+}: {
+  mlbs: string[];
+  dias?: number;
+  conta?: Conta;
+  concorrencia?: number;
+}): Promise<{ linhas: VisitaDia[]; falharam: string[] }> {
+  const linhas: VisitaDia[] = [];
+  const falharam: string[] = [];
+  const janela = Math.min(150, Math.max(1, Math.trunc(dias)));
 
-    const data = await meliGet<{
-      total_visits?: number;
-      visits?: { item_id?: string; total_visits?: number; visits?: number }[];
-      items?: { item_id?: string; total_visits?: number; visits?: number }[];
-    }>(`/users/${encodeURIComponent(String(v.id))}/items_visits?${qs}`, conta);
-
-    const linhas = data.visits ?? data.items ?? [];
-    for (const l of linhas) {
-      itens.push({
-        mlb: l.item_id ?? "",
-        visitas: Number(l.total_visits ?? l.visits ?? 0),
-      });
+  async function um(mlb: string) {
+    try {
+      const data = await meliGet<{
+        item_id?: string;
+        results?: { date?: string; total?: number }[];
+      }>(
+        `/items/${encodeURIComponent(mlb)}/visits/time_window?last=${janela}&unit=day`,
+        conta
+      );
+      for (const r of data.results ?? []) {
+        if (!r.date) continue;
+        linhas.push({
+          mlb,
+          // A API devolve o dia em UTC à meia-noite; o dia civil é o prefixo.
+          data: String(r.date).slice(0, 10),
+          visitas: Number(r.total ?? 0),
+        });
+      }
+    } catch {
+      falharam.push(mlb);
     }
   }
 
-  return { total: itens.reduce((s, i) => s + i.visitas, 0), itens };
+  const fila = [...new Set(mlbs.filter(Boolean))];
+  for (let i = 0; i < fila.length; i += concorrencia) {
+    await Promise.all(fila.slice(i, i + concorrencia).map(um));
+  }
+
+  return { linhas, falharam };
 }
 
 /* ── Catálogo do vendedor ────────────────────────────────────── */
@@ -563,6 +708,20 @@ export async function meusAnuncios({
   conta?: Conta;
   maximo?: number;
 } = {}): Promise<PrecoAnuncio[]> {
+  const ids = await idsDosAnuncios({ status, conta, maximo });
+  return ids.length ? precosAtuais(ids, conta) : [];
+}
+
+/** Só os ids, para quem vai hidratar com outro recorte de campos. */
+export async function idsDosAnuncios({
+  status,
+  conta = "principal",
+  maximo = 3000,
+}: {
+  status?: "active" | "paused" | "closed";
+  conta?: Conta;
+  maximo?: number;
+} = {}): Promise<string[]> {
   const v = await vendedor(conta);
   const ids: string[] = [];
   const limite = 100;
@@ -582,7 +741,121 @@ export async function meusAnuncios({
     if (pagina.length < limite || (Number.isFinite(total) && ids.length >= total)) break;
   }
 
-  return ids.length ? precosAtuais(ids, conta) : [];
+  return ids;
+}
+
+/* ── Catálogo completo, para gravar no banco ─────────────────── */
+
+export type AnuncioCompleto = {
+  mlb: string;
+  titulo: string;
+  sku: string | null;
+  preco: number | null;
+  status: string | null;
+  /** `gold_pro` = premium, `gold_special` = clássico. */
+  tipoBruto: string | null;
+  tipo: "classico" | "premium" | "outro";
+  estoque: number | null;
+  vendidos: number | null;
+  /** Peso do pacote em kg, do atributo SELLER_PACKAGE_WEIGHT. */
+  pesoKg: number | null;
+  freteGratis: boolean;
+  logistica: string | null;
+  /** Por que está pausado: `out_of_stock`, `paused_by_seller`… */
+  motivoPausa: string[];
+  link: string | null;
+  catalogo: boolean;
+};
+
+type ItemBruto = {
+  id?: string;
+  title?: string;
+  seller_custom_field?: string | null;
+  price?: number;
+  status?: string;
+  listing_type_id?: string;
+  available_quantity?: number;
+  sold_quantity?: number;
+  permalink?: string;
+  catalog_listing?: boolean;
+  sub_status?: string[];
+  shipping?: { free_shipping?: boolean; logistic_type?: string } | null;
+  attributes?: { id?: string; value_name?: string | null }[];
+};
+
+/** `21800 g` → 21.8. A API devolve peso com unidade colada no texto. */
+function pesoEmKg(attrs: ItemBruto["attributes"]): number | null {
+  const bruto = attrs?.find((a) => a.id === "SELLER_PACKAGE_WEIGHT")?.value_name;
+  if (!bruto) return null;
+  const texto = String(bruto).trim();
+  const numero = parseFloat(texto.replace(/[^\d.,]/g, "").replace(",", "."));
+  if (!Number.isFinite(numero) || numero <= 0) return null;
+  // Sem unidade explícita o Meli manda gramas nesse atributo.
+  const emKg = /kg/i.test(texto) ? numero : numero / 1000;
+  return +emKg.toFixed(3);
+}
+
+function tipoDe(listing: string | null | undefined): AnuncioCompleto["tipo"] {
+  if (listing === "gold_pro") return "premium";
+  if (listing === "gold_special") return "classico";
+  return "outro";
+}
+
+/**
+ * O catálogo inteiro com os campos que a plataforma grava.
+ *
+ * `precosAtuais` existe e é mais enxuto — serve para conferir preço. Aqui
+ * o recorte é maior porque é o que alimenta `anuncios` e o peso de
+ * `produtos`, e uma segunda passada só para pegar peso dobraria a cota.
+ */
+export async function catalogoCompleto({
+  conta = "principal",
+  incluirPausados = true,
+}: { conta?: Conta; incluirPausados?: boolean } = {}): Promise<AnuncioCompleto[]> {
+  const status: ("active" | "paused")[] = incluirPausados
+    ? ["active", "paused"]
+    : ["active"];
+
+  const ids: string[] = [];
+  for (const s of status) {
+    ids.push(...(await idsDosAnuncios({ status: s, conta })));
+  }
+
+  const unicos = [...new Set(ids)];
+  const saida: AnuncioCompleto[] = [];
+
+  for (let i = 0; i < unicos.length; i += 20) {
+    const lote = unicos.slice(i, i + 20);
+    const resposta = await meliGet<{ code: number; body: ItemBruto }[]>(
+      `/items?ids=${encodeURIComponent(lote.join(","))}`,
+      conta
+    );
+
+    for (const item of resposta) {
+      if (item.code !== 200) continue;
+      const b = item.body ?? {};
+      if (!b.id) continue;
+      saida.push({
+        mlb: b.id,
+        titulo: b.title ?? "",
+        sku: b.seller_custom_field?.trim() || null,
+        preco: b.price ?? null,
+        status: b.status ?? null,
+        tipoBruto: b.listing_type_id ?? null,
+        tipo: tipoDe(b.listing_type_id),
+        estoque: b.available_quantity ?? null,
+        vendidos: b.sold_quantity ?? null,
+        pesoKg: pesoEmKg(b.attributes),
+        freteGratis: Boolean(b.shipping?.free_shipping),
+        logistica: b.shipping?.logistic_type ?? null,
+        motivoPausa: b.sub_status ?? [],
+        link: b.permalink ?? null,
+        catalogo: Boolean(b.catalog_listing),
+      });
+    }
+  }
+
+  return saida;
 }
 
 /* ── Frete ───────────────────────────────────────────────────── */
