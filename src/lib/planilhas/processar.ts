@@ -1,6 +1,6 @@
 /* eslint-disable */
 import ExcelJS from "exceljs";
-import { precoPiso, precoComExtra, processItem, FormulaBaseData } from "./motor-promocoes";
+import { precoPiso, precoComExtra, processItem, norm, FormulaBaseData } from "./motor-promocoes";
 import { surgicallyEditExcel } from "./editor-xlsx";
 import { ReportItem } from "./relatorio-gerencial";
 
@@ -75,7 +75,13 @@ function localizar(
  *  quase                 recusado por pouco — diferença de até R$ 100
  *  folga                 aprovado, e ainda haveria espaço para descontar mais
  */
-export type Tag = "tabela_acima_ml" | "tabela_acima_original" | "quase" | "folga";
+export type Tag =
+  | "tabela_acima_ml"
+  | "tabela_acima_original"
+  | "quase"
+  | "folga"
+  /** Status "Participando": analisada, mas não escrita. */
+  | "participando";
 
 export type LinhaProcessada = {
   /**
@@ -284,6 +290,18 @@ export async function processarPlanilha(
     ["tipo de anúncio", "listing_type", "tipo de anuncio"],
     ["tipo de anúncio", "listing_type"]
   );
+  /*
+   * O status da linha na campanha: "Participando" ou "Nova proposta".
+   *
+   * "status" sozinho não entra em `exatos`: a planilha tem outras colunas
+   * cujo rótulo começa assim, e casar a errada faria o sistema pular linhas
+   * que deveria processar. Coluna ausente é tolerada — exportações antigas
+   * não a traziam, e aí todas as linhas são tratadas como antes.
+   */
+  const statusColIndex = findCol(
+    ["status da promoção", "status da promocao", "promotion_status"],
+    ["status da promo"]
+  );
 
   if (
     skuColIndex === -1 ||
@@ -386,20 +404,42 @@ export async function processarPlanilha(
       descontoExtra
     );
 
-    // A coluna de ação sempre é reescrita.
-    xmlUpdates.push({
-      rowIndex: i,
-      colLetter: getColLetter(actionColIndex),
-      value: result.action,
-    });
+    /*
+     * Linha que JÁ ESTÁ PARTICIPANDO não é tocada.
+     *
+     * A decisão é pelo status da campanha, não pela coluna de ação: é o
+     * status que diz se o anúncio já está dentro. Reescrever a ação ou o
+     * preço de quem já participa trocaria uma oferta que está no ar — e
+     * que foi aceita pelo canal naquele preço — por outra que ainda
+     * precisaria ser aprovada.
+     *
+     * A linha continua sendo ANALISADA, e aparece na lista com o que a
+     * tabela diria. Só não é escrita. Assim dá para ver quando uma oferta
+     * em vigor passou a ficar abaixo da margem, sem que o sistema a
+     * derrube sozinho.
+     */
+    const statusPromo =
+      statusColIndex !== -1
+        ? extractText(row.getCell(statusColIndex).value).trim()
+        : "";
+    const jaParticipando = norm(statusPromo) === "participando";
+    const acaoAtual = extractText(row.getCell(actionColIndex).value).trim();
 
-    // Só o caso sem redução de tarifa recalcula o preço final.
-    if (result.newPrice !== null) {
+    if (!jaParticipando) {
       xmlUpdates.push({
         rowIndex: i,
-        colLetter: getColLetter(finalPriceColIndex),
-        value: result.newPrice,
+        colLetter: getColLetter(actionColIndex),
+        value: result.action,
       });
+
+      // Só o caso sem redução de tarifa recalcula o preço final.
+      if (result.newPrice !== null) {
+        xmlUpdates.push({
+          rowIndex: i,
+          colLetter: getColLetter(finalPriceColIndex),
+          value: result.newPrice,
+        });
+      }
     }
 
     const tabela = result.tabelaCalculada || 0;
@@ -408,7 +448,9 @@ export async function processarPlanilha(
       finalPrice !== null && tabela > 0 ? (finalPrice - tabela) / tabela : null;
 
     // Compara com o rótulo positivo DESTA linha, não com uma lista fixa.
-    const aprovado = result.action === acaoPositiva;
+    // Quem já participa continua dentro: a planilha volta com a ação
+    // original, então conta como aprovado.
+    const aprovado = jaParticipando ? true : result.action === acaoPositiva;
     const tipoCampanha: "Com Redução" | "Sem Redução" =
       saleFee !== null && saleFee > 0 ? "Com Redução" : "Sem Redução";
 
@@ -423,12 +465,17 @@ export async function processarPlanilha(
       precoTabela: tabela,
       diferencaRS,
       diferencaPerc,
-      status: aprovado ? "Aprovado" : "Reprovado",
-      motivo: result.pendencia || "OK",
+      status: jaParticipando ? "Mantido" : aprovado ? "Aprovado" : "Reprovado",
+      motivo: jaParticipando
+        ? "Já participando — linha não alterada"
+        : result.pendencia || "OK",
     });
 
+    // Linha mantida volta com o preço que já tinha.
     const precoFinalAplicado =
-      result.newPrice !== null ? result.newPrice : finalPrice || 0;
+      !jaParticipando && result.newPrice !== null
+        ? result.newPrice
+        : finalPrice || 0;
 
     // Folga = quanto o preço proposto pelo canal está acima do preço de
     // tabela. Positiva sobra margem, negativa a margem não fecha.
@@ -436,6 +483,7 @@ export async function processarPlanilha(
       finalPrice !== null && tabela > 0 ? +(finalPrice - tabela).toFixed(2) : null;
 
     const tags: Tag[] = [];
+    if (jaParticipando) tags.push("participando");
 
     if (finalPrice !== null && tabela > 0 && tabela > finalPrice) {
       tags.push("tabela_acima_ml");
@@ -481,10 +529,12 @@ export async function processarPlanilha(
           ? ((originalPrice - precoFinalAplicado) / originalPrice) * 100
           : null,
       folga,
-      decisao: result.action,
+      decisao: jaParticipando ? acaoAtual || acaoPositiva : result.action,
       aprovado,
-      recalculado: result.newPrice !== null,
-      motivo: result.pendencia || "",
+      recalculado: !jaParticipando && result.newPrice !== null,
+      motivo: jaParticipando
+        ? "Já participando — linha não alterada"
+        : result.pendencia || "",
       tags,
     });
   }
