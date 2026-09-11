@@ -58,6 +58,9 @@ export default async function Pagina({
       despesas={canal.despesas}
       canais={custos.canais}
       adsPorMes={canal.adsPorMes}
+      inicio={inicio}
+      fim={fim}
+      canalId={canalId ?? ""}
     />
   );
 }

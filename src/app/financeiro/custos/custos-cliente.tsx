@@ -1,11 +1,15 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select, Field } from "@/components/ui/controls";
 import { money, pct, count } from "@/lib/format";
-import { Save, Plus, Trash2, Loader2, AlertCircle, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Save, Plus, Trash2, Loader2, AlertCircle, Check, ArrowDownToLine,
+} from "lucide-react";
 import type {
   CustoSku,
   FaixaFrete,
@@ -132,6 +136,19 @@ function Par({
   );
 }
 
+type CampoEditavel =
+  | "custoMercadoria"
+  | "embalagem"
+  | "aliquotaImpostos"
+  | "pesoKg";
+
+const ROTULO_CAMPO: Record<CampoEditavel, string> = {
+  custoMercadoria: "Mercadoria",
+  embalagem: "Embalagem",
+  aliquotaImpostos: "Impostos %",
+  pesoKg: "Peso (kg)",
+};
+
 export default function CustosCliente({
   linhas,
   faixas,
@@ -139,6 +156,9 @@ export default function CustosCliente({
   despesas,
   canais,
   adsPorMes,
+  inicio,
+  fim,
+  canalId,
 }: {
   linhas: CustoSku[];
   faixas: FaixaFrete[];
@@ -146,7 +166,43 @@ export default function CustosCliente({
   despesas: DespesaCanal[];
   canais: CanalSimples[];
   adsPorMes: { competencia: string; canalNome: string; valor: number }[];
+  inicio: string;
+  fim: string;
+  canalId: string;
 }) {
+  const router = useRouter();
+
+  /*
+   * O recorte vai para a URL, e a página recarrega do servidor.
+   *
+   * Filtrar aqui na tela seria mais rápido de escrever e errado: o
+   * praticado sai de `margem.ts`, que recorta por pedido. Refazer esse
+   * recorte no navegador criaria uma segunda implementação da mesma
+   * regra, e as duas divergiriam na primeira mudança.
+   */
+  function aplicarRecorte(campo: "inicio" | "fim" | "canal", valor: string) {
+    const q = new URLSearchParams({ inicio, fim });
+    if (canalId) q.set("canal", canalId);
+    if (valor) q.set(campo, valor);
+    else q.delete(campo);
+    router.push("/financeiro/custos?" + q.toString());
+  }
+
+  /* ── Seleção e preenchimento em lote ── */
+
+  const [selecionados, setSelecionados] = React.useState<Set<string>>(new Set());
+  const [campoLote, setCampoLote] =
+    React.useState<CampoEditavel>("custoMercadoria");
+  const [valorLote, setValorLote] = React.useState("");
+
+  function alternar(id: string) {
+    setSelecionados((s) => {
+      const novo = new Set(s);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+  }
   const [aba, setAba] = React.useState<Aba>("sku");
   const [erro, setErro] = React.useState<string | null>(null);
   const [salvando, setSalvando] = React.useState(false);
@@ -349,6 +405,43 @@ export default function CustosCliente({
           </Panel>
         )}
 
+        {/*
+          O recorte vale para o PRATICADO, não para o cadastro.
+          Mercadoria, embalagem, alíquota e peso são do produto e não mudam
+          com o período; comissão, frete, juros e preço médio mudam.
+        */}
+        <Panel className="px-3 py-2.5 mb-3 flex items-center gap-2 flex-wrap">
+          <span className="label shrink-0">Recorte</span>
+          <Input
+            type="date"
+            value={inicio}
+            onChange={(e) => aplicarRecorte("inicio", e.target.value)}
+            className="w-[150px]"
+          />
+          <span className="text-[12px] text-ink-3">até</span>
+          <Input
+            type="date"
+            value={fim}
+            onChange={(e) => aplicarRecorte("fim", e.target.value)}
+            className="w-[150px]"
+          />
+          <Select
+            value={canalId}
+            onChange={(e) => aplicarRecorte("canal", e.target.value)}
+            className="w-[190px]"
+          >
+            <option value="">Todos os canais</option>
+            {canais.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </Select>
+          <span className="text-[11.5px] text-ink-3 ml-auto">
+            O recorte muda o praticado. O cadastro é do produto e não muda.
+          </span>
+        </Panel>
+
         <Panel className="overflow-hidden">
           <Tabs
             tabs={[
@@ -375,6 +468,19 @@ export default function CustosCliente({
                   onClick={() => setSoIncompletos((v) => !v)}
                 >
                   Só os incompletos
+                </Button>
+                <Button
+                  onClick={() =>
+                    setSelecionados((s) =>
+                      s.size === visiveis.length
+                        ? new Set()
+                        : new Set(visiveis.map((l) => l.produtoId))
+                    )
+                  }
+                >
+                  {selecionados.size === visiveis.length && visiveis.length > 0
+                    ? "Limpar seleção"
+                    : "Selecionar todos"}
                 </Button>
                 <span className="text-[12px] text-ink-3 num">
                   {count(visiveis.length)} linhas
@@ -409,16 +515,92 @@ export default function CustosCliente({
                 </Button>
               </div>
 
+              {selecionados.size > 0 && (
+                /*
+                  O "arrastar" do Excel, adaptado à web.
+                  Arrastar alça exige mouse e não funciona no celular; marcar
+                  linhas e aplicar de uma vez faz o mesmo trabalho e ainda
+                  deixa escolher linhas que não são vizinhas.
+                */
+                <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line bg-brand-wash flex-wrap">
+                  <ArrowDownToLine className="w-4 h-4 text-brand shrink-0" />
+                  <span className="text-[12.5px] text-ink">
+                    <b className="num">{selecionados.size}</b> selecionado
+                    {selecionados.size > 1 ? "s" : ""} · preencher
+                  </span>
+                  <Select
+                    value={campoLote}
+                    onChange={(e) => setCampoLote(e.target.value as CampoEditavel)}
+                    className="w-[150px]"
+                  >
+                    {(Object.keys(ROTULO_CAMPO) as CampoEditavel[]).map((c) => (
+                      <option key={c} value={c}>
+                        {ROTULO_CAMPO[c]}
+                      </option>
+                    ))}
+                  </Select>
+                  <span className="text-[12.5px] text-ink-2">com</span>
+                  <Input
+                    inputMode="decimal"
+                    placeholder="valor"
+                    value={valorLote}
+                    onChange={(e) => setValorLote(e.target.value)}
+                    className="w-[120px]"
+                  />
+                  <Button
+                    variant="primary"
+                    disabled={valorLote.trim() === ""}
+                    onClick={() => {
+                      const v = Number(valorLote.replace(",", "."));
+                      if (!Number.isFinite(v) || v < 0) return;
+                      for (const id of selecionados) editar(id, campoLote, v);
+                      setValorLote("");
+                    }}
+                  >
+                    Aplicar aos {selecionados.size}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      // Apagar é uma ação legítima: devolve a margem ao
+                      // estado "não calculável", que é a verdade enquanto o
+                      // custo não se sabe.
+                      for (const id of selecionados) editar(id, campoLote, null);
+                    }}
+                  >
+                    Apagar
+                  </Button>
+                  <Button variant="ghost" onClick={() => setSelecionados(new Set())}>
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse min-w-[1100px]">
                   <thead className="bg-panel-2">
                     <tr>
-                      <th className={`${th} text-left sticky left-0 bg-panel-2 z-10`}>
+                      <th className={`${th} w-[34px] text-center sticky left-0 bg-panel-2 z-10`}>
+                        <input
+                          type="checkbox"
+                          aria-label="Selecionar todos"
+                          checked={selecionados.size === visiveis.length && visiveis.length > 0}
+                          onChange={() =>
+                            setSelecionados((s) =>
+                              s.size === visiveis.length
+                                ? new Set()
+                                : new Set(visiveis.map((l) => l.produtoId))
+                            )
+                          }
+                        />
+                      </th>
+                      <th className={`${th} text-left`}>
                         SKU
                       </th>
                       <th className={`${th} text-right`}>Vendido</th>
                       <th className={`${th} text-right`}>Preço médio</th>
-                      <th className={`${th} text-right`}>Comissão %</th>
+                      <th className={`${th} text-right`}>Comissão do canal</th>
+                      <th className={`${th} text-right`}>Comissão % (anúncio)</th>
                       <th className={`${th} text-right`}>Frete R$</th>
                       <th className={`${th} text-right`}>Juros R$</th>
                       <th className={`${th} text-right w-[92px]`}>Mercadoria</th>
@@ -430,8 +612,22 @@ export default function CustosCliente({
                   </thead>
                   <tbody>
                     {visiveis.map((l) => (
-                      <tr key={l.produtoId} className="hover:bg-panel-2/50">
-                        <td className={`${td} sticky left-0 bg-panel z-10`}>
+                      <tr
+                        key={l.produtoId}
+                        className={cn(
+                          "hover:bg-panel-2/50",
+                          selecionados.has(l.produtoId) && "bg-brand-wash/60"
+                        )}
+                      >
+                        <td className={`${td} text-center sticky left-0 bg-panel z-10`}>
+                          <input
+                            type="checkbox"
+                            aria-label={`Selecionar ${l.sku}`}
+                            checked={selecionados.has(l.produtoId)}
+                            onChange={() => alternar(l.produtoId)}
+                          />
+                        </td>
+                        <td className={td}>
                           <p className="num text-[12.5px] text-ink font-medium">
                             {l.sku}
                           </p>
@@ -452,6 +648,16 @@ export default function CustosCliente({
                         <td className={`${td} text-right`}>
                           <span className="num text-[12.5px] text-ink-2">
                             {l.precoMedio != null ? money(l.precoMedio) : "—"}
+                          </span>
+                        </td>
+                        <td className={`${td} text-right`}>
+                          {/*
+                            A alíquota cadastrada para o CANAL, não para o
+                            anúncio. Quando as duas divergem, é sinal de
+                            anúncio fora da tarifa que se supunha pagar.
+                          */}
+                          <span className="num text-[12.5px] text-ink-2">
+                            {l.comissaoCanal != null ? pct(l.comissaoCanal, 2) : "—"}
                           </span>
                         </td>
                         <td className={`${td} text-right`}>
