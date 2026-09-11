@@ -43,3 +43,19 @@ export function tone(v: number, inverse = false): "up" | "down" | "flat" {
   const positive = v > 0;
   return (inverse ? !positive : positive) ? "up" : "down";
 }
+
+/* ── Dias da semana ─────────────────────────────────────────── */
+
+const DIA_SEMANA = [
+  "domingo", "segunda", "terça", "quarta",
+  "quinta", "sexta", "sábado",
+];
+
+/**
+ * Nome do dia da semana, a partir do índice de `Date.getUTCDay()`.
+ *
+ * Vive aqui, e não junto do carregador do dia, porque a TELA precisa dele
+ * e o carregador é `server-only`: importar de lá arrastaria o cliente do
+ * Supabase para dentro do componente de cliente.
+ */
+export const nomeDoDia = (d: number) => DIA_SEMANA[d] ?? "";
