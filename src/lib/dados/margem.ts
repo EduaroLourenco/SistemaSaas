@@ -609,6 +609,45 @@ export type Resultado = {
   cadaCoberturaDe: BaseMargem["cobertura"];
 };
 
+/**
+ * A mesma DRE, mês a mês.
+ *
+ * É como uma DRE de verdade se lê: a coluna do mês ao lado da do anterior.
+ * Um número sozinho não diz se 8% de margem é bom — a série ao lado diz.
+ *
+ * Reaproveita `carregarResultado` por mês em vez de somar por fora. Mais
+ * consultas, sim, mas a linha de dezembro sai da MESMA implementação que
+ * a do total, e não de uma segunda que precisaria ser mantida em par.
+ */
+export async function carregarResultadoMensal(
+  inicio: string,
+  fim: string,
+  canalId?: string,
+  /** Teto de meses, para um recorte de anos não virar 36 consultas. */
+  maximo = 13
+): Promise<Resultado[]> {
+  const meses: { de: string; ate: string }[] = [];
+  const [ai, mi] = inicio.split("-").map(Number);
+  const [af, mf] = fim.split("-").map(Number);
+
+  for (let a = ai, m = mi; a < af || (a === af && m <= mf); ) {
+    const primeiro = `${a}-${String(m).padStart(2, "0")}-01`;
+    const ultimoDia = new Date(Date.UTC(a, m, 0)).getUTCDate();
+    const ultimo = `${a}-${String(m).padStart(2, "0")}-${ultimoDia}`;
+    meses.push({
+      // O primeiro e o último mês são aparados pelo recorte pedido: quem
+      // filtrou de 10/03 a 20/04 não quer março inteiro na coluna.
+      de: primeiro < inicio ? inicio : primeiro,
+      ate: ultimo > fim ? fim : ultimo,
+    });
+    m += 1;
+    if (m > 12) { m = 1; a += 1; }
+  }
+
+  const recorte = meses.slice(-maximo);
+  return Promise.all(recorte.map((x) => carregarResultado(x.de, x.ate, canalId)));
+}
+
 export async function carregarResultado(
   inicio: string,
   fim: string,

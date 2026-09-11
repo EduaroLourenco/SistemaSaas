@@ -8,6 +8,7 @@ import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select, Field } from "@/components/ui/controls";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import { AlertCircle, ArrowRight } from "lucide-react";
+import { DreMensal, ResumoDre } from "@/components/financeiro/dre-mensal";
 import type { Resultado, LinhaMargem, Dimensao } from "@/lib/dados/margem";
 
 /**
@@ -95,6 +96,7 @@ function Linha({
 
 export default function FinanceiroCliente({
   resultado: r,
+  mensal,
   visoes,
   canais,
   inicio,
@@ -102,6 +104,7 @@ export default function FinanceiroCliente({
   canalId,
 }: {
   resultado: Resultado;
+  mensal: Resultado[];
   visoes: Record<Dimensao, LinhaMargem[]>;
   canais: { id: string; nome: string }[];
   inicio: string;
@@ -171,6 +174,8 @@ export default function FinanceiroCliente({
             </Button>
           </div>
         </Panel>
+
+        <ResumoDre r={r} />
 
         {/* ── Cobertura: vem antes de qualquer número ── */}
         {semCusto && (
@@ -377,6 +382,16 @@ export default function FinanceiroCliente({
               </table>
             </div>
           </Panel>
+        </div>
+
+        {/*
+          A DRE mês a mês fecha a página.
+          Vem depois do resumo e do detalhe por dimensão porque é a leitura
+          longa: quem abre a tela quer primeiro saber como está o período,
+          e só então como chegou até aqui.
+        */}
+        <div className="mt-3">
+          <DreMensal mensal={mensal} total={r} />
         </div>
       </PageBody>
     </>

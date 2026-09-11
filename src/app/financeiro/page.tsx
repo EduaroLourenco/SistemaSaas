@@ -2,6 +2,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import {
   carregarBaseMargem,
   carregarResultado,
+  carregarResultadoMensal,
   agregar,
   type Dimensao,
 } from "@/lib/dados/margem";
@@ -52,8 +53,9 @@ export default async function Pagina({
   const canalId = params.canal || undefined;
 
   const sb = await clienteServidor();
-  const [resultado, base, canais] = await Promise.all([
+  const [resultado, mensal, base, canais] = await Promise.all([
     carregarResultado(inicio, fim, canalId),
+    carregarResultadoMensal(inicio, fim, canalId),
     carregarBaseMargem({ inicio, fim, canalId }),
     sb.from("canais").select("id,nome").order("nome"),
   ]);
@@ -65,6 +67,7 @@ export default async function Pagina({
   return (
     <FinanceiroCliente
       resultado={resultado}
+      mensal={mensal}
       visoes={visoes}
       canais={(canais.data ?? []) as { id: string; nome: string }[]}
       inicio={inicio}
