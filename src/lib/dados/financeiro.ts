@@ -407,3 +407,69 @@ export async function carregarContas(): Promise<
     })),
   };
 }
+
+/* ── Comissões por canal ─────────────────────────────────────── */
+
+export type ComissaoCanal = {
+  id: string;
+  canalId: string;
+  canalNome: string;
+  /** Nulo = alíquota única do canal. */
+  tipo: string | null;
+  comissao: number;
+  vigenciaInicio: string;
+  observacao: string | null;
+  /** É a que vale hoje para este par (canal, tipo). */
+  vigente: boolean;
+};
+
+/**
+ * O que cada canal cobra, e desde quando.
+ *
+ * Guarda histórico: tarifa muda, e margem de julho calculada com a tarifa
+ * de setembro não é margem de julho. `vigente` marca a linha que vale
+ * hoje — a mais recente cuja vigência já começou.
+ */
+export async function carregarComissoesCanal(): Promise<{
+  linhas: ComissaoCanal[];
+  canais: { id: string; nome: string }[];
+}> {
+  const sb = await clienteServidor();
+  const [res, canaisRes] = await Promise.all([
+    sb
+      .from("comissoes_canal")
+      .select("id,canal_id,tipo,comissao,vigencia_inicio,observacao")
+      .order("vigencia_inicio", { ascending: false }),
+    sb.from("canais").select("id,nome").eq("ativo", true).order("nome"),
+  ]);
+
+  const canais = ((canaisRes.data ?? []) as { id: string; nome: string }[]).map(
+    (c) => ({ id: c.id, nome: c.nome })
+  );
+  if (res.error) return { linhas: [], canais };
+
+  const nome = new Map(canais.map((c) => [c.id, c.nome]));
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  const brutas = ((res.data ?? []) as Record<string, unknown>[]).map((c) => ({
+    id: c.id as string,
+    canalId: c.canal_id as string,
+    canalNome: nome.get(c.canal_id as string) ?? "—",
+    tipo: (c.tipo as string) ?? null,
+    comissao: n(c.comissao),
+    vigenciaInicio: String(c.vigencia_inicio).slice(0, 10),
+    observacao: (c.observacao as string) ?? null,
+    vigente: false,
+  }));
+
+  // A vigente de cada par é a primeira já iniciada, na ordem decrescente.
+  const jaMarcado = new Set<string>();
+  for (const l of brutas) {
+    const chave = `${l.canalId}|${l.tipo ?? "geral"}`;
+    if (jaMarcado.has(chave) || l.vigenciaInicio > hoje) continue;
+    l.vigente = true;
+    jaMarcado.add(chave);
+  }
+
+  return { linhas: brutas, canais };
+}

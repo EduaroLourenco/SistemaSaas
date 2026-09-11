@@ -139,6 +139,39 @@ export const RECURSOS: Record<string, Recurso> = {
     },
   },
 
+  /*
+   * A alíquota de tabela de cada canal.
+   *
+   * É a peça que torna a lógica de promoção multicanal sem mexer em
+   * código: a MATRIZ DE PREÇO por faixa de comissão é a mesma para todos
+   * os canais — mercadoria, embalagem e imposto não mudam porque a venda
+   * saiu na Shopee em vez do Meli. O que muda é em que faixa o canal cai.
+   *
+   * Cadastrar a comissão do canal aqui já basta para o motor achar o
+   * preço certo na mesma tabela que ele já usa.
+   *
+   * `tipo` nulo é a alíquota única do canal, que é o caso da maioria. O
+   * Mercado Livre é a exceção que justifica a coluna: clássico e premium
+   * cobram diferente, e cinco pontos mudam o preço que fecha a margem.
+   */
+  comissoes: {
+    tabela: "comissoes_canal",
+    nome: "comissão de canal",
+    selecao: "id,canal_id,tipo,comissao,vigencia_inicio,observacao",
+    ordem: [{ coluna: "vigencia_inicio", ascendente: false }],
+    campos: {
+      canalId: { coluna: "canal_id", tipo: "uuid", obrigatorio: true },
+      tipo: {
+        coluna: "tipo",
+        tipo: "enum",
+        valores: ["classico", "premium", "outro"],
+      },
+      comissao: { coluna: "comissao", tipo: "numero", max: 99.99, obrigatorio: true },
+      vigenciaInicio: { coluna: "vigencia_inicio", tipo: "data", obrigatorio: true },
+      observacao: { coluna: "observacao", tipo: "texto" },
+    },
+  },
+
   folha: {
     tabela: "folha_pagamento",
     nome: "folha",
