@@ -143,6 +143,8 @@ export type LinhaCruzada = {
   sku: string;
   titulo: string;
   categoria: string;
+  /** Conta do canal onde o anúncio está. Vazio quando não se sabe. */
+  conta?: string;
   tipo: ItemCatalogo["tipo"];
   status: ItemCatalogo["status"];
   precoPraticado: number;

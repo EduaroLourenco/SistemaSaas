@@ -154,6 +154,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
   const {
     relatorios: RELATORIOS_PRECO_IDEAL,
     categorias: CATEGORIAS_CATALOGO,
+    contas: CONTAS,
     cruzamentos,
   } = dados;
 
@@ -174,6 +175,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
   const [faixa, setFaixa] = React.useState<Faixa>("Todas");
   const [tipo, setTipo] = React.useState<(typeof TIPOS)[number]>("Todos");
   const [categoria, setCategoria] = React.useState("Todas");
+  const [conta, setConta] = React.useState("Todas");
   const [filtrosAbertos, setFiltrosAbertos] = React.useState(false);
   const [selecionado, setSelecionado] = React.useState<LinhaCruzada | null>(null);
   const [arquivos, setArquivos] = React.useState<File[]>([]);
@@ -213,6 +215,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
       if (!naFaixa(l.desvio, faixa)) return false;
       if (tipo !== "Todos" && l.tipo !== tipo) return false;
       if (categoria !== "Todas" && l.categoria !== categoria) return false;
+      if (conta !== "Todas" && l.conta !== conta) return false;
       if (!q) return true;
       return (
         l.mlb.toLowerCase().includes(q) ||
@@ -220,18 +223,20 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
         l.titulo.toLowerCase().includes(q)
       );
     });
-  }, [linhas, busca, faixa, tipo, categoria]);
+  }, [linhas, busca, faixa, tipo, categoria, conta]);
 
   const filtrosAtivos =
     (faixa !== "Todas" ? 1 : 0) +
     (tipo !== "Todos" ? 1 : 0) +
-    (categoria !== "Todas" ? 1 : 0);
+    (categoria !== "Todas" ? 1 : 0) +
+    (conta !== "Todas" ? 1 : 0);
 
   function limparFiltros() {
     setBusca("");
     setFaixa("Todas");
     setTipo("Todos");
     setCategoria("Todas");
+    setConta("Todas");
   }
 
   const colunas: Column<LinhaCruzada>[] = [
@@ -334,9 +339,9 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
   return (
     <>
       <PageHeader
-        title="Preço ideal"
+        title="Lógica de promoção"
         breadcrumb="Anúncios"
-        description="Relatórios importados, preço alvo por MLB e o desvio do que está no ar"
+        description="Onde a Fórmula base entra: o preço mínimo de campanha, por MLB, e o desvio do que está no ar"
         actions={
           <>
             <Button
@@ -395,6 +400,26 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
                   </option>
                 ))}
               </Select>
+              {/*
+               * Sem isto a tela somava as duas contas do Mercado Livre e
+               * o desvio de preço aparecia como se fosse de uma carteira
+               * só. Aparece apenas quando há mais de uma conta.
+               */}
+              {CONTAS.length > 1 && (
+                <Select
+                  value={conta}
+                  onChange={(e) => setConta(e.target.value)}
+                  className="w-44"
+                  aria-label="Conta do canal"
+                >
+                  <option value="Todas">Todas as contas</option>
+                  {CONTAS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </div>
 
             <span className="num text-[12px] text-ink-3 shrink-0 ml-auto hidden md:block">
@@ -596,6 +621,23 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
               ))}
             </Select>
           </Field>
+
+          {CONTAS.length > 1 && (
+            <Field label="Conta">
+              <Select
+                value={conta}
+                onChange={(e) => setConta(e.target.value)}
+                className="h-11"
+              >
+                <option value="Todas">Todas as contas</option>
+                {CONTAS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
 
           <div>
             <p className="label mb-2">Relatório</p>

@@ -21,6 +21,8 @@ export type DadosPrecoIdeal = {
   /** Cruzamento já pronto por relatório — a tela não recalcula. */
   cruzamentos: Record<string, LinhaCruzada[]>;
   categorias: string[];
+  /** Contas do canal presentes no cruzamento, para o filtro da tela. */
+  contas: string[];
   vazio: boolean;
 };
 
@@ -78,13 +80,15 @@ export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
     paginar(() =>
       sb
         .from("anuncios")
-        .select("codigo_externo,titulo,sku_canal,tipo,status,preco_atual,comissao_atual")
+        .select(
+          "codigo_externo,titulo,sku_canal,tipo,status,preco_atual,comissao_atual,contas_canal(nome)"
+        )
     ),
   ]);
 
   const relatoriosBrutos = imports ?? [];
   if (!relatoriosBrutos.length || !itens.length) {
-    return { relatorios: [], cruzamentos: {}, categorias: [], vazio: true };
+    return { relatorios: [], cruzamentos: {}, categorias: [], contas: [], vazio: true };
   }
 
   // Matriz de preços por chave.
@@ -108,6 +112,7 @@ export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
   type Anuncio = {
     codigo_externo: string; titulo: string; sku_canal: string | null;
     tipo: string; status: string; preco_atual: string | null; comissao_atual: string | null;
+    contas_canal: { nome: string } | null;
   };
   const catalogo = new Map(
     (anuncios as unknown as Anuncio[]).map((a) => [a.codigo_externo.toUpperCase(), a])
@@ -123,6 +128,7 @@ export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
 
   const cruzamentos: Record<string, LinhaCruzada[]> = {};
   const categorias = new Set<string>();
+  const contas = new Set<string>();
 
   for (const rel of relatorios) {
     const linhas: LinhaCruzada[] = [];
@@ -140,12 +146,15 @@ export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
       const desvio = precoIdeal ? ((praticado - precoIdeal) / precoIdeal) * 100 : 0;
       const categoria = categoriaDe(item.titulo);
       categorias.add(categoria);
+      const conta = item.contas_canal?.nome ?? "";
+      if (conta) contas.add(conta);
 
       linhas.push({
         mlb: item.codigo_externo,
         sku: item.sku_canal ?? "",
         titulo: item.titulo,
         categoria,
+        conta,
         tipo: item.tipo === "premium" ? "Premium" : "Clássico",
         status:
           item.status === "pausado"
@@ -174,6 +183,7 @@ export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
     relatorios,
     cruzamentos,
     categorias: [...categorias].sort(),
+    contas: [...contas].sort(),
     vazio: false,
   };
 }
