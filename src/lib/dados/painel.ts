@@ -257,7 +257,14 @@ export async function carregarPainel(): Promise<DadosPainel> {
     canaisSemanas,
     canalCores: cores,
     canalNomes: nomes,
-    anuncios: await carregarAnuncios(sb),
+    anuncios: await carregarAnuncios(
+      sb,
+      new Map(
+        base.canais
+          .filter((c) => c.contaCanalId)
+          .map((c) => [c.contaCanalId as string, c.id])
+      )
+    ),
     linhas,
     canaisInfo: base.canais,
     ultimaData,
@@ -281,18 +288,25 @@ type BrutoAnuncio = {
     sku_canal: string | null;
     tipo: string;
     status: string;
+    conta_canal_id: string | null;
   } | null;
 };
 
 /** Anúncios com o acumulado das semanas importadas. */
+/**
+ * @param slugPorConta  conta_canal_id → slug de canal, o mesmo que as
+ *   linhas de venda usam. Sem ele a Visão geral não conseguiria filtrar a
+ *   tabela de SKUs pelo mesmo recorte dos KPIs.
+ */
 async function carregarAnuncios(
-  sb: Awaited<ReturnType<typeof clienteServidor>>
+  sb: Awaited<ReturnType<typeof clienteServidor>>,
+  slugPorConta: Map<string, string>
 ): Promise<Anuncio[]> {
   const data = await paginar(() =>
     sb
       .from("anuncio_desempenho_semanal")
       .select(
-        "visitas,vendas,receita,preco_praticado,semana_iso,anuncios(codigo_externo,titulo,sku_canal,tipo,status)"
+        "visitas,vendas,receita,preco_praticado,semana_iso,anuncios(codigo_externo,titulo,sku_canal,tipo,status,conta_canal_id)"
       )
       .order("semana_iso", { ascending: true })
   );
@@ -308,6 +322,7 @@ async function carregarAnuncios(
         mlb: a.codigo_externo,
         titulo: a.titulo,
         sku: a.sku_canal ?? "",
+        canalId: a.conta_canal_id ? slugPorConta.get(a.conta_canal_id) : undefined,
         curva: "C",
         tipo: a.tipo === "premium" ? "Premium" : "Clássico",
         visitas: 0,

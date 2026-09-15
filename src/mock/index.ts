@@ -241,6 +241,12 @@ export type Anuncio = {
   mlb: string;
   titulo: string;
   sku: string;
+  /**
+   * Slug da conta de canal onde o anúncio está — a mesma chave que
+   * `LinhaDia.canalId` usa, para a Visão geral poder filtrar os dois
+   * juntos. Ausente quando o anúncio não tem conta identificada.
+   */
+  canalId?: string;
   curva: "A" | "B" | "C";
   tipo: "Clássico" | "Premium";
   visitas: number;

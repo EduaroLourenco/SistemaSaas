@@ -10,6 +10,7 @@ import { Button, Panel, PanelHeader, Delta } from "@/components/ui/primitives";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
+import { SeletorCanal } from "@/components/ui/seletor-canal";
 import { type Anuncio } from "@/mock";
 import type { DadosPainel } from "@/lib/dados/painel";
 import { recortar } from "@/lib/periodo";
@@ -41,6 +42,8 @@ function formatKpi(v: number, f: "money" | "count" | "pct") {
 
 export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
   const [periodo, setPeriodo] = React.useState("30 dias");
+  /** "" = consolidado. Aceita item de canal (`grupo:…`) ou de conta. */
+  const [canalSel, setCanalSel] = React.useState("");
 
   const {
     canaisSemanas: CANAIS_12_SEMANAS,
@@ -49,17 +52,64 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
     anuncios: ANUNCIOS,
   } = dados;
 
+  const canalAtual = dados.canaisInfo.find((c) => c.id === canalSel);
+
+  /*
+   * Quais slugs de linha o recorte cobre.
+   *
+   * Um item de CANAL soma as contas que ele agrupa; um item de CONTA é ele
+   * mesmo. Nulo quer dizer consolidado, e aí nada é filtrado — que é o
+   * comportamento que a tela sempre teve.
+   */
+  const idsDoRecorte = React.useMemo(() => {
+    if (!canalSel) return null;
+    const c = dados.canaisInfo.find((x) => x.id === canalSel);
+    return new Set(c?.agrupa?.length ? c.agrupa : [canalSel]);
+  }, [canalSel, dados.canaisInfo]);
+
+  const linhasDoRecorte = React.useMemo(
+    () =>
+      idsDoRecorte ? dados.linhas.filter((l) => idsDoRecorte.has(l.canalId)) : dados.linhas,
+    [dados.linhas, idsDoRecorte]
+  );
+
   /*
    * KPIs, canais e a curva de faturamento saem do período escolhido. Antes
    * vinham prontos numa janela fixa de 30 dias, e o seletor só pintava o
    * botão — clicar em "Ano" mudava a cor e não o número.
    */
   const recorte = React.useMemo(
-    () => recortar(dados.linhas, dados.canaisInfo, periodo),
-    [dados.linhas, dados.canaisInfo, periodo]
+    () => recortar(linhasDoRecorte, dados.canaisInfo, periodo),
+    [linhasDoRecorte, dados.canaisInfo, periodo]
+  );
+
+  /*
+   * Houve visita registrada no recorte?
+   *
+   * Sem isso, "conversão 0,00%" é lido como "ninguém comprou", quando o
+   * que aconteceu foi "não sei quantos entraram". As duas leituras pedem
+   * ações opostas — uma manda mexer no anúncio, a outra manda arrumar a
+   * importação de visitas.
+   */
+  const temVisitas = React.useMemo(
+    () => linhasDoRecorte.some((l) => l.visitas > 0),
+    [linhasDoRecorte]
   );
   const KPIS = recorte.kpis;
-  const CANAIS = recorte.canais;
+  /*
+   * Os painéis de canal ficam SEMPRE no consolidado.
+   *
+   * Eles existem para comparar um canal com os outros; recortados num
+   * canal só, viram uma barra de 100% e uma linha na tabela, o que não
+   * responde nada. Então os KPIs e a curva acompanham o seletor, e a
+   * comparação entre canais continua inteira embaixo.
+   */
+  const recorteTodos = React.useMemo(
+    () =>
+      idsDoRecorte ? recortar(dados.linhas, dados.canaisInfo, periodo) : recorte,
+    [idsDoRecorte, dados.linhas, dados.canaisInfo, periodo, recorte]
+  );
+  const CANAIS = recorteTodos.canais;
   const FATURAMENTO_30D = recorte.faturamento;
 
   /*
@@ -79,10 +129,26 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
     return [...vistos].sort((a, b) => soma(a) - soma(b));
   }, [CANAIS_12_SEMANAS]);
 
-  const topSkus = React.useMemo(
-    () => [...ANUNCIOS].sort((a, b) => b.receita - a.receita).slice(0, 8),
-    [ANUNCIOS]
-  );
+  const topSkus = React.useMemo(() => {
+    const doRecorte = idsDoRecorte
+      ? ANUNCIOS.filter((a) => a.canalId && idsDoRecorte.has(a.canalId))
+      : ANUNCIOS;
+    return [...doRecorte].sort((a, b) => b.receita - a.receita).slice(0, 8);
+  }, [ANUNCIOS, idsDoRecorte]);
+
+  /**
+   * O "Ver todos" leva o recorte junto.
+   *
+   * A Análise de SKU fala em uuid (`conta:<uuid>` ou o uuid do canal); o
+   * painel fala em slug. A tradução acontece aqui, e não no servidor,
+   * porque é só para montar um link.
+   */
+  const linkVerTodos = React.useMemo(() => {
+    if (!canalAtual) return "/vendas/skus";
+    if (canalAtual.contaCanalId) return `/vendas/skus?canal=conta:${canalAtual.contaCanalId}`;
+    const canal = dados.canaisDisponiveis.find((c) => c.nome === canalAtual.nome);
+    return canal ? `/vendas/skus?canal=${canal.id}` : "/vendas/skus";
+  }, [canalAtual, dados.canaisDisponiveis]);
 
   const colunas: Column<Anuncio>[] = [
     {
@@ -129,8 +195,16 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       header: "Conversão",
       align: "right",
       mobile: "metric",
-      cell: (r) => <span className="num">{pct(r.conversao, 2)}</span>,
-      sortValue: (r) => r.conversao,
+      // Mesma regra do KPI: sem visita a conversão é desconhecida, não zero.
+      cell: (r) =>
+        r.visitas > 0 ? (
+          <span className="num">{pct(r.conversao, 2)}</span>
+        ) : (
+          <span className="text-ink-3" title="sem visita registrada para este anúncio">
+            —
+          </span>
+        ),
+      sortValue: (r) => (r.visitas > 0 ? r.conversao : -1),
       width: "110px",
     },
   ];
@@ -139,7 +213,9 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
     <>
       <PageHeader
         title="Visão geral"
-        description="Consolidado de todos os canais"
+        description={
+          canalAtual ? canalAtual.nome : "Consolidado de todos os canais"
+        }
         actions={
           <>
             <span className="num hidden sm:inline-flex items-center gap-1.5 text-[12px] text-ink-3">
@@ -149,6 +225,24 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           </>
         }
         filters={
+          <>
+            {/*
+              * Seletor de canal E de conta: `canaisInfo` já traz o item do
+              * canal inteiro e, abaixo, cada conta. No consolidado a alta
+              * de um canal cobre a queda de outro e a semana parece
+              * estável — só olhando um por vez dá para responder "quem
+              * caiu".
+              */}
+            <SeletorCanal
+              canais={dados.canaisInfo.map((c) => ({
+                id: c.id,
+                nome: c.nome,
+                cor: c.cor,
+              }))}
+              valor={canalSel}
+              onChange={setCanalSel}
+              rotuloTodos="Todos os canais"
+            />
           <div className="flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line shrink-0">
             {PERIODOS.map((p) => (
               <button
@@ -164,7 +258,8 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 {p}
               </button>
             ))}
-          </div>
+            </div>
+          </>
         }
       />
 
@@ -184,17 +279,26 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {KPIS.map((k) => (
-            <StatTile
-              key={k.id}
-              label={k.label}
-              value={formatKpi(k.value, k.format)}
-              delta={k.delta}
-              inverse={k.inverse}
-              hint={k.hint}
-              spark={k.spark}
-            />
-          ))}
+          {KPIS.map((k) => {
+            /*
+             * Conversão sem visita não é zero, é desconhecido. Mostrar
+             * "0,00%" aqui faz o número ser lido como "ninguém comprou" —
+             * e alguém mexe no anúncio quando o problema é a importação
+             * de visitas não ter chegado.
+             */
+            const semBase = k.id === "conversao" && !temVisitas;
+            return (
+              <StatTile
+                key={k.id}
+                label={k.label}
+                value={semBase ? "—" : formatKpi(k.value, k.format)}
+                delta={semBase ? undefined : k.delta}
+                inverse={k.inverse}
+                hint={semBase ? "sem visita registrada no recorte" : k.hint}
+                spark={semBase ? undefined : k.spark}
+              />
+            );
+          })}
         </div>
 
         {/* Faturamento diário + participação */}
@@ -255,7 +359,12 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           </Panel>
 
           <Panel className="overflow-hidden">
-            <PanelHeader title="Participação por canal" hint="12 semanas" />
+            <PanelHeader
+              title="Participação por canal"
+              hint={
+                canalAtual ? "12 semanas · todos os canais" : "12 semanas"
+              }
+            />
             <div className="h-[196px] px-2 pt-3">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -298,10 +407,10 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           <Panel className="overflow-hidden">
             <PanelHeader
               title="Produtos com maior receita"
-              hint="no período"
+              hint={canalAtual ? `no período · ${canalAtual.nome}` : "no período"}
               action={
                 <Link
-                  href="/vendas/skus"
+                  href={linkVerTodos}
                   className="h-7 px-2 inline-flex items-center rounded-r1 text-[12.5px] text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
                 >
                   Ver todos
@@ -319,7 +428,14 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
 
         {/* Resumo dos canais */}
         <Panel className="overflow-hidden">
-          <PanelHeader title="Canais" hint="faturamento e variação no período" />
+          <PanelHeader
+            title="Canais"
+            hint={
+              canalAtual
+                ? "faturamento e variação no período · todos os canais, para comparar"
+                : "faturamento e variação no período"
+            }
+          />
           <div className="grid grid-cols-2 lg:grid-cols-5 divide-x divide-y lg:divide-y-0 divide-line">
             {CANAIS.map((c) => (
               <div key={c.id} className="px-4 py-3.5">

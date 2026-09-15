@@ -22,7 +22,19 @@ export type LinhaDia = {
   pedidosCancelados: number;
 };
 
-export type CanalInfo = { id: string; nome: string; cor: string };
+export type CanalInfo = {
+  id: string;
+  nome: string;
+  cor: string;
+  /** Conta de vendedor no banco. Ausente no item que representa o canal inteiro. */
+  contaCanalId?: string;
+  /**
+   * Os slugs de conta que este item soma. Só o item de CANAL tem, e só
+   * onde o canal opera mais de uma conta — é o que deixa a tela oferecer
+   * "Mercado Livre" inteiro e cada conta dele no mesmo seletor.
+   */
+  agrupa?: string[];
+};
 
 /** Quantos dias COM MOVIMENTO cada opção cobre. */
 export const DIAS_DO_PERIODO: Record<string, number> = {
