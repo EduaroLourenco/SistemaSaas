@@ -3,6 +3,8 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
 import { comissaoUtilizavel } from "./comissao-plausivel";
+import { lerRecorte, noRecorte, recorteParcial, canalDoRecorte } from "@/lib/recorte";
+import { carregarContasRecorte } from "./contas-recorte";
 
 /**
  * Margem, calculada no item do pedido.
@@ -272,6 +274,9 @@ export async function carregarBaseMargem(
 
   /* ── Pedidos, com exclusões e filtro ── */
 
+  // `canalId` do filtro traz o recorte da URL: o canal inteiro ou uma conta.
+  const recorte = lerRecorte(filtro.canalId);
+
   const { mantidas: pedidos } = aplicar(
     (pedidosRaw as unknown as Ped[]).map((p) => ({
       ...p,
@@ -286,7 +291,7 @@ export async function carregarBaseMargem(
     const dia = String(p.data).slice(0, 10);
     if (filtro.inicio && dia < filtro.inicio) return false;
     if (filtro.fim && dia > filtro.fim) return false;
-    if (filtro.canalId && p.canalId !== filtro.canalId) return false;
+    if (!noRecorte(recorte, p)) return false;
     return true;
   });
   const pedidoPorId = new Map(usaveis.map((p) => [p.id, p]));
@@ -675,11 +680,12 @@ export async function carregarResultado(
   );
 
   /* Cancelamentos e mídia, do período. */
-  const [pedidosRaw, diariasRaw, lancRaw] = await Promise.all([
+  const recorte = lerRecorte(canalId);
+  const [pedidosRaw, diariasRaw, lancRaw, contas] = await Promise.all([
     paginar(() =>
       sb
         .from("pedidos")
-        .select("total,cancelado,data,canal_id")
+        .select("total,cancelado,data,canal_id,conta_canal_id")
         .eq("cancelado", true)
         .gte("data", inicio)
         .lte("data", fim)
@@ -687,7 +693,7 @@ export async function carregarResultado(
     paginar(() =>
       sb
         .from("vendas_diarias")
-        .select("investimento_ads,data,canal_id")
+        .select("investimento_ads,data,canal_id,conta_canal_id")
         .gte("data", inicio)
         .lte("data", fim)
     ),
@@ -699,17 +705,44 @@ export async function carregarResultado(
         .gte("competencia", inicio.slice(0, 8) + "01")
         .lte("competencia", fim)
     ),
+    carregarContasRecorte(),
   ]);
 
-  const doCanal = <T extends { canal_id: string | null }>(linhas: T[]) =>
-    canalId ? linhas.filter((l) => l.canal_id === canalId) : linhas;
+  /** Pedido e diária sabem a conta: o recorte vale como está. */
+  const doRecorte = <T extends { canal_id: string | null; conta_canal_id: string | null }>(
+    linhas: T[]
+  ) =>
+    linhas.filter((l) =>
+      noRecorte(recorte, { canalId: l.canal_id, contaCanalId: l.conta_canal_id })
+    );
 
-  const cancelamentos = doCanal(
-    pedidosRaw as unknown as { total: string | number; canal_id: string }[]
+  /*
+   * Lançamento financeiro só sabe o CANAL.
+   *
+   * Olhando uma conta de um canal com duas, uma despesa do Mercado Livre
+   * não tem como ser atribuída a uma delas — somá-la inteira na conta A
+   * inventaria o prejuízo de A. Nesse recorte ela fica de fora, e o
+   * resultado é o da operação da conta, sem o rateio que ninguém fez.
+   */
+  const parcial = recorteParcial(recorte, contas);
+  const canalDoFiltro = canalDoRecorte(recorte, contas);
+  const doCanal = <T extends { canal_id: string | null }>(linhas: T[]) =>
+    parcial
+      ? []
+      : canalDoFiltro
+        ? linhas.filter((l) => l.canal_id === canalDoFiltro)
+        : linhas;
+
+  const cancelamentos = doRecorte(
+    pedidosRaw as unknown as { total: string | number; canal_id: string; conta_canal_id: string }[]
   ).reduce((s, p) => s + n(p.total), 0);
 
-  const ads = doCanal(
-    diariasRaw as unknown as { investimento_ads: string | number; canal_id: string }[]
+  const ads = doRecorte(
+    diariasRaw as unknown as {
+      investimento_ads: string | number;
+      canal_id: string;
+      conta_canal_id: string;
+    }[]
   ).reduce((s, d) => s + n(d.investimento_ads), 0);
 
   const porNatureza = { fixa_recorrente: 0, variavel_recorrente: 0, variavel_avulsa: 0 };

@@ -7,6 +7,7 @@ import { generateReport, type ReportItem } from "@/lib/planilhas/relatorio-geren
 import { guardarPacote } from "@/lib/planilhas/pacotes";
 import { gravarProcessamento } from "@/lib/dados/gravar-promocoes";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { operacaoPadrao } from "@/lib/dados/operacao";
 
 // exceljs e jszip precisam do runtime Node, não do Edge.
 export const runtime = "nodejs";
@@ -123,7 +124,10 @@ export async function POST(req: NextRequest) {
     try {
       const sb = await clienteServidor();
       const { data: sessao } = await sb.auth.getUser();
+      const operacao = await operacaoPadrao();
+      if (!operacao) throw new Error("Nenhuma operação acessível para gravar o processamento.");
       gravacao = await gravarProcessamento({
+        operacaoId: operacao.id,
         linhas: todasLinhas,
         arquivos: arquivos.map((a) => a.nome),
         descontoExtra,

@@ -100,6 +100,48 @@ export function chaveCanal(nome: string) {
     .replace(/^_|_$/g, "");
 }
 
+/**
+ * Para cada conta, os grupos de canal que a contêm.
+ *
+ * O grupo "Mercado Livre" existe na lista de canais para o filtro, mas as
+ * linhas de venda são gravadas por conta. Sem este mapa a série do grupo
+ * nasce e fica zerada: escolher o canal inteiro mostraria zero.
+ */
+function gruposPorConta(canais: CanalInfo[]): Map<string, string[]> {
+  const mapa = new Map<string, string[]>();
+  for (const c of canais) {
+    for (const conta of c.agrupa ?? []) {
+      mapa.set(conta, [...(mapa.get(conta) ?? []), c.id]);
+    }
+  }
+  return mapa;
+}
+
+/**
+ * Onde a meta de um canal entra.
+ *
+ * A meta é gravada por canal. Com uma conta só, ela é da conta; com várias,
+ * é do grupo — dar a meta inteira do Mercado Livre a uma das contas faria
+ * essa conta parecer sempre abaixo do alvo, e a outra sem alvo nenhum.
+ */
+function alvoDaMeta(linhas: LinhaVendaDia[], canais: CanalInfo[]): Map<string, string> {
+  const contasDoCanal = new Map<string, Set<string>>();
+  for (const l of linhas) {
+    if (!l.canalReal) continue;
+    const s = contasDoCanal.get(l.canalReal) ?? new Set<string>();
+    s.add(l.canalId);
+    contasDoCanal.set(l.canalReal, s);
+  }
+  const grupos = gruposPorConta(canais);
+  const alvo = new Map<string, string>();
+  for (const [canalReal, contas] of contasDoCanal) {
+    const [primeira] = contas;
+    const grupo = grupos.get(primeira)?.[0];
+    alvo.set(canalReal, contas.size > 1 && grupo ? grupo : primeira);
+  }
+  return alvo;
+}
+
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 /** Segunda-feira da semana ISO a que a data pertence. */
@@ -498,10 +540,8 @@ export async function carregarAnual(): Promise<DadosAnual> {
    * nenhuma no mês ficaria de fora — que é justamente o caso em que o
    * alvo importa. Por isso o laço percorre os canais, não as vendas.
    */
-  const slugPorCanalReal = new Map<string, string>();
-  for (const l of base.linhas) {
-    if (l.canalReal) slugPorCanalReal.set(l.canalReal, l.canalId);
-  }
+  const destinoDaMeta = alvoDaMeta(base.linhas, base.canais);
+  const gruposAnual = gruposPorConta(base.canais);
 
   const series: Record<string, MesAnual[]> = {
     todos: Array.from({ length: 12 }, (_, m) => mesVazio(m)),
@@ -520,7 +560,8 @@ export async function carregarAnual(): Promise<DadosAnual> {
     const m = Number(l.data.slice(5, 7)) - 1;
 
     if (ano === base.ano) {
-      for (const alvo of [series.todos, series[l.canalId]]) {
+      const grupos = (gruposAnual.get(l.canalId) ?? []).map((g) => series[g]);
+      for (const alvo of [series.todos, series[l.canalId], ...grupos]) {
         if (!alvo) continue;
         alvo[m].receita += l.receita;
         alvo[m].pedidos += l.pedidos;
@@ -532,8 +573,10 @@ export async function carregarAnual(): Promise<DadosAnual> {
     } else if (ano === base.ano - 1) {
       anterior.todos.receita += l.receita;
       anterior.todos.pedidos += l.pedidos;
-      const a = anterior[l.canalId];
-      if (a) { a.receita += l.receita; a.pedidos += l.pedidos; }
+      for (const id of [l.canalId, ...(gruposAnual.get(l.canalId) ?? [])]) {
+        const a = anterior[id];
+        if (a) { a.receita += l.receita; a.pedidos += l.pedidos; }
+      }
     }
   }
 
@@ -542,8 +585,8 @@ export async function carregarAnual(): Promise<DadosAnual> {
     const m = Number(mesStr) - 1;
     if (m < 0 || m > 11) continue;
     series.todos[m].meta += valor;
-    const slug = slugPorCanalReal.get(canalReal);
-    if (slug && series[slug]) series[slug][m].meta += valor;
+    const destino = destinoDaMeta.get(canalReal);
+    if (destino && series[destino]) series[destino][m].meta += valor;
   }
 
   return { ano: base.ano, canais: base.canais, series, anoAnterior: anterior, vazio: false };
@@ -605,11 +648,13 @@ export async function carregarComparativos(): Promise<DadosComparativos> {
     serieDiaria[c.id] = Array.from({ length: dias }, vazioDia);
   }
 
+  const gruposComp = gruposPorConta(base.canais);
   for (const l of base.linhas) {
     if (Number(l.data.slice(0, 4)) !== base.ano) continue;
     const i = diaDoAno(l.data);
     if (i < 0 || i >= dias) continue;
-    for (const alvo of [serieDiaria.todos, serieDiaria[l.canalId]]) {
+    const grupos = (gruposComp.get(l.canalId) ?? []).map((g) => serieDiaria[g]);
+    for (const alvo of [serieDiaria.todos, serieDiaria[l.canalId], ...grupos]) {
       if (!alvo) continue;
       alvo[i].visitas += l.visitas;
       alvo[i].receita += l.receita;

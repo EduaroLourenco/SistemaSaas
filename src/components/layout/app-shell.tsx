@@ -47,58 +47,6 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
  * dado nem tela própria ainda. Oferecer a troca sugere que há algo do
  * outro lado, e a pessoa clica para descobrir que não muda nada.
  */
-const CONTAS = ["Operação principal"];
-
-function AccountSwitcher() {
-  const [open, setOpen] = React.useState(false);
-  const [atual, setAtual] = React.useState(CONTAS[0]);
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 h-7 px-2 rounded-r1 border border-line hover:bg-panel-3 transition-colors max-w-[190px]"
-      >
-        <span className="text-[12px] font-medium text-ink truncate">
-          {atual}
-        </span>
-        <ChevronsUpDown className="w-3 h-3 text-ink-3 shrink-0" />
-      </button>
-
-      {open && (
-        <div
-          className="absolute left-0 top-full mt-1 w-56 panel z-50 py-1"
-          style={{ boxShadow: "var(--sh-3)" }}
-        >
-          <p className="label px-3 py-1.5">Conta</p>
-          {CONTAS.map((c) => (
-            <button
-              key={c}
-              onClick={() => {
-                setAtual(c);
-                setOpen(false);
-              }}
-              className="w-full flex items-center justify-between gap-2 px-3 h-8 text-[13px] text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
-            >
-              <span className="truncate">{c}</span>
-              {c === atual && <Check className="w-3.5 h-3.5 text-brand shrink-0" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ══ Tema ════════════════════════════════════════════════════ */
 
 function ThemeToggle() {
@@ -348,18 +296,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="hidden md:block h-5 w-px bg-line" />
 
-          <div className="hidden md:block">
-            <AccountSwitcher />
-          </div>
 
           <div className="flex-1" />
 
           <BuscaGlobal />
 
-          <button className="w-8 h-8 rounded-r1 flex items-center justify-center text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors relative">
+          <Link
+            href="/alertas"
+            aria-label="Alertas"
+            title="Alertas"
+            className="w-8 h-8 rounded-r1 flex items-center justify-center text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
+          >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-down ring-2 ring-panel" />
-          </button>
+          </Link>
 
           <ThemeToggle />
 
@@ -404,9 +353,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <X className="w-4.5 h-4.5" />
               </button>
-            </div>
-            <div className="px-4 py-3 border-b border-line shrink-0">
-              <AccountSwitcher />
             </div>
             <div
               className="overflow-y-auto"

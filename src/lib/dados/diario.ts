@@ -3,6 +3,8 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar, type Exclusao } from "./exclusoes";
 import type { DiaPeriodo, Periodo, PeriodoId } from "@/mock/diario";
+import { lerRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
+import { carregarContasRecorte } from "./contas-recorte";
 
 /**
  * Comparativo diário, lido do banco.
@@ -24,8 +26,10 @@ export type DadosDiario = {
   primeiraData: string | null;
   ultimaData: string | null;
   vazio: boolean;
-  /** Canais com movimento no recorte, para a tela montar o filtro. */
+  /** Canais, para o painel de exclusões. */
   canais: { id: string; nome: string }[];
+  /** Opções do filtro: canais e, onde há mais de uma, suas contas. */
+  opcoes: GrupoRecorte[];
   exclusoes: Exclusao[];
   removidas: number;
 };
@@ -74,17 +78,14 @@ const br = (iso: string) => iso.split("-").reverse().join("/");
 export async function carregarDiario(canalId?: string): Promise<DadosDiario> {
   const sb = await clienteServidor();
 
-  // Os canais vêm sempre, mesmo com filtro ativo: senão, ao escolher um
+  // As opções vêm sempre, mesmo com filtro ativo: senão, ao escolher um
   // canal a lista encolheria para ele só e não haveria como voltar.
-  const { data: canaisRaw } = await sb
-    .from("canais")
-    .select("id, nome")
-    .eq("ativo", true)
-    .order("ordem");
-  const canais = (canaisRaw ?? []).map((c) => ({
-    id: c.id as string,
-    nome: c.nome as string,
-  }));
+  const contas = await carregarContasRecorte();
+  const opcoes = opcoesRecorte(contas);
+  const canais = [
+    ...new Map(contas.map((c) => [c.canalId, { id: c.canalId, nome: c.canalNome }])).values(),
+  ].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const recorte = lerRecorte(canalId);
 
   const [data, exclusoes] = await Promise.all([
     paginar(() => {
@@ -96,7 +97,8 @@ export async function carregarDiario(canalId?: string): Promise<DadosDiario> {
           "data,receita,pedidos,visitas,investimento_ads,valor_cancelado,pedidos_cancelados,canal_id,conta_canal_id"
         )
         .order("data", { ascending: true });
-      if (canalId) q = q.eq("canal_id", canalId);
+      if (recorte.contaCanalId) q = q.eq("conta_canal_id", recorte.contaCanalId);
+      else if (recorte.canalId) q = q.eq("canal_id", recorte.canalId);
       return q;
     }),
     carregarExclusoes(),
@@ -112,7 +114,7 @@ export async function carregarDiario(canalId?: string): Promise<DadosDiario> {
   );
   const linhas = mantidas as unknown as Linha[];
   if (!linhas.length)
-    return { periodos: [], dias: [], primeiraData: null, ultimaData: null, vazio: true, canais, exclusoes, removidas };
+    return { periodos: [], dias: [], primeiraData: null, ultimaData: null, vazio: true, canais, opcoes, exclusoes, removidas };
 
   /* Soma os canais de um mesmo dia: a tela é a operação inteira. */
   const porDia = new Map<string, DiaPeriodo>();
@@ -216,6 +218,6 @@ export async function carregarDiario(canalId?: string): Promise<DadosDiario> {
 
   return {
     periodos, dias: todosOsDias, primeiraData: inicio,
-    ultimaData: fim, vazio: false, canais, exclusoes, removidas,
+    ultimaData: fim, vazio: false, canais, opcoes, exclusoes, removidas,
   };
 }

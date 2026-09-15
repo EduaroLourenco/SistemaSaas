@@ -3,17 +3,14 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { NAV, NAV_FOOTER } from "@/lib/nav";
-import { ANUNCIOS_ANALISE } from "@/mock/analise";
-import { CANAIS } from "@/mock";
-import { TERMOS } from "@/mock/sistema";
 import { Search, CornerDownLeft, X } from "lucide-react";
 
 /**
  * Busca global — abre com `/` ou Ctrl+K.
  *
- * O ponto dela não é achar tela: o menu já faz isso. É digitar um MLB ou
- * um SKU de qualquer lugar do sistema e cair direto no anúncio, sem passar
- * por Anúncios → Análise → filtrar → procurar na tabela.
+ * Acha telas pelo nome. Anúncios, canais e termos saíram do índice: vinham
+ * de uma lista de demonstração, e a busca levava a anúncios que não existem
+ * na operação. Voltam quando o índice for montado a partir do banco.
  */
 
 type Achado = {
@@ -51,28 +48,7 @@ function montarIndice(): Achado[] {
     })),
   ];
 
-  const anuncios: Achado[] = ANUNCIOS_ANALISE.map((a) => ({
-    tipo: "anuncio" as const,
-    rotulo: a.titulo,
-    detalhe: `${a.mlb} · ${a.sku} · ${a.conta}`,
-    href: `/anuncios/analise?anuncio=${a.mlb}`,
-  }));
-
-  const canais: Achado[] = CANAIS.map((c) => ({
-    tipo: "canal" as const,
-    rotulo: c.nome,
-    detalhe: "Vendas por canal",
-    href: "/vendas/canais",
-  }));
-
-  const termos: Achado[] = TERMOS.map((t) => ({
-    tipo: "termo" as const,
-    rotulo: t.termo + (t.sigla ? ` (${t.sigla})` : ""),
-    detalhe: t.definicao,
-    href: "/glossario",
-  }));
-
-  return [...anuncios, ...telas, ...canais, ...termos];
+  return telas;
 }
 
 export function BuscaGlobal() {

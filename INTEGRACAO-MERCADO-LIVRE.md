@@ -120,6 +120,57 @@ que prova acesso àquele período.
 
 ---
 
+## Passo 5 — Atualização automática (13h e 01h)
+
+A plataforma sincroniza sozinha duas vezes por dia, no horário de
+Brasília:
+
+| Horário | O que traz |
+|---|---|
+| **13h** | A manhã de hoje (parcial) e revisa ontem: estoque, pedidos, visitas |
+| **01h** | Fecha o dia: os três últimos dias inteiros, com os cancelamentos tardios |
+
+A tela **Vendas → Dia** mostra no cabeçalho de quando é o número
+("atualizado hoje às 13:04 (automático)") e avisa em amarelo se a última
+tentativa falhou.
+
+Para ligar:
+
+1. **Rode `db/19_sincronizacao_automatica.sql`** no SQL Editor do
+   Supabase. Ela guarda o token do Meli no cofre do Supabase (Vault) — o
+   refresh token é de uso único, e sem lugar para morar a segunda execução
+   já não teria com o que renovar.
+2. **Na Vercel** (Settings → Environment Variables), cadastre:
+
+| Variável | Valor |
+|---|---|
+| `MELI_APP_ID` | da aplicação **nova** (Passo 1) |
+| `MELI_CLIENT_SECRET` | da aplicação nova |
+| `MELI_REFRESH_TOKEN` | o da conta São Paulo, gerado com a aplicação nova |
+| `CRON_SECRET` | uma senha longa e aleatória, inventada por você |
+
+   O `CRON_SECRET` é o que impede qualquer pessoa de disparar a
+   sincronização pela URL. A Vercel o envia sozinha nas chamadas
+   agendadas. Sem ele, a rota fica desligada — de propósito.
+
+3. **Publique** (deploy). Os horários estão em `vercel.json`.
+
+> **Nunca use o refresh token do Meli+ aqui.** A primeira renovação da
+> plataforma o invalidaria, e os seus agentes parariam na hora. É por isso
+> que o Passo 1 cria uma aplicação separada.
+
+O `MELI_REFRESH_TOKEN` só é usado **uma vez**, para semear. Depois da
+primeira sincronização o token passa a morar no cofre e se renova
+sozinho. Se um dia a autorização cair (senha do Meli trocada, app
+revogado), a tela avisa; basta gerar um refresh token novo e pôr na
+variável — a plataforma tenta o do ambiente quando o do cofre é recusado.
+
+**Sobre o plano da Vercel:** no Hobby, cada horário dispara uma vez por
+dia, em algum momento dentro da hora marcada (13h00 a 13h59). No Pro,
+dispara no minuto. Cada execução leva cerca de 2 minutos por conta.
+
+---
+
 ## Sobre a credencial que veio no zip
 
 O pacote `Meli+` que você enviou trazia a pasta `.meli/` com o

@@ -1,5 +1,6 @@
 "use client";
 
+import { linkDoAnuncio } from "@/lib/links";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import {
@@ -23,11 +24,6 @@ import { AXIS, GRID, ChartTooltip, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { type ItemCatalogo, type StatusAnuncio } from "@/mock/catalogo";
 import type { DadosCatalogo } from "@/lib/dados/catalogo";
-import {
-  RELATORIO_ATUAL,
-  comissaoNegociadaVigente,
-  precoIdealVigente,
-} from "@/mock/preco-ideal";
 import { count, delta as fmtDelta, money, pct } from "@/lib/format";
 import {
   CartesianGrid,
@@ -185,11 +181,6 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
     const comissao =
       publicados.reduce((s, i) => s + i.comissaoAtual, 0) /
       (publicados.length || 1);
-    const negociada =
-      publicados.reduce(
-        (s, i) => s + (comissaoNegociadaVigente(i.mlb) || i.comissaoAtual),
-        0
-      ) / (publicados.length || 1);
     return {
       total: CATALOGO.length,
       publicados: publicados.length,
@@ -199,8 +190,6 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
       classicos: CATALOGO.filter((i) => i.tipo === "Clássico").length,
       premium: CATALOGO.filter((i) => i.tipo === "Premium").length,
       comissao,
-      negociada,
-      semPrecoIdeal: publicados.filter((i) => !precoIdealVigente(i.mlb)).length,
     };
   }, []);
 
@@ -341,10 +330,6 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
                 <span className="num text-[11px]">({filtrosAtivos})</span>
               )}
             </Button>
-            <Button size="sm" className="hidden sm:inline-flex">
-              <Download className="w-3.5 h-3.5" />
-              Exportar
-            </Button>
           </>
         }
         filters={
@@ -400,74 +385,27 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
       />
 
       <PageBody>
-        {/* ── Importação do catálogo ─────────────────────────── */}
-        <Panel className="overflow-hidden">
-          <button
-            onClick={() => setImportAberto((v) => !v)}
-            className="w-full flex items-center justify-between gap-3 px-4 h-11 hover:bg-panel-2 transition-colors"
-          >
-            <span className="flex items-baseline gap-2 min-w-0">
-              <span className="text-[13px] font-semibold text-ink">
-                Importar catálogo
-              </span>
-              <span className="text-[11px] text-ink-3 truncate hidden sm:inline">
-                última carga: {IMPORTACOES_CATALOGO[0].arquivo} ·{" "}
-                {IMPORTACOES_CATALOGO[0].linhas} linhas
-              </span>
-            </span>
-            <ChevronDown
-              className={
-                "w-4 h-4 text-ink-3 shrink-0 transition-transform " +
-                (importAberto ? "rotate-180" : "")
-              }
-            />
-          </button>
-
-          {importAberto && (
-            <div className="border-t border-line grid lg:grid-cols-[1fr_320px]">
-              <div className="p-4">
-                <FileDrop
-                  hint="Arraste a exportação de anúncios ou clique para escolher"
-                  files={arquivos}
-                  onFiles={(f) => setArquivos((prev) => [...prev, ...f])}
-                  onRemove={(i) =>
-                    setArquivos((prev) => prev.filter((_, x) => x !== i))
-                  }
-                />
-                <div className="flex flex-col sm:flex-row sm:items-end gap-3 mt-3">
-                  <p className="text-[12px] text-ink-3 flex-1 min-w-0">
-                    O arquivo é casado por MLB: linhas conhecidas atualizam preço,
-                    comissão e situação; linhas novas entram como anúncio inédito.
-                  </p>
-                  <Button
-                    variant="primary"
-                    className="max-sm:h-11 shrink-0"
-                    disabled={arquivos.length === 0}
-                  >
-                    Processar {arquivos.length > 0 && `(${arquivos.length})`}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-4 border-t lg:border-t-0 lg:border-l border-line">
-                <p className="label mb-2">Cargas recentes</p>
-                <ul className="flex flex-col divide-y divide-line border border-line rounded-r2 overflow-hidden">
-                  {IMPORTACOES_CATALOGO.map((imp) => (
-                    <li key={imp.id} className="px-3 py-2 bg-panel">
-                      <p className="num text-[12px] font-medium text-ink truncate">
-                        {imp.arquivo}
-                      </p>
-                      <p className="num text-[11px] text-ink-3 mt-0.5">
-                        {imp.enviadoEm} · {imp.linhas} linhas · {imp.novos} novos ·{" "}
-                        {imp.atualizados} atualizados
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+        {/* ── Cargas do catálogo ─────────────────────────────── */}
+        {IMPORTACOES_CATALOGO.length > 0 && (
+          <Panel className="px-4 py-3">
+            <div className="flex items-baseline justify-between gap-3 mb-2">
+              <p className="label">Cargas recentes do catálogo</p>
+              <a href="/importar" className="text-[12px] text-brand hover:underline shrink-0">
+                Importar nova carga
+              </a>
             </div>
-          )}
-        </Panel>
+            <ul className="flex flex-col divide-y divide-line border border-line rounded-r2 overflow-hidden">
+              {IMPORTACOES_CATALOGO.slice(0, 5).map((imp) => (
+                <li key={imp.id} className="px-3 py-2 bg-panel">
+                  <p className="num text-[12px] font-medium text-ink truncate">{imp.arquivo}</p>
+                  <p className="num text-[11px] text-ink-3 mt-0.5">
+                    {imp.enviadoEm} · {imp.linhas} linhas
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
 
         {/* ── Indicadores da carteira ────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -489,7 +427,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
           <StatTile
             label="Comissão média"
             value={pct(resumo.comissao)}
-            hint={`negociada ${pct(resumo.negociada)}`}
+            hint="média dos anúncios publicados"
           />
         </div>
 
@@ -527,15 +465,6 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
                   },
                 ]}
               />
-              {resumo.semPrecoIdeal > 0 && (
-                <p className="text-[12px] text-ink-2 mt-3 pt-3 border-t border-line">
-                  <span className="font-semibold text-ink">
-                    {resumo.semPrecoIdeal}
-                  </span>{" "}
-                  anúncios publicados ainda não aparecem no relatório de preço
-                  ideal de {dataBR(RELATORIO_ATUAL.dataBase)}.
-                </p>
-              )}
             </div>
           </Panel>
         </div>
@@ -669,12 +598,11 @@ function FichaAnuncio({
   item: ItemCatalogo;
   onClose: () => void;
 }) {
-  const ideal = precoIdealVigente(item.mlb);
-  const negociada = comissaoNegociadaVigente(item.mlb);
-  const desvio = ideal ? ((item.precoAtual - ideal) / ideal) * 100 : 0;
   const serie = item.historicoPreco;
-  const primeiro = serie[0].preco;
-  const variacao = ((item.precoAtual - primeiro) / primeiro) * 100;
+  // Anúncio sem retrato semanal de preço não tem série — a maioria. Ler
+  // `serie[0]` direto derrubava a ficha inteira ao clicar num deles.
+  const primeiro = serie[0]?.preco ?? item.precoAtual;
+  const variacao = primeiro ? ((item.precoAtual - primeiro) / primeiro) * 100 : 0;
 
   return (
     <Sheet
@@ -684,13 +612,21 @@ function FichaAnuncio({
       width="620px"
       footer={
         <>
-          <Button className="flex-1 max-sm:h-11">
-            <ExternalLink className="w-3.5 h-3.5" />
-            Abrir no canal
-          </Button>
-          <Button variant="primary" className="flex-1 max-sm:h-11">
-            Ajustar preço
-          </Button>
+          {linkDoAnuncio(item.mlb) ? (
+            <a
+              href={linkDoAnuncio(item.mlb)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 h-8 max-sm:h-11 inline-flex items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] text-ink hover:bg-panel-3 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Abrir no Mercado Livre
+            </a>
+          ) : (
+            <Button className="flex-1 max-sm:h-11" onClick={onClose}>
+              Fechar
+            </Button>
+          )}
         </>
       }
     >
@@ -720,40 +656,6 @@ function FichaAnuncio({
             </p>
           </div>
         ))}
-      </div>
-
-      {/* aderência ao preço ideal */}
-      <div className="px-4 py-3.5 border-b border-line">
-        <p className="label mb-2.5">Aderência ao preço ideal</p>
-        {ideal ? (
-          <div className="grid grid-cols-2 gap-y-2">
-            <span className="text-[12px] text-ink-3">Praticado</span>
-            <span className="num text-[13px] text-ink text-right">
-              {money(item.precoAtual)}
-            </span>
-            <span className="text-[12px] text-ink-3">
-              Ideal · {dataBR(RELATORIO_ATUAL.dataBase)}
-            </span>
-            <span className="num text-[13px] text-ink text-right">
-              {money(ideal)}
-            </span>
-            <span className="text-[12px] text-ink-3">Desvio</span>
-            <span className="text-right">
-              <Badge tone={tomDesvio(desvio)}>
-                <span className="num">{fmtDelta(desvio)}</span>
-              </Badge>
-            </span>
-            <span className="text-[12px] text-ink-3">Comissão negociada</span>
-            <span className="num text-[13px] text-ink text-right">
-              {pct(negociada)}
-            </span>
-          </div>
-        ) : (
-          <p className="text-[12px] text-ink-2">
-            Este MLB não consta no relatório de preço ideal vigente. Importe um
-            relatório mais recente para calcular o desvio.
-          </p>
-        )}
       </div>
 
       {/* histórico de preço */}
@@ -788,13 +690,6 @@ function FichaAnuncio({
                 cursor={{ stroke: "var(--line-2)", strokeDasharray: "3 3" }}
                 content={<ChartTooltip formatter={(v) => money(v)} />}
               />
-              {ideal > 0 && (
-                <ReferenceLine
-                  y={ideal}
-                  stroke="var(--ink-3)"
-                  strokeDasharray="4 3"
-                />
-              )}
               <Line
                 type="monotone"
                 dataKey="preco"
@@ -811,9 +706,6 @@ function FichaAnuncio({
           className="mt-2"
           items={[
             { label: "Preço praticado", color: "var(--s1)" },
-            ...(ideal > 0
-              ? [{ label: "Preço ideal vigente", color: "var(--ink-3)" }]
-              : []),
           ]}
         />
       </div>

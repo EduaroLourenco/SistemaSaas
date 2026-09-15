@@ -350,10 +350,6 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
                 <span className="num text-[11px]">({filtrosAtivos})</span>
               )}
             </Button>
-            <Button size="sm" className="hidden sm:inline-flex">
-              <Download className="w-3.5 h-3.5" />
-              Exportar
-            </Button>
           </>
         }
         filters={
@@ -409,46 +405,6 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
       />
 
       <PageBody>
-        {/* ── Importar relatório ─────────────────────────────── */}
-        <Panel className="overflow-hidden">
-          <PanelHeader
-            title="Importar relatório de preço ideal"
-            hint="a data-base define a qual recorte o preço alvo pertence"
-          />
-          <div className="p-4 grid lg:grid-cols-[1fr_280px] gap-4">
-            <FileDrop
-              hint="Arraste a planilha de preço ideal ou clique para escolher"
-              files={arquivos}
-              onFiles={(f) => setArquivos((prev) => [...prev, ...f])}
-              onRemove={(i) => setArquivos((prev) => prev.filter((_, x) => x !== i))}
-            />
-            <div className="flex flex-col gap-3">
-              <Field
-                label="Data-base"
-                hint="Referência do cálculo dentro da planilha."
-              >
-                <Input
-                  type="date"
-                  value={dataBase}
-                  onChange={(e) => setDataBase(e.target.value)}
-                  className="max-sm:h-11"
-                />
-              </Field>
-              <Button
-                variant="primary"
-                className="max-sm:h-11"
-                disabled={arquivos.length === 0 || !dataBase}
-              >
-                Processar relatório
-              </Button>
-              <p className="text-[11px] text-ink-3">
-                As linhas são casadas por MLB com o catálogo. O preço praticado
-                sai do catálogo; o alvo e a comissão saem daqui.
-              </p>
-            </div>
-          </div>
-        </Panel>
-
         {/* ── Relatórios importados ──────────────────────────── */}
         <Panel className="overflow-hidden">
           <PanelHeader
@@ -712,9 +668,6 @@ function ComparativoLinha({
         <>
           <Button className="flex-1 max-sm:h-11" onClick={onClose}>
             Fechar
-          </Button>
-          <Button variant="primary" className="flex-1 max-sm:h-11">
-            Aplicar preço ideal
           </Button>
         </>
       }

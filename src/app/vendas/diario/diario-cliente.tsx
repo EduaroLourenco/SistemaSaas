@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Delta, Badge } from "@/components/ui/primitives";
@@ -237,7 +238,7 @@ export default function ComparativoDiario({
   const router = useRouter();
 
   function trocarCanal(id: string) {
-    const url = id ? `/vendas/diario?canal=${id}` : "/vendas/diario";
+    const url = id ? `/vendas/diario?canal=${encodeURIComponent(id)}` : "/vendas/diario";
     router.push(url);
   }
 
@@ -390,18 +391,12 @@ export default function ComparativoDiario({
         filters={
           <label className="flex items-center gap-2 shrink-0">
             <span className="label">Canal</span>
-            <Select
-              value={canalAtual}
-              onChange={(e) => trocarCanal(e.target.value)}
-              aria-label="Filtrar por canal"
-            >
-              <option value="">Todos os canais</option>
-              {dados.canais.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </Select>
+            <SelectRecorte
+              grupos={dados.opcoes}
+              valor={canalAtual}
+              onChange={trocarCanal}
+              className="w-[240px]"
+            />
           </label>
         }
       />

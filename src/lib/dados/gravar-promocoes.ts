@@ -26,7 +26,6 @@ export type ResumoGravacao = {
   semAnuncio: number;
 };
 
-const OPERACAO = "00000000-0000-0000-0000-000000000101";
 
 /**
  * O supabase-js lança objeto simples, não Error. Sem esta conversão a
@@ -48,7 +47,15 @@ export async function gravarProcessamento({
   descontoExtra,
   importacaoId,
   usuarioId,
+  operacaoId,
 }: {
+  /**
+   * A operação dona do processamento. Era uma constante no código — toda
+   * promoção caía na operação de demonstração, qualquer que fosse a
+   * empresa. Com mais de uma empresa no sistema, isso misturaria campanhas
+   * e histórico entre elas.
+   */
+  operacaoId: string;
   linhas: LinhaProcessada[];
   arquivos: string[];
   descontoExtra: number;
@@ -67,7 +74,7 @@ export async function gravarProcessamento({
   const { data: proc, error: erroProc } = await sb
     .from("processamentos_promocao")
     .insert({
-      operacao_id: OPERACAO,
+      operacao_id: operacaoId,
       importacao_id: importacaoId ?? null,
       itens_lidos: linhas.length,
       itens_aprovados: aprovados,
@@ -105,7 +112,7 @@ export async function gravarProcessamento({
     const { data: existente } = await sb
       .from("campanhas")
       .select("id")
-      .eq("operacao_id", OPERACAO)
+      .eq("operacao_id", operacaoId)
       .eq("nome", nome)
       .maybeSingle();
 
@@ -117,7 +124,7 @@ export async function gravarProcessamento({
     const { data: nova, error } = await sb
       .from("campanhas")
       .insert({
-        operacao_id: OPERACAO,
+        operacao_id: operacaoId,
         canal_id: canal?.id,
         nome,
         tem_reducao_tarifa: comReducao,
@@ -164,7 +171,7 @@ export async function gravarProcessamento({
     if (!anuncioId) semAnuncio++;
 
     historico.push({
-      operacao_id: OPERACAO,
+      operacao_id: operacaoId,
       processamento_id: processamentoId,
       anuncio_id: anuncioId,
       mlb: l.mlb,
@@ -198,7 +205,7 @@ export async function gravarProcessamento({
      * de entrar ou não sai justamente de comparar as faixas entre si.
      */
     itens.push({
-      operacao_id: OPERACAO,
+      operacao_id: operacaoId,
       processamento_id: processamentoId,
       campanha_id: campanhaId,
       anuncio_id: anuncioId,

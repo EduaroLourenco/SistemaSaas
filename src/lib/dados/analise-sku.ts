@@ -2,6 +2,14 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
+import {
+  lerRecorte,
+  noRecorte,
+  opcoesRecorte,
+  nomeRecorte,
+  type GrupoRecorte,
+} from "@/lib/recorte";
+import { carregarContasRecorte } from "./contas-recorte";
 
 /**
  * Desempenho de venda por SKU, mês e canal.
@@ -69,7 +77,11 @@ export type DadosAnaliseSku = {
   canais: CanalSku[];
   periodo: { inicio: string; fim: string };
   limites: { inicio: string; fim: string };
+  /** Recorte atual, no formato da URL (`uuid` do canal ou `conta:uuid`). */
   canalId: string | null;
+  /** Nome do recorte para o arquivo exportado; nulo sem filtro. */
+  rotuloRecorte: string | null;
+  opcoes: GrupoRecorte[];
   totais: { unidades: number; receita: number; pedidos: number; skus: number };
   /** Quantos SKUs fazem 50% e 80% da receita. */
   concentracao: { metade: number; oitenta: number };
@@ -86,7 +98,8 @@ export async function carregarAnaliseSku(
 ): Promise<DadosAnaliseSku> {
   const sb = await clienteServidor();
 
-  const [pedidosRaw, itensRaw, exclusoes, contasRaw, canaisRaw] =
+  const recorte = lerRecorte(filtro.canalId);
+  const [pedidosRaw, itensRaw, exclusoes, contasRaw, canaisRaw, contasRecorte] =
     await Promise.all([
       paginar(() =>
         sb
@@ -103,6 +116,7 @@ export async function carregarAnaliseSku(
       carregarExclusoes(),
       sb.from("contas_canal").select("id,canal_id").limit(200),
       sb.from("canais").select("id,nome").order("nome"),
+      carregarContasRecorte(),
     ]);
 
   type Ped = {
@@ -152,7 +166,7 @@ export async function carregarAnaliseSku(
         if (p.cancelado) return false;
         const d = String(p.data).slice(0, 10);
         if (d < inicio || d > fim) return false;
-        if (filtro.canalId && p.canalId !== filtro.canalId) return false;
+        if (!noRecorte(recorte, p)) return false;
         return true;
       })
       .map((p) => [p.id, p])
@@ -286,6 +300,8 @@ export async function carregarAnaliseSku(
     periodo: { inicio, fim },
     limites,
     canalId: filtro.canalId ?? null,
+    rotuloRecorte: filtro.canalId ? nomeRecorte(recorte, contasRecorte) : null,
+    opcoes: opcoesRecorte(contasRecorte),
     totais: {
       unidades: linhas.reduce((s, l) => s + l.unidades, 0),
       receita: r2(receitaTotal),

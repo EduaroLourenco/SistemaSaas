@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -189,17 +190,11 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
               />
             </Field>
             <Field label="Canal">
-              <Select
-                value={filtro.canal}
-                onChange={(e) => setFiltro({ ...filtro, canal: e.target.value })}
-              >
-                <option value="">Todos os canais</option>
-                {canais.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </Select>
+              <SelectRecorte
+                grupos={dados.opcoes}
+                valor={filtro.canal}
+                onChange={(v) => setFiltro({ ...filtro, canal: v })}
+              />
             </Field>
             <Button variant="primary" onClick={aplicar}>
               Aplicar

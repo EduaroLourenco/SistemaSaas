@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Badge, EmptyState } from "@/components/ui/primitives";
@@ -772,10 +773,13 @@ export default function ProcessarPromocoes() {
                     </>
                   )}
                 </Button>
-                <Button className="max-sm:h-11">
+                <Link
+                  href="/promocoes/historico"
+                  className="h-8 max-sm:h-11 px-3 inline-flex items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] text-ink hover:bg-panel-3 transition-colors"
+                >
                   <History className="w-3.5 h-3.5" />
                   Ver no histórico
-                </Button>
+                </Link>
               </div>
 
               <p className="text-[11px] text-ink-3 mt-3">

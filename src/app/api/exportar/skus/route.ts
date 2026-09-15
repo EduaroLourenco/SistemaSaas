@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     }
 
     const nomeCanal =
-      dados.canais.find((c) => c.id === canalId)?.nome ?? null;
+      dados.rotuloRecorte;
     const buffer = await montarPlanilhaSkus(dados, nomeCanal);
 
     // O nome carrega o recorte: três exportações de canais diferentes na

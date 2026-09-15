@@ -165,7 +165,12 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
   const SEMANAS = React.useMemo(
     () =>
       dados.linhas.length
-        ? agruparSemanas(dados.linhas, dados.ano, dados.ultimaData, canal || undefined)
+        ? agruparSemanas(
+            dados.linhas,
+            dados.ano,
+            dados.ultimaData,
+            dados.canais.find((c) => c.id === canal)?.agrupa ?? (canal || undefined)
+          )
         : dados.semanas,
     [dados, canal]
   );

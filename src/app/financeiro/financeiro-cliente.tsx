@@ -1,5 +1,7 @@
 "use client";
 
+import { SelectRecorte } from "@/components/ui/select-recorte";
+import type { GrupoRecorte } from "@/lib/recorte";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -98,7 +100,7 @@ export default function FinanceiroCliente({
   resultado: r,
   mensal,
   visoes,
-  canais,
+  opcoes,
   inicio,
   fim,
   canalId,
@@ -106,7 +108,7 @@ export default function FinanceiroCliente({
   resultado: Resultado;
   mensal: Resultado[];
   visoes: Record<Dimensao, LinhaMargem[]>;
-  canais: { id: string; nome: string }[];
+  opcoes: GrupoRecorte[];
   inicio: string;
   fim: string;
   canalId: string;
@@ -157,17 +159,11 @@ export default function FinanceiroCliente({
               />
             </Field>
             <Field label="Canal">
-              <Select
-                value={filtro.canal}
-                onChange={(e) => setFiltro({ ...filtro, canal: e.target.value })}
-              >
-                <option value="">Todos</option>
-                {canais.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </Select>
+              <SelectRecorte
+                grupos={opcoes}
+                valor={filtro.canal}
+                onChange={(v) => setFiltro({ ...filtro, canal: v })}
+              />
             </Field>
             <Button variant="primary" onClick={aplicar}>
               Aplicar

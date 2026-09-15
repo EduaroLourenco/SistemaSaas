@@ -25,7 +25,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const nomeCanal = dados.canais.find((c) => c.id === canalId)?.nome ?? null;
+    const nomeCanal = dados.rotuloRecorte;
     const { buffer, skus, faixas } = await montarPlanilhaPreco(dados, nomeCanal);
 
     if (!skus) {

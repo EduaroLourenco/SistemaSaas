@@ -72,14 +72,14 @@ type Soma = {
   pedidosComVisita: number;
 };
 
-function somar(linhas: LinhaDia[], de: string, ate: string, canal?: string): Soma {
+function somar(linhas: LinhaDia[], de: string, ate: string, alvo?: string[]): Soma {
   const t: Soma = {
     receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0,
     pedidosCancelados: 0, pedidosComVisita: 0,
   };
   for (const l of linhas) {
     if (l.data < de || l.data > ate) continue;
-    if (canal && l.canalId !== canal) continue;
+    if (alvo && !alvo.includes(l.canalId)) continue;
     t.receita += l.receita;
     t.pedidos += l.pedidos;
     t.visitas += l.visitas;
@@ -100,8 +100,17 @@ export function montarRoteiro(
   canal?: string
 ): Slide[] {
   const ant = periodoAnterior(de, ate);
-  const a = somar(linhas, de, ate, canal);
-  const b = somar(linhas, ant.de, ant.ate, canal);
+  /*
+   * O recorte vira a lista de contas que ele cobre. As linhas são por
+   * conta; o grupo "Mercado Livre" existe só no seletor. Comparar o id do
+   * grupo com o da linha zerava a apresentação inteira do canal.
+   */
+  const escolhido = canal
+    ? (canais.find((c) => c.id === canal) as { agrupa?: string[] } | undefined)
+    : undefined;
+  const alvo = canal ? (escolhido?.agrupa ?? [canal]) : undefined;
+  const a = somar(linhas, de, ate, alvo);
+  const b = somar(linhas, ant.de, ant.ate, alvo);
 
   const nomeCanal = canal ? canais.find((c) => c.id === canal)?.nome : null;
   const escopo = nomeCanal ?? "todos os canais";
@@ -111,7 +120,7 @@ export function montarRoteiro(
   const porDia = new Map<string, { receita: number; pedidos: number }>();
   for (const l of linhas) {
     if (l.data < de || l.data > ate) continue;
-    if (canal && l.canalId !== canal) continue;
+    if (alvo && !alvo.includes(l.canalId)) continue;
     const d = porDia.get(l.data) ?? { receita: 0, pedidos: 0 };
     d.receita += l.receita;
     d.pedidos += l.pedidos;

@@ -230,6 +230,12 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
               );
             })}
           </div>
+          {d.metaIncompleta.length > 0 && (
+            <p className="text-[11.5px] text-ink-3 mt-2.5">
+              A meta de {d.metaIncompleta.join(", ")} é do canal inteiro e ficou de fora:
+              marque todas as contas dele para comparar com a meta.
+            </p>
+          )}
         </Panel>
 
         {/* ── O gap ── */}

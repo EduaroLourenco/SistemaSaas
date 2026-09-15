@@ -7,6 +7,8 @@ import {
   type Dimensao,
 } from "@/lib/dados/margem";
 import FinanceiroCliente from "./financeiro-cliente";
+import { carregarContasRecorte } from "@/lib/dados/contas-recorte";
+import { opcoesRecorte } from "@/lib/recorte";
 
 export const dynamic = "force-dynamic";
 
@@ -52,12 +54,11 @@ export default async function Pagina({
   const fim = params.fim ?? padrao.fim;
   const canalId = params.canal || undefined;
 
-  const sb = await clienteServidor();
-  const [resultado, mensal, base, canais] = await Promise.all([
+  const [resultado, mensal, base, contas] = await Promise.all([
     carregarResultado(inicio, fim, canalId),
     carregarResultadoMensal(inicio, fim, canalId),
     carregarBaseMargem({ inicio, fim, canalId }),
-    sb.from("canais").select("id,nome").order("nome"),
+    carregarContasRecorte(),
   ]);
 
   const visoes = Object.fromEntries(
@@ -69,7 +70,7 @@ export default async function Pagina({
       resultado={resultado}
       mensal={mensal}
       visoes={visoes}
-      canais={(canais.data ?? []) as { id: string; nome: string }[]}
+      opcoes={opcoesRecorte(contas)}
       inicio={inicio}
       fim={fim}
       canalId={canalId ?? ""}

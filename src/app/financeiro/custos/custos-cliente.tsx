@@ -1,5 +1,7 @@
 "use client";
 
+import { SelectRecorte } from "@/components/ui/select-recorte";
+import type { GrupoRecorte } from "@/lib/recorte";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -155,6 +157,7 @@ export default function CustosCliente({
   completos,
   despesas,
   canais,
+  opcoes,
   adsPorMes,
   inicio,
   fim,
@@ -165,6 +168,7 @@ export default function CustosCliente({
   completos: number;
   despesas: DespesaCanal[];
   canais: CanalSimples[];
+  opcoes: GrupoRecorte[];
   adsPorMes: { competencia: string; canalNome: string; valor: number }[];
   inicio: string;
   fim: string;
@@ -425,18 +429,12 @@ export default function CustosCliente({
             onChange={(e) => aplicarRecorte("fim", e.target.value)}
             className="w-[150px]"
           />
-          <Select
-            value={canalId}
-            onChange={(e) => aplicarRecorte("canal", e.target.value)}
-            className="w-[190px]"
-          >
-            <option value="">Todos os canais</option>
-            {canais.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
-              </option>
-            ))}
-          </Select>
+          <SelectRecorte
+            grupos={opcoes}
+            valor={canalId}
+            onChange={(v) => aplicarRecorte("canal", v)}
+            className="w-[240px]"
+          />
           <span className="text-[11.5px] text-ink-3 ml-auto">
             O recorte muda o praticado. O cadastro é do produto e não muda.
           </span>

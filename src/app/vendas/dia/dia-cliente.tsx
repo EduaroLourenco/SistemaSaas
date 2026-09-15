@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -7,7 +8,7 @@ import { Panel, Badge, Delta, EmptyState } from "@/components/ui/primitives";
 import { Select } from "@/components/ui/controls";
 import { money, moneyShort, pct, count, nomeDoDia } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { CalendarDays, Trophy, TrendingDown } from "lucide-react";
+import { AlertTriangle, CalendarDays, Trophy, TrendingDown } from "lucide-react";
 import type { DadosDia, DiaLinha } from "@/lib/dados/dia";
 
 /**
@@ -28,6 +29,50 @@ import type { DadosDia, DiaLinha } from "@/lib/dados/dia";
  */
 
 const br = (iso: string) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
+
+/** "hoje às 13:04", "ontem às 01:02" ou "09/09 às 13:05" — sempre em Brasília. */
+function quando(iso: string) {
+  const fmt = (d: Date, o: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", ...o }).format(d);
+  const d = new Date(iso);
+  const dia = fmt(d, { day: "2-digit", month: "2-digit" });
+  const hora = fmt(d, { hour: "2-digit", minute: "2-digit" });
+  const hoje = fmt(new Date(), { day: "2-digit", month: "2-digit" });
+  const ontem = fmt(new Date(Date.now() - 86_400_000), { day: "2-digit", month: "2-digit" });
+  const rotulo = dia === hoje ? "hoje" : dia === ontem ? "ontem" : dia;
+  return `${rotulo} às ${hora}`;
+}
+
+function textoAtualizacao(a: DadosDia["atualizacao"]) {
+  if (!a) return null;
+  const ref = a.ok ? a.em : a.ultimaOk;
+  if (!ref) return "canal ainda sem sincronização concluída";
+  return `atualizado ${quando(ref)}${a.ok && a.automatica ? " (automático)" : ""}`;
+}
+
+/**
+ * Faixa de aviso quando a última sincronização falhou.
+ *
+ * Fica acima dos números, e não num rodapé, porque o que ela diz muda a
+ * leitura de tudo abaixo: o dia pode estar incompleto.
+ */
+function AvisoFalha({ a }: { a: DadosDia["atualizacao"] }) {
+  if (!a || a.ok) return null;
+  return (
+    <div className="panel bg-warn-wash border-transparent px-3 py-2.5 mb-3 flex gap-2.5">
+      <AlertTriangle className="w-4 h-4 text-warn shrink-0 mt-px" strokeWidth={2} />
+      <p className="text-[12px] text-ink-2">
+        <span className="font-semibold text-ink">
+          A sincronização de {quando(a.em)} falhou.
+        </span>{" "}
+        {a.ultimaOk
+          ? `Os números abaixo são de ${quando(a.ultimaOk)} e podem estar incompletos.`
+          : "Nenhuma sincronização foi concluída ainda."}
+        {a.erro && <span className="block text-ink-3 mt-0.5">{a.erro}</span>}
+      </p>
+    </div>
+  );
+}
 
 export default function DiaCliente({ dados }: { dados: DadosDia }) {
   const router = useRouter();
@@ -66,26 +111,28 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
       <PageHeader
         title="Dia"
         breadcrumb="Vendas"
-        description={`${nomeDoDia(h.diaSemana)}, ${br(h.data)} · ${dados.mesRotulo}`}
+        description={[
+          `${nomeDoDia(h.diaSemana)}, ${br(h.data)}`,
+          dados.mesRotulo,
+          textoAtualizacao(dados.atualizacao),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         actions={
           <div className="flex items-center gap-2">
-            <Select
-              value={dados.canalId}
-              onChange={(e) => ir("canal", e.target.value)}
-              className="w-[180px]"
-            >
-              <option value="">Todos os canais</option>
-              {dados.canais.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </Select>
+            <SelectRecorte
+              grupos={dados.opcoes}
+              valor={dados.canalId}
+              onChange={(v) => ir("canal", v)}
+              className="w-[240px]"
+            />
           </div>
         }
       />
 
       <PageBody>
+        <AvisoFalha a={dados.atualizacao} />
+
         {/* ── O dia ── */}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden mb-3">
           <Cartao
@@ -101,7 +148,9 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
                 ? h.sobraMeta >= 0
                   ? `sobrou ${moneyShort(h.sobraMeta)}`
                   : `faltou ${moneyShort(-h.sobraMeta)}`
-                : "sem meta para o dia"
+                : dados.metaPorConta
+                  ? "meta é do canal inteiro"
+                  : "sem meta para o dia"
             }
             tom={h.bateu === null ? undefined : h.bateu ? "up" : "down"}
           />

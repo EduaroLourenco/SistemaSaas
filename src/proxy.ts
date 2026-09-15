@@ -8,7 +8,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLICAS = ["/entrar", "/auth"];
+/*
+ * `/api/cron/` não tem sessão: quem chama é o agendador da Vercel. Não é
+ * rota aberta — cada uma confere o CRON_SECRET e recusa sem ele. A barra
+ * final impede que uma rota futura como `/api/cronograma` herde a isenção.
+ */
+const PUBLICAS = ["/entrar", "/auth", "/api/cron/"];
 
 export async function proxy(req: NextRequest) {
   let resposta = NextResponse.next({ request: req });

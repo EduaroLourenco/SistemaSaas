@@ -3,6 +3,14 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
 import { comissaoUtilizavel } from "./comissao-plausivel";
+import {
+  lerRecorte,
+  noRecorte,
+  opcoesRecorte,
+  nomeRecorte,
+  type GrupoRecorte,
+} from "@/lib/recorte";
+import { carregarContasRecorte } from "./contas-recorte";
 
 /**
  * Performance de preço: a que preço cada SKU vende melhor.
@@ -205,7 +213,11 @@ export type DadosPerformancePreco = {
   vazio: boolean;
   linhas: LinhaPreco[];
   canais: { id: string; nome: string }[];
+  /** Recorte atual, no formato da URL (`uuid` do canal ou `conta:uuid`). */
   canalId: string | null;
+  /** Nome do recorte para o arquivo exportado; nulo sem filtro. */
+  rotuloRecorte: string | null;
+  opcoes: GrupoRecorte[];
   dias: number;
   periodo: { inicio: string; fim: string };
   resumo: {
@@ -221,9 +233,10 @@ export async function carregarPerformancePreco(filtro: {
   canalId?: string;
 }): Promise<DadosPerformancePreco> {
   const sb = await clienteServidor();
-  const dias = [7, 30, 90].includes(filtro.dias ?? 90) ? filtro.dias! : 90;
+  const dias = [7, 30, 90].includes(filtro.dias ?? 0) ? filtro.dias! : 90;
 
-  const [pedidosRaw, itensRaw, anunciosRaw, contasRaw, canaisRaw, exclusoes] =
+  const filtroConta = lerRecorte(filtro.canalId);
+  const [pedidosRaw, itensRaw, anunciosRaw, contasRaw, canaisRaw, exclusoes, contasRecorte] =
     await Promise.all([
       paginar(() =>
         sb
@@ -240,13 +253,16 @@ export async function carregarPerformancePreco(filtro: {
       paginar(() =>
         sb
           .from("anuncios")
-          .select("codigo_externo,sku_canal,tipo,preco_atual,comissao_atual,canal_id")
+          .select("codigo_externo,sku_canal,tipo,preco_atual,comissao_atual,canal_id,conta_canal_id")
           .order("codigo_externo")
       ),
       sb.from("contas_canal").select("id,canal_id").limit(200),
       sb.from("canais").select("id,nome").order("nome"),
       carregarExclusoes(),
+      carregarContasRecorte(),
     ]);
+  const opcoes = opcoesRecorte(contasRecorte);
+  const rotuloRecorte = filtro.canalId ? nomeRecorte(filtroConta, contasRecorte) : null;
 
   type Ped = {
     id: string;
@@ -274,6 +290,7 @@ export async function carregarPerformancePreco(filtro: {
     preco_atual: string | number | null;
     comissao_atual: string | number | null;
     canal_id: string;
+    conta_canal_id: string | null;
   };
 
   const canalDaConta = new Map(
@@ -291,7 +308,13 @@ export async function carregarPerformancePreco(filtro: {
   const pedidos = mantidas as unknown as (Ped & { canalId: string })[];
 
   if (!pedidos.length) {
-    return vazio(dias, (canaisRaw.data ?? []) as { id: string; nome: string }[], filtro.canalId);
+    return vazio(
+      dias,
+      (canaisRaw.data ?? []) as { id: string; nome: string }[],
+      filtro.canalId,
+      opcoes,
+      rotuloRecorte
+    );
   }
 
   const fim = pedidos.map((p) => String(p.data).slice(0, 10)).sort().slice(-1)[0];
@@ -305,7 +328,7 @@ export async function carregarPerformancePreco(filtro: {
         if (p.cancelado) return false;
         const d = String(p.data).slice(0, 10);
         if (d < inicio || d > fim) return false;
-        if (filtro.canalId && p.canalId !== filtro.canalId) return false;
+        if (!noRecorte(filtroConta, p)) return false;
         return true;
       })
       .map((p) => [p.id, p])
@@ -383,7 +406,7 @@ export async function carregarPerformancePreco(filtro: {
   for (const a of anuncios) {
     const sku = (a.sku_canal ?? "").trim();
     if (!sku) continue;
-    if (filtro.canalId && a.canal_id !== filtro.canalId) continue;
+    if (!noRecorte(filtroConta, { canalId: a.canal_id, contaCanalId: a.conta_canal_id })) continue;
     const lista = catalogoPorSku.get(sku) ?? [];
     lista.push(a);
     catalogoPorSku.set(sku, lista);
@@ -640,6 +663,8 @@ export async function carregarPerformancePreco(filtro: {
     linhas,
     canais: (canaisRaw.data ?? []) as { id: string; nome: string }[],
     canalId: filtro.canalId ?? null,
+    rotuloRecorte,
+    opcoes,
     dias,
     periodo: { inicio, fim },
     resumo: {
@@ -654,13 +679,17 @@ export async function carregarPerformancePreco(filtro: {
 function vazio(
   dias: number,
   canais: { id: string; nome: string }[],
-  canalId?: string
+  canalId: string | undefined,
+  opcoes: GrupoRecorte[],
+  rotuloRecorte: string | null
 ): DadosPerformancePreco {
   return {
     vazio: true,
     linhas: [],
     canais,
     canalId: canalId ?? null,
+    rotuloRecorte,
+    opcoes,
     dias,
     periodo: { inicio: "", fim: "" },
     resumo: { comEvidencia: 0, subiuECaiu: 0, acimaDoMelhor: 0, total: 0 },

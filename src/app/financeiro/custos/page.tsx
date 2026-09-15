@@ -1,6 +1,8 @@
 import { carregarCustos, carregarDespesasCanal } from "@/lib/dados/custos";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import CustosCliente from "./custos-cliente";
+import { carregarContasRecorte } from "@/lib/dados/contas-recorte";
+import { opcoesRecorte } from "@/lib/recorte";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +47,10 @@ export default async function Pagina({
   const fim = params.fim ?? padrao.fim;
   const canalId = params.canal || undefined;
 
-  const [custos, canal] = await Promise.all([
+  const [custos, canal, contas] = await Promise.all([
     carregarCustos({ inicio, fim, canalId }),
     carregarDespesasCanal(),
+    carregarContasRecorte(),
   ]);
 
   return (
@@ -57,6 +60,7 @@ export default async function Pagina({
       completos={custos.completos}
       despesas={canal.despesas}
       canais={custos.canais}
+      opcoes={opcoesRecorte(contas)}
       adsPorMes={canal.adsPorMes}
       inicio={inicio}
       fim={fim}

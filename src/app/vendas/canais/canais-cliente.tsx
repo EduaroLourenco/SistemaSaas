@@ -270,10 +270,10 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
         description="Comparativo de desempenho entre canais"
         actions={
           <>
-            <Button size="sm" className="hidden sm:inline-flex">
+            <span className="num hidden sm:inline-flex items-center gap-1.5 text-[12px] text-ink-3">
               <CalendarDays className="w-3.5 h-3.5" />
               {intervalo}
-            </Button>
+            </span>
             <Button
               size="sm"
               className="sm:hidden"
@@ -284,10 +284,6 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
               {ocultos.length > 0 && (
                 <span className="num text-[11px]">({ocultos.length})</span>
               )}
-            </Button>
-            <Button size="sm" variant="primary">
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Exportar</span>
             </Button>
           </>
         }

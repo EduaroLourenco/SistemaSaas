@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import * as React from "react";
 import {
   PageHeader,
@@ -141,15 +142,10 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         description="Consolidado de todos os canais"
         actions={
           <>
-            <Button size="sm">
+            <span className="num hidden sm:inline-flex items-center gap-1.5 text-[12px] text-ink-3">
               <CalendarDays className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{recorte.intervalo}</span>
-              <span className="sm:hidden">Período</span>
-            </Button>
-            <Button size="sm" variant="primary">
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Exportar</span>
-            </Button>
+              {recorte.intervalo}
+            </span>
           </>
         }
         filters={
@@ -304,9 +300,12 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
               title="Produtos com maior receita"
               hint="no período"
               action={
-                <Button size="sm" variant="ghost">
+                <Link
+                  href="/vendas/skus"
+                  className="h-7 px-2 inline-flex items-center rounded-r1 text-[12.5px] text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
+                >
                   Ver todos
-                </Button>
+                </Link>
               }
             />
             <DataTable

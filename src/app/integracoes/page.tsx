@@ -1,157 +1,119 @@
-"use client";
-
-import * as React from "react";
+import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { Button, Panel, Badge } from "@/components/ui/primitives";
+import { Panel, Badge } from "@/components/ui/primitives";
 import { SectionTitle } from "@/components/ui/controls";
-import { StatTile } from "@/components/ui/stat-tile";
-import {
-  INTEGRACOES,
-  GRUPOS_INTEGRACAO,
-  type Integracao,
-} from "@/mock/sistema";
-import { count } from "@/lib/format";
-import { Info, Plug, RefreshCw, Settings, CircleAlert } from "lucide-react";
+import { FontesDados } from "@/components/painel/fontes-dados";
+import { carregarFontes } from "@/lib/dados/fontes";
+import { situacaoContas } from "@/lib/meli/cliente";
+import { clienteServidor } from "@/lib/supabase/servidor";
+import { Info } from "lucide-react";
 
-const STATUS_TOM = {
-  conectada: "up",
-  desconectada: "neutral",
-  erro: "down",
-} as const;
+export const dynamic = "force-dynamic";
 
-const STATUS_ROTULO = {
-  conectada: "Conectado",
-  desconectada: "Não conectado",
-  erro: "Erro",
-} as const;
+/**
+ * De onde vem cada número do sistema.
+ *
+ * A versão anterior desta tela era uma vitrine de conectores fictícios —
+ * VTEX "sincronizado há 5 min", botão "Sincronizar tudo" que não fazia
+ * nada. Para quem decide com base no painel, isso é pior que tela vazia:
+ * afirma que um dado está atualizado quando ele nem existe.
+ *
+ * Agora mostra só o que é verdade: as contas do Mercado Livre ligadas por
+ * API, com a última sincronização registrada, e as fontes que entram por
+ * planilha, com até que dia cada uma vai.
+ */
+export default async function Integracoes() {
+  const sb = await clienteServidor();
+  const [fontes, integracoes] = await Promise.all([
+    carregarFontes(),
+    sb
+      .from("integracoes")
+      .select("status,ultima_sincronizacao,ultimo_erro,config")
+      .eq("provedor", "mercado_livre"),
+  ]);
 
-function CartaoIntegracao({ i }: { i: Integracao }) {
-  return (
-    <div className="panel panel-1 flex flex-col">
-      <div className="px-4 pt-3.5 pb-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-ink truncate">{i.nome}</p>
-          <p className="text-[12px] text-ink-3 mt-0.5 leading-snug">
-            {i.sincroniza}
-          </p>
-        </div>
-        <Badge tone={STATUS_TOM[i.status]}>{STATUS_ROTULO[i.status]}</Badge>
-      </div>
-
-      <div className="px-4 pb-3 mt-auto">
-        {i.status === "erro" && i.erro && (
-          <div className="flex gap-2 mb-3 px-2.5 py-2 rounded-r1 bg-down-wash">
-            <CircleAlert
-              className="w-3.5 h-3.5 text-down shrink-0 mt-px"
-              strokeWidth={2}
-            />
-            <p className="text-[11px] text-ink-2">{i.erro}</p>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between gap-3 pt-3 border-t border-line">
-          <span className="min-w-0">
-            <span className="block text-[11px] text-ink-2 truncate">
-              {i.resumo}
-            </span>
-            {i.status === "conectada" && (
-              <span className="num block text-[11px] text-ink-3">
-                sincronizado {i.ultimaSincronizacao}
-              </span>
-            )}
-          </span>
-          <Button size="sm" variant={i.status === "conectada" ? "default" : "primary"}>
-            {i.status === "conectada" ? (
-              <>
-                <Settings className="w-3.5 h-3.5" />
-                Configurar
-              </>
-            ) : i.status === "erro" ? (
-              <>
-                <RefreshCw className="w-3.5 h-3.5" />
-                Reconectar
-              </>
-            ) : (
-              <>
-                <Plug className="w-3.5 h-3.5" />
-                Conectar
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
+  type Linha = {
+    status: string;
+    ultima_sincronizacao: string | null;
+    ultimo_erro: string | null;
+    config: { conta?: string } | null;
+  };
+  // Sem a migração 19 a coluna `config.conta` não é preenchida; a tela só
+  // perde a data da última sincronização, e continua dizendo o resto.
+  const porConta = new Map(
+    ((integracoes.data ?? []) as Linha[]).map((l) => [l.config?.conta ?? "", l])
   );
-}
 
-export default function Integracoes() {
-  const conectadas = INTEGRACOES.filter((i) => i.status === "conectada").length;
-  const comErro = INTEGRACOES.filter((i) => i.status === "erro").length;
+  const quando = (iso: string) =>
+    new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
 
   return (
     <>
       <PageHeader
         title="Integrações"
-        description="Conectores que alimentam o sistema automaticamente"
-        actions={
-          <Button size="sm" variant="primary">
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Sincronizar tudo</span>
-          </Button>
-        }
+        description="De onde vem cada número do sistema"
       />
 
       <PageBody>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatTile
-            label="Conectadas"
-            value={count(conectadas)}
-            hint={`de ${INTEGRACOES.length} disponíveis`}
+        <div className="space-y-3">
+          <SectionTitle
+            title="Mercado Livre · API"
+            hint="Sincroniza sozinho às 13h e à 01h (horário de Brasília)"
           />
-          <StatTile
-            label="Com erro"
-            value={count(comErro)}
-            delta={comErro > 0 ? 100 : 0}
-            inverse
-            hint="precisam de atenção"
-          />
-          <StatTile label="Última sincronização" value="há 5 min" hint="VTEX" />
-          <StatTile
-            label="Próxima janela"
-            value="em 48 min"
-            hint="a cada hora"
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {situacaoContas().map((c) => {
+              const reg = porConta.get(c.slug);
+              const comErro = reg?.status === "erro" || reg?.status === "expirada";
+              return (
+                <Panel key={c.slug} className="px-4 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-ink truncate">{c.nome}</p>
+                      <p className="text-[12px] text-ink-3 mt-0.5">
+                        Pedidos, visitas, catálogo, estoque, comissão e frete
+                      </p>
+                    </div>
+                    <Badge tone={!c.conectada ? "neutral" : comErro ? "down" : "up"}>
+                      {!c.conectada ? "Não conectada" : comErro ? "Com erro" : "Conectada"}
+                    </Badge>
+                  </div>
+                  <p className="num text-[11.5px] text-ink-2 mt-3 pt-3 border-t border-line">
+                    {reg?.ultima_sincronizacao
+                      ? `Última sincronização: ${quando(reg.ultima_sincronizacao)}`
+                      : c.conectada
+                        ? "Ainda sem sincronização registrada"
+                        : "Enquanto não conectada, os números desta conta entram por planilha"}
+                  </p>
+                  {comErro && reg?.ultimo_erro && (
+                    <p className="text-[11.5px] text-down mt-1.5">{reg.ultimo_erro}</p>
+                  )}
+                </Panel>
+              );
+            })}
+          </div>
         </div>
 
-        <Panel className="px-4 py-3 flex gap-2.5">
-          <Info className="w-4 h-4 text-ink-3 shrink-0 mt-px" strokeWidth={1.75} />
-          <p className="text-[12px] text-ink-2">
-            Enquanto um canal não estiver conectado, os números dele entram por
-            planilha na tela de{" "}
-            <span className="font-medium text-ink">Vendas · Lançamentos</span>. A
-            conexão não apaga o que já foi lançado à mão — ela passa a preencher os
-            dias seguintes e marca a origem de cada linha.
-          </p>
-        </Panel>
-
-        {GRUPOS_INTEGRACAO.map((grupo) => {
-          const itens = INTEGRACOES.filter((i) => i.grupo === grupo);
-          return (
-            <div key={grupo} className="space-y-3">
-              <SectionTitle
-                title={grupo}
-                hint={`${itens.filter((i) => i.status === "conectada").length} de ${
-                  itens.length
-                } conectados`}
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {itens.map((i) => (
-                  <CartaoIntegracao key={i.id} i={i} />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+        <div className="space-y-3">
+          <SectionTitle title="Planilhas" hint="Fontes que entram pela tela de Importar" />
+          <FontesDados dados={fontes} />
+          <Panel className="px-4 py-3 flex gap-2.5">
+            <Info className="w-4 h-4 text-ink-3 shrink-0 mt-px" strokeWidth={1.75} />
+            <p className="text-[12px] text-ink-2">
+              Canais sem API entram por arquivo na tela{" "}
+              <Link href="/importar" className="font-medium text-brand hover:underline">
+                Importar
+              </Link>
+              . A sincronização da API não apaga o que já foi importado: ela
+              preenche os dias seguintes da conta conectada.
+            </p>
+          </Panel>
+        </div>
       </PageBody>
     </>
   );

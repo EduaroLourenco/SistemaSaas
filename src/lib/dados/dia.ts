@@ -3,6 +3,15 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
 import { ticketMedio, pedidosValidos } from "@/lib/ticket";
+import {
+  lerRecorte,
+  noRecorte,
+  recorteParcial,
+  canalDoRecorte,
+  opcoesRecorte,
+  type GrupoRecorte,
+} from "@/lib/recorte";
+import { carregarContasRecorte } from "./contas-recorte";
 
 /**
  * O dia, e os dias do mês ao redor dele.
@@ -69,11 +78,61 @@ export type DadosDia = {
   /** Quantos dias do mês bateram a meta, de quantos com meta. */
   bateram: number;
   comMeta: number;
-  canais: { id: string; nome: string }[];
+  /** Opções do seletor: canais e, onde há mais de uma, suas contas. */
+  opcoes: GrupoRecorte[];
+  /** O recorte atual, no formato da URL (`uuid` ou `conta:uuid`). */
   canalId: string;
+  /**
+   * Recorte é uma conta que divide o canal com outra. A meta é gravada por
+   * canal, então nesse caso ela não se aplica e a tela diz por quê.
+   */
+  metaPorConta: boolean;
   /** Última data com movimento na base. */
   ultimaData: string | null;
+  /** Última sincronização com o canal; nulo sem a migração 19. */
+  atualizacao: Atualizacao | null;
 };
+
+export type Atualizacao = {
+  /** Quando terminou a execução mais recente. */
+  em: string;
+  ok: boolean;
+  automatica: boolean;
+  erro: string | null;
+  /** Se a mais recente falhou: quando foi a última que deu certo. */
+  ultimaOk: string | null;
+};
+
+/**
+ * De quando é o número que a tela mostra.
+ *
+ * Sem isso, uma sincronização parada é invisível: a tela segue exibindo
+ * o último dia que entrou, com a mesma cara de sempre, e a primeira
+ * notícia do problema é uma decisão tomada em cima de dado velho.
+ */
+async function carregarAtualizacao(
+  sb: Awaited<ReturnType<typeof clienteServidor>>
+): Promise<Atualizacao | null> {
+  const { data, error } = await sb
+    .from("sincronizacoes")
+    .select("terminada_em,status,origem,erro")
+    .not("terminada_em", "is", null)
+    .order("iniciada_em", { ascending: false })
+    .limit(20);
+  // Coluna `origem` ausente (migração 19 não rodada) não é erro da tela.
+  if (error || !data?.length) return null;
+  type L = { terminada_em: string; status: string; origem: string | null; erro: string | null };
+  const linhas = data as L[];
+  const ok = (l: L) => l.status === "concluida";
+  const [ultima] = linhas;
+  return {
+    em: ultima.terminada_em,
+    ok: ok(ultima),
+    automatica: ultima.origem === "agendada",
+    erro: ok(ultima) ? null : ultima.erro,
+    ultimaOk: linhas.find(ok)?.terminada_em ?? null,
+  };
+}
 
 import { nomeDoDia } from "@/lib/format";
 
@@ -94,7 +153,7 @@ export async function carregarDia(
 ): Promise<DadosDia> {
   const sb = await clienteServidor();
 
-  const [diariasRaw, metasRaw, canaisRaw, exclusoes] = await Promise.all([
+  const [diariasRaw, metasRaw, contas, exclusoes, atualizacao] = await Promise.all([
     paginar(() =>
       sb
         .from("vendas_diarias")
@@ -107,9 +166,13 @@ export async function carregarDia(
     paginar(() =>
       sb.from("metas_diarias").select("data,receita_meta,canal_id")
     ),
-    sb.from("canais").select("id,nome").eq("ativo", true).order("nome"),
+    carregarContasRecorte(),
     carregarExclusoes(),
+    carregarAtualizacao(sb),
   ]);
+  const recorte = lerRecorte(canalId);
+  const metaPorConta = recorteParcial(recorte, contas);
+  const canalDaMeta = canalDoRecorte(recorte, contas);
 
   type Linha = {
     data: string;
@@ -132,17 +195,17 @@ export async function carregarDia(
     exclusoes
   );
   let linhas = mantidas as unknown as Linha[];
-  if (canalId) linhas = linhas.filter((l) => l.canal_id === canalId);
-
-  const canais = ((canaisRaw.data ?? []) as { id: string; nome: string }[]).map(
-    (c) => ({ id: c.id, nome: c.nome })
+  linhas = linhas.filter((l) =>
+    noRecorte(recorte, { canalId: l.canal_id, contaCanalId: l.conta_canal_id })
   );
+
+  const opcoes = opcoesRecorte(contas);
 
   if (!linhas.length) {
     return {
       vazio: true, hoje: null, mes: [], mesRotulo: "", comparacoes: [],
       melhor: null, pior: null, bateram: 0, comMeta: 0,
-      canais, canalId: canalId ?? "", ultimaData: null,
+      opcoes, canalId: canalId ?? "", metaPorConta, ultimaData: null, atualizacao,
     };
   }
 
@@ -182,7 +245,8 @@ export async function carregarDia(
   for (const m of metasRaw as unknown as {
     data: string; receita_meta: string | number; canal_id: string;
   }[]) {
-    if (canalId && m.canal_id !== canalId) continue;
+    if (metaPorConta) continue;
+    if (canalDaMeta && m.canal_id !== canalDaMeta) continue;
     const k = String(m.data).slice(0, 10);
     metas.set(k, (metas.get(k) ?? 0) + n(m.receita_meta));
   }
@@ -307,8 +371,10 @@ export async function carregarDia(
     pior,
     bateram,
     comMeta: comMeta.length,
-    canais,
+    opcoes,
     canalId: canalId ?? "",
+    metaPorConta,
     ultimaData,
+    atualizacao,
   };
 }

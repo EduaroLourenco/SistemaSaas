@@ -12,6 +12,8 @@ import {
   type AnuncioCompleto,
   type Pedido,
 } from "./cliente";
+import { iniciarRegistro, concluirRegistro, type Origem, type Registro } from "./historico";
+import { integracaoDa, vincularIntegracao } from "./tokens";
 
 /**
  * Traz do Mercado Livre para o banco.
@@ -585,6 +587,8 @@ export type OpcoesSincronizacao = {
   diasVisitas?: number;
   /** Desliga etapas, para rodar só o que interessa. */
   etapas?: { catalogo?: boolean; pedidos?: boolean; visitas?: boolean; diarias?: boolean };
+  /** Deixa registro em `sincronizacoes`. Sem isto, a execução não é anotada. */
+  registro?: { origem: Origem; turno?: string };
 };
 
 function hoje() {
@@ -594,11 +598,49 @@ function diasAtras(n: number) {
   return new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 }
 
-export async function sincronizarMeli(
-  opcoes: OpcoesSincronizacao = {}
-): Promise<Resumo & { conta: string; periodo: { de: string; ate: string } }> {
-  const conta = opcoes.conta ?? "principal";
+type Resultado = Resumo & { conta: string; periodo: { de: string; ate: string } };
 
+/**
+ * O registro é aberto o quanto antes — ANTES do token, se a integração já
+ * existe. A falha mais comum de uma rotina agendada é justamente o token,
+ * e registro aberto só depois dele nunca a veria.
+ *
+ * Na primeira execução da conta a integração ainda não existe; aí o
+ * registro abre logo depois de `vincularIntegracao` criá-la.
+ */
+type RegistroVivo = { atual: Registro };
+
+export async function sincronizarMeli(opcoes: OpcoesSincronizacao = {}): Promise<Resultado> {
+  const conta = opcoes.conta ?? "principal";
+  const reg: RegistroVivo = { atual: null };
+  if (opcoes.registro) {
+    const integ = await integracaoDa(conta);
+    if (integ) {
+      reg.atual = await iniciarRegistro(integ, opcoes.registro.origem, opcoes.registro.turno);
+    }
+  }
+  try {
+    const r = await executar(opcoes, conta, reg);
+    await concluirRegistro(reg.atual, {
+      ok: true,
+      registros: r.anuncios.gravados + r.pedidos.gravados + r.visitas.linhas,
+      resumo: r,
+    });
+    return r;
+  } catch (e) {
+    await concluirRegistro(reg.atual, {
+      ok: false,
+      erro: e instanceof Error ? e.message : String(e),
+    });
+    throw e;
+  }
+}
+
+async function executar(
+  opcoes: OpcoesSincronizacao,
+  conta: Conta,
+  reg: RegistroVivo
+): Promise<Resultado> {
   const de = opcoes.de ?? diasAtras(30);
   const ate = opcoes.ate ?? hoje();
   const diasVisitas = Math.min(150, Math.max(1, opcoes.diasVisitas ?? 30));
@@ -617,6 +659,12 @@ export async function sincronizarMeli(
   };
 
   const ctx = await resolverConta(conta);
+  // Primeiro momento em que se sabe operação e conta de canal: cria a
+  // integração se falta e grava o token que a renovação deixou pendente.
+  const integ = await vincularIntegracao(conta, ctx);
+  if (opcoes.registro && !reg.atual && integ) {
+    reg.atual = await iniciarRegistro(integ, opcoes.registro.origem, opcoes.registro.turno);
+  }
 
   let mlbs: string[] = [];
 

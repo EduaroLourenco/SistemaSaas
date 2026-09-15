@@ -1,5 +1,6 @@
 "use client";
 
+import { linkDoAnuncio } from "@/lib/links";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import {
@@ -173,7 +174,6 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
   const [selecionado, setSelecionado] = React.useState<AnuncioAnalisado | null>(null);
   const [marcados, setMarcados] = React.useState<string[]>([]);
   const [filtrosAbertos, setFiltrosAbertos] = React.useState(false);
-  const [importAberto, setImportAberto] = React.useState(false);
   const [mapaAberto, setMapaAberto] = React.useState(false);
   const [comparando, setComparando] = React.useState(false);
 
@@ -501,15 +501,6 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
               <span className="hidden sm:inline">
                 {precos.fase === "buscando" ? "Consultando…" : "Atualizar preços"}
               </span>
-            </Button>
-            <Button size="sm" className="hidden lg:inline-flex">
-              <Download className="w-3.5 h-3.5" />
-              Exportar
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => setImportAberto(true)}>
-              <Upload className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Importar relatório</span>
-              <span className="sm:hidden">Importar</span>
             </Button>
           </>
         }
@@ -886,7 +877,6 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
                     <Columns2 className="w-3.5 h-3.5" />
                     Comparar
                   </Button>
-                  <Button size="sm">Exportar seleção</Button>
                   <Button size="sm" variant="ghost" onClick={() => setMarcados([])}>
                     Limpar
                   </Button>
@@ -932,13 +922,6 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
         <CompararAnuncios
           itens={itens.filter((i) => marcados.includes(i.mlb))}
           onClose={() => setComparando(false)}
-        />
-      )}
-
-      {importAberto && (
-        <ImportarRelatorio
-          importacoes={IMPORTACOES}
-          onClose={() => setImportAberto(false)}
         />
       )}
 
@@ -1067,13 +1050,21 @@ function RaioX({
       width="640px"
       footer={
         <>
-          <Button className="flex-1 max-sm:h-11">
-            <ExternalLink className="w-3.5 h-3.5" />
-            Abrir no canal
-          </Button>
-          <Button variant="primary" className="flex-1 max-sm:h-11">
-            Ajustar preço
-          </Button>
+          {linkDoAnuncio(item.mlb) ? (
+            <a
+              href={linkDoAnuncio(item.mlb)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 h-8 max-sm:h-11 inline-flex items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] text-ink hover:bg-panel-3 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Abrir no Mercado Livre
+            </a>
+          ) : (
+            <Button className="flex-1 max-sm:h-11" onClick={onClose}>
+              Fechar
+            </Button>
+          )}
         </>
       }
     >
@@ -1313,102 +1304,3 @@ function RaioX({
   );
 }
 
-/* ══════════════════════════════════════════════════════════════
-   Importação de relatórios
-   ══════════════════════════════════════════════════════════════ */
-
-function ImportarRelatorio({
-  importacoes,
-  onClose,
-}: {
-  importacoes: DadosAnalise["importacoes"];
-  onClose: () => void;
-}) {
-  const [desempenho, setDesempenho] = React.useState<File[]>([]);
-  const [precoIdeal, setPrecoIdeal] = React.useState<File[]>([]);
-  const [dataBase, setDataBase] = React.useState("");
-
-  const pronto = desempenho.length > 0 || precoIdeal.length > 0;
-
-  return (
-    <Sheet
-      title="Importar relatório"
-      subtitle="Os arquivos são cruzados por MLB e agrupados por semana"
-      onClose={onClose}
-      footer={
-        <>
-          <Button className="flex-1 max-sm:h-11" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button variant="primary" className="flex-1 max-sm:h-11" disabled={!pronto}>
-            Processar
-          </Button>
-        </>
-      }
-    >
-      <div className="px-4 py-4 space-y-5">
-        <div>
-          <SectionTitle
-            title="Desempenho de publicações"
-            hint="Exportação do canal com visitas, vendas e conversão por anúncio."
-          />
-          <div className="mt-3">
-            <FileDrop
-              files={desempenho}
-              onFiles={(f) => setDesempenho((prev) => [...prev, ...f])}
-              onRemove={(i) =>
-                setDesempenho((prev) => prev.filter((_, x) => x !== i))
-              }
-            />
-          </div>
-        </div>
-
-        <div>
-          <SectionTitle
-            title="Preço ideal"
-            hint="Planilha interna com o preço alvo e a comissão negociada."
-          />
-          <div className="mt-3 space-y-3">
-            <FileDrop
-              files={precoIdeal}
-              onFiles={(f) => setPrecoIdeal((prev) => [...prev, ...f])}
-              onRemove={(i) =>
-                setPrecoIdeal((prev) => prev.filter((_, x) => x !== i))
-              }
-            />
-            <Field
-              label="Data-base do cálculo"
-              hint="Define a qual semana este preço ideal será associado."
-            >
-              <Input
-                type="date"
-                value={dataBase}
-                onChange={(e) => setDataBase(e.target.value)}
-                className="max-sm:h-11"
-              />
-            </Field>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 pb-4">
-        <p className="label mb-2">Importações recentes</p>
-        <ul className="flex flex-col divide-y divide-line border border-line rounded-r2 overflow-hidden">
-          {importacoes.map((imp) => (
-            <li key={imp.id} className="px-3 py-2.5 bg-panel">
-              <p className="text-[12px] font-medium text-ink truncate">
-                {imp.arquivo}
-              </p>
-              <p className="text-[11px] text-ink-3 mt-0.5">
-                Desempenho de anúncios · {imp.periodo}
-              </p>
-              <p className="num text-[11px] text-ink-3 mt-0.5">
-                {imp.linhas} linhas · {imp.quando}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </Sheet>
-  );
-}

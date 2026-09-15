@@ -1,4 +1,5 @@
 import "server-only";
+import { lerRecorte, noRecorte } from "@/lib/recorte";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
@@ -38,7 +39,13 @@ import { ticketMedio } from "@/lib/ticket";
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
 const r2 = (v: number) => Number(v.toFixed(2));
 
-export type CanalMtd = { id: string; nome: string; cor: string };
+/**
+ * Uma ficha do recorte. Canal de conta única é o próprio canal (`id` =
+ * uuid do canal); canal com várias contas vira uma ficha por conta
+ * (`id` = `conta:uuid`), para dar para olhar São Paulo e a 2ª conta do
+ * Mercado Livre separadas ou juntas.
+ */
+export type CanalMtd = { id: string; nome: string; cor: string; canalId: string };
 
 export type Alavanca = {
   /** O que está acontecendo no mês até aqui. */
@@ -60,6 +67,14 @@ export type DadosMtd = {
 
   canais: CanalMtd[];
   selecionados: string[];
+  /**
+   * Canais cuja meta entrou na conta: só os marcados por inteiro. A meta é
+   * gravada por canal — marcar uma conta só do Mercado Livre e somar a
+   * meta do canal faria essa conta parecer sempre abaixo do alvo.
+   */
+  canaisComMeta: string[];
+  /** Canais marcados só em parte, cuja meta ficou de fora. */
+  metaIncompleta: string[];
 
   /* Realizado no mês, até `ate`. */
   receitaBruta: number;
@@ -112,7 +127,7 @@ export async function carregarMtd(
           )
           .order("data")
       ),
-      sb.from("contas_canal").select("id,canal_id").limit(200),
+      sb.from("contas_canal").select("id,canal_id,nome").limit(200),
       sb.from("canais").select("id,nome,cor_serie,ordem").order("ordem"),
       sb.from("metas").select("canal_id,receita_meta").eq("ano", ano).eq("mes", mes),
       paginar(() =>
@@ -155,19 +170,47 @@ export async function carregarMtd(
   const todas = mantidas as unknown as (Diaria & { canalId: string })[];
 
   const canaisTodos = (canaisRaw.data ?? []) as Canal[];
-  const comMovimento = new Set(todas.map((d) => d.canalId));
-  const canais: CanalMtd[] = canaisTodos
-    .filter((c) => comMovimento.has(c.id))
-    .map((c) => ({ id: c.id, nome: c.nome, cor: `var(--s${c.cor_serie ?? 1})` }));
+  const contasTodas = (contasRaw.data ?? []) as { id: string; canal_id: string; nome: string }[];
+  const contaComMovimento = new Set(todas.map((d) => d.conta_canal_id));
+  const canais: CanalMtd[] = [];
+  for (const c of canaisTodos) {
+    const doCanal = contasTodas.filter((k) => k.canal_id === c.id);
+    const comMov = doCanal.filter((k) => contaComMovimento.has(k.id));
+    if (!comMov.length) continue;
+    const cor = `var(--s${c.cor_serie ?? 1})`;
+    if (doCanal.length > 1) {
+      for (const k of comMov) {
+        canais.push({ id: `conta:${k.id}`, nome: `${c.nome} — ${k.nome}`, cor, canalId: c.id });
+      }
+    } else {
+      canais.push({ id: c.id, nome: c.nome, cor, canalId: c.id });
+    }
+  }
 
   // Sem seleção, todos: a primeira visita mostra a operação inteira, que é
   // a pergunta mais comum.
+  // Link antigo com o uuid do canal inteiro vira as fichas das contas dele.
   const sel =
     canaisSelecionados?.length
-      ? canaisSelecionados.filter((id) => canais.some((c) => c.id === id))
+      ? [...new Set(canaisSelecionados.flatMap((id) =>
+          canais.some((c) => c.id === id)
+            ? [id]
+            : canais.filter((c) => c.canalId === id).map((c) => c.id)
+        ))]
       : canais.map((c) => c.id);
 
-  const doRecorte = todas.filter((d) => sel.includes(d.canalId));
+  const recortes = sel.map((id) => lerRecorte(id));
+  const doRecorte = todas.filter((d) =>
+    recortes.some((r) => noRecorte(r, { canalId: d.canalId, contaCanalId: d.conta_canal_id }))
+  );
+
+  const idsDoCanal = new Map<string, string[]>();
+  for (const c of canais) idsDoCanal.set(c.canalId, [...(idsDoCanal.get(c.canalId) ?? []), c.id]);
+  const canaisComMeta = [...idsDoCanal].filter(([, ids]) => ids.every((id) => sel.includes(id))).map(([cid]) => cid);
+  const metaIncompleta = [...idsDoCanal]
+    .filter(([, ids]) => ids.some((id) => sel.includes(id)) && !ids.every((id) => sel.includes(id)))
+    .map(([cid]) => canaisTodos.find((c) => c.id === cid)?.nome ?? "");
+
   if (!doRecorte.length) {
     return vazio(ano, mes, canais, sel);
   }
@@ -202,14 +245,14 @@ export async function carregarMtd(
 
   const metaPorCanal = new Map(
     ((metasRaw.data ?? []) as { canal_id: string | null; receita_meta: string | number }[])
-      .filter((m) => m.canal_id && sel.includes(m.canal_id))
+      .filter((m) => m.canal_id && canaisComMeta.includes(m.canal_id))
       .map((m) => [m.canal_id as string, n(m.receita_meta)])
   );
   const metaMes = r2([...metaPorCanal.values()].reduce((s, v) => s + v, 0));
 
   type MetaDia = { canal_id: string; data: string; receita_meta: string | number; manual: boolean };
   const metasDia = (metasDiariasRaw as unknown as MetaDia[]).filter((m) =>
-    sel.includes(m.canal_id)
+    canaisComMeta.includes(m.canal_id)
   );
 
   const metaAteAqui = r2(
@@ -290,6 +333,8 @@ export async function carregarMtd(
     diasRestantes,
     canais,
     selecionados: sel,
+    canaisComMeta,
+    metaIncompleta,
     receitaBruta: r2(receitaBruta),
     receitaCancelada: r2(receitaCancelada),
     receitaPaga: r2(receitaPaga),
@@ -320,7 +365,7 @@ function vazio(
   const nulo: Alavanca = { atual: null, necessario: null, variacao: null };
   return {
     vazio: true, ano, mes, ate: "", diasDecorridos: 0, diasRestantes: 0,
-    canais, selecionados: sel,
+    canais, selecionados: sel, canaisComMeta: [], metaIncompleta: [],
     receitaBruta: 0, receitaCancelada: 0, receitaPaga: 0,
     pedidos: 0, pedidosCancelados: 0, visitas: 0,
     conversao: null, ticket: null,
@@ -376,7 +421,7 @@ export async function redistribuirRestante(
     .not("canal_id", "is", null);
 
   const alvo = (metas ?? []).filter((m) =>
-    mtd.selecionados.includes(m.canal_id as string)
+    mtd.canaisComMeta.includes(m.canal_id as string)
   );
   if (!alvo.length) {
     throw new Error("Nenhum canal selecionado tem meta neste mês.");

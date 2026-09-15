@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -175,17 +176,11 @@ export default function PerformancePrecoCliente({
               />
             </Field>
             <Field label="Canal">
-              <Select
-                value={dados.canalId ?? ""}
-                onChange={(e) => ir(dias, e.target.value || null)}
-              >
-                <option value="">Todos os canais</option>
-                {canais.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </Select>
+              <SelectRecorte
+                grupos={dados.opcoes}
+                valor={dados.canalId ?? ""}
+                onChange={(v) => ir(dias, v || null)}
+              />
             </Field>
             <div className="flex-1" />
             <Button disabled={baixando} onClick={exportar}>

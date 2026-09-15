@@ -246,9 +246,11 @@ export function agruparSemanas(
   linhas: LinhaDia[],
   ano: number,
   ultimaData: string,
-  canal?: string
+  /** Uma conta, ou as contas de um grupo de canal. */
+  canal?: string | string[]
 ): SemanaAgregada[] {
-  const fonte = canal ? linhas.filter((l) => l.canalId === canal) : linhas;
+  const alvo = Array.isArray(canal) ? new Set(canal) : canal ? new Set([canal]) : null;
+  const fonte = alvo ? linhas.filter((l) => alvo.has(l.canalId)) : linhas;
 
   const acc = new Map<
     number,

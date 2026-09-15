@@ -5,12 +5,14 @@
  *
  *  1. credenciais vêm de variável de ambiente, não de arquivo em disco —
  *     token em texto puro no repositório é o que causou o vazamento;
- *  2. o access token é renovado sob demanda pelo refresh token e fica só
- *     em memória do processo;
+ *  2. o access token é renovado sob demanda pelo refresh token, e o par
+ *     renovado fica no banco (`meli_tokens`) — o refresh do Meli é de uso
+ *     único, e só em memória ele morreria no fim de cada execução;
  *  3. nunca é importado de componente de cliente. Só de rota de API.
  */
 
 import { aguardarVez, autorizarLeitura, MeliBloqueado } from "./limite";
+import { lerToken, gravarToken, registrarErroToken, type TokenSalvo } from "./tokens";
 
 export { MeliBloqueado };
 
@@ -56,23 +58,23 @@ export class MeliNaoConfigurado extends Error {
   }
 }
 
-type Credenciais = {
-  appId: string;
-  clientSecret: string;
-  refreshToken: string;
-};
-
+/** Refresh token do ambiente — só a semente da primeira renovação. */
 function refreshDe(conta: Conta): string | undefined {
   const def = CONTAS.find((c) => c.slug === conta);
   return def ? process.env[def.variavel] : undefined;
 }
 
-function credenciais(conta: Conta): Credenciais {
-  const appId = process.env.MELI_APP_ID;
-  const clientSecret = process.env.MELI_CLIENT_SECRET;
-  const refreshToken = refreshDe(conta);
-  if (!appId || !clientSecret || !refreshToken) throw new MeliNaoConfigurado(conta);
-  return { appId, clientSecret, refreshToken };
+/**
+ * A conta tem com o que renovar: semente no ambiente OU token no banco.
+ *
+ * Diferente de `meliConfigurado`, olha o banco — depois da primeira
+ * renovação a semente do ambiente pode até ser apagada, e a conta segue
+ * conectada. É o que a rotina agendada usa para decidir quem sincronizar.
+ */
+export async function contaConectada(conta: Conta): Promise<boolean> {
+  if (!process.env.MELI_APP_ID || !process.env.MELI_CLIENT_SECRET) return false;
+  if (refreshDe(conta)) return true;
+  return Boolean(await lerToken(conta));
 }
 
 /** Sem argumento, responde se ao menos UMA conta está conectada. */
@@ -95,16 +97,15 @@ export function situacaoContas() {
 }
 
 /**
- * Token em memória, por conta, renovado 60 s antes de vencer.
+ * Cópia em memória do token, por conta, renovado 60 s antes de vencer.
  *
  * O access token dura 6 horas e a renovação é automática — ninguém precisa
  * fazer login de novo por isso.
  *
- * `refresh` guarda o refresh token MAIS RECENTE. O Mercado Livre pode
- * devolver um refresh token novo a cada renovação e invalidar o anterior
- * (rotação). Guardando só o valor da variável de ambiente, a integração
- * funcionaria no primeiro dia e quebraria na primeira rotação — o pior
- * tipo de falha, porque aparece horas depois, sem ninguém ter mexido.
+ * `refresh` guarda o refresh token MAIS RECENTE. O Mercado Livre devolve
+ * um novo a cada renovação e invalida o anterior (rotação). A memória é só
+ * atalho dentro de uma execução; a fonte que sobrevive entre execuções é
+ * o banco — ver `tokens.ts`.
  */
 const g = globalThis as unknown as {
   __meliToken?: Record<
@@ -113,66 +114,138 @@ const g = globalThis as unknown as {
   >;
 };
 
-async function accessToken(conta: Conta): Promise<string> {
-  g.__meliToken = g.__meliToken ?? {};
-  const cache = g.__meliToken[conta];
-  if (cache && cache.expiraEm > Date.now() + 60_000) return cache.valor;
+class RenovacaoRecusada extends Error {
+  constructor(public status: number, mensagem: string) {
+    super(mensagem);
+  }
+}
 
-  const c = credenciais(conta);
-  const corpo = new URLSearchParams({
-    grant_type: "refresh_token",
-    client_id: c.appId,
-    client_secret: c.clientSecret,
-    // Prefere o rotacionado; cai para o do .env no primeiro uso.
-    refresh_token: cache?.refresh ?? c.refreshToken,
-  });
+type Renovado = { access_token: string; expires_in: number; refresh_token?: string };
 
+async function renovar(appId: string, clientSecret: string, refresh: string): Promise<Renovado> {
   const r = await fetch(TOKEN_URL, {
     method: "POST",
     headers: {
       "content-type": "application/x-www-form-urlencoded",
       accept: "application/json",
     },
-    body: corpo,
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: appId,
+      client_secret: clientSecret,
+      refresh_token: refresh,
+    }),
   });
 
   if (!r.ok) {
     const texto = await r.text().catch(() => "");
     // Nunca ecoar o corpo inteiro: pode trazer pedaço de credencial.
-    throw new Error(
+    throw new RenovacaoRecusada(
+      r.status,
       `Falha ao renovar o token (HTTP ${r.status}). ` +
         (r.status === 400
-          ? "O refresh token provavelmente expirou ou foi revogado — refaça a autorização."
+          ? "O refresh token expirou ou foi revogado — refaça a autorização da conta."
           : texto.slice(0, 120))
     );
   }
+  return (await r.json()) as Renovado;
+}
 
-  const json = (await r.json()) as {
-    access_token: string;
-    expires_in: number;
-    refresh_token?: string;
-  };
+/**
+ * Access token válido para a conta, renovando quando precisa.
+ *
+ * Ordem de procura: memória do processo → banco → renovação. O banco vem
+ * antes de renovar porque renovar gasta o refresh token: se outra execução
+ * já renovou há dez minutos, o access token dela ainda vale seis horas e
+ * não há motivo para queimar mais um.
+ *
+ * O refresh token de partida é o do banco; o do ambiente só é usado na
+ * primeira vez, para semear. Depois da primeira renovação o do ambiente
+ * já está morto — é por isso que ele não pode ser a fonte.
+ */
+async function accessToken(conta: Conta): Promise<string> {
+  g.__meliToken = g.__meliToken ?? {};
+  const cache = g.__meliToken[conta];
+  if (cache && cache.expiraEm > Date.now() + 60_000) return cache.valor;
 
-  const rotacionou = Boolean(
-    json.refresh_token && json.refresh_token !== (cache?.refresh ?? c.refreshToken)
-  );
+  const appId = process.env.MELI_APP_ID;
+  const clientSecret = process.env.MELI_CLIENT_SECRET;
+  if (!appId || !clientSecret) throw new MeliNaoConfigurado(conta);
 
-  g.__meliToken![conta] = {
-    valor: json.access_token,
-    expiraEm: Date.now() + json.expires_in * 1000,
-    refresh: json.refresh_token ?? cache?.refresh ?? c.refreshToken,
-  };
+  const salvo = await lerToken(conta);
+  const valeAinda = (t: TokenSalvo | null) =>
+    Boolean(t?.access_token && t.expira_em && new Date(t.expira_em).getTime() > Date.now() + 60_000);
 
-  if (rotacionou) {
-    // Só a memória do processo tem o valor novo. Reiniciar o servidor faz
-    // cair para o do .env, que já pode ter sido invalidado — daí o aviso.
-    // Some quando o refresh token passar a ser guardado no banco.
-    console.warn(
-      `[meli] A conta "${conta}" recebeu um refresh token novo. ` +
-        "Ele está apenas em memória: se o servidor reiniciar e o antigo já " +
-        "tiver sido invalidado, será preciso refazer o login."
-    );
+  if (salvo && valeAinda(salvo)) {
+    g.__meliToken[conta] = {
+      valor: salvo.access_token!,
+      expiraEm: new Date(salvo.expira_em!).getTime(),
+      refresh: salvo.refresh_token,
+    };
+    return salvo.access_token!;
   }
+
+  const semente = refreshDe(conta);
+  const primeiro = salvo?.refresh_token ?? cache?.refresh ?? semente;
+  if (!primeiro) throw new MeliNaoConfigurado(conta);
+
+  let usado = primeiro;
+  let json: Renovado;
+  try {
+    json = await renovar(appId, clientSecret, primeiro);
+  } catch (e) {
+    if (!(e instanceof RenovacaoRecusada) || e.status !== 400) throw e;
+
+    /*
+     * Recusado. Dois motivos comuns, e os dois têm conserto sem gente:
+     *
+     *  - outra execução renovou entre a nossa leitura e a nossa tentativa
+     *    (a agendada das 13h coincidindo com alguém clicando em
+     *    sincronizar). O token dela está no banco agora;
+     *  - alguém refez a autorização e pôs um token novo no ambiente, mas o
+     *    banco ainda guarda o velho, já revogado.
+     *
+     * Tenta cada um uma vez. Se nenhum servir, é autorização de verdade
+     * perdida — e aí registra, para a tela dizer por que parou.
+     */
+    const agora = await lerToken(conta);
+    if (agora && agora.refresh_token !== primeiro && valeAinda(agora)) {
+      g.__meliToken[conta] = {
+        valor: agora.access_token!,
+        expiraEm: new Date(agora.expira_em!).getTime(),
+        refresh: agora.refresh_token,
+      };
+      return agora.access_token!;
+    }
+    const candidatos = [agora?.refresh_token, semente].filter(
+      (t, i, l): t is string => Boolean(t) && t !== primeiro && l.indexOf(t) === i
+    );
+    let ok: Renovado | null = null;
+    for (const t of candidatos) {
+      try {
+        ok = await renovar(appId, clientSecret, t);
+        usado = t;
+        break;
+      } catch {
+        // próximo candidato
+      }
+    }
+    if (!ok) {
+      await registrarErroToken(conta, (e as Error).message);
+      throw e;
+    }
+    json = ok;
+  }
+
+  const refresh = json.refresh_token ?? usado;
+  const expiraEm = Date.now() + json.expires_in * 1000;
+  g.__meliToken[conta] = { valor: json.access_token, expiraEm, refresh };
+
+  await gravarToken(conta, {
+    refresh_token: refresh,
+    access_token: json.access_token,
+    expira_em: new Date(expiraEm),
+  });
 
   return json.access_token;
 }

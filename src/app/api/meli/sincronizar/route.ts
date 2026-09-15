@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
       ate: corpo.ate,
       diasVisitas: corpo.diasVisitas,
       etapas: corpo.etapas,
+      registro: { origem: "manual" },
     });
     return NextResponse.json({
       ...r,
