@@ -34,6 +34,17 @@ type Sb = Awaited<ReturnType<typeof clienteServidor>>;
 /** Chave `MLB|segunda-feira-da-semana` → tarifa em %. */
 export type TarifasPorSemana = Map<string, number>;
 
+/**
+ * O mesmo cálculo, agregado por anúncio em vez de por semana.
+ *
+ * Serve ao catálogo, que mostra um MLB por linha e não tem eixo de tempo.
+ * `receita` é o volume que sustenta a média — uma tarifa apurada sobre
+ * R$ 200 não vale o mesmo que uma sobre R$ 40 mil, e a tela precisa
+ * poder dizer isso.
+ */
+export type TarifaDoAnuncio = { tarifa: number; receita: number; pedidos: number };
+export type TarifasPorAnuncio = Map<string, TarifaDoAnuncio>;
+
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
 
 export function chaveSemana(mlb: string, dataIso: string): string {
@@ -42,9 +53,15 @@ export function chaveSemana(mlb: string, dataIso: string): string {
   return `${mlb}|${d.toISOString().slice(0, 10)}`;
 }
 
-export async function carregarTarifasCobradas(
+/**
+ * As duas leituras de uma varredura só.
+ *
+ * Quem precisa das duas (catálogo mostra por anúncio, análise por semana)
+ * não paga a leitura de `pedidos` + `pedido_itens` duas vezes.
+ */
+export async function carregarTarifas(
   sb: Sb
-): Promise<TarifasPorSemana> {
+): Promise<{ porSemana: TarifasPorSemana; porAnuncio: TarifasPorAnuncio }> {
   const [pedidosRaw, exclusoes, { data: contasRaw }] = await Promise.all([
     paginar(() =>
       sb
@@ -117,7 +134,7 @@ export async function carregarTarifasCobradas(
   const comComissao = pedidos.filter(
     (p) => !p.cancelado && comissaoUtilizavel(p.comissao, p.total)
   );
-  if (!comComissao.length) return new Map();
+  if (!comComissao.length) return { porSemana: new Map(), porAnuncio: new Map() };
 
   const porId = new Map(comComissao.map((p) => [p.id, p]));
 
@@ -143,6 +160,10 @@ export async function carregarTarifasCobradas(
   }
 
   const acumulado = new Map<string, { comissao: number; valor: number }>();
+  const porMlb = new Map<
+    string,
+    { comissao: number; valor: number; pedidos: Set<string> }
+  >();
 
   for (const it of lista) {
     const p = porId.get(it.pedido_id);
@@ -160,13 +181,36 @@ export async function carregarTarifasCobradas(
     at.comissao += n(p.comissao) * fatia;
     at.valor += n(it.total);
     acumulado.set(chave, at);
+
+    const ac = porMlb.get(mlb) ?? { comissao: 0, valor: 0, pedidos: new Set<string>() };
+    ac.comissao += n(p.comissao) * fatia;
+    ac.valor += n(it.total);
+    ac.pedidos.add(it.pedido_id);
+    porMlb.set(mlb, ac);
   }
 
-  const tarifas: TarifasPorSemana = new Map();
+  const porSemana: TarifasPorSemana = new Map();
   for (const [chave, v] of acumulado) {
     if (v.valor > 0) {
-      tarifas.set(chave, Number(((v.comissao * 100) / v.valor).toFixed(2)));
+      porSemana.set(chave, Number(((v.comissao * 100) / v.valor).toFixed(2)));
     }
   }
-  return tarifas;
+
+  const porAnuncio: TarifasPorAnuncio = new Map();
+  for (const [mlb, v] of porMlb) {
+    if (v.valor > 0) {
+      porAnuncio.set(mlb, {
+        tarifa: Number(((v.comissao * 100) / v.valor).toFixed(2)),
+        receita: Number(v.valor.toFixed(2)),
+        pedidos: v.pedidos.size,
+      });
+    }
+  }
+
+  return { porSemana, porAnuncio };
+}
+
+/** Só o recorte semanal — o uso mais antigo, mantido para não mexer nas chamadas. */
+export async function carregarTarifasCobradas(sb: Sb): Promise<TarifasPorSemana> {
+  return (await carregarTarifas(sb)).porSemana;
 }

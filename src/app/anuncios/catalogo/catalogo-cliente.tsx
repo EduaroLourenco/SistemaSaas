@@ -2,6 +2,7 @@
 
 import { linkDoAnuncio } from "@/lib/links";
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import {
   Badge,
@@ -39,10 +40,14 @@ import {
   ChevronDown,
   Download,
   ExternalLink,
+  Info,
+  Loader2,
   Package,
+  RefreshCw,
   Search,
   SearchX,
   SlidersHorizontal,
+  TriangleAlert,
   X,
 } from "lucide-react";
 
@@ -147,6 +152,42 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
     importacoes: IMPORTACOES_CATALOGO,
   } = dados;
 
+  const router = useRouter();
+  const [sincronizando, setSincronizando] = React.useState(false);
+  const [erroSync, setErroSync] = React.useState<string | null>(null);
+  const [origemAberta, setOrigemAberta] = React.useState(false);
+
+  /**
+   * Força uma releitura do catálogo no canal.
+   *
+   * Só a etapa de catálogo: pedidos e visitas são varreduras longas, e
+   * quem aperta este botão quer ver preço e situação atualizados agora,
+   * não esperar cinco minutos por dado de outra tela.
+   */
+  async function sincronizar() {
+    setSincronizando(true);
+    setErroSync(null);
+    try {
+      const r = await fetch("/api/meli/sincronizar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          etapas: { catalogo: true, pedidos: false, visitas: false, diarias: false },
+        }),
+      });
+      const corpo = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setErroSync(corpo.erro ?? `Não deu para sincronizar (HTTP ${r.status}).`);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setErroSync("Não consegui falar com o servidor.");
+    } finally {
+      setSincronizando(false);
+    }
+  }
+
   const [busca, setBusca] = React.useState("");
   const [tipo, setTipo] = React.useState<(typeof TIPOS)[number]>("Todos");
   const [status, setStatus] = React.useState<(typeof STATUS)[number]>("Todos");
@@ -181,7 +222,23 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
     const comissao =
       publicados.reduce((s, i) => s + i.comissaoAtual, 0) /
       (publicados.length || 1);
+    /*
+     * A média da praticada é ponderada pela RECEITA, não pelo número de
+     * anúncios: um MLB que vendeu R$ 40 mil a 7% e outro que vendeu R$ 200
+     * a 16% não têm o mesmo peso no caixa, e a média simples diria que
+     * têm.
+     */
+    const comPraticada = publicados.filter((i) => i.comissaoPraticada != null);
+    const receitaPraticada = comPraticada.reduce((s, i) => s + (i.receitaComissao ?? 0), 0);
+    const comissaoPraticada = receitaPraticada
+      ? comPraticada.reduce(
+          (s, i) => s + i.comissaoPraticada! * (i.receitaComissao ?? 0),
+          0
+        ) / receitaPraticada
+      : null;
     return {
+      comissaoPraticada,
+      anunciosComPraticada: comPraticada.length,
       total: CATALOGO.length,
       publicados: publicados.length,
       ativos: ativos.length,
@@ -268,12 +325,45 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
     },
     {
       key: "comissao",
-      header: "Comissão",
+      header: "Comissão padrão",
       align: "right",
       mobile: "metric",
-      width: "110px",
+      width: "120px",
       sortValue: (i) => i.comissaoAtual,
       cell: (i) => <span className="num text-ink-2">{pct(i.comissaoAtual)}</span>,
+    },
+    /*
+     * A padrão é a alíquota de tabela do tipo de anúncio; a praticada sai
+     * dos pedidos deste MLB. Como quase todo anúncio daqui tem redução
+     * negociada, a padrão sozinha superestima o custo — e era só ela que
+     * a tela mostrava.
+     */
+    {
+      key: "comissaoPraticada",
+      header: "Comissão praticada",
+      align: "right",
+      mobile: "metric",
+      width: "140px",
+      sortValue: (i) => i.comissaoPraticada ?? -1,
+      cell: (i) =>
+        i.comissaoPraticada == null ? (
+          <span className="text-ink-3">—</span>
+        ) : (
+          <span className="num">
+            <span
+              className={
+                i.comissaoPraticada < i.comissaoAtual - 0.5
+                  ? "text-up font-medium"
+                  : "text-ink-2"
+              }
+            >
+              {pct(i.comissaoPraticada)}
+            </span>
+            <span className="block text-[10.5px] text-ink-3">
+              sobre {money(i.receitaComissao ?? 0)}
+            </span>
+          </span>
+        ),
     },
     /*
      * Estoque saiu da tela a pedido: a operação não usa o número hoje, e o
@@ -319,6 +409,23 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
         description="Espelho das publicações do canal — preço praticado, comissão e situação por MLB"
         actions={
           <>
+            <Button size="sm" variant="primary" disabled={sincronizando} onClick={sincronizar}>
+              {sincronizando ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Consultando o canal
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  Atualizar
+                </>
+              )}
+            </Button>
+            <Button size="sm" onClick={() => setOrigemAberta(true)}>
+              <Info className="w-3.5 h-3.5" />
+              De onde vem
+            </Button>
             <Button
               size="sm"
               className="md:hidden"
@@ -375,6 +482,27 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
                   </option>
                 ))}
               </Select>
+              {/*
+               * O seletor de conta só existia no painel de filtros do
+               * celular. No desktop a tela somava as duas contas do
+               * Mercado Livre sem dizer, que é exatamente o que o Eduardo
+               * apontou na revisão.
+               */}
+              {CONTAS_CATALOGO.length > 1 && (
+                <Select
+                  value={conta}
+                  onChange={(e) => setConta(e.target.value)}
+                  className="w-44"
+                  aria-label="Conta do canal"
+                >
+                  <option value="Todas">Todas as contas</option>
+                  {CONTAS_CATALOGO.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </div>
 
             <span className="num text-[12px] text-ink-3 shrink-0 ml-auto hidden md:block">
@@ -385,6 +513,45 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
       />
 
       <PageBody>
+        {erroSync && (
+          <Panel className="px-4 py-3 flex items-start gap-2.5 border-down/30">
+            <TriangleAlert className="w-4 h-4 text-down shrink-0 mt-0.5" strokeWidth={2} />
+            <p className="text-[12.5px] text-ink-2">
+              <span className="font-semibold text-ink">Não deu para atualizar. </span>
+              {erroSync} O que está na tela é a última leitura guardada.
+            </p>
+          </Panel>
+        )}
+
+        {/* ── Idade do dado ──────────────────────────────────── */}
+        <div className="flex items-center gap-2 flex-wrap text-[11.5px] text-ink-3">
+          <span>
+            Tudo nesta tela vem da API do Mercado Livre.{" "}
+            {dados.sincronizadoEm ? (
+              <>
+                Última leitura em{" "}
+                <span className="num text-ink-2">
+                  {new Date(dados.sincronizadoEm).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                .
+              </>
+            ) : (
+              <span className="text-warn">Nunca sincronizado.</span>
+            )}
+          </span>
+          <button
+            onClick={() => setOrigemAberta(true)}
+            className="text-brand hover:underline"
+          >
+            Ver a origem de cada coluna
+          </button>
+        </div>
+
         {/* ── Cargas do catálogo ─────────────────────────────── */}
         {IMPORTACOES_CATALOGO.length > 0 && (
           <Panel className="px-4 py-3">
@@ -425,9 +592,15 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
             hint="fora da vitrine agora"
           />
           <StatTile
-            label="Comissão média"
-            value={pct(resumo.comissao)}
-            hint="média dos anúncios publicados"
+            label="Comissão praticada"
+            value={
+              resumo.comissaoPraticada == null ? "—" : pct(resumo.comissaoPraticada)
+            }
+            hint={
+              resumo.comissaoPraticada == null
+                ? "nenhum pedido com comissão informada"
+                : `padrão é ${pct(resumo.comissao)} · ${count(resumo.anunciosComPraticada)} anúncios com apuração`
+            }
           />
         </div>
 
@@ -583,7 +756,154 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
           </Field>
         </FilterSheet>
       )}
+
+      {origemAberta && (
+        <OrigemDosDados
+          sincronizadoEm={dados.sincronizadoEm}
+          comComissaoPraticada={dados.comComissaoPraticada}
+          total={CATALOGO.length}
+          onClose={() => setOrigemAberta(false)}
+        />
+      )}
     </>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   De onde vem cada coluna
+   ══════════════════════════════════════════════════════════════ */
+
+/**
+ * O Eduardo pediu isto explicitamente na revisão: "documentar todo dado
+ * mostrado e sua origem, já que tudo vem por API".
+ *
+ * Só que não é bem tudo. Três colunas desta tela NÃO vêm da API, e
+ * confundir as duas coisas é o que faz alguém decidir preço com um número
+ * que não é o que parece. Então a lista separa por FONTE, não por coluna,
+ * e diz na cara quando o dado é derivado.
+ */
+const ORIGENS: {
+  fonte: string;
+  tom: "api" | "pedidos" | "derivado";
+  colunas: { nome: string; detalhe: string }[];
+}[] = [
+  {
+    fonte: "API do Mercado Livre",
+    tom: "api",
+    colunas: [
+      { nome: "MLB", detalhe: "o identificador do anúncio no canal." },
+      { nome: "Título", detalhe: "o título publicado, exatamente como está no ar." },
+      { nome: "SKU", detalhe: "o `seller_custom_field` do anúncio — o SKU que VOCÊ cadastrou lá, não o do ERP." },
+      { nome: "Tipo", detalhe: "`listing_type_id`: gold_pro vira Premium, gold_special vira Clássico." },
+      { nome: "Status", detalhe: "ativo, pausado ou finalizado, como o canal reporta." },
+      { nome: "Preço atual", detalhe: "o preço de VITRINE agora — não o que foi vendido." },
+      { nome: "Comissão padrão", detalhe: "a alíquota de tabela do tipo de anúncio: 11,5% no Clássico, 16,5% no Premium." },
+    ],
+  },
+  {
+    fonte: "Seus pedidos, no banco",
+    tom: "pedidos",
+    colunas: [
+      {
+        nome: "Comissão praticada",
+        detalhe:
+          "o que o canal REALMENTE cobrou, apurado pedido a pedido e rateado entre os itens. Só entra pedido em que o canal informou a comissão — onde não informou, a coluna fica em traço em vez de chutar.",
+      },
+    ],
+  },
+  {
+    fonte: "Derivado aqui dentro",
+    tom: "derivado",
+    colunas: [
+      {
+        nome: "Categoria",
+        detalhe:
+          "a primeira palavra do título. O canal não exporta categoria e os produtos ainda não estão cadastrados — é um agrupamento grosseiro, mas que erra de forma visível.",
+      },
+      {
+        nome: "Histórico de preço",
+        detalhe:
+          "o retrato semanal do preço de vitrine, guardado toda vez que o catálogo sincroniza. A API só devolve o preço de agora; o histórico existe porque a plataforma o acumula.",
+      },
+    ],
+  },
+];
+
+const TOM_ORIGEM: Record<string, "brand" | "up" | "warn"> = {
+  api: "brand",
+  pedidos: "up",
+  derivado: "warn",
+};
+
+function OrigemDosDados({
+  sincronizadoEm,
+  comComissaoPraticada,
+  total,
+  onClose,
+}: {
+  sincronizadoEm: string | null;
+  comComissaoPraticada: number;
+  total: number;
+  onClose: () => void;
+}) {
+  return (
+    <Sheet
+      title="De onde vem cada dado"
+      subtitle="Catálogo · o que é lido do canal, o que é seu e o que é calculado"
+      onClose={onClose}
+      width="560px"
+    >
+      <div className="px-4 py-3.5 border-b border-line">
+        <p className="text-[12.5px] text-ink-2 leading-relaxed">
+          {sincronizadoEm ? (
+            <>
+              A última leitura do canal foi em{" "}
+              <span className="num text-ink font-medium">
+                {new Date(sincronizadoEm).toLocaleString("pt-BR")}
+              </span>
+              . O botão <span className="font-medium text-ink">Atualizar</span>, no topo,
+              força uma nova agora — ele consulta só o catálogo, então leva segundos e não
+              a sincronização inteira.
+            </>
+          ) : (
+            <>
+              Este catálogo nunca foi sincronizado com o canal. O que está na tela veio de
+              importação de planilha.
+            </>
+          )}
+        </p>
+      </div>
+
+      {ORIGENS.map((o) => (
+        <div key={o.fonte} className="px-4 py-3.5 border-b border-line">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge tone={TOM_ORIGEM[o.tom]}>{o.fonte}</Badge>
+            {o.tom === "pedidos" && (
+              <span className="num text-[11px] text-ink-3">
+                {count(comComissaoPraticada)} de {count(total)} anúncios
+              </span>
+            )}
+          </div>
+          <ul className="flex flex-col gap-2">
+            {o.colunas.map((c) => (
+              <li key={c.nome} className="text-[12px] leading-relaxed">
+                <span className="font-semibold text-ink">{c.nome}</span>
+                <span className="text-ink-2"> — {c.detalhe}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+
+      <div className="px-4 py-3.5">
+        <p className="text-[11.5px] text-ink-3 leading-relaxed">
+          O que esta tela <span className="text-ink-2 font-medium">não</span> mostra: preço
+          vendido, unidades e receita. Nada disso é catálogo — é pedido, e fica em Vendas e
+          em Performance de preço. Misturar os dois aqui daria a impressão de que o preço
+          de vitrine é o preço que entrou.
+        </p>
+      </div>
+    </Sheet>
   );
 }
 
@@ -646,7 +966,11 @@ function FichaAnuncio({
       <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-line border-b border-line">
         {[
           { l: "Preço atual", v: money(item.precoAtual) },
-          { l: "Comissão", v: pct(item.comissaoAtual) },
+          { l: "Comissão padrão", v: pct(item.comissaoAtual) },
+          {
+            l: "Comissão praticada",
+            v: item.comissaoPraticada == null ? "—" : pct(item.comissaoPraticada),
+          },
           { l: "No ar há", v: `${count(Math.round(dias(item.criadoEm) / 30))} m` },
         ].map((x) => (
           <div key={x.l} className="px-4 py-3">

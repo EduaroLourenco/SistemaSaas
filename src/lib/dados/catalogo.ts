@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { carregarTarifas } from "./tarifa-cobrada";
 import type { ItemCatalogo } from "@/mock/catalogo";
 
 /**
@@ -25,6 +26,10 @@ export type DadosCatalogo = {
   categorias: string[];
   contas: string[];
   importacoes: ImportacaoCatalogo[];
+  /** Sincronização mais recente de qualquer anúncio. ISO completo ou nulo. */
+  sincronizadoEm: string | null;
+  /** Anúncios com comissão praticada apurada, para a tela poder dizer a cobertura. */
+  comComissaoPraticada: number;
   vazio: boolean;
 };
 
@@ -38,6 +43,7 @@ type LinhaAnuncio = {
   preco_atual: string | null;
   comissao_atual: string | null;
   atualizado_em: string;
+  sincronizado_em: string | null;
   criado_em: string;
   contas_canal: { nome: string } | null;
 };
@@ -61,12 +67,12 @@ function categoriaDe(titulo: string): string {
 export async function carregarCatalogo(): Promise<DadosCatalogo> {
   const sb = await clienteServidor();
 
-  const [anuncios, retratos, { data: imports }] = await Promise.all([
+  const [anuncios, retratos, { data: imports }, tarifas] = await Promise.all([
       paginar(() =>
         sb
           .from("anuncios")
           .select(
-            "id,codigo_externo,titulo,sku_canal,tipo,status,preco_atual,comissao_atual,atualizado_em,criado_em,contas_canal(nome)"
+            "id,codigo_externo,titulo,sku_canal,tipo,status,preco_atual,comissao_atual,atualizado_em,sincronizado_em,criado_em,contas_canal(nome)"
           )
           .order("titulo", { ascending: true })
       ),
@@ -82,11 +88,20 @@ export async function carregarCatalogo(): Promise<DadosCatalogo> {
         .eq("tipo", "catalogo")
         .order("criado_em", { ascending: false })
         .limit(10),
+      carregarTarifas(sb),
     ]);
 
   const linhas = anuncios as unknown as LinhaAnuncio[];
   if (!linhas.length) {
-    return { itens: [], categorias: [], contas: [], importacoes: [], vazio: true };
+    return {
+      itens: [],
+      categorias: [],
+      contas: [],
+      importacoes: [],
+      sincronizadoEm: null,
+      comComissaoPraticada: 0,
+      vazio: true,
+    };
   }
 
   type Retrato = {
@@ -105,7 +120,9 @@ export async function carregarCatalogo(): Promise<DadosCatalogo> {
     if (r.disponivel != null) estoquePor.set(r.anuncio_id, r.disponivel);
   }
 
-  const itens: ItemCatalogo[] = linhas.map((a) => ({
+  const itens: ItemCatalogo[] = linhas.map((a) => {
+    const praticada = tarifas.porAnuncio.get(a.codigo_externo);
+    return {
     mlb: a.codigo_externo,
     sku: a.sku_canal ?? "",
     titulo: a.titulo,
@@ -113,6 +130,8 @@ export async function carregarCatalogo(): Promise<DadosCatalogo> {
     tipo: a.tipo === "premium" ? "Premium" : "Clássico",
     precoAtual: n(a.preco_atual),
     comissaoAtual: n(a.comissao_atual),
+    comissaoPraticada: praticada?.tarifa ?? null,
+    receitaComissao: praticada?.receita ?? 0,
     status:
       a.status === "pausado"
         ? "pausado"
@@ -122,11 +141,13 @@ export async function carregarCatalogo(): Promise<DadosCatalogo> {
     conta: a.contas_canal?.nome ?? "Conta principal",
     estoque: estoquePor.get(a.id) ?? 0,
     atualizadoEm: a.atualizado_em.slice(0, 10),
+    sincronizadoEm: a.sincronizado_em,
     criadoEm: a.criado_em.slice(0, 10),
     // O export do canal não diz se o frete é grátis; afirmar seria inventar.
     freteGratis: false,
     historicoPreco: historico.get(a.id) ?? [],
-  }));
+    };
+  });
 
   const categorias = [...new Set(itens.map((i) => i.categoria))].sort();
   const contas = [...new Set(itens.map((i) => i.conta))].sort();
@@ -145,5 +166,20 @@ export async function carregarCatalogo(): Promise<DadosCatalogo> {
     atualizados: (i.linhas_validas as number) ?? 0,
   }));
 
-  return { itens, categorias, contas, importacoes, vazio: false };
+  const sincronizadoEm =
+    linhas
+      .map((a) => a.sincronizado_em)
+      .filter((s): s is string => Boolean(s))
+      .sort()
+      .pop() ?? null;
+
+  return {
+    itens,
+    categorias,
+    contas,
+    importacoes,
+    sincronizadoEm,
+    comComissaoPraticada: itens.filter((i) => i.comissaoPraticada != null).length,
+    vazio: false,
+  };
 }

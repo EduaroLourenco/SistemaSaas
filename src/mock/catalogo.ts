@@ -20,13 +20,22 @@ export type ItemCatalogo = {
   tipo: TipoAnuncio;
   /** Preço praticado hoje, em reais. */
   precoAtual: number;
-  /** Comissão do canal para o tipo de anúncio, em %. */
+  /** Comissão de TABELA do canal para o tipo de anúncio, em %. */
   comissaoAtual: number;
+  /**
+   * Comissão realmente cobrada nos pedidos deste MLB, em %. Nula quando
+   * nenhum pedido dele trouxe comissão informada pelo canal.
+   */
+  comissaoPraticada?: number | null;
+  /** Receita que sustenta a comissão praticada. */
+  receitaComissao?: number;
   status: StatusAnuncio;
   conta: string;
   estoque: number;
   /** ISO curto (yyyy-mm-dd). */
   atualizadoEm: string;
+  /** Última leitura deste anúncio na API do canal. ISO completo ou nulo. */
+  sincronizadoEm?: string | null;
   criadoEm: string;
   freteGratis: boolean;
   historicoPreco: { semana: string; preco: number }[];
