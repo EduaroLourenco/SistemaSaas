@@ -71,6 +71,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         title="Tráfego pago"
         breadcrumb="Anúncios"
         description="A mídia contra a margem que ela produz"
+        badge={<Badge tone="warn">Em desenvolvimento</Badge>}
       />
 
       <PageBody>

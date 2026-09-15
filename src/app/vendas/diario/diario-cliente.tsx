@@ -377,7 +377,7 @@ export default function ComparativoDiario({
   return (
     <>
       <PageHeader
-        title="Comparativo diário e de períodos"
+        title="Comparar período"
         breadcrumb="Vendas"
         description="Até 4 períodos lado a lado, métrica por métrica"
         actions={

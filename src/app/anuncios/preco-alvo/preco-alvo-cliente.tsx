@@ -118,6 +118,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
         title="Preço-alvo"
         breadcrumb="Anúncios"
         description="O preço que fecha a margem que você quer"
+        badge={<Badge tone="warn">Em desenvolvimento</Badge>}
       />
 
       <PageBody>

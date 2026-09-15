@@ -373,33 +373,6 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
     };
   }, [escopo, M]);
 
-  /* ── início vs. fim do mês ────────────────────────────────── */
-
-  const ocorrencias = React.useMemo(() => {
-    const linhas = DIAS_SEMANA.map((nome, dw) => {
-      const primeira = M.media(agregar(INDICES_DOW_PRIMEIRA[dw], escopo));
-      const ultima = M.media(agregar(INDICES_DOW_ULTIMA[dw], escopo));
-      return {
-        dw,
-        nome,
-        primeira,
-        ultima,
-        variacao: primeira ? ((ultima - primeira) / primeira) * 100 : 0,
-      };
-    });
-    const mediaPrimeira =
-      linhas.reduce((s, l) => s + l.primeira, 0) / linhas.length;
-    const mediaUltima = linhas.reduce((s, l) => s + l.ultima, 0) / linhas.length;
-    return {
-      linhas,
-      mediaPrimeira,
-      mediaUltima,
-      variacao: mediaPrimeira
-        ? ((mediaUltima - mediaPrimeira) / mediaPrimeira) * 100
-        : 0,
-    };
-  }, [escopo, M]);
-
   return (
     <>
       <PageHeader
@@ -708,87 +681,6 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
           </div>
         </Panel>
 
-        {/* ── Início vs. fim do mês ──────────────────────────── */}
-        <Panel>
-          <PanelHeader
-            title="Padrão início vs. fim do mês"
-            hint="1ª ocorrência de cada dia da semana contra a última"
-            action={
-              <Badge
-                tone={
-                  Math.abs(ocorrencias.variacao) < 0.5
-                    ? "neutral"
-                    : ocorrencias.variacao > 0
-                      ? "up"
-                      : "down"
-                }
-              >
-                <span className="num">{pct(ocorrencias.variacao)}</span>
-                <span className="ml-1 font-medium hidden sm:inline">
-                  no fim do mês
-                </span>
-              </Badge>
-            }
-          />
-
-          <div className="grid grid-cols-2 divide-x divide-line border-b border-line">
-            <div className="px-4 py-3">
-              <p className="label truncate">1ª ocorrência</p>
-              <p className="num text-[19px] font-semibold text-ink leading-none mt-1.5">
-                {M.fmtCurto(ocorrencias.mediaPrimeira)}
-              </p>
-              <p className="text-[11px] text-ink-3 mt-1.5">
-                média dos 7 dias na 1ª semana cheia
-              </p>
-            </div>
-            <div className="px-4 py-3">
-              <p className="label truncate">Última ocorrência</p>
-              <p className="num text-[19px] font-semibold text-ink leading-none mt-1.5">
-                {M.fmtCurto(ocorrencias.mediaUltima)}
-              </p>
-              <div className="mt-1.5">
-                <Delta value={ocorrencias.variacao} />
-              </div>
-            </div>
-          </div>
-
-          <div className="px-4 py-3">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 sm:gap-x-6">
-              <span className="label pb-1.5">Dia</span>
-              <span className="label pb-1.5 text-right">1ª</span>
-              <span className="label pb-1.5 text-right">Última</span>
-              <span className="label pb-1.5 text-right">Var.</span>
-
-              {ocorrencias.linhas.map((l) => {
-                const forte = Math.abs(l.variacao) >= 4;
-                return (
-                  <React.Fragment key={l.dw}>
-                    <span className="flex items-center h-11 md:h-8 border-t border-line text-[13px] text-ink truncate">
-                      <span className="sm:hidden">
-                        {DIAS_SEMANA_CURTOS[l.dw]}
-                      </span>
-                      <span className="hidden sm:inline">{l.nome}</span>
-                    </span>
-                    <span className="flex items-center justify-end h-11 md:h-8 border-t border-line num text-[12px] text-ink-2 whitespace-nowrap">
-                      {M.fmtCurto(l.primeira)}
-                    </span>
-                    <span
-                      className={cn(
-                        "flex items-center justify-end h-11 md:h-8 border-t border-line num text-[12px] whitespace-nowrap",
-                        forte ? "text-ink font-semibold" : "text-ink"
-                      )}
-                    >
-                      {M.fmtCurto(l.ultima)}
-                    </span>
-                    <span className="flex items-center justify-end h-11 md:h-8 border-t border-line">
-                      <Delta value={l.variacao} />
-                    </span>
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          </div>
-        </Panel>
       </PageBody>
 
       {/* filtro de canal — mobile */}

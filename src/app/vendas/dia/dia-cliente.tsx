@@ -90,13 +90,33 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
   if (dados.vazio || !dados.hoje) {
     return (
       <>
-        <PageHeader title="Dia" breadcrumb="Vendas" />
+        <PageHeader
+          title="Dia"
+          breadcrumb="Vendas"
+          actions={
+            // Sem o seletor aqui, escolher uma conta sem movimento prendia
+            // a tela nesse estado vazio: não tinha como voltar sem editar
+            // a URL à mão ou recarregar a página.
+            dados.opcoes.length > 0 && (
+              <SelectRecorte
+                grupos={dados.opcoes}
+                valor={dados.canalId}
+                onChange={(v) => ir("canal", v)}
+                className="w-[240px]"
+              />
+            )
+          }
+        />
         <PageBody>
           <Panel className="p-6">
             <EmptyState
               icon={CalendarDays}
               title="Sem movimento registrado"
-              description="Importe os lançamentos ou sincronize o canal para a visão do dia aparecer."
+              description={
+                dados.canalId
+                  ? "Este canal não tem venda no período. Escolha outro no seletor acima, ou sincronize-o."
+                  : "Importe os lançamentos ou sincronize o canal para a visão do dia aparecer."
+              }
             />
           </Panel>
         </PageBody>

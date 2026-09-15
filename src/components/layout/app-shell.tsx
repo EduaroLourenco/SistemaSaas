@@ -373,12 +373,15 @@ export function PageHeader({
   title,
   breadcrumb,
   description,
+  badge,
   actions,
   filters,
 }: {
   title: string;
   breadcrumb?: string;
   description?: string;
+  /** Selo ao lado do título — ex.: "Em desenvolvimento". */
+  badge?: React.ReactNode;
   actions?: React.ReactNode;
   filters?: React.ReactNode;
 }) {
@@ -390,9 +393,12 @@ export function PageHeader({
         )}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0">
-            <h1 className="text-[20px] font-semibold text-ink leading-tight truncate">
-              {title}
-            </h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-[20px] font-semibold text-ink leading-tight truncate">
+                {title}
+              </h1>
+              {badge}
+            </div>
             {description && (
               <p className="text-[12px] text-ink-3 mt-0.5">{description}</p>
             )}
