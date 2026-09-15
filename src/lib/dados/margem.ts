@@ -605,7 +605,22 @@ export type Resultado = {
   variavelRecorrente: number;
   variavelAvulsa: number;
 
-  resultado: number;
+  /**
+   * O que sobrou — ou nulo quando a conta não fecha.
+   *
+   * Nulo enquanto a margem não cobrir praticamente toda a receita. A
+   * razão é aritmética, não de zelo: a margem de contribuição sai só dos
+   * itens com custo completo, e os custos de operação abaixo dela são
+   * INTEIROS. Subtrair 100% da mídia de 30% da contribuição não dá um
+   * resultado parcial — dá um número sem significado, e ele sai enorme e
+   * negativo justamente quando falta cadastro.
+   *
+   * Com zero de cobertura, a versão antiga mostrava "Resultado
+   * −R$ (mídia do período)" em vermelho, como se a operação tivesse
+   * perdido exatamente o que gastou em anúncio. Não tinha; ela só não
+   * sabia o próprio custo.
+   */
+  resultado: number | null;
   resultadoPct: number | null;
 
   /** Quanto da receita entrou na margem — abaixo de 100%, é parcial. */
@@ -759,13 +774,28 @@ export async function carregarResultado(
   }
 
   const margemContribuicao = r2(total.margem);
-  const resultado = r2(
-    margemContribuicao -
-      ads -
-      porNatureza.fixa_recorrente -
-      porNatureza.variavel_recorrente -
-      porNatureza.variavel_avulsa
-  );
+  const cobertura =
+    total.receita > 0 ? r2((total.receitaApurada * 100) / total.receita) : 0;
+
+  /*
+   * Só existe resultado quando a contribuição cobre a receita.
+   *
+   * Os custos de operação são inteiros; a contribuição, parcial. Misturar
+   * os dois produz um número que parece prejuízo e é, na verdade, cadastro
+   * faltando. O corte em 99,5% é o mesmo que a tela já usa para decidir se
+   * avisa sobre cobertura — uma régua só, para não haver estado em que a
+   * tela avisa que está incompleta e mesmo assim afirma um resultado.
+   */
+  const resultado =
+    cobertura >= 99.5
+      ? r2(
+          margemContribuicao -
+            ads -
+            porNatureza.fixa_recorrente -
+            porNatureza.variavel_recorrente -
+            porNatureza.variavel_avulsa
+        )
+      : null;
 
   return {
     inicio,
@@ -790,9 +820,10 @@ export async function carregarResultado(
     variavelAvulsa: r2(porNatureza.variavel_avulsa),
     resultado,
     resultadoPct:
-      total.receitaApurada > 0 ? r2((resultado * 100) / total.receitaApurada) : null,
-    cobertura:
-      total.receita > 0 ? r2((total.receitaApurada * 100) / total.receita) : 0,
+      resultado != null && total.receitaApurada > 0
+        ? r2((resultado * 100) / total.receitaApurada)
+        : null,
+    cobertura,
     receitaSemCusto: r2(total.receita - total.receitaApurada),
     cadaCoberturaDe: base.cobertura,
   };

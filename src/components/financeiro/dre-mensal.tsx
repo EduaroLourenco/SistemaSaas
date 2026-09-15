@@ -153,7 +153,25 @@ export function DreMensal({
                       {l.rotulo}
                     </td>
                     {colunas.map((r, i) => {
-                      const v = Number(r[l.campo] ?? 0);
+                      // `resultado` é nulo quando a cobertura de custo não
+                      // fecha. Cair para zero mostraria "R$ 0" na linha de
+                      // RESULTADO, que se lê como "empatou" — e não é isso.
+                      const bruto = r[l.campo];
+                      if (bruto == null) {
+                        return (
+                          <td
+                            key={i}
+                            className={cn(
+                              "px-3 py-1.5 text-right whitespace-nowrap text-ink-3",
+                              ehTotal(i) && "bg-panel-2/60 border-l border-line-2",
+                              l.forte && "font-semibold"
+                            )}
+                          >
+                            <span className="num">—</span>
+                          </td>
+                        );
+                      }
+                      const v = Number(bruto);
                       const p = vert(r, v);
                       /*
                        * Resultado negativo é o único número desta tabela que
@@ -209,10 +227,22 @@ function EvolucaoMargem({ mensal }: { mensal: Resultado[] }) {
   const pontos = mensal.map((r) => ({
     rotulo: rotuloMes(r),
     margem: r.receitaLiquida > 0 ? (r.margemContribuicao / r.receitaLiquida) * 100 : 0,
-    resultado: r.receitaLiquida > 0 ? (r.resultado / r.receitaLiquida) * 100 : 0,
+    // Nulo quando o mês não tem cobertura suficiente para ter resultado.
+    resultado:
+      r.resultado != null && r.receitaLiquida > 0
+        ? (r.resultado / r.receitaLiquida) * 100
+        : null,
   }));
 
-  const todos = pontos.flatMap((p) => [p.margem, p.resultado]);
+  /*
+   * A série do resultado só é desenhada se algum mês tiver resultado. Com
+   * custos por SKU em branco, nenhum tem — e uma linha reta no zero
+   * chamada "Resultado" seria lida como "a operação empatou".
+   */
+  const temResultado = pontos.some((p) => p.resultado != null);
+  const todos = pontos.flatMap((p) =>
+    p.resultado == null ? [p.margem] : [p.margem, p.resultado]
+  );
   const max = Math.max(10, ...todos);
   const min = Math.min(0, ...todos);
   const faixa = max - min || 1;
@@ -225,7 +255,11 @@ function EvolucaoMargem({ mensal }: { mensal: Resultado[] }) {
   const y = (v: number) => T + alturaPlot - ((v - min) / faixa) * alturaPlot;
 
   const linha = (campo: "margem" | "resultado") =>
-    pontos.map((p, i) => `${x(i).toFixed(1)},${y(p[campo]).toFixed(1)}`).join(" ");
+    pontos
+      .map((p, i) => [p[campo], i] as const)
+      .filter((par): par is readonly [number, number] => par[0] != null)
+      .map(([v, i]) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+      .join(" ");
 
   const zeroY = y(0);
 
@@ -236,10 +270,12 @@ function EvolucaoMargem({ mensal }: { mensal: Resultado[] }) {
           <i className="w-3 h-0.5 bg-brand inline-block" />
           Margem de contribuição
         </span>
-        <span className="flex items-center gap-1.5 text-[11.5px] text-ink-2">
-          <i className="w-3 h-0.5 bg-up inline-block" />
-          Resultado
-        </span>
+        {temResultado && (
+          <span className="flex items-center gap-1.5 text-[11.5px] text-ink-2">
+            <i className="w-3 h-0.5 bg-up inline-block" />
+            Resultado
+          </span>
+        )}
         <span className="text-[11px] text-ink-3 ml-auto">% da receita líquida</span>
       </div>
 
@@ -270,12 +306,16 @@ function EvolucaoMargem({ mensal }: { mensal: Resultado[] }) {
           </text>
 
           <polyline points={linha("margem")} fill="none" stroke="var(--brand)" strokeWidth="2" strokeLinejoin="round" />
-          <polyline points={linha("resultado")} fill="none" stroke="var(--up)" strokeWidth="2" strokeLinejoin="round" />
+          {temResultado && (
+            <polyline points={linha("resultado")} fill="none" stroke="var(--up)" strokeWidth="2" strokeLinejoin="round" />
+          )}
 
           {pontos.map((p, i) => (
             <g key={i}>
               <circle cx={x(i)} cy={y(p.margem)} r="3" fill="var(--brand)" />
-              <circle cx={x(i)} cy={y(p.resultado)} r="3" fill="var(--up)" />
+              {p.resultado != null && (
+                <circle cx={x(i)} cy={y(p.resultado)} r="3" fill="var(--up)" />
+              )}
               <text
                 x={x(i)} y={T + alturaPlot + 15} textAnchor="middle"
                 className="num" fontSize="10" fill="var(--ink-3)"
@@ -359,8 +399,10 @@ export function ResumoDre({ r }: { r: Resultado }) {
     {
       k: "Resultado",
       v: r.resultadoPct != null ? pct(r.resultadoPct, 1) : "—",
-      sub: money(r.resultado),
-      ruim: r.resultado < 0,
+      // Sem cobertura não há resultado. Dizer o que falta vale mais que
+      // um número vermelho que só reflete a mídia do período.
+      sub: r.resultado != null ? money(r.resultado) : "falta custo por SKU",
+      ruim: r.resultado != null && r.resultado < 0,
     },
     { k: "Cobertura da margem", v: pct(r.cobertura, 1), sub: `${moneyShort(r.receitaSemCusto)} sem custo` },
   ];

@@ -258,11 +258,33 @@ export default function FinanceiroCliente({
             />
             <Linha rotulo="Variáveis avulsas" valor={r.variavelAvulsa} indent />
 
-            <Linha rotulo="Resultado" valor={r.resultado} tipo="final" />
-            {r.resultadoPct != null && (
-              <p className="text-[11.5px] text-ink-3 text-right num">
-                {pct(r.resultadoPct, 1)} da receita apurada
-              </p>
+            {/*
+              * Sem cobertura não há resultado, e sim cadastro faltando.
+              * Mostrar um número aqui seria subtrair a mídia inteira de uma
+              * contribuição parcial — o que dá um prejuízo que não existe.
+              */}
+            {r.resultado != null ? (
+              <>
+                <Linha rotulo="Resultado" valor={r.resultado} tipo="final" />
+                {r.resultadoPct != null && (
+                  <p className="text-[11.5px] text-ink-3 text-right num">
+                    {pct(r.resultadoPct, 1)} da receita apurada
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="border-t border-line mt-1 pt-2">
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="text-[13px] font-semibold text-ink">Resultado</span>
+                  <span className="num text-[13px] text-ink-3">—</span>
+                </div>
+                <p className="text-[11px] text-ink-3 leading-relaxed mt-1">
+                  Os custos de operação acima são do período inteiro, mas a margem
+                  de contribuição só cobre {pct(r.cobertura, 1)} da receita.
+                  Subtrair um do outro daria um prejuízo que não existe. O
+                  resultado aparece quando os custos por SKU estiverem completos.
+                </p>
+              </div>
             )}
 
             {/* Quanto do custo foi medido, e quanto foi estimado por tabela. */}
