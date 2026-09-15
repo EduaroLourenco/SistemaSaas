@@ -220,6 +220,25 @@ export type DadosPerformancePreco = {
   opcoes: GrupoRecorte[];
   dias: number;
   periodo: { inicio: string; fim: string };
+  /**
+   * Saúde da coluna de vitrine.
+   *
+   * Todo preço desta tela sai dos PEDIDOS, menos a vitrine: essa vem do
+   * catálogo, que por sua vez é abastecido pela API do canal. Quando a
+   * sincronização falha, `preco_atual` não some — ele simplesmente
+   * envelhece, e uma vitrine de três semanas atrás parece atual.
+   *
+   * Por isso a tela recebe quando foi a última sincronização e quantos
+   * anúncios do recorte sequer têm preço, para poder avisar em vez de
+   * mostrar número velho com cara de novo.
+   */
+  vitrine: {
+    /** Sincronização mais recente entre os anúncios do recorte. */
+    atualizadoEm: string | null;
+    /** Anúncios do recorte com `preco_atual` preenchido. */
+    comPreco: number;
+    total: number;
+  };
   resumo: {
     comEvidencia: number;
     subiuECaiu: number;
@@ -253,7 +272,9 @@ export async function carregarPerformancePreco(filtro: {
       paginar(() =>
         sb
           .from("anuncios")
-          .select("codigo_externo,sku_canal,tipo,preco_atual,comissao_atual,canal_id,conta_canal_id")
+          .select(
+            "codigo_externo,sku_canal,tipo,preco_atual,comissao_atual,canal_id,conta_canal_id,sincronizado_em"
+          )
           .order("codigo_externo")
       ),
       sb.from("contas_canal").select("id,canal_id").limit(200),
@@ -291,6 +312,7 @@ export async function carregarPerformancePreco(filtro: {
     comissao_atual: string | number | null;
     canal_id: string;
     conta_canal_id: string | null;
+    sincronizado_em: string | null;
   };
 
   const canalDaConta = new Map(
@@ -411,6 +433,22 @@ export async function carregarPerformancePreco(filtro: {
     lista.push(a);
     catalogoPorSku.set(sku, lista);
   }
+
+  // Saúde da vitrine, medida no MESMO recorte que a tela mostra: a 2ª
+  // conta pode estar meses atrás sem que a de São Paulo esteja.
+  const doRecorte = anuncios.filter((a) =>
+    noRecorte(filtroConta, { canalId: a.canal_id, contaCanalId: a.conta_canal_id })
+  );
+  const vitrine = {
+    atualizadoEm:
+      doRecorte
+        .map((a) => a.sincronizado_em)
+        .filter((s): s is string => Boolean(s))
+        .sort()
+        .pop() ?? null,
+    comPreco: doRecorte.filter((a) => a.preco_atual != null).length,
+    total: doRecorte.length,
+  };
 
   /* ── Monta ── */
 
@@ -667,6 +705,7 @@ export async function carregarPerformancePreco(filtro: {
     opcoes,
     dias,
     periodo: { inicio, fim },
+    vitrine,
     resumo: {
       comEvidencia: linhas.filter((l) => l.melhor).length,
       subiuECaiu: linhas.filter((l) => l.situacao === "subiu_e_caiu").length,
@@ -692,6 +731,7 @@ function vazio(
     opcoes,
     dias,
     periodo: { inicio: "", fim: "" },
+    vitrine: { atualizadoEm: null, comPreco: 0, total: 0 },
     resumo: { comEvidencia: 0, subiuECaiu: 0, acimaDoMelhor: 0, total: 0 },
   };
 }

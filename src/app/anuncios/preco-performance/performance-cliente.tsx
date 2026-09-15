@@ -145,6 +145,31 @@ export default function PerformancePrecoCliente({
   const th = "px-2.5 py-2 text-[11px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-2.5 py-1.5 border-b border-line";
 
+  /*
+   * A vitrine é o único número desta tela que não sai dos pedidos: vem do
+   * catálogo, abastecido pela API do canal. Quando a sincronização falha,
+   * o preço não some — envelhece em silêncio. O aviso é em maiúsculo e no
+   * topo justamente porque um preço velho com cara de atual é pior que
+   * uma coluna vazia.
+   */
+  const { vitrine } = dados;
+  const horasDesde = vitrine.atualizadoEm
+    ? (Date.now() - new Date(vitrine.atualizadoEm).getTime()) / 3_600_000
+    : null;
+  const semVitrine = vitrine.total > 0 && vitrine.comPreco === 0;
+  const vitrineVelha = horasDesde != null && horasDesde > 48;
+  const faltamPrecos =
+    vitrine.total > 0 && vitrine.comPreco > 0 && vitrine.comPreco < vitrine.total;
+
+  const avisoVitrine =
+    horasDesde == null || semVitrine
+      ? "NÃO FOI POSSÍVEL LER O PREÇO DE VITRINE NO CANAL."
+      : vitrineVelha
+        ? `O PREÇO DE VITRINE ESTÁ DESATUALIZADO — ÚLTIMA LEITURA HÁ ${Math.floor(
+            horasDesde / 24
+          )} DIA(S).`
+        : null;
+
   return (
     <>
       <PageHeader
@@ -163,6 +188,25 @@ export default function PerformancePrecoCliente({
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
             <p className="text-[13px] text-ink-2">{erro}</p>
           </Panel>
+        )}
+
+        {avisoVitrine && (
+          <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-warn/40 bg-warn-wash">
+            <AlertCircle className="w-4 h-4 text-warn shrink-0 mt-0.5" />
+            <p className="text-[12.5px] text-ink-2 leading-relaxed">
+              <span className="font-semibold text-ink tracking-wide">{avisoVitrine}</span>{" "}
+              A coluna <span className="font-medium text-ink-2">Vitrine / desconto</span> é
+              a única que depende do canal; todo o resto vem dos pedidos e continua
+              correto. Sincronize o canal para a vitrine voltar a valer.
+            </p>
+          </Panel>
+        )}
+
+        {!avisoVitrine && faltamPrecos && (
+          <p className="text-[11.5px] text-ink-3 mb-2">
+            {count(vitrine.total - vitrine.comPreco)} dos {count(vitrine.total)} anúncios
+            do recorte estão sem preço de vitrine — nessas linhas a coluna sai vazia.
+          </p>
         )}
 
         {/* ── Recorte ── */}
@@ -369,10 +413,10 @@ export default function PerformancePrecoCliente({
                 <tr>
                   <th className={`${th} text-left`}>SKU</th>
                   <th className={`${th} text-right`}>Un.</th>
-                  <th className={`${th} text-right`}>Melhor preço</th>
+                  <th className={`${th} text-right`}>Melhor preço vendido</th>
                   <th className={`${th} text-right`}>Un/dia nele</th>
-                  <th className={`${th} text-right`}>Último preço</th>
-                  <th className={`${th} text-right`}>Média 14 dias</th>
+                  <th className={`${th} text-right`}>Último preço vendido</th>
+                  <th className={`${th} text-right`}>Média vendida 14 dias</th>
                   <th className={`${th} text-right`}>Vitrine / desconto</th>
                   <th className={`${th} text-right`}>Variação</th>
                   <th className={`${th} text-right`}>Impacto na venda</th>
@@ -544,6 +588,16 @@ export default function PerformancePrecoCliente({
           <div>
             <p className="text-[12px] font-semibold text-ink mb-1">
               Como ler, e o que isto não prova
+            </p>
+            <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-3xl mb-1.5">
+              <span className="text-ink-2 font-medium">
+                Todo preço desta tela é preço VENDIDO
+              </span>{" "}
+              — o que o cliente efetivamente pagou no pedido, já com desconto, campanha e
+              cupom. A única exceção é a coluna{" "}
+              <span className="text-ink-2">Vitrine</span>, que é o preço publicado no
+              anúncio. Os dois divergem bastante, e é de propósito que estão lado a lado:
+              a distância entre eles é o desconto que a operação vem dando.
             </p>
             <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-3xl">
               O melhor preço é o que teve mais{" "}
