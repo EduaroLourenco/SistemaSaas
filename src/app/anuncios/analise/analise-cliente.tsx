@@ -33,26 +33,17 @@ import { LinhaDoTempo } from "@/components/analise/linha-do-tempo";
 import { Elasticidade } from "@/components/analise/elasticidade";
 import { CompararAnuncios } from "@/components/analise/comparar";
 import type { DadosAnalise } from "@/lib/dados/analise";
-import {
-  analisar,
-  LENTES,
-  type AnuncioAnalisado,
-  type Lente,
-} from "@/lib/analise";
+import { analisar, LENTES, type AnuncioAnalisado } from "@/lib/analise";
 import { money, count, pct, delta as fmtDelta } from "@/lib/format";
 import {
   Bar,
   CartesianGrid,
   ComposedChart,
   Line,
-  ReferenceLine,
   ResponsiveContainer,
-  Scatter,
-  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
-  ZAxis,
 } from "recharts";
 import {
   Search,
@@ -65,14 +56,15 @@ import {
   RefreshCw,
   TriangleAlert,
   Package,
-  ChevronDown,
   Columns2,
 } from "lucide-react";
 
-const RECORTES = [
-  { value: "4", label: "4 semanas" },
-  { value: "8", label: "8 semanas" },
-] as const;
+/**
+ * Tamanhos de recorte oferecidos. A lista é filtrada pelo que existe de
+ * fato no histórico importado — não adianta oferecer 52 semanas quando só
+ * há 11 no relatório. O último item é sempre "tudo o que existe".
+ */
+const RECORTES_POSSIVEIS = [4, 8, 12, 16, 26, 39, 52];
 
 const TIPOS = ["Todos", "Clássico", "Premium"] as const;
 const STATUS = ["Todos", "ativo", "pausado"] as const;
@@ -159,22 +151,34 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
   const {
     anuncios: ANUNCIOS_ANALISE,
     semanas: SEMANAS,
-    categorias: CATEGORIAS,
     importacoes: IMPORTACOES,
   } = dados;
 
-  const [recorte, setRecorte] = React.useState<"4" | "8">("8");
+  /*
+   * Opções de recorte que fazem sentido para este histórico. Sempre termina
+   * com o total disponível, para o caso de o Eduardo querer olhar tudo.
+   */
+  const RECORTES = React.useMemo(() => {
+    const total = SEMANAS.length;
+    const valores = RECORTES_POSSIVEIS.filter((n) => n < total);
+    if (total > 0) valores.push(total);
+    return valores.map((n) => ({
+      value: String(n),
+      label: n === total ? `${n} semanas (tudo)` : `${n} semanas`,
+    }));
+  }, [SEMANAS.length]);
+
+  const [recorte, setRecorte] = React.useState(() =>
+    String(Math.min(8, SEMANAS.length || 8))
+  );
   const [precos, setPrecos] = React.useState<EstadoPrecos>({ fase: "ocioso" });
-  const [lente, setLente] = React.useState<Lente>("todos");
   const [busca, setBusca] = React.useState("");
   const [conta, setConta] = React.useState("");
-  const [categoria, setCategoria] = React.useState("Todas");
   const [tipo, setTipo] = React.useState<(typeof TIPOS)[number]>("Todos");
   const [status, setStatus] = React.useState<(typeof STATUS)[number]>("Todos");
   const [selecionado, setSelecionado] = React.useState<AnuncioAnalisado | null>(null);
   const [marcados, setMarcados] = React.useState<string[]>([]);
   const [filtrosAbertos, setFiltrosAbertos] = React.useState(false);
-  const [mapaAberto, setMapaAberto] = React.useState(false);
   const [comparando, setComparando] = React.useState(false);
 
   const semanasSelecionadas = React.useMemo(
@@ -202,11 +206,10 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
     return [...vistas.keys()].sort().map((c) => ({ id: c, nome: c }));
   }, [itens]);
 
-  const porAtributo = React.useMemo(() => {
+  const filtrados = React.useMemo(() => {
     const q = busca.trim().toLowerCase();
     return itens.filter((i) => {
       if (conta && i.conta !== conta) return false;
-      if (categoria !== "Todas" && i.categoria !== categoria) return false;
       if (tipo !== "Todos" && i.tipo !== tipo) return false;
       if (status !== "Todos" && i.status !== status) return false;
       if (!q) return true;
@@ -216,19 +219,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
         i.mlb.toLowerCase().includes(q)
       );
     });
-  }, [itens, busca, categoria, tipo, status, conta]);
-
-  const contagemLentes = React.useMemo(() => {
-    const m = {} as Record<Lente, number>;
-    for (const l of LENTES) m[l.id] = 0;
-    for (const i of porAtributo) for (const l of i.lentes) m[l] += 1;
-    return m;
-  }, [porAtributo]);
-
-  const filtrados = React.useMemo(
-    () => porAtributo.filter((i) => i.lentes.includes(lente)),
-    [porAtributo, lente]
-  );
+  }, [itens, busca, tipo, status, conta]);
 
   /**
    * Link direto para um anúncio: `?anuncio=MLB123`.
@@ -244,11 +235,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
     if (achado) setSelecionado(achado);
   }, [itens]);
 
-  const lenteAtual = LENTES.find((l) => l.id === lente)!;
-  const filtrosAtivos =
-    (categoria !== "Todas" ? 1 : 0) +
-    (tipo !== "Todos" ? 1 : 0) +
-    (status !== "Todos" ? 1 : 0);
+  const filtrosAtivos = (tipo !== "Todos" ? 1 : 0) + (status !== "Todos" ? 1 : 0);
 
   /**
    * Puxa o preço da vitrine agora, sob demanda.
@@ -291,10 +278,8 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
 
   function limparFiltros() {
     setBusca("");
-    setCategoria("Todas");
     setTipo("Todos");
     setStatus("Todos");
-    setLente("todos");
   }
 
   function alternarMarca(mlb: string) {
@@ -530,25 +515,20 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
               )}
             </div>
 
-            <Segmented<"4" | "8">
-              options={RECORTES}
+            <Select
               value={recorte}
-              onChange={setRecorte}
-            />
+              onChange={(e) => setRecorte(e.target.value)}
+              className="w-[168px] shrink-0"
+              aria-label="Quantidade de semanas analisadas"
+            >
+              {RECORTES.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </Select>
 
             <div className="hidden md:flex items-center gap-2">
-              <Select
-                value={categoria}
-                onChange={(e) => setCategoria(e.target.value)}
-                className="w-40"
-              >
-                <option value="Todas">Todas as categorias</option>
-                {CATEGORIAS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
               <Segmented<(typeof TIPOS)[number]>
                 options={TIPOS}
                 value={tipo}
@@ -658,195 +638,6 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
           />
         </div>
 
-        {/* ── Lentes estratégicas ────────────────────────────── */}
-        <Panel className="overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto border-b border-line">
-            {LENTES.map((l) => {
-              const n = contagemLentes[l.id] ?? 0;
-              const ativa = lente === l.id;
-              return (
-                <button
-                  key={l.id}
-                  onClick={() => setLente(l.id)}
-                  className={
-                    "flex items-center gap-2 h-8 px-3 rounded-r1 border text-[12px] font-medium whitespace-nowrap transition-colors " +
-                    (ativa
-                      ? "border-brand bg-brand-wash text-brand"
-                      : "border-line text-ink-2 hover:bg-panel-3 hover:text-ink")
-                  }
-                >
-                  {l.rotulo}
-                  <span
-                    className={
-                      "num text-[11px] px-1.5 h-4 flex items-center rounded-[4px] " +
-                      (ativa ? "bg-brand text-brand-ink" : "bg-panel-3 text-ink-3")
-                    }
-                  >
-                    {n}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-1.5">
-            <p className="text-[12px] text-ink-2 flex-1 min-w-0">
-              <span className="font-semibold text-ink">Critério: </span>
-              {lenteAtual.regra}
-            </p>
-            {lente !== "todos" && (
-              <p className="text-[12px] text-ink-2 flex-1 min-w-0">
-                <span className="font-semibold text-ink">O que fazer: </span>
-                {lenteAtual.acao}
-              </p>
-            )}
-          </div>
-        </Panel>
-
-        {/* ── Mapa da carteira (recolhível) ──────────────────── */}
-        <Panel className="overflow-hidden">
-          <button
-            onClick={() => setMapaAberto((v) => !v)}
-            className="w-full flex items-center justify-between gap-3 px-4 h-11 hover:bg-panel-2 transition-colors"
-          >
-            <span className="flex items-baseline gap-2 min-w-0">
-              <span className="text-[13px] font-semibold text-ink">
-                Mapa da carteira
-              </span>
-              <span className="text-[11px] text-ink-3 truncate hidden sm:inline">
-                tráfego × conversão — os quadrantes explicam as lentes
-              </span>
-            </span>
-            <ChevronDown
-              className={
-                "w-4 h-4 text-ink-3 shrink-0 transition-transform " +
-                (mapaAberto ? "rotate-180" : "")
-              }
-            />
-          </button>
-
-          {mapaAberto && (
-            <div className="border-t border-line">
-              <div className="h-[300px] px-2 pt-4 pb-1">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                    <CartesianGrid {...GRID} vertical />
-                    <XAxis
-                      type="number"
-                      dataKey="x"
-                      name="Visitas"
-                      {...AXIS}
-                      tickFormatter={(v: number) => count(v)}
-                    />
-                    <YAxis
-                      type="number"
-                      dataKey="y"
-                      name="Conversão"
-                      {...AXIS}
-                      width={48}
-                      tickFormatter={(v: number) => pct(v, 1)}
-                    />
-                    <ZAxis type="number" dataKey="z" range={[30, 400]} />
-                    <ReferenceLine
-                      x={resumo.mediaVisitas}
-                      stroke="var(--line-2)"
-                      strokeDasharray="4 4"
-                    />
-                    <ReferenceLine
-                      y={resumo.mediaConversao}
-                      stroke="var(--line-2)"
-                      strokeDasharray="4 4"
-                    />
-                    <Tooltip
-                      cursor={{ strokeDasharray: "3 3", stroke: "var(--line-2)" }}
-                      content={({ active, payload }) => {
-                        if (!active || !payload || !payload.length) return null;
-                        const d = payload[0].payload as {
-                          nome: string;
-                          x: number;
-                          y: number;
-                          z: number;
-                        };
-                        return (
-                          <div
-                            className="panel px-2.5 py-2 max-w-[240px]"
-                            style={{ boxShadow: "var(--sh-3)" }}
-                          >
-                            <p className="text-[12px] font-semibold text-ink leading-snug">
-                              {d.nome}
-                            </p>
-                            <p className="num text-[11px] text-ink-2 mt-1">
-                              {count(d.x)} visitas · {pct(d.y, 2)} de conversão
-                            </p>
-                            <p className="num text-[11px] text-ink-2">
-                              {money(d.z)} de receita
-                            </p>
-                          </div>
-                        );
-                      }}
-                    />
-                    <Scatter
-                      name="Joias escondidas"
-                      isAnimationActive={false}
-                      fill="var(--up)"
-                      data={porAtributo
-                        .filter((i) => i.lentes.includes("joias"))
-                        .map((i) => ({
-                          nome: i.titulo,
-                          x: i.metricas.visitas,
-                          y: i.metricas.conversao,
-                          z: i.metricas.receita,
-                        }))}
-                    />
-                    <Scatter
-                      name="Desperdício de tráfego"
-                      isAnimationActive={false}
-                      fill="var(--down)"
-                      data={porAtributo
-                        .filter((i) => i.lentes.includes("desperdicio"))
-                        .map((i) => ({
-                          nome: i.titulo,
-                          x: i.metricas.visitas,
-                          y: i.metricas.conversao,
-                          z: i.metricas.receita,
-                        }))}
-                    />
-                    <Scatter
-                      name="Demais anúncios"
-                      isAnimationActive={false}
-                      fill="var(--s9)"
-                      data={porAtributo
-                        .filter(
-                          (i) =>
-                            !i.lentes.includes("joias") &&
-                            !i.lentes.includes("desperdicio")
-                        )
-                        .map((i) => ({
-                          nome: i.titulo,
-                          x: i.metricas.visitas,
-                          y: i.metricas.conversao,
-                          z: i.metricas.receita,
-                        }))}
-                    />
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="px-4 py-3 border-t border-line flex flex-wrap items-center justify-between gap-3">
-                <Legend
-                  items={[
-                    { label: "Joias escondidas", color: "var(--up)" },
-                    { label: "Desperdício de tráfego", color: "var(--down)" },
-                    { label: "Demais anúncios", color: "var(--s9)" },
-                  ]}
-                />
-                <span className="text-[11px] text-ink-3">
-                  As linhas tracejadas são as médias da carteira. O tamanho do ponto
-                  é a receita.
-                </span>
-              </div>
-            </div>
-          )}
-        </Panel>
-
         {/* ── SKU × semana, com o gráfico de quem subiu e quem caiu ── */}
         <MatrizAnuncios itens={filtrados} semanas={semanasSelecionadas} />
 
@@ -898,11 +689,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
               <EmptyState
                 icon={SearchX}
                 title="Nenhum anúncio neste recorte"
-                description={
-                  lente === "todos"
-                    ? "Ajuste a busca ou limpe os filtros de categoria e tipo."
-                    : "Nenhum anúncio se enquadra nesta lente com os filtros atuais."
-                }
+                description="Ajuste a busca, troque a quantidade de semanas ou limpe os filtros de tipo e situação."
                 action={
                   <Button size="sm" onClick={limparFiltros}>
                     Limpar filtros
@@ -931,16 +718,15 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
           onClear={limparFiltros}
           applyLabel={`Ver ${filtrados.length} anúncios`}
         >
-          <Field label="Categoria">
+          <Field label="Semanas analisadas">
             <Select
-              value={categoria}
-              onChange={(e) => setCategoria(e.target.value)}
+              value={recorte}
+              onChange={(e) => setRecorte(e.target.value)}
               className="h-11"
             >
-              <option value="Todas">Todas as categorias</option>
-              {CATEGORIAS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {RECORTES.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
                 </option>
               ))}
             </Select>
@@ -986,28 +772,6 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
             </div>
           </div>
 
-          <div>
-            <p className="label mb-2">Lente</p>
-            <div className="flex flex-col gap-1.5">
-              {LENTES.map((l) => (
-                <button
-                  key={l.id}
-                  onClick={() => setLente(l.id)}
-                  className={
-                    "flex items-center justify-between gap-2 h-11 px-3 rounded-r1 border text-[13px] font-medium transition-colors " +
-                    (lente === l.id
-                      ? "border-brand bg-brand-wash text-brand"
-                      : "border-line text-ink-2")
-                  }
-                >
-                  {l.rotulo}
-                  <span className="num text-[12px]">
-                    {contagemLentes[l.id] ?? 0}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
         </FilterSheet>
       )}
     </>
