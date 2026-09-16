@@ -49,6 +49,39 @@ export type CancelamentoMes = {
   taxaValor: number;
 };
 
+/** Uma célula da matriz canal × mês. */
+export type CelulaMes = {
+  pedidos: number;
+  cancelados: number;
+  valorCancelado: number;
+  receitaBruta: number;
+  taxaValor: number;
+  taxaQuantidade: number;
+};
+
+/**
+ * Cancelamento por canal AO LONGO do tempo.
+ *
+ * As duas visões que já existiam respondem meio caminho cada uma: "por
+ * canal" soma o ano inteiro e não mostra quando piorou; "por mês" soma
+ * todos os canais e não mostra quem piorou. A pergunta real é a
+ * intersecção — e ela só aparece cruzando os dois eixos.
+ *
+ * Um canal que cancela 12% o ano todo é um custo conhecido. Um que
+ * cancelava 4% e foi para 22% em agosto é um incidente, e tem dono e
+ * data. Na soma anual os dois parecem iguais.
+ */
+export type LinhaMatriz = {
+  chave: string;
+  canalId: string;
+  canal: string;
+  conta: string;
+  mostrarConta: boolean;
+  /** Indexado pelo mês `AAAA-MM`. Mês sem pedido nenhum fica ausente. */
+  porMes: Record<string, CelulaMes>;
+  total: CelulaMes;
+};
+
 export type DadosCancelamento = {
   /** O que está fora da análise, e quanto saiu. A tela é obrigada a mostrar. */
   exclusoes: Exclusao[];
@@ -58,6 +91,10 @@ export type DadosCancelamento = {
   porCanal: CancelamentoCanal[];
   porSku: CancelamentoSku[];
   porMes: CancelamentoMes[];
+  /** Canal × mês: quem piorou, e quando. */
+  matriz: LinhaMatriz[];
+  /** Os meses que a matriz cobre, em ordem. */
+  mesesDisponiveis: string[];
   totalCancelado: number;
   totalBruto: number;
   taxaGeral: number;
@@ -102,6 +139,8 @@ export async function carregarCancelamentos(
       porCanal: [],
       porSku: [],
       porMes: [],
+      matriz: [],
+      mesesDisponiveis: [],
       totalCancelado: 0,
       totalBruto: 0,
       taxaGeral: 0,
@@ -210,6 +249,78 @@ export async function carregarCancelamentos(
     }))
     .sort((a, b) => a.mes.localeCompare(b.mes));
 
+  /* ── Canal × mês ──
+   *
+   * Mesma varredura de linhas, dois eixos. Sai da mesma fonte que "por
+   * canal" e "por mês" de propósito: três agregações independentes do
+   * mesmo dado é como uma tela passa a discordar da outra sobre o mesmo
+   * cancelamento.
+   */
+  const zeroCelula = (): CelulaMes => ({
+    pedidos: 0,
+    cancelados: 0,
+    valorCancelado: 0,
+    receitaBruta: 0,
+    taxaValor: 0,
+    taxaQuantidade: 0,
+  });
+
+  const fecharCelula = (c: CelulaMes): CelulaMes => ({
+    ...c,
+    taxaValor: c.receitaBruta ? (c.valorCancelado * 100) / c.receitaBruta : 0,
+    taxaQuantidade: c.pedidos ? (c.cancelados * 100) / c.pedidos : 0,
+  });
+
+  const mesesSet = new Set<string>();
+  const matrizMap = new Map<string, LinhaMatriz>();
+
+  for (const p of linhas) {
+    const c = porConta.get(p.conta_canal_id);
+    if (!c) continue;
+
+    const mes = String(p.data).slice(0, 7);
+    mesesSet.add(mes);
+
+    const at =
+      matrizMap.get(p.conta_canal_id) ??
+      ({
+        chave: p.conta_canal_id,
+        canalId: c.canal_id,
+        canal: c.canais?.nome ?? "Outros",
+        conta: c.nome,
+        mostrarConta: (contasPorCanal.get(c.canal_id) ?? 1) > 1,
+        porMes: {} as Record<string, CelulaMes>,
+        total: zeroCelula(),
+      } as LinhaMatriz);
+
+    const cel = at.porMes[mes] ?? zeroCelula();
+    cel.pedidos += 1;
+    cel.receitaBruta += n(p.total);
+    at.total.pedidos += 1;
+    at.total.receitaBruta += n(p.total);
+    if (p.cancelado) {
+      cel.cancelados += 1;
+      cel.valorCancelado += n(p.total);
+      at.total.cancelados += 1;
+      at.total.valorCancelado += n(p.total);
+    }
+    at.porMes[mes] = cel;
+    matrizMap.set(p.conta_canal_id, at);
+  }
+
+  const mesesDisponiveis = [...mesesSet].sort();
+  const matriz = [...matrizMap.values()]
+    .map((l) => ({
+      ...l,
+      porMes: Object.fromEntries(
+        Object.entries(l.porMes).map(([m, c]) => [m, fecharCelula(c)])
+      ),
+      total: fecharCelula(l.total),
+    }))
+    // Pelo valor cancelado: o topo da tabela é onde está o dinheiro, não
+    // onde está a maior porcentagem sobre uma base minúscula.
+    .sort((a, b) => b.total.valorCancelado - a.total.valorCancelado);
+
   /* ── Por SKU ──
    *
    * Só os itens dos pedidos cancelados são buscados. Trazer os 7 mil itens
@@ -296,6 +407,8 @@ export async function carregarCancelamentos(
     porCanal,
     porSku: porSku.slice(0, 60),
     porMes,
+    matriz,
+    mesesDisponiveis,
     totalCancelado,
     totalBruto,
     taxaGeral: totalBruto ? (totalCancelado * 100) / totalBruto : 0,

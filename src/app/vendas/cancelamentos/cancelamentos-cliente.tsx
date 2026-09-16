@@ -37,12 +37,21 @@ import { XCircle } from "lucide-react";
  * justamente esse caso que a taxa por quantidade sozinha esconderia.
  */
 
-type Aba = "canal" | "sku" | "mes";
+type Aba = "canal" | "quando" | "sku" | "mes";
 
 const ABAS = [
   { value: "canal" as const, label: "Por canal" },
+  { value: "quando" as const, label: "Canal × mês" },
   { value: "sku" as const, label: "Por SKU" },
   { value: "mes" as const, label: "Ao longo do ano" },
+];
+
+/** Como medir a célula da matriz. As duas leituras discordam de propósito. */
+type Medida = "valor" | "quantidade";
+
+const MEDIDAS = [
+  { value: "valor" as const, label: "Valor" },
+  { value: "quantidade" as const, label: "Quantidade" },
 ];
 
 /** Acima disto, o canal merece investigação, não observação. */
@@ -158,6 +167,7 @@ export default function Cancelamentos({ dados }: { dados: DadosCancelamento }) {
           />
 
           {aba === "canal" && <PorCanal dados={dados} />}
+          {aba === "quando" && <CanalPorMes dados={dados} />}
           {aba === "sku" && <PorSku dados={dados} />}
           {aba === "mes" && <PorMes dados={dados} />}
         </div>
@@ -363,6 +373,246 @@ function PorSku({ dados }: { dados: DadosCancelamento }) {
         sem o denominador as duas situações parecem iguais.
       </p>
     </Panel>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Canal × mês
+   ══════════════════════════════════════════════════════════════ */
+
+/**
+ * O mapa de calor que responde "quem piorou, e quando".
+ *
+ * ── Por que uma matriz e não mais um gráfico ──
+ *
+ * A pergunta tem dois eixos. "Por canal" soma o ano e esconde quando;
+ * "ao longo do ano" soma os canais e esconde quem. Um canal que cancela
+ * 12% o ano todo é um custo conhecido; um que cancelava 4% e foi para
+ * 22% em agosto é um incidente com dono e data. Na soma anual os dois
+ * parecem iguais — e era só a soma anual que existia.
+ *
+ * ── A escala é fixa, não relativa ──
+ *
+ * A cor sai de uma régua absoluta (5%, 10%, 15%, 25%), e não do maior
+ * valor da tabela. Escala relativa faria o mês menos ruim de um ano ruim
+ * aparecer verde, e a tela mentiria por normalização. Com régua fixa, o
+ * ano inteiro vermelho é lido como ano inteiro vermelho.
+ */
+
+/** Régua fixa de gravidade, em % — a mesma em toda a matriz. */
+const FAIXAS = [
+  { ate: 5, fundo: "transparent", texto: "text-ink-3" },
+  { ate: 10, fundo: "var(--warn-wash)", texto: "text-ink-2" },
+  { ate: 15, fundo: "color-mix(in srgb, var(--warn-wash) 55%, var(--warn) 45%)", texto: "text-ink" },
+  { ate: 25, fundo: "color-mix(in srgb, var(--down-wash) 60%, var(--down) 40%)", texto: "text-ink" },
+  { ate: Infinity, fundo: "var(--down)", texto: "text-white font-semibold" },
+];
+
+function faixaDe(taxa: number) {
+  return FAIXAS.find((f) => taxa < f.ate) ?? FAIXAS[FAIXAS.length - 1];
+}
+
+const MES_CURTO = [
+  "jan", "fev", "mar", "abr", "mai", "jun",
+  "jul", "ago", "set", "out", "nov", "dez",
+];
+
+function rotuloMes(m: string) {
+  const [ano, mes] = m.split("-");
+  return `${MES_CURTO[Number(mes) - 1]}/${ano.slice(2)}`;
+}
+
+function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
+  const [medida, setMedida] = React.useState<Medida>("valor");
+  const { matriz, mesesDisponiveis: meses } = dados;
+
+  if (!matriz.length || !meses.length) {
+    return (
+      <Panel>
+        <EmptyState
+          icon={XCircle}
+          title="Sem histórico para cruzar"
+          description="A matriz precisa de pedidos em mais de um mês para dizer quem piorou e quando."
+        />
+      </Panel>
+    );
+  }
+
+  const taxaDe = (c?: { taxaValor: number; taxaQuantidade: number }) =>
+    c ? (medida === "valor" ? c.taxaValor : c.taxaQuantidade) : null;
+
+  /*
+   * O pior salto do período: o canal-mês que mais subiu contra a própria
+   * média. É o que a leitura de baixo aponta — sem isso, a matriz é bonita
+   * e muda, e alguém ainda tem que varrer 12 colunas com o olho.
+   */
+  let salto: {
+    linha: (typeof matriz)[number];
+    mes: string;
+    taxa: number;
+    media: number;
+  } | null = null;
+
+  for (const l of matriz) {
+    const media = taxaDe(l.total) ?? 0;
+    if (media <= 0 || l.total.pedidos < 20) continue;
+    for (const m of meses) {
+      const cel = l.porMes[m];
+      if (!cel || cel.pedidos < 10) continue;
+      const t = taxaDe(cel) ?? 0;
+      if (t < 10) continue;
+      const excesso = t - media;
+      if (!salto || excesso > salto.taxa - salto.media) {
+        salto = { linha: l, mes: m, taxa: t, media };
+      }
+    }
+  }
+
+  const th =
+    "px-2.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-ink-3 whitespace-nowrap";
+
+  return (
+    <>
+      <Panel className="overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-line flex-wrap">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-ink">Quem piorou, e quando</p>
+            <p className="text-[11.5px] text-ink-3">
+              taxa de cancelamento por conta, mês a mês
+            </p>
+          </div>
+          <div className="ml-auto flex items-center gap-3 flex-wrap">
+            <Segmented options={MEDIDAS} value={medida} onChange={setMedida} />
+            <Legenda />
+          </div>
+        </div>
+
+        {/* A tabela é o único elemento que pode passar da largura da tela. */}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[12.5px]">
+            <thead className="bg-panel-2">
+              <tr>
+                <th className={`${th} text-left sticky left-0 bg-panel-2 z-10`}>
+                  Canal
+                </th>
+                {meses.map((m) => (
+                  <th key={m} className={`${th} text-center`}>
+                    {rotuloMes(m)}
+                  </th>
+                ))}
+                <th className={`${th} text-right border-l border-line-2`}>
+                  Período
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {matriz.map((l) => {
+                const total = taxaDe(l.total) ?? 0;
+                const f = faixaDe(total);
+                return (
+                  <tr key={l.chave} className="border-t border-line">
+                    <td className="px-2.5 py-1.5 sticky left-0 bg-panel z-10 whitespace-nowrap">
+                      <span className="text-ink font-medium">{l.canal}</span>
+                      {l.mostrarConta && (
+                        <span className="text-ink-3 text-[11.5px]"> · {l.conta}</span>
+                      )}
+                    </td>
+                    {meses.map((m) => {
+                      const cel = l.porMes[m];
+                      const t = taxaDe(cel);
+                      if (t == null) {
+                        return (
+                          <td
+                            key={m}
+                            className="px-2.5 py-1.5 text-center text-ink-3 num"
+                            title="sem pedido neste mês"
+                          >
+                            ·
+                          </td>
+                        );
+                      }
+                      const fx = faixaDe(t);
+                      return (
+                        <td
+                          key={m}
+                          className={`px-2.5 py-1.5 text-center num ${fx.texto}`}
+                          style={{ background: fx.fundo }}
+                          title={`${count(cel!.cancelados)} de ${count(cel!.pedidos)} pedidos · ${money(cel!.valorCancelado)}`}
+                        >
+                          {t.toFixed(t >= 10 ? 0 : 1)}%
+                        </td>
+                      );
+                    })}
+                    <td
+                      className={`px-2.5 py-1.5 text-right num border-l border-line-2 ${f.texto}`}
+                      style={{ background: f.fundo }}
+                    >
+                      {total.toFixed(1)}%
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="px-4 py-2.5 text-[11.5px] text-ink-3 border-t border-line">
+          {medida === "valor"
+            ? "Taxa sobre o VALOR: quanto do faturamento daquele mês voltou. Um canal que cancela poucos pedidos grandes aparece aqui e some na contagem."
+            : "Taxa sobre a QUANTIDADE: quantos pedidos de cada cem voltaram. Um canal que cancela muitos pedidos pequenos aparece aqui e some no valor."}{" "}
+          O ponto (·) é mês sem pedido nenhum — não é zero de cancelamento.
+        </p>
+      </Panel>
+
+      {salto ? (
+        <Leitura tom="atencao" titulo="O maior desvio do período">
+          <span className="font-semibold text-ink">{salto.linha.canal}</span>
+          {salto.linha.mostrarConta && (
+            <span className="text-ink-2"> · {salto.linha.conta}</span>
+          )}{" "}
+          cancelou{" "}
+          <span className="num font-semibold">{pct(salto.taxa)}</span> em{" "}
+          <span className="font-semibold text-ink">{rotuloMes(salto.mes)}</span>,
+          contra <span className="num">{pct(salto.media)}</span> de média dele no
+          período —{" "}
+          <span className="num font-semibold">
+            {(salto.taxa - salto.media).toFixed(1)} p.p.
+          </span>{" "}
+          acima do próprio normal. Um canal que sempre cancela muito é um custo
+          conhecido; um que piorou num mês específico tem causa e data, e é esse
+          que vale investigar.
+        </Leitura>
+      ) : (
+        <TudoCerto
+          titulo="Nenhum mês fora da curva"
+          detalhe="Nenhuma conta com volume relevante teve um mês que destoasse da própria média. O que houver de cancelamento aqui é o patamar normal de cada canal — que pode ser alto, mas é estável."
+        />
+      )}
+    </>
+  );
+}
+
+/** A régua de cor, explicada. Sem ela o mapa de calor é decoração. */
+function Legenda() {
+  const passos = [
+    { rotulo: "< 5%", faixa: FAIXAS[0] },
+    { rotulo: "5–10%", faixa: FAIXAS[1] },
+    { rotulo: "10–15%", faixa: FAIXAS[2] },
+    { rotulo: "15–25%", faixa: FAIXAS[3] },
+    { rotulo: "25%+", faixa: FAIXAS[4] },
+  ];
+  return (
+    <div className="flex items-center gap-1.5">
+      {passos.map((p) => (
+        <span key={p.rotulo} className="flex items-center gap-1">
+          <span
+            className="w-3.5 h-3.5 rounded-[3px] border border-line"
+            style={{ background: p.faixa.fundo }}
+          />
+          <span className="num text-[10.5px] text-ink-3">{p.rotulo}</span>
+        </span>
+      ))}
+    </div>
   );
 }
 
