@@ -4,6 +4,12 @@ import { linkDoAnuncio } from "@/lib/links";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import {
+  BarraFiltros,
+  Filtro,
+  FiltroAcoes,
+  FiltroDivisor,
+} from "@/components/layout/barra-filtros";
+import {
   Button,
   Panel,
   PanelHeader,
@@ -490,50 +496,39 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
           </>
         }
         filters={
-          <>
-            <SeletorCanal
-              canais={CONTAS}
-              valor={conta}
-              onChange={setConta}
-              rotuloTodos="Todas as contas"
-            />
-            <div className="relative shrink-0 w-full sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
-              <input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Título, SKU ou MLB"
-                className="w-full h-7 pl-8 pr-7 rounded-r1 border border-line bg-panel text-[12px] text-ink placeholder:text-ink-3 focus:border-brand transition-colors"
+          <BarraFiltros>
+            <Filtro rotulo="Conta">
+              <SeletorCanal
+                canais={CONTAS}
+                valor={conta}
+                onChange={setConta}
+                rotuloTodos="Todas as contas"
               />
-              {busca && (
-                <button
-                  onClick={() => setBusca("")}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-ink-3 hover:text-ink"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+            </Filtro>
 
-            <Select
-              value={recorte}
-              onChange={(e) => setRecorte(e.target.value)}
-              className="w-[168px] shrink-0"
-              aria-label="Quantidade de semanas analisadas"
-            >
-              {RECORTES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </Select>
+            <Filtro rotulo="Semanas" >
+              <Select
+                value={recorte}
+                onChange={(e) => setRecorte(e.target.value)}
+                className="w-[168px]"
+              >
+                {RECORTES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </Select>
+            </Filtro>
 
-            <div className="hidden md:flex items-center gap-2">
+            <Filtro rotulo="Tipo" className="hidden md:flex">
               <Segmented<(typeof TIPOS)[number]>
                 options={TIPOS}
                 value={tipo}
                 onChange={setTipo}
               />
+            </Filtro>
+
+            <Filtro rotulo="Situação" className="hidden md:flex">
               <Segmented<(typeof STATUS)[number]>
                 options={STATUS.map((s) => ({
                   value: s,
@@ -542,12 +537,36 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
                 value={status}
                 onChange={setStatus}
               />
-            </div>
+            </Filtro>
 
-            <span className="num text-[12px] text-ink-3 shrink-0 ml-auto hidden md:block">
-              {filtrados.length} de {itens.length}
-            </span>
-          </>
+            <FiltroDivisor />
+
+            <Filtro rotulo="Buscar" className="w-full sm:w-64">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Título, SKU ou MLB"
+                  className="w-full h-8 pl-8 pr-7 rounded-r1 border border-line bg-panel text-[12px] text-ink placeholder:text-ink-3 focus:border-brand transition-colors"
+                />
+                {busca && (
+                  <button
+                    onClick={() => setBusca("")}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-ink-3 hover:text-ink"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </Filtro>
+
+            <FiltroAcoes>
+              <span className="num text-[12px] text-ink-3 hidden md:block">
+                {filtrados.length} de {itens.length}
+              </span>
+            </FiltroAcoes>
+          </BarraFiltros>
         }
       />
 

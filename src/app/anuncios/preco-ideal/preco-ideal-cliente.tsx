@@ -3,6 +3,12 @@
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import {
+  BarraFiltros,
+  Filtro,
+  FiltroAcoes,
+  FiltroDivisor,
+} from "@/components/layout/barra-filtros";
+import {
   Badge,
   Button,
   EmptyState,
@@ -358,36 +364,29 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
           </>
         }
         filters={
-          <>
-            <div className="relative shrink-0 w-full sm:w-72">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
-              <input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="MLB, SKU ou título"
-                className="w-full h-7 pl-8 pr-7 rounded-r1 border border-line bg-panel text-[12px] text-ink placeholder:text-ink-3 focus:border-brand transition-colors"
-              />
-              {busca && (
-                <button
-                  onClick={() => setBusca("")}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-ink-3 hover:text-ink"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="hidden md:flex items-center gap-2">
+          <BarraFiltros>
+            {/*
+              A faixa de desvio é o filtro que decide nesta tela — quem abre
+              quer ver quem está fora do preço, não a carteira inteira. Vem
+              primeiro por isso.
+            */}
+            <Filtro rotulo="Desvio do ideal" className="hidden md:flex">
               <Segmented<Faixa>
                 options={FAIXAS.map((f) => ({ value: f, label: ROTULO_FAIXA[f] }))}
                 value={faixa}
                 onChange={setFaixa}
               />
+            </Filtro>
+
+            <Filtro rotulo="Tipo" className="hidden md:flex">
               <Segmented<(typeof TIPOS)[number]>
                 options={TIPOS}
                 value={tipo}
                 onChange={setTipo}
               />
+            </Filtro>
+
+            <Filtro rotulo="Categoria" className="hidden md:flex">
               <Select
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
@@ -400,17 +399,18 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
                   </option>
                 ))}
               </Select>
-              {/*
-               * Sem isto a tela somava as duas contas do Mercado Livre e
-               * o desvio de preço aparecia como se fosse de uma carteira
-               * só. Aparece apenas quando há mais de uma conta.
-               */}
-              {CONTAS.length > 1 && (
+            </Filtro>
+
+            {/*
+              Sem isto a tela somava as duas contas do Mercado Livre e o
+              desvio de preço aparecia como se fosse de uma carteira só.
+            */}
+            {CONTAS.length > 1 && (
+              <Filtro rotulo="Conta" className="hidden md:flex">
                 <Select
                   value={conta}
                   onChange={(e) => setConta(e.target.value)}
                   className="w-44"
-                  aria-label="Conta do canal"
                 >
                   <option value="Todas">Todas as contas</option>
                   {CONTAS.map((c) => (
@@ -419,13 +419,37 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
                     </option>
                   ))}
                 </Select>
-              )}
-            </div>
+              </Filtro>
+            )}
 
-            <span className="num text-[12px] text-ink-3 shrink-0 ml-auto hidden md:block">
-              {filtrados.length} de {linhas.length}
-            </span>
-          </>
+            <FiltroDivisor />
+
+            <Filtro rotulo="Buscar" className="w-full sm:w-72">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="MLB, SKU ou título"
+                  className="w-full h-8 pl-8 pr-7 rounded-r1 border border-line bg-panel text-[12px] text-ink placeholder:text-ink-3 focus:border-brand transition-colors"
+                />
+                {busca && (
+                  <button
+                    onClick={() => setBusca("")}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-ink-3 hover:text-ink"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </Filtro>
+
+            <FiltroAcoes>
+              <span className="num text-[12px] text-ink-3 hidden md:block">
+                {filtrados.length} de {linhas.length}
+              </span>
+            </FiltroAcoes>
+          </BarraFiltros>
         }
       />
 

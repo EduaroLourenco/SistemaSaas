@@ -5,6 +5,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import {
+  BarraFiltros,
+  Filtro,
+  FiltroAcoes,
+  FiltroDivisor,
+} from "@/components/layout/barra-filtros";
+import {
   Badge,
   Button,
   EmptyState,
@@ -440,36 +446,24 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
           </>
         }
         filters={
-          <>
-            <div className="relative shrink-0 w-full sm:w-72">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
-              <input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="MLB, SKU ou título"
-                className="w-full h-7 pl-8 pr-7 rounded-r1 border border-line bg-panel text-[12px] text-ink placeholder:text-ink-3 focus:border-brand transition-colors"
-              />
-              {busca && (
-                <button
-                  onClick={() => setBusca("")}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-ink-3 hover:text-ink"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="hidden md:flex items-center gap-2">
+          <BarraFiltros>
+            <Filtro rotulo="Tipo" className="hidden md:flex">
               <Segmented<(typeof TIPOS)[number]>
                 options={TIPOS}
                 value={tipo}
                 onChange={setTipo}
               />
+            </Filtro>
+
+            <Filtro rotulo="Situação" className="hidden md:flex">
               <Segmented<(typeof STATUS)[number]>
                 options={STATUS.map((s) => ({ value: s, label: ROTULO_STATUS[s] }))}
                 value={status}
                 onChange={setStatus}
               />
+            </Filtro>
+
+            <Filtro rotulo="Categoria" className="hidden md:flex">
               <Select
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
@@ -482,18 +476,19 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
                   </option>
                 ))}
               </Select>
-              {/*
-               * O seletor de conta só existia no painel de filtros do
-               * celular. No desktop a tela somava as duas contas do
-               * Mercado Livre sem dizer, que é exatamente o que o Eduardo
-               * apontou na revisão.
-               */}
-              {CONTAS_CATALOGO.length > 1 && (
+            </Filtro>
+
+            {/*
+              O seletor de conta só existia no painel de filtros do
+              celular. No desktop a tela somava as duas contas do Mercado
+              Livre sem dizer, que é o que o Eduardo apontou na revisão.
+            */}
+            {CONTAS_CATALOGO.length > 1 && (
+              <Filtro rotulo="Conta" className="hidden md:flex">
                 <Select
                   value={conta}
                   onChange={(e) => setConta(e.target.value)}
                   className="w-44"
-                  aria-label="Conta do canal"
                 >
                   <option value="Todas">Todas as contas</option>
                   {CONTAS_CATALOGO.map((c) => (
@@ -502,13 +497,37 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
                     </option>
                   ))}
                 </Select>
-              )}
-            </div>
+              </Filtro>
+            )}
 
-            <span className="num text-[12px] text-ink-3 shrink-0 ml-auto hidden md:block">
-              {filtrados.length} de {CATALOGO.length}
-            </span>
-          </>
+            <FiltroDivisor />
+
+            <Filtro rotulo="Buscar" className="w-full sm:w-72">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="MLB, SKU ou título"
+                  className="w-full h-8 pl-8 pr-7 rounded-r1 border border-line bg-panel text-[12px] text-ink placeholder:text-ink-3 focus:border-brand transition-colors"
+                />
+                {busca && (
+                  <button
+                    onClick={() => setBusca("")}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-ink-3 hover:text-ink"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </Filtro>
+
+            <FiltroAcoes>
+              <span className="num text-[12px] text-ink-3 hidden md:block">
+                {filtrados.length} de {CATALOGO.length}
+              </span>
+            </FiltroAcoes>
+          </BarraFiltros>
         }
       />
 
