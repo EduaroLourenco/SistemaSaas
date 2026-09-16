@@ -40,7 +40,7 @@ import type { DadosAnaliseSku, LinhaSku } from "@/lib/dados/analise-sku";
  * classificação no produto responderia sempre a mesma coisa.
  */
 
-type Aba = "mes" | "canal" | "curva";
+type Aba = "mes" | "canal" | "periodo" | "curva";
 type Metrica = "receita" | "unidades";
 
 const MESES = [
@@ -51,11 +51,64 @@ const MESES = [
 const rotuloMes = (m: string) =>
   `${MESES[Number(m.slice(5, 7)) - 1]}/${m.slice(2, 4)}`;
 
+/**
+ * Os atalhos de comparação.
+ *
+ * Todos comparam a janela atual com a IMEDIATAMENTE anterior do mesmo
+ * tamanho — que é a única comparação que isola o efeito do tempo. Contra
+ * "o mesmo mês do ano passado" entra sazonalidade junto, e aí duas coisas
+ * mudaram e nenhuma explicação é limpa.
+ */
+const ATALHOS = [
+  { dias: 7, rotulo: "7 × 7" },
+  { dias: 30, rotulo: "30 × 30" },
+  { dias: 90, rotulo: "90 × 90" },
+] as const;
+
+/** Volta `dias` dias de uma data ISO, sem passar por fuso. */
+function menos(iso: string, dias: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - dias);
+  return d.toISOString().slice(0, 10);
+}
+
 const TOM_CURVA: Record<LinhaSku["curva"], "up" | "warn" | "neutral"> = {
   A: "up",
   B: "warn",
   C: "neutral",
 };
+
+/**
+ * A variação entre a janela atual e a anterior.
+ *
+ * Três casos que um "%" sozinho contaria errado:
+ *
+ * - **Não vendia e passou a vender.** Dividir por zero dá infinito; a
+ *   tela mostra "novo", que é o que aconteceu.
+ * - **Vendia e parou.** −100% é verdade, mas "parou" é a palavra que faz
+ *   alguém abrir o anúncio.
+ * - **Não vendeu em nenhuma das duas.** Não é 0% de variação, é ausência
+ *   — e fica em traço para não competir com as linhas que têm o que dizer.
+ */
+function Variacao({ agora, antes }: { agora: number; antes: number }) {
+  if (!agora && !antes) return <span className="text-[11px] text-ink-3">—</span>;
+  if (!antes) {
+    return (
+      <span className="text-[11px] font-medium text-up">novo</span>
+    );
+  }
+  if (!agora) {
+    return <span className="text-[11px] font-medium text-down">parou</span>;
+  }
+  const d = ((agora - antes) / antes) * 100;
+  const tom = d > 2 ? "text-up" : d < -2 ? "text-down" : "text-ink-3";
+  return (
+    <span className={`num text-[12px] font-medium ${tom}`}>
+      {d > 0 ? "+" : ""}
+      {d.toFixed(0)}%
+    </span>
+  );
+}
 
 export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku }) {
   const router = useRouter();
@@ -76,6 +129,14 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
     filtro.de !== periodo.inicio ||
     filtro.ate !== periodo.fim ||
     filtro.canal !== (dados.canalId ?? "");
+
+  /*
+   * As comparações já aplicadas, no formato da URL. Sai de `dados`, e não
+   * de estado local, porque quem manda é o servidor — ele agregou por
+   * elas.
+   */
+  const comparacoes = dados.periodos.slice(1);
+  const cmp = comparacoes.map((c) => `${c.inicio}~${c.fim}`).join(",");
 
   const [baixando, setBaixando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
@@ -130,6 +191,34 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
   function aplicar() {
     const q = new URLSearchParams({ de: filtro.de, ate: filtro.ate });
     if (filtro.canal) q.set("canal", filtro.canal);
+    // A comparação sobrevive à troca de período principal: quem montou
+    // três janelas não quer perdê-las ao corrigir uma data.
+    if (cmp) q.set("cmp", cmp);
+    router.push(`/vendas/skus?${q}`);
+  }
+
+  /**
+   * Aplica um atalho: a janela atual passa a ser os últimos N dias, e a
+   * anterior de mesmo tamanho vira a comparação.
+   *
+   * A âncora é o ÚLTIMO DIA COM VENDA, não hoje. Pedido chega com atraso
+   * de importação, e ancorar em hoje faria "7 × 7" devolver uma semana
+   * pela metade contra uma inteira — e a queda seria do arquivo.
+   */
+  function atalho(dias: number) {
+    const fim = limites.fim;
+    const de = menos(fim, dias - 1);
+    const cmpFim = menos(de, 1);
+    const cmpDe = menos(cmpFim, dias - 1);
+    const q = new URLSearchParams({ de, ate: fim, cmp: `${cmpDe}~${cmpFim}` });
+    if (filtro.canal) q.set("canal", filtro.canal);
+    router.push(`/vendas/skus?${q}`);
+  }
+
+  /** Tira todas as comparações e volta a uma janela só. */
+  function limparComparacao() {
+    const q = new URLSearchParams({ de: periodo.inicio, ate: periodo.fim });
+    if (dados.canalId) q.set("canal", dados.canalId);
     router.push(`/vendas/skus?${q}`);
   }
 
@@ -157,7 +246,13 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
     const chaves = aba === "canal" ? canais.map((c) => c.id) : meses;
     for (const l of visiveis.slice(0, 200)) {
       for (const k of chaves) {
-        const v = valor(aba === "canal" ? l.porCanal[k] : l.porMes[k]);
+        const v = valor(
+          aba === "canal"
+            ? l.porCanal[k]
+            : aba === "periodo"
+              ? l.porPeriodo[k]
+              : l.porMes[k]
+        );
         if (v > m) m = v;
       }
     }
@@ -167,9 +262,12 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
   const th = "px-2.5 py-2 text-[11px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-2.5 py-1.5 border-b border-line";
 
-  const colunas = aba === "canal"
-    ? canais.map((c) => ({ chave: c.id, rotulo: c.nome }))
-    : meses.map((m) => ({ chave: m, rotulo: rotuloMes(m) }));
+  const colunas =
+    aba === "canal"
+      ? canais.map((c) => ({ chave: c.id, rotulo: c.nome }))
+      : aba === "periodo"
+        ? dados.periodos.map((p, i) => ({ chave: String(i), rotulo: p.rotulo }))
+        : meses.map((m) => ({ chave: m, rotulo: rotuloMes(m) }));
 
   return (
     <>
@@ -210,6 +308,37 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
             <Button variant="primary" disabled={!sujo} onClick={aplicar}>
               Aplicar
             </Button>
+
+            <FiltroDivisor />
+
+            {/*
+              Os atalhos montam as duas janelas de uma vez — a atual e a
+              anterior de mesmo tamanho. É o gesto que a pessoa quer
+              ("como estamos contra o mês passado?") em um clique, em vez
+              de quatro campos de data preenchidos à mão sem errar.
+            */}
+            <Filtro rotulo="Comparar com o anterior">
+              <div className="flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line">
+                {ATALHOS.map((a) => (
+                  <button
+                    key={a.dias}
+                    onClick={() => atalho(a.dias)}
+                    className="h-6 px-2.5 rounded-[4px] text-[12px] font-medium text-ink-3 hover:bg-panel hover:text-ink transition-colors whitespace-nowrap"
+                  >
+                    {a.rotulo}
+                  </button>
+                ))}
+                {comparacoes.length > 0 && (
+                  <button
+                    onClick={limparComparacao}
+                    title="Voltar a um período só"
+                    className="h-6 px-2 rounded-[4px] text-[12px] text-ink-3 hover:bg-panel hover:text-ink transition-colors"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </Filtro>
 
             <FiltroDivisor />
 
@@ -285,6 +414,11 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
             tabs={[
               { value: "mes" as const, label: "Por mês", count: meses.length },
               { value: "canal" as const, label: "Por canal", count: canais.length },
+              {
+                value: "periodo" as const,
+                label: "Comparar períodos",
+                count: dados.periodos.length,
+              },
               { value: "curva" as const, label: "Curva ABC" },
             ]}
             value={aba}
@@ -327,6 +461,11 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                         {c.rotulo}
                       </th>
                     ))}
+                  {aba === "periodo" && comparacoes.length > 0 && (
+                    <th className={`${th} text-right border-l border-line-2`}>
+                      Variação
+                    </th>
+                  )}
                   {aba === "curva" && (
                     <>
                       <th className={`${th} text-right`}>Unidades</th>
@@ -358,7 +497,12 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
 
                     {aba !== "curva" &&
                       colunas.map((c) => {
-                        const cel = aba === "canal" ? l.porCanal[c.chave] : l.porMes[c.chave];
+                        const cel =
+                          aba === "canal"
+                            ? l.porCanal[c.chave]
+                            : aba === "periodo"
+                              ? l.porPeriodo[c.chave]
+                              : l.porMes[c.chave];
                         const v = valor(cel);
                         // Sombreado proporcional: com 9 meses e 10 canais,
                         // o olho não acha o pico lendo número por número.
@@ -384,6 +528,14 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                         );
                       })}
 
+                    {aba === "periodo" && comparacoes.length > 0 && (
+                      <td className={`${td} text-right border-l border-line-2`}>
+                        <Variacao
+                          agora={valor(l.porPeriodo["0"])}
+                          antes={valor(l.porPeriodo["1"])}
+                        />
+                      </td>
+                    )}
                     {aba === "curva" && (
                       <>
                         <td className={`${td} text-right num text-[12px] text-ink-2`}>
