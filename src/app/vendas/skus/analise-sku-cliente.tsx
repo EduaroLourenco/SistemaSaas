@@ -5,7 +5,13 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
-import { Tabs, Input, Select, Field, Segmented } from "@/components/ui/controls";
+import { Tabs, Input, Select, Segmented } from "@/components/ui/controls";
+import {
+  BarraFiltros,
+  Filtro,
+  FiltroAcoes,
+  FiltroDivisor,
+} from "@/components/layout/barra-filtros";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import { Download, Loader2, AlertCircle } from "lucide-react";
 import type { DadosAnaliseSku, LinhaSku } from "@/lib/dados/analise-sku";
@@ -64,6 +70,12 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
     ate: periodo.fim,
     canal: dados.canalId ?? "",
   });
+
+  /** Mexeram no recorte desde a última carga? Só então "Aplicar" faz algo. */
+  const sujo =
+    filtro.de !== periodo.inicio ||
+    filtro.ate !== periodo.fim ||
+    filtro.canal !== (dados.canalId ?? "");
 
   const [baixando, setBaixando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
@@ -165,65 +177,78 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
         title="Análise de SKU"
         breadcrumb="Vendas"
         description="Desempenho por produto, período e canal"
-      />
-
-      <PageBody>
-        {/* ── Recorte ── */}
-        <Panel className="p-3 mb-3">
-          <div className="flex items-end gap-2 flex-wrap">
-            <Field label="De">
+        filters={
+          <BarraFiltros>
+            <Filtro rotulo="De">
               <Input
                 type="date"
+                className="w-[148px]"
                 value={filtro.de}
                 min={limites.inicio}
                 max={limites.fim}
                 onChange={(e) => setFiltro({ ...filtro, de: e.target.value })}
               />
-            </Field>
-            <Field label="Até">
+            </Filtro>
+            <Filtro rotulo="Até">
               <Input
                 type="date"
+                className="w-[148px]"
                 value={filtro.ate}
                 min={filtro.de}
                 max={limites.fim}
                 onChange={(e) => setFiltro({ ...filtro, ate: e.target.value })}
               />
-            </Field>
-            <Field label="Canal">
+            </Filtro>
+            <Filtro rotulo="Canal">
               <SelectRecorte
                 grupos={dados.opcoes}
                 valor={filtro.canal}
                 onChange={(v) => setFiltro({ ...filtro, canal: v })}
+                className="w-[220px]"
               />
-            </Field>
-            <Button variant="primary" onClick={aplicar}>
+            </Filtro>
+            <Button variant="primary" disabled={!sujo} onClick={aplicar}>
               Aplicar
             </Button>
-            <Button disabled={baixando} onClick={exportar}>
-              {baixando ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Montando
-                </>
-              ) : (
-                <>
-                  <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
-                  Exportar Excel
-                </>
-              )}
-            </Button>
-            <div className="flex-1" />
-            <Segmented
-              options={[
-                { value: "receita" as const, label: "Receita" },
-                { value: "unidades" as const, label: "Unidades" },
-              ]}
-              value={metrica}
-              onChange={setMetrica}
-            />
-          </div>
-        </Panel>
 
+            <FiltroDivisor />
+
+            {/*
+              Medir por receita ou por unidade não recarrega nada — é
+              recorte de leitura, não de consulta. Fica depois do divisor
+              para não parecer que precisa de "Aplicar".
+            */}
+            <Filtro rotulo="Medir por">
+              <Segmented
+                options={[
+                  { value: "receita" as const, label: "Receita" },
+                  { value: "unidades" as const, label: "Unidades" },
+                ]}
+                value={metrica}
+                onChange={setMetrica}
+              />
+            </Filtro>
+
+            <FiltroAcoes>
+              <Button disabled={baixando} onClick={exportar}>
+                {baixando ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Montando
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
+                    Exportar Excel
+                  </>
+                )}
+              </Button>
+            </FiltroAcoes>
+          </BarraFiltros>
+        }
+      />
+
+      <PageBody>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />

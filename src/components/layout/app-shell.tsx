@@ -408,11 +408,14 @@ export function PageHeader({
           )}
         </div>
       </div>
-      {filters && (
-        <div className="px-4 md:px-6 pb-3 flex items-center gap-2 overflow-x-auto">
-          {filters}
-        </div>
-      )}
+      {/*
+        O slot não impõe mais `flex` nem `overflow-x-auto`.
+        Ele impunha, e isso brigava com a `BarraFiltros`, que precisa
+        alinhar pela BASE (por causa do rótulo em cima de cada controle) e
+        quebrar linha em tela estreita em vez de rolar para o lado. Rolagem
+        horizontal numa faixa de filtro esconde controle sem avisar.
+      */}
+      {filters && <div className="px-4 md:px-6 pb-3">{filters}</div>}
     </div>
   );
 }

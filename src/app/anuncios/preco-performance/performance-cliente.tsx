@@ -5,7 +5,13 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
-import { Input, Select, Field, Segmented } from "@/components/ui/controls";
+import { Input, Select, Segmented } from "@/components/ui/controls";
+import {
+  BarraFiltros,
+  Filtro,
+  FiltroAcoes,
+  FiltroDivisor,
+} from "@/components/layout/barra-filtros";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import { AXIS, GRID, ChartTooltip } from "@/components/ui/chart";
 import {
@@ -180,6 +186,52 @@ export default function PerformancePrecoCliente({
             ? `${periodo.inicio.slice(8, 10)}/${periodo.inicio.slice(5, 7)} a ${periodo.fim.slice(8, 10)}/${periodo.fim.slice(5, 7)}`
             : undefined
         }
+        filters={
+          <BarraFiltros>
+            <Filtro rotulo="Período">
+              <Segmented
+                options={PERIODOS}
+                value={String(dias) as "7" | "30" | "90"}
+                onChange={(v) => ir(Number(v), dados.canalId)}
+              />
+            </Filtro>
+            <Filtro rotulo="Canal">
+              <SelectRecorte
+                grupos={dados.opcoes}
+                valor={dados.canalId ?? ""}
+                onChange={(v) => ir(dias, v || null)}
+                className="w-[220px]"
+              />
+            </Filtro>
+
+            <FiltroDivisor />
+
+            <Filtro rotulo="Buscar">
+              <Input
+                placeholder="SKU, título ou MLB"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-[240px]"
+              />
+            </Filtro>
+
+            <FiltroAcoes>
+              <Button disabled={baixando} onClick={exportar}>
+                {baixando ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Montando
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
+                    Exportar Excel
+                  </>
+                )}
+              </Button>
+            </FiltroAcoes>
+          </BarraFiltros>
+        }
       />
 
       <PageBody>
@@ -209,45 +261,6 @@ export default function PerformancePrecoCliente({
           </p>
         )}
 
-        {/* ── Recorte ── */}
-        <Panel className="p-3 mb-3">
-          <div className="flex items-end gap-2 flex-wrap">
-            <Field label="Período">
-              <Segmented
-                options={PERIODOS}
-                value={String(dias) as "7" | "30" | "90"}
-                onChange={(v) => ir(Number(v), dados.canalId)}
-              />
-            </Field>
-            <Field label="Canal">
-              <SelectRecorte
-                grupos={dados.opcoes}
-                valor={dados.canalId ?? ""}
-                onChange={(v) => ir(dias, v || null)}
-              />
-            </Field>
-            <div className="flex-1" />
-            <Button disabled={baixando} onClick={exportar}>
-              {baixando ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Montando
-                </>
-              ) : (
-                <>
-                  <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
-                  Exportar Excel
-                </>
-              )}
-            </Button>
-            <Input
-              placeholder="Buscar SKU, título ou MLB"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="max-w-xs"
-            />
-          </div>
-        </Panel>
 
         {/* ── Resumo ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">

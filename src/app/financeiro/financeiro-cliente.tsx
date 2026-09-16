@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
-import { Tabs, Input, Select, Field } from "@/components/ui/controls";
+import { Tabs, Input, Select } from "@/components/ui/controls";
+import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import { AlertCircle, ArrowRight } from "lucide-react";
 import { DreMensal, ResumoDre } from "@/components/financeiro/dre-mensal";
@@ -117,6 +118,10 @@ export default function FinanceiroCliente({
   const [dim, setDim] = React.useState<Dimensao>("mes");
   const [filtro, setFiltro] = React.useState({ inicio, fim, canal: canalId });
 
+  /** Mexeram no filtro desde a última carga? Só então "Aplicar" faz algo. */
+  const sujo =
+    filtro.inicio !== inicio || filtro.fim !== fim || filtro.canal !== canalId;
+
   function aplicar() {
     const q = new URLSearchParams({
       inicio: filtro.inicio,
@@ -138,39 +143,46 @@ export default function FinanceiroCliente({
         title="Financeiro"
         breadcrumb="Financeiro"
         description="Do bruto ao que sobra"
-      />
-
-      <PageBody>
-        {/* ── Período ── */}
-        <Panel className="p-3 mb-3">
-          <div className="flex items-end gap-2 flex-wrap">
-            <Field label="De">
+        filters={
+          <BarraFiltros>
+            <Filtro rotulo="De">
               <Input
                 type="date"
+                className="w-[148px]"
                 value={filtro.inicio}
                 onChange={(e) => setFiltro({ ...filtro, inicio: e.target.value })}
               />
-            </Field>
-            <Field label="Até">
+            </Filtro>
+            <Filtro rotulo="Até">
               <Input
                 type="date"
+                className="w-[148px]"
                 value={filtro.fim}
                 onChange={(e) => setFiltro({ ...filtro, fim: e.target.value })}
               />
-            </Field>
-            <Field label="Canal">
+            </Filtro>
+            <Filtro rotulo="Canal">
               <SelectRecorte
                 grupos={opcoes}
                 valor={filtro.canal}
                 onChange={(v) => setFiltro({ ...filtro, canal: v })}
+                className="w-[220px]"
               />
-            </Field>
-            <Button variant="primary" onClick={aplicar}>
+            </Filtro>
+            {/*
+              O botão só acende quando há o que aplicar. Antes ele ficava
+              sempre ativo, e clicar sem ter mexido em nada recarregava a
+              tela inteira para chegar no mesmo lugar — o que dá a
+              impressão de que o filtro não funcionou.
+            */}
+            <Button variant="primary" disabled={!sujo} onClick={aplicar}>
               Aplicar
             </Button>
-          </div>
-        </Panel>
+          </BarraFiltros>
+        }
+      />
 
+      <PageBody>
         <ResumoDre r={r} />
 
         {/* ── Cobertura: vem antes de qualquer número ── */}

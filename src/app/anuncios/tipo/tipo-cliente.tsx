@@ -4,7 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, EmptyState, Delta } from "@/components/ui/primitives";
-import { Field, Segmented, Checkbox } from "@/components/ui/controls";
+import { Segmented, Checkbox } from "@/components/ui/controls";
+import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import { Leitura } from "@/components/ui/leitura";
 import { Metrica, Celula } from "@/components/ui/metrica";
@@ -70,42 +71,48 @@ export default function TipoAnuncio({ dados }: { dados: DadosTipo }) {
   }
 
   const filtros = (
-    <Panel className="p-3">
-      <div className="flex items-end gap-2 flex-wrap">
-        <Field label="Período">
-          <Segmented
-            options={PERIODOS}
-            value={String(dados.dias)}
-            onChange={(v) => ir({ dias: Number(v) })}
+    <BarraFiltros>
+      <Filtro rotulo="Período">
+        <Segmented
+          options={PERIODOS}
+          value={String(dados.dias)}
+          onChange={(v) => ir({ dias: Number(v) })}
+        />
+      </Filtro>
+      <Filtro rotulo="Canal">
+        <SelectRecorte
+          grupos={dados.opcoes}
+          valor={dados.canalId}
+          onChange={(v) => ir({ canal: v })}
+          className="w-[220px]"
+        />
+      </Filtro>
+      {/*
+        A caixa não tem rótulo em cima porque o próprio texto dela já é o
+        rótulo. Alinhada pela base junto dos outros controles.
+      */}
+      {dados.dias > 0 && (
+        <div className="h-8 flex items-center">
+          <Checkbox
+            checked={Boolean(dados.anterior)}
+            onChange={(v) => ir({ comparar: v })}
+            label="Comparar com o período anterior"
           />
-        </Field>
-        <Field label="Canal">
-          <SelectRecorte
-            grupos={dados.opcoes}
-            valor={dados.canalId}
-            onChange={(v) => ir({ canal: v })}
-          />
-        </Field>
-        {dados.dias > 0 && (
-          <div className="pb-1.5">
-            <Checkbox
-              checked={Boolean(dados.anterior)}
-              onChange={(v) => ir({ comparar: v })}
-              label="Comparar com o período anterior"
-            />
-          </div>
-        )}
-      </div>
-    </Panel>
+        </div>
+      )}
+    </BarraFiltros>
   );
 
   if (dados.vazio) {
     return (
       <>
-        <PageHeader title="Clássico vs Premium" breadcrumb="Anúncios" />
+        <PageHeader
+          title="Clássico vs Premium"
+          breadcrumb="Anúncios"
+          filters={filtros}
+        />
         <PageBody>
           <div className="flex flex-col gap-3">
-            {filtros}
             <Panel>
               <EmptyState
                 icon={Layers}
@@ -135,12 +142,11 @@ export default function TipoAnuncio({ dados }: { dados: DadosTipo }) {
             ? `${dados.rotuloRecorte} · ${rotuloPeriodo(dados.periodo)}`
             : dados.rotuloRecorte
         }
+        filters={filtros}
       />
 
       <PageBody>
         <div className="flex flex-col gap-3">
-          {filtros}
-
           {dados.anterior && (
             <p className="text-[12px] text-ink-3">
               Comparando com{" "}

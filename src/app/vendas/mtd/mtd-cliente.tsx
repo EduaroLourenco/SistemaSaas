@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
-import { Select, Field } from "@/components/ui/controls";
+import { Select } from "@/components/ui/controls";
+import {
+  BarraFiltros,
+  Filtro,
+  FiltroAcoes,
+} from "@/components/layout/barra-filtros";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import {
   Loader2, AlertCircle, ArrowRight, Split, Check, Target,
@@ -137,6 +142,19 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
   }
 
   const devendo = d.gap > 0;
+  /**
+   * Troca de mês ou de ano, preservando a seleção de canais.
+   *
+   * O seletor de ano antes montava a URL sem `canais`, então mudar o ano
+   * silenciosamente devolvia todos os canais para a conta — e o número na
+   * tela mudava por dois motivos ao mesmo tempo.
+   */
+  function irPara(ano: number, mes: number) {
+    const q = new URLSearchParams({ ano: String(ano), mes: String(mes) });
+    if (sel.length < d.canais.length) q.set("canais", sel.join(","));
+    router.push(`/vendas/mtd?${q}`);
+  }
+
   const semMeta = d.metaMes === 0;
 
   return (
@@ -149,6 +167,45 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
             ? `Fechado até ${brData(d.ate)} · ${d.diasDecorridos} de ${d.diasDecorridos + d.diasRestantes} dias`
             : "Sem dado no mês"
         }
+        filters={
+          <BarraFiltros>
+            <Filtro rotulo="Mês">
+              <Select
+                className="w-[130px]"
+                value={String(d.mes)}
+                onChange={(e) => irPara(d.ano, Number(e.target.value))}
+              >
+                {MESES.map((m, i) => (
+                  <option key={m} value={i + 1}>
+                    {m}
+                  </option>
+                ))}
+              </Select>
+            </Filtro>
+            <Filtro rotulo="Ano">
+              <Select
+                className="w-[100px]"
+                value={String(d.ano)}
+                onChange={(e) => irPara(Number(e.target.value), d.mes)}
+              >
+                {[d.ano - 1, d.ano, d.ano + 1].map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </Select>
+            </Filtro>
+            <FiltroAcoes>
+              <Button
+                onClick={() =>
+                  aplicar(todosMarcados ? [] : d.canais.map((c) => c.id))
+                }
+              >
+                {todosMarcados ? "Limpar canais" : "Todos os canais"}
+              </Button>
+            </FiltroAcoes>
+          </BarraFiltros>
+        }
       />
 
       <PageBody>
@@ -159,51 +216,11 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
           </Panel>
         )}
 
-        {/* ── Recorte ── */}
+        {/* ── Quais canais entram na conta ── */}
         <Panel className="p-3 mb-3">
-          <div className="flex items-end gap-2 flex-wrap">
-            <Field label="Mês">
-              <Select
-                value={String(d.mes)}
-                onChange={(e) =>
-                  router.push(
-                    `/vendas/mtd?ano=${d.ano}&mes=${e.target.value}${
-                      sel.length < d.canais.length ? `&canais=${sel.join(",")}` : ""
-                    }`
-                  )
-                }
-              >
-                {MESES.map((m, i) => (
-                  <option key={m} value={i + 1}>
-                    {m}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Ano">
-              <Select
-                value={String(d.ano)}
-                onChange={(e) =>
-                  router.push(`/vendas/mtd?ano=${e.target.value}&mes=${d.mes}`)
-                }
-              >
-                {[d.ano - 1, d.ano, d.ano + 1].map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <div className="flex-1" />
-            <Button
-              onClick={() =>
-                aplicar(todosMarcados ? [] : d.canais.map((c) => c.id))
-              }
-            >
-              {todosMarcados ? "Limpar canais" : "Todos os canais"}
-            </Button>
-          </div>
-
+          <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-3 mb-2">
+            Canais na conta
+          </p>
           {/* Canais como fichas: com dez canais, dez caixas de seleção
               empilhadas ocupariam a tela inteira antes do número. */}
           <div className="flex flex-wrap gap-1.5 mt-3">
