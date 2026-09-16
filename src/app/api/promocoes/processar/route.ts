@@ -169,6 +169,22 @@ export async function POST(req: NextRequest) {
             Number(a.tipoCampanha === "Com Redução");
           return red !== 0 ? red : (b.folga ?? 0) - (a.folga ?? 0);
         }),
+
+      /*
+       * As linhas que o sistema NÃO tocou, e por quê.
+       *
+       * Sem este balde, a nova regra é invisível: a planilha volta com
+       * itens sem alteração e não há onde ver quais foram nem a razão.
+       * Quem conferir precisa poder auditar a omissão do mesmo jeito que
+       * audita uma decisão.
+       */
+      nao_alteradas: todasLinhas
+        .filter(
+          (l) =>
+            l.tags.includes("participando") ||
+            l.tags.includes("sem_acao_disponivel")
+        )
+        .sort((a, b) => (a.folga ?? 0) - (b.folga ?? 0)),
     };
 
     return NextResponse.json({

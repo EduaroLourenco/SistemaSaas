@@ -80,8 +80,85 @@ export type Tag =
   | "tabela_acima_original"
   | "quase"
   | "folga"
-  /** Status "Participando": analisada, mas não escrita. */
-  | "participando";
+  /** Oferta já fechada com o canal: analisada, mas não escrita. */
+  | "participando"
+  /** A célula de ação não oferece escolha: não há o que escrever nela. */
+  | "sem_acao_disponivel";
+
+/**
+ * Estados em que a oferta JÁ ESTÁ FECHADA com o canal.
+ *
+ * Regra do Eduardo (16/09): só se altera a linha que ainda está em aberto —
+ * aquela cuja coluna de ação oferece "Participar" ou "Aplicar proposta".
+ * Anúncio que já consta como aceito ou negociado não é tocado.
+ *
+ * Por que isso importa: reescrever a ação ou o preço de uma oferta já
+ * aceita troca um acordo que está no ar, e no preço em que foi aprovado,
+ * por outro que ainda precisaria passar pelo canal. O anúncio sai da
+ * campanha enquanto isso, e ninguém percebe até a venda cair.
+ *
+ * A lista é de TERMOS, comparados sem acento e sem caixa, por conter —
+ * o canal escreve "Participando", "Aceita", "Oferta aceita", "Negociado
+ * com o vendedor", e a exportação muda o rótulo de tempos em tempos. Casar
+ * por igualdade exata deixaria passar a variação seguinte.
+ */
+const STATUS_FECHADO = [
+  "participando",
+  "aceit", // aceito, aceita, aceite
+  "negociad", // negociado, negociada
+  "aprovad", // aprovado, aprovada
+  "vigente",
+  "ativa",
+  "ativo",
+  "em campanha",
+  "confirmad", // confirmado, confirmada
+];
+
+/**
+ * Prefixos que NEGAM o termo seguinte.
+ *
+ * "Não participando" contém "participando" e seria lido como oferta
+ * fechada — quando é exatamente o contrário: o anúncio está fora da
+ * campanha e é justamente o que se quer processar. Casar por substring
+ * sem olhar a negação inverte a regra no único caso em que ela mais
+ * importa.
+ */
+const NEGACOES = ["nao ", "sem ", "fora "];
+
+/**
+ * A linha já está fechada com o canal?
+ *
+ * Status vazio ou desconhecido devolve `false` — a linha segue para
+ * análise. É a escolha conservadora na direção certa: exportação antiga
+ * não trazia a coluna de status, e bloquear por ausência faria o sistema
+ * parar de processar planilhas que sempre funcionaram.
+ */
+export function ofertaJaFechada(status: string): boolean {
+  const s = norm(status);
+  if (!s) return false;
+  // `norm` já tirou os acentos: "não" chega aqui como "nao".
+  if (NEGACOES.some((n) => s.startsWith(n))) return false;
+  return STATUS_FECHADO.some((termo) => s.includes(termo));
+}
+
+/**
+ * A célula de ação aceita uma escolha positiva?
+ *
+ * Quando a validação da célula existe, ela lista o que o canal aceita ali.
+ * Se nenhuma das opções for uma ação de entrar na campanha, escrever
+ * naquela célula produz um valor que o canal recusa no retorno — e a
+ * planilha inteira volta com erro por causa de uma linha.
+ *
+ * Sem validação nenhuma, devolve `true`: é o caso das exportações antigas,
+ * que não traziam a lista e sempre foram processadas.
+ */
+export function acaoEditavel(opcoes: string[] | null): boolean {
+  if (!opcoes || !opcoes.length) return true;
+  return opcoes.some((o) => {
+    const n = norm(o);
+    return n.startsWith("participar") || n.startsWith("aplicar");
+  });
+}
 
 export type LinhaProcessada = {
   /**
@@ -363,9 +440,18 @@ export async function processarPlanilha(
     let acaoPositiva = positiveAction;
     let acaoNegativa = negativeAction;
 
+    /*
+     * As opções que a célula de ação oferece NESTA linha.
+     *
+     * Guardadas para além dos rótulos: é a lista que diz se a linha ainda
+     * aceita escolha. Uma oferta já fechada costuma vir sem validação ou
+     * com opções que não incluem entrar na campanha.
+     */
+    let opcoesAcao: string[] | null = null;
     const rowValidation = row.getCell(actionColIndex).dataValidation;
     if (rowValidation?.formulae?.[0]) {
       const options = String(rowValidation.formulae[0]).replace(/['"]/g, "").split(",");
+      opcoesAcao = options.map((o) => o.trim()).filter(Boolean);
       if (options.length >= 2) {
         acaoPositiva = options[0].trim();
         acaoNegativa = options[1].trim();
@@ -405,24 +491,35 @@ export async function processarPlanilha(
     );
 
     /*
-     * Linha que JÁ ESTÁ PARTICIPANDO não é tocada.
+     * SÓ SE ESCREVE NA LINHA QUE AINDA ESTÁ EM ABERTO.
      *
-     * A decisão é pelo status da campanha, não pela coluna de ação: é o
-     * status que diz se o anúncio já está dentro. Reescrever a ação ou o
-     * preço de quem já participa trocaria uma oferta que está no ar — e
-     * que foi aceita pelo canal naquele preço — por outra que ainda
-     * precisaria ser aprovada.
+     * Duas portas, e as duas precisam estar abertas:
      *
-     * A linha continua sendo ANALISADA, e aparece na lista com o que a
-     * tabela diria. Só não é escrita. Assim dá para ver quando uma oferta
-     * em vigor passou a ficar abaixo da margem, sem que o sistema a
-     * derrube sozinho.
+     *   1. O STATUS não pode indicar oferta fechada. Antes o guarda era
+     *      só a igualdade com "participando", o que deixava passar
+     *      "Aceita", "Negociado" e as variações que o canal usa.
+     *   2. A CÉLULA DE AÇÃO precisa oferecer entrar na campanha. Se a
+     *      validação lista outra coisa, escrever ali produz um valor que
+     *      o canal recusa no retorno — e a planilha inteira volta com
+     *      erro por causa de uma linha.
+     *
+     * Reescrever a ação ou o preço de uma oferta já aceita troca um acordo
+     * que está no ar, e no preço em que foi aprovado, por outro que ainda
+     * precisaria passar pelo canal. O anúncio sai da campanha enquanto
+     * isso, e ninguém percebe até a venda cair.
+     *
+     * A linha continua sendo ANALISADA e aparece na lista com o que a
+     * tabela diria. Só não é escrita — assim dá para ver quando uma oferta
+     * em vigor ficou abaixo da margem, sem que o sistema a derrube
+     * sozinho.
      */
     const statusPromo =
       statusColIndex !== -1
         ? extractText(row.getCell(statusColIndex).value).trim()
         : "";
-    const jaParticipando = norm(statusPromo) === "participando";
+    const jaFechada = ofertaJaFechada(statusPromo);
+    const podeEscolher = acaoEditavel(opcoesAcao);
+    const jaParticipando = jaFechada || !podeEscolher;
     const acaoAtual = extractText(row.getCell(actionColIndex).value).trim();
 
     if (!jaParticipando) {
@@ -466,9 +563,11 @@ export async function processarPlanilha(
       diferencaRS,
       diferencaPerc,
       status: jaParticipando ? "Mantido" : aprovado ? "Aprovado" : "Reprovado",
-      motivo: jaParticipando
-        ? "Já participando — linha não alterada"
-        : result.pendencia || "OK",
+      motivo: jaFechada
+        ? `Oferta já fechada com o canal (${statusPromo}) — linha não alterada`
+        : !podeEscolher
+          ? "A célula de ação não oferece entrar na campanha — linha não alterada"
+          : result.pendencia || "OK",
     });
 
     // Linha mantida volta com o preço que já tinha.
@@ -483,7 +582,10 @@ export async function processarPlanilha(
       finalPrice !== null && tabela > 0 ? +(finalPrice - tabela).toFixed(2) : null;
 
     const tags: Tag[] = [];
-    if (jaParticipando) tags.push("participando");
+    // Duas razões distintas para não escrever, duas tags: a leitura da
+    // lista de revisão precisa dizer QUAL foi.
+    if (jaFechada) tags.push("participando");
+    if (!podeEscolher) tags.push("sem_acao_disponivel");
 
     if (finalPrice !== null && tabela > 0 && tabela > finalPrice) {
       tags.push("tabela_acima_ml");
@@ -532,9 +634,11 @@ export async function processarPlanilha(
       decisao: jaParticipando ? acaoAtual || acaoPositiva : result.action,
       aprovado,
       recalculado: !jaParticipando && result.newPrice !== null,
-      motivo: jaParticipando
-        ? "Já participando — linha não alterada"
-        : result.pendencia || "",
+      motivo: jaFechada
+        ? `Oferta já fechada com o canal (${statusPromo}) — linha não alterada`
+        : !podeEscolher
+          ? "A célula de ação não oferece entrar na campanha — linha não alterada"
+          : result.pendencia || "",
       tags,
     });
   }

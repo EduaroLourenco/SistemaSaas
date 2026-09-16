@@ -22,7 +22,13 @@ import {
 
 /* ══ Tipos que a rota devolve ══════════════════════════════════ */
 
-type Tag = "tabela_acima_ml" | "tabela_acima_original" | "quase" | "folga";
+type Tag =
+  | "tabela_acima_ml"
+  | "tabela_acima_original"
+  | "quase"
+  | "folga"
+  /** Linha que o sistema deixou como estava, e o porquê. */
+  | "nao_alteradas";
 
 type Linha = {
   id: string;
@@ -112,6 +118,15 @@ const CENARIOS: {
       "Faltou até R$ 100 para o preço proposto alcançar o preço de tabela. Os que faltaram menos vêm primeiro.",
     acao:
       "Em item de giro alto, abrir mão de poucos reais pode valer a exposição da campanha.",
+  },
+  {
+    tag: "nao_alteradas",
+    rotulo: "Não alteradas",
+    tom: "info",
+    regra:
+      "A oferta já estava fechada com o canal (aceita, negociada, participando), ou a célula de ação não oferecia entrar na campanha. O sistema analisou e não escreveu.",
+    acao:
+      "Confira se alguma delas ficou abaixo da margem: o preço em vigor foi aprovado num custo que pode ter mudado. Para mexer, é pela Central de Promoções, não por aqui.",
   },
   {
     tag: "folga",
