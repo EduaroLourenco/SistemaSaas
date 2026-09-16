@@ -26,7 +26,7 @@ conforme fecha.
 
 ## Vendas · Mês até aqui
 
-- [ ] `[fix]` Poder distribuir a meta por canal: escolher pra quais canais joga o gap, não só todos juntos
+- [x] `[fix]` Distribuir a meta por canal — o painel do gap agora pergunta **quem recupera o atraso**. No modo "cada canal recupera o seu" (o antigo), nada muda. No modo "jogar tudo em canais escolhidos", o atraso de todos vira um bolo só e vai para os canais marcados, pelo peso recente de cada um; os demais ficam com os dias futuros zerados. A meta do MÊS é preservada exatamente, e a meta mensal por canal é reescrita junto — senão Metas e Mês até aqui discordariam sobre o mesmo canal.
 
 ## Vendas · Diário
 
@@ -39,15 +39,23 @@ conforme fecha.
 
 ## Vendas · Análise de SKU
 
-- [ ] `[fix]` Ao filtrar por canal, adicionar atalhos de período comparativo: 30×30, 7×7, 90×90, ano todo por mês, período de calendário livre — até 3 períodos ao mesmo tempo
+- [x] `[fix]` Períodos comparativos — nova aba **Comparar períodos**, com uma coluna por janela e uma coluna de **variação**. Os atalhos (7×7, 30×30, 90×90) montam as duas janelas de uma vez, sempre contra a imediatamente anterior de mesmo tamanho. Ano por mês e calendário livre já existiam. A comparação vive na URL, então um link com as janelas montadas pode ser colado no chat.
+>
+> Dois cuidados que valem registro: a âncora dos atalhos é o **último dia com venda**, não hoje — ancorar em hoje faria "7×7" comparar uma semana pela metade contra uma inteira, e a queda seria do arquivo. E a curva/concentração continuam saindo só da janela principal, porque janelas podem se sobrepor e somar as três inflaria quem aparece em duas.
 
 ## Vendas · Cancelamentos
 
-- [ ] `[fix]` Poder ver por canal, ao longo do ano, agrupado por mês
+- [x] `[fix]` Ver por canal, ao longo do ano, agrupado por mês — nova aba **Canal × mês**, mapa de calor com régua de cor FIXA (5/10/15/25%), medível por valor ou por quantidade. A leitura aponta o maior desvio de cada conta contra a PRÓPRIA média.
+
+> **Achado de 16/09:** a matriz mostrou o que nenhuma tela mostrava — Loja própria saltou de ~15% de média para **34% em agosto** (R$ 1,02 mi cancelados no ano); **Casas Bahia foi a 100% em agosto e 70% em setembro**; Zema opera entre 40% e 83% desde fevereiro.
+>
+> **E uma divergência para você conferir:** o banco (planilha) diz 9% de cancelamento na Loja própria em setembro. A API da VTEX, consultada direto, deu **51% na semana de 08 a 14/09** (204 de 401 pedidos). Uma das duas fontes está errada, e isso vale mais que a estética da tela.
 
 ## Vendas · Metas
 
-- [ ] `[fix]` Reformular pra ser dinâmico: escolher quais canais puxam a meta, poder somar meta extra pra outros canais, editar um por um se quiser — mas manter a distribuição por sazonalidade (últimos 90 dias) como base automática
+- [x] `[fix]` Metas dinâmico — cada linha da tabela de canais ganhou **cadeado**. Cravar um canal tira o valor dele do bolo e redivide o resto pelos pesos dos demais; a sazonalidade dos 90 dias continua valendo para quem não está cravado. Uma faixa mostra quanto foi cravado e quanto sobrou, e fica vermelha se os cravados passarem da meta.
+>
+> **Uma limitação de propósito:** qual canal foi cravado não é persistido. A coluna `metas.origem` é um enum de três valores e não comporta um quarto sem migração — e uma migração aqui deixaria a tela quebrada até você rodá-la no banco. O que fica gravado é o VALOR, que é o que a meta é.
 
 ## Vendas · Lançamentos
 
@@ -132,9 +140,11 @@ conforme fecha.
 > aba Financeiro: entender, arrumar o que está errado e deixar a tela
 > menos confusa. Sem projeto paralelo, sem reescrita.
 
-- [ ] `[fix]` Relatório de como funciona HOJE: quais dados existem, de onde vêm (automático via API ou manual), o que dá pra analisar quando tudo preenchido — primeiro passo, pra saber o que arrumar
-- [ ] `[fix]` Corrigir o que estiver errado no que já existe
-- [ ] `[fix]` Melhorar estética e front — está confuso
+- [x] `[fix]` Relatório de como funciona HOJE — **entregue em 15/09**: https://claude.ai/artifact/V4oeguhWnGWne9PpQ5vvpU
+>
+> Resumo: o motor está certo, o cadastro está vazio. Dos 142 produtos, **zero** têm custo de mercadoria, embalagem ou alíquota de imposto — por isso a margem cobre 0% da receita. Comissão está informada em 22% dos pedidos, frete em 46%, mídia é automática pela API. Contas a pagar, folha e fornecedores estão com as tabelas vazias.
+- [x] `[fix]` Corrigir o que estiver errado — **um defeito grave encontrado e corrigido**: com 0% de cobertura de custo, a linha "Resultado" subtraía a mídia e as despesas INTEIRAS de uma margem que cobre nada, e mostrava `−R$ (toda a mídia do período)` em vermelho. Lia-se como "a operação perdeu exatamente o que gastou em anúncio". Agora mostra — e explica. Pegou também o cartão do resumo, o demonstrativo mês a mês e o gráfico de evolução, que desenhava uma reta no zero chamada "Resultado".
+- [x] `[fix]` Estética e front — a maior causa da confusão não era estética, era **ordem**: o aviso de cobertura ficava DEPOIS dos quatro indicadores, então a pessoa lia a margem, formava opinião, e só então descobria que aquela margem cobre uma fração da receita. Subiu para o topo e mudou de voz. Além disso: a divisão entre custo da VENDA e custo da OPERAÇÃO virou faixa com régua (eram duas linhas cinza no meio de quinze linhas iguais); o cartão de margem passou a dizer "só da parte apurada"; e a tabela da direita ganhou título dizendo que é a mesma DRE aberta por um eixo.
 
 ## Relatórios · Apresentação
 
