@@ -21,6 +21,8 @@ type Corpo = {
   mes?: number;
   total?: number;
   canais?: string[];
+  /** Metas cravadas por canal, em reais: { canalId: valor }. */
+  fixos?: Record<string, number>;
 };
 
 export async function POST(req: Request) {
@@ -42,6 +44,19 @@ export async function POST(req: Request) {
   }
 
   const { ano, mes, total, canais } = corpo;
+
+  /*
+   * Os fixos são higienizados aqui e não lá dentro: o corpo vem da rede,
+   * e um valor negativo ou NaN escapando para o rateio não estoura — ele
+   * produz silenciosamente uma meta errada, que é pior.
+   */
+  const fixos: Record<string, number> = {};
+  if (corpo.fixos && typeof corpo.fixos === "object") {
+    for (const [id, v] of Object.entries(corpo.fixos)) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n >= 0) fixos[id] = n;
+    }
+  }
 
   if (!Number.isInteger(ano) || ano! < 2000 || ano! > 2100) {
     return NextResponse.json({ erro: "Ano inválido." }, { status: 400 });
@@ -72,7 +87,7 @@ export async function POST(req: Request) {
 
   try {
     const r = await definirMeta(
-      { ano: ano!, mes: mes!, total, canaisSelecionados: canais },
+      { ano: ano!, mes: mes!, total, canaisSelecionados: canais, fixos },
       operacao.id
     );
 

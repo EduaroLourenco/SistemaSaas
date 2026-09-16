@@ -4,7 +4,7 @@ import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
 import { ticketMedio } from "@/lib/ticket";
 import {
-  ratearPorPeso,
+  ratearCanais,
   ratearNoMes,
   pesosDaSemana,
   primeiroDiaDoMes,
@@ -279,6 +279,16 @@ export type PedidoDefinirMeta = {
   mes: number;
   total: number;
   canaisSelecionados: string[];
+  /**
+   * Metas cravadas para canais específicos, em reais.
+   *
+   * O que está aqui sai do bolo: soma-se, subtrai-se do total e o RESTO
+   * é que se divide pelos pesos históricos dos demais. É a mesma regra
+   * do dia fixado, um nível acima — e existe porque a sazonalidade dos
+   * 90 dias é boa base e péssima ordem quando a operação sabe de uma
+   * campanha que o histórico não sabe.
+   */
+  fixos?: Record<string, number>;
 };
 
 /**
@@ -297,11 +307,14 @@ export async function definirMeta(
 
   const dados = await carregarPlanejamento(ano, mes);
 
+  const fixos = pedido.fixos ?? {};
   const pesos = canaisSelecionados.map((id) => ({
     canalId: id,
     peso: dados.canais.find((c) => c.id === id)?.peso ?? 0,
+    fixo: Number.isFinite(fixos[id]) ? Math.max(0, fixos[id]) : undefined,
   }));
-  const fatias = ratearPorPeso(total, pesos);
+  const rateio = ratearCanais(total, pesos);
+  const fatias = rateio.fatias;
 
   /* Metas mensais por canal */
 
@@ -312,6 +325,18 @@ export async function definirMeta(
     mes,
     receita_meta: f.valor,
     peso: f.peso,
+    /*
+     * Continua "manual": a coluna é do tipo `origem_dado`, um enum de
+     * três valores (manual, planilha, api). Cravar um canal à mão e
+     * ratear o resto são as duas formas de uma meta DIGITADA — as duas
+     * vieram de alguém, não de importação nem de API.
+     *
+     * Qual delas foi cravada não é persistido hoje, e é uma escolha: a
+     * alternativa era uma migração que o Eduardo teria de rodar antes de
+     * a tela funcionar. O que fica gravado é o VALOR, que é o que a meta
+     * é. Reabrindo a tela, ela mostra os valores salvos; para mudar de
+     * novo, digita-se de novo.
+     */
     origem: "manual",
     atualizado_em: new Date().toISOString(),
   }));

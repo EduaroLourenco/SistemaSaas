@@ -9,7 +9,7 @@ import { money, moneyShort, pct, count } from "@/lib/format";
 import {
   Target, Loader2, AlertCircle, Check, Lock, Unlock, Info,
 } from "lucide-react";
-import { ratearPorPeso } from "@/lib/dados/ratear-meta";
+import { ratearCanais } from "@/lib/dados/ratear-meta";
 import type { DadosPlanejamento } from "@/lib/dados/metas-planejamento";
 
 /**
@@ -68,16 +68,49 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
   const [aviso, setAviso] = React.useState<string | null>(null);
   const [salvo, setSalvo] = React.useState(false);
 
+  /**
+   * Metas cravadas à mão, por canal. A chave é o id; o valor é o TEXTO do
+   * campo, não o número — para não reformatar o que a pessoa está digitando
+   * a cada tecla.
+   *
+   * Só vive na sessão. O que é gravado é o valor resultante; reabrindo a
+   * tela, ela mostra as metas salvas, e cravar de novo é digitar de novo.
+   */
+  const [fixos, setFixos] = React.useState<Record<string, string>>({});
+
+  /** Crava a meta de um canal no valor que o rateio acabou de dar. */
+  function cravar(id: string, valor: number) {
+    setFixos((x) => ({ ...x, [id]: String(valor).replace(".", ",") }));
+    setSalvo(false);
+  }
+
+  /** Devolve o canal ao rateio automático. */
+  function soltar(id: string) {
+    setFixos((x) => {
+      const { [id]: _, ...resto } = x;
+      return resto;
+    });
+    setSalvo(false);
+  }
+
   const valorTotal = ler(total);
 
   /* A mesma função do servidor, rodando aqui para a prévia. */
-  const fatias = React.useMemo(() => {
+  const rateio = React.useMemo(() => {
     const pesos = selecionados.map((id) => ({
       canalId: id,
       peso: canais.find((c) => c.id === id)?.peso ?? 0,
+      // Campo em branco não conta como zero: conta como "ainda não
+      // digitei", e o canal segue no rateio até ter um número.
+      fixo: fixos[id] != null && fixos[id].trim() !== "" ? ler(fixos[id]) : undefined,
     }));
-    return new Map(ratearPorPeso(valorTotal, pesos).map((f) => [f.canalId, f]));
-  }, [valorTotal, selecionados, canais]);
+    return ratearCanais(valorTotal, pesos);
+  }, [valorTotal, selecionados, canais, fixos]);
+
+  const fatias = React.useMemo(
+    () => new Map(rateio.fatias.map((f) => [f.canalId, f])),
+    [rateio]
+  );
 
   async function salvar() {
     setSalvando(true);
@@ -87,7 +120,17 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
       const r = await fetch("/api/metas", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ano, mes, total: valorTotal, canais: selecionados }),
+        body: JSON.stringify({
+          ano,
+          mes,
+          total: valorTotal,
+          canais: selecionados,
+          fixos: Object.fromEntries(
+            Object.entries(fixos)
+              .filter(([id, v]) => selecionados.includes(id) && v.trim() !== "")
+              .map(([id, v]) => [id, ler(v)])
+          ),
+        }),
       });
       const corpo = await r.json().catch(() => ({}));
       if (!r.ok) {
@@ -262,7 +305,57 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
             <span className="num text-[12px] text-ink-3">
               {count(selecionados.length)} de {count(canais.length)}
             </span>
+            <span className="ml-auto text-[11.5px] text-ink-3 hidden sm:block">
+              O cadeado crava a meta de um canal; o resto se redivide sozinho.
+            </span>
           </div>
+
+          {/*
+            O estado do rateio, quando há algo cravado. Sem esta linha, a
+            pessoa crava três canais e não sabe quanto sobrou para os
+            outros — e a única forma de descobrir é somar a coluna com o
+            olho.
+          */}
+          {rateio.fixado > 0 && (
+            <div
+              className={
+                "px-4 py-2 border-b border-line flex items-baseline gap-x-5 gap-y-1 flex-wrap text-[12px] " +
+                (rateio.estourou ? "bg-down-wash" : "bg-panel-2")
+              }
+            >
+              {rateio.estourou ? (
+                <p className="text-ink-2">
+                  <span className="font-semibold text-down">
+                    Os canais cravados já passam da meta do mês.
+                  </span>{" "}
+                  Somam{" "}
+                  <span className="num font-semibold">{money(rateio.fixado)}</span>{" "}
+                  contra uma meta de{" "}
+                  <span className="num">{money(valorTotal)}</span>. Os demais
+                  ficaram em zero — aumente a meta ou solte algum cadeado.
+                </p>
+              ) : (
+                <>
+                  <span className="text-ink-2">
+                    Cravado à mão{" "}
+                    <span className="num font-semibold text-ink">
+                      {money(rateio.fixado)}
+                    </span>
+                  </span>
+                  <span className="text-ink-2">
+                    Rateado pelos outros{" "}
+                    <span className="num font-semibold text-ink">
+                      {money(rateio.distribuido)}
+                    </span>
+                  </span>
+                  <span className="text-ink-3">
+                    a sazonalidade dos 90 dias continua valendo para quem não
+                    está cravado
+                  </span>
+                </>
+              )}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-[640px]">
               <thead className="bg-panel-2">
@@ -279,6 +372,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
                 {canais.map((c) => {
                   const marcado = selecionados.includes(c.id);
                   const f = fatias.get(c.id);
+                  const cravado = fixos[c.id] != null;
                   // Pedidos-alvo é derivado do ticket recente: não é uma
                   // segunda meta a bater, é a tradução da mesma meta em
                   // volume, que é como a operação pensa no dia a dia.
@@ -316,17 +410,49 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
                         {pct(c.peso, 1)}
                       </td>
                       <td className={`${td} text-right`}>
-                        {marcado && f ? (
-                          <div className="flex flex-col items-end leading-tight">
-                            <span className="num text-[13px] font-semibold text-ink">
-                              {money(f.valor)}
-                            </span>
-                            <span className="num text-[10.5px] text-ink-3">
-                              {pct(f.peso, 1)} do total
-                            </span>
+                        {!marcado || !f ? (
+                          <span className="text-[12px] text-ink-3">—</span>
+                        ) : cravado ? (
+                          /* Cravado: campo editável, com o cadeado para soltar. */
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Input
+                              inputMode="decimal"
+                              autoFocus
+                              value={fixos[c.id] ?? ""}
+                              onChange={(e) => {
+                                setFixos((x) => ({ ...x, [c.id]: e.target.value }));
+                                setSalvo(false);
+                              }}
+                              className="w-32 text-right"
+                              aria-label={`Meta de ${c.nome}`}
+                            />
+                            <button
+                              onClick={() => soltar(c.id)}
+                              title="Voltar ao rateio automático"
+                              className="w-6 h-6 flex items-center justify-center rounded-r1 text-brand hover:bg-panel-3"
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         ) : (
-                          <span className="text-[12px] text-ink-3">—</span>
+                          /* Rateado: clicar no cadeado crava o valor atual. */
+                          <div className="flex items-center justify-end gap-1.5">
+                            <div className="flex flex-col items-end leading-tight">
+                              <span className="num text-[13px] font-semibold text-ink">
+                                {money(f.valor)}
+                              </span>
+                              <span className="num text-[10.5px] text-ink-3">
+                                {pct(f.peso, 1)} do total
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => cravar(c.id, f.valor)}
+                              title="Cravar esta meta e ratear o resto"
+                              className="w-6 h-6 flex items-center justify-center rounded-r1 text-ink-3 hover:text-ink hover:bg-panel-3"
+                            >
+                              <Unlock className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
                       </td>
                       <td className={`${td} text-right num text-[12.5px] text-ink-3`}>

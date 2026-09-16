@@ -28,9 +28,42 @@
  * números negativos que apareceriam como alvo na tela.
  */
 
-export type PesoCanal = { canalId: string; peso: number };
+export type PesoCanal = {
+  canalId: string;
+  peso: number;
+  /**
+   * Valor fixado à mão para este canal.
+   *
+   * Mesma regra do dia manual: o que se fixa SAI DO BOLO. O rateio soma
+   * os fixados, subtrai do total e divide o resto entre os demais pelos
+   * pesos deles. O mês continua fechando no número que se digitou.
+   *
+   * Existe porque a sazonalidade dos 90 dias é uma boa base e uma péssima
+   * ordem. Quando a operação sabe algo que o histórico não sabe — uma
+   * campanha contratada, um canal que vai entrar em férias coletivas — ela
+   * precisa poder dizer o número daquele canal sem abrir mão da
+   * distribuição automática de todos os outros.
+   */
+  fixo?: number;
+};
 
-export type FatiaCanal = { canalId: string; valor: number; peso: number };
+export type FatiaCanal = {
+  canalId: string;
+  valor: number;
+  peso: number;
+  /** Veio de `fixo`, não do rateio. */
+  manual: boolean;
+};
+
+export type RateioCanais = {
+  fatias: FatiaCanal[];
+  /** Soma dos canais fixados à mão. */
+  fixado: number;
+  /** Quanto sobrou para os canais automáticos. */
+  distribuido: number;
+  /** Os fixados já passam da meta do mês? */
+  estourou: boolean;
+};
 
 const r2 = (v: number) => Number(v.toFixed(2));
 
@@ -39,27 +72,66 @@ const r2 = (v: number) => Number(v.toFixed(2));
  *
  * Peso zero em todos — canal novo, sem histórico — cai em partes iguais:
  * é o único palpite honesto quando não há o que ponderar.
+ *
+ * Canal com `fixo` não entra no rateio: recebe o valor pedido e o resto
+ * se divide entre os outros. Se os fixados já passam do total, os
+ * automáticos ficam em zero e `estourou` avisa — em vez de devolver
+ * negativo, que apareceria como alvo na tela.
  */
-export function ratearPorPeso(
-  total: number,
-  pesos: PesoCanal[]
-): FatiaCanal[] {
-  if (!pesos.length) return [];
+export function ratearCanais(total: number, pesos: PesoCanal[]): RateioCanais {
+  if (!pesos.length) {
+    return { fatias: [], fixado: 0, distribuido: 0, estourou: false };
+  }
 
-  const somaPesos = pesos.reduce((s, p) => s + Math.max(0, p.peso), 0);
+  const manuais = pesos.filter((p) => p.fixo != null);
+  const livres = pesos.filter((p) => p.fixo == null);
+
+  const fixado = r2(manuais.reduce((s, p) => s + Math.max(0, p.fixo ?? 0), 0));
+  const resto = r2(total - fixado);
+  const estourou = resto < 0;
+
+  const somaPesos = livres.reduce((s, p) => s + Math.max(0, p.peso), 0);
   const iguais = somaPesos <= 0;
 
-  const fatias = pesos.map((p) => {
-    const fracao = iguais ? 1 / pesos.length : Math.max(0, p.peso) / somaPesos;
+  const calculadas: FatiaCanal[] = livres.map((p) => {
+    const fracao = iguais ? 1 / (livres.length || 1) : Math.max(0, p.peso) / somaPesos;
     return {
       canalId: p.canalId,
-      valor: r2(total * fracao),
+      valor: estourou ? 0 : r2(resto * fracao),
       peso: r2(fracao * 100),
+      manual: false,
     };
   });
 
-  ajustarSobra(fatias, total);
-  return fatias;
+  if (!estourou && calculadas.length) ajustarSobra(calculadas, resto);
+
+  const fixas: FatiaCanal[] = manuais.map((p) => ({
+    canalId: p.canalId,
+    valor: r2(Math.max(0, p.fixo ?? 0)),
+    // O peso mostrado é a fatia REAL do total, não o peso histórico: é o
+    // que responde "quanto deste mês é deste canal", que é a pergunta.
+    peso: total > 0 ? r2((Math.max(0, p.fixo ?? 0) * 100) / total) : 0,
+    manual: true,
+  }));
+
+  // Devolve na ordem em que entrou, para a tabela não dançar quando
+  // alguém fixa um canal.
+  const porId = new Map([...calculadas, ...fixas].map((f) => [f.canalId, f]));
+  const fatias = pesos
+    .map((p) => porId.get(p.canalId))
+    .filter((f): f is FatiaCanal => Boolean(f));
+
+  return { fatias, fixado, distribuido: estourou ? 0 : resto, estourou };
+}
+
+/**
+ * A forma antiga: só o rateio, sem fixos.
+ *
+ * Mantida porque três chamadas ainda a usam e ela nunca precisou de mais
+ * que isso. Por dentro é `ratearCanais`, para não existirem duas contas.
+ */
+export function ratearPorPeso(total: number, pesos: PesoCanal[]): FatiaCanal[] {
+  return ratearCanais(total, pesos).fatias;
 }
 
 export type DiaMeta = {
