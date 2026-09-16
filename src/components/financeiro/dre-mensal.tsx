@@ -387,14 +387,22 @@ export function LinhaVertical({
   );
 }
 
-/** Cabeçalho com os três números que resumem a DRE. */
+/** Cabeçalho com os quatro números que resumem a DRE. */
 export function ResumoDre({ r }: { r: Resultado }) {
+  const parcial = r.cobertura < 99.5;
   const cartoes = [
     { k: "Receita líquida", v: money(r.receitaLiquida), sub: `bruta ${moneyShort(r.receitaBruta)}` },
     {
       k: "Margem de contribuição",
       v: r.margemPct != null ? pct(r.margemPct, 1) : "—",
-      sub: money(r.margemContribuicao),
+      /*
+       * A porcentagem é sobre a receita APURADA, não sobre a do período.
+       * Com 30% de cobertura, "margem de 18%" significa 18% de 30% da
+       * receita — e sem esta linha alguém lê 18% da operação.
+       */
+      sub: parcial
+        ? `${money(r.margemContribuicao)} · só da parte apurada`
+        : money(r.margemContribuicao),
     },
     {
       k: "Resultado",

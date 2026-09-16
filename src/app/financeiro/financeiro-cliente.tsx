@@ -97,6 +97,28 @@ function Linha({
   );
 }
 
+/**
+ * A faixa que separa os dois blocos de custo da DRE.
+ *
+ * Eram duas linhas de texto cinza de 11px, do mesmo peso de qualquer
+ * outra nota da tela — e a DRE virava uma lista de quinze linhas iguais,
+ * onde a divisão que mais importa (custo da VENDA contra custo da
+ * OPERAÇÃO) era a menos visível de todas.
+ *
+ * É essa divisão que decide se ratear um custo dentro do preço de um SKU
+ * faz sentido. Ela merece uma faixa, não um rodapé.
+ */
+function GrupoDre({ titulo, explicacao }: { titulo: string; explicacao: string }) {
+  return (
+    <div className="mt-3.5 mb-1 pt-2 border-t border-line-2 flex items-baseline gap-2 flex-wrap">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-2">
+        {titulo}
+      </span>
+      <span className="text-[11px] text-ink-3">{explicacao}</span>
+    </div>
+  );
+}
+
 export default function FinanceiroCliente({
   resultado: r,
   mensal,
@@ -183,40 +205,48 @@ export default function FinanceiroCliente({
       />
 
       <PageBody>
-        <ResumoDre r={r} />
-
-        {/* ── Cobertura: vem antes de qualquer número ── */}
+        {/*
+          A cobertura vem ANTES dos números, e não depois.
+          Estava depois, embaixo dos quatro indicadores — o que fazia a
+          pessoa ler a margem, formar uma opinião, e só então descobrir
+          que aquela margem cobre uma fração da receita. A ordem certa é a
+          da leitura: o aviso que invalida o número vem primeiro que o
+          número.
+        */}
         {semCusto && (
-          <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-warn/30">
-            <AlertCircle className="w-4 h-4 text-warn shrink-0 mt-0.5" />
+          <Panel className="px-4 py-3 flex items-start gap-3 border-warn/40 bg-warn-wash">
+            <AlertCircle className="w-4 h-4 text-warn shrink-0 mt-0.5" strokeWidth={2} />
             <div className="min-w-0 flex-1">
               <p className="text-[13px] text-ink">
-                A margem cobre{" "}
-                <span className="num font-semibold">{pct(r.cobertura, 1)}</span>{" "}
-                da receita do período.
+                <span className="font-semibold">
+                  Tudo abaixo é a margem de {pct(r.cobertura, 1)} da receita
+                </span>{" "}
+                — não da operação inteira.
               </p>
               <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
                 Faltam custos de{" "}
-                <span className="num">{money(r.receitaSemCusto)}</span> em vendas.
-                O que aparece abaixo é a margem da parte apurada — não da
-                operação inteira. Cadastre mercadoria, embalagem e imposto por
-                SKU para fechar.
+                <span className="num font-medium">{money(r.receitaSemCusto)}</span>{" "}
+                em vendas. Enquanto um SKU não tiver mercadoria, embalagem e
+                imposto cadastrados, as vendas dele ficam de fora — não entram
+                como zero, ficam fora mesmo.
               </p>
               <Link
                 href="/financeiro/custos"
-                className="inline-flex items-center gap-1 text-[12px] text-brand hover:underline mt-1.5"
+                className="inline-flex items-center gap-1 text-[12px] font-medium text-brand hover:underline mt-1.5"
               >
-                Preencher custos
+                Preencher custos por SKU
                 <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
           </Panel>
         )}
 
+        <ResumoDre r={r} />
+
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,380px)_1fr] gap-3">
           {/* ── DRE ── */}
           <Panel className="p-4 h-fit">
-            <p className="text-[13px] font-semibold text-ink mb-2">
+            <p className="text-[13px] font-semibold text-ink mb-2.5">
               Resultado do período
             </p>
 
@@ -228,9 +258,10 @@ export default function FinanceiroCliente({
               tipo="subtotal"
             />
 
-            <p className="text-[11px] text-ink-3 mt-3 mb-1">
-              Custos que só existem porque houve venda
-            </p>
+            <GrupoDre
+              titulo="Custos da venda"
+              explicacao="só existem porque houve venda"
+            />
             <Linha rotulo="Comissão do canal" valor={r.comissao} indent />
             <Linha rotulo="Frete" valor={r.frete} indent />
             <Linha
@@ -258,9 +289,10 @@ export default function FinanceiroCliente({
               }
             />
 
-            <p className="text-[11px] text-ink-3 mt-3 mb-1">
-              Custos da operação, com ou sem venda
-            </p>
+            <GrupoDre
+              titulo="Custos da operação"
+              explicacao="saem exista venda ou não"
+            />
             <Linha rotulo="Mídia (Ads)" valor={r.ads} indent />
             <Linha rotulo="Fixas recorrentes" valor={r.fixaRecorrente} indent />
             <Linha
@@ -318,6 +350,21 @@ export default function FinanceiroCliente({
 
           {/* ── Margem por dimensão ── */}
           <Panel className="overflow-hidden">
+            {/*
+              A tabela abria direto nas abas, sem dizer o que ela é. Com
+              oito colunas de número e nenhum título, a leitura mais
+              provável era "outra tabela" — quando na verdade é a MESMA
+              DRE da esquerda, aberta por um eixo de cada vez.
+            */}
+            <div className="px-4 py-3 border-b border-line">
+              <p className="text-[13px] font-semibold text-ink">
+                A mesma conta, aberta por
+              </p>
+              <p className="text-[11.5px] text-ink-3 mt-0.5">
+                cada linha soma a margem da esquerda dentro de um recorte — a
+                coluna de cobertura diz o quanto daquela linha foi apurado
+              </p>
+            </div>
             <Tabs
               tabs={DIMENSOES.map((d) => ({ value: d.valor, label: d.rotulo }))}
               value={dim}
