@@ -263,7 +263,7 @@ export default function PerformancePrecoCliente({
 
 
         {/* ── Resumo ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {[
             { r: "SKUs com venda", v: count(resumo.total) },
             {

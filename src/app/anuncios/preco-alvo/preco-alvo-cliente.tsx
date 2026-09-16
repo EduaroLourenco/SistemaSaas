@@ -130,7 +130,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
         )}
 
         {/* ── Canal e margens-alvo ── */}
-        <Panel className="p-4 mb-3">
+        <Panel className="p-4">
           <div className="flex items-end gap-3 flex-wrap">
             <Field label="Canal">
               <Select

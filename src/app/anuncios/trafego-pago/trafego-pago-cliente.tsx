@@ -76,7 +76,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
 
       <PageBody>
         {/* ── Períodos ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {periodos.map((p) => (
             <Panel key={p.inicio} className="p-3">
               <p className="text-[11px] text-ink-3 mb-1">{p.rotulo}</p>
@@ -105,7 +105,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         </div>
 
         {/* ── O número que decide ── */}
-        <Panel className="p-4 mb-3">
+        <Panel className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
               <p className="text-[11px] text-ink-3 mb-1">

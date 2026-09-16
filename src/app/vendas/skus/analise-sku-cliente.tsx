@@ -386,7 +386,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
         )}
 
         {/* ── Resumo ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {[
             { r: "SKUs com venda", v: count(totais.skus) },
             { r: "Receita", v: moneyShort(totais.receita) },

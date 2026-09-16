@@ -239,7 +239,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
         )}
 
         {/* ── Quais canais entram na conta ── */}
-        <Panel className="p-3 mb-3">
+        <Panel className="p-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-3 mb-2">
             Canais na conta
           </p>
@@ -278,7 +278,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
         </Panel>
 
         {/* ── O gap ── */}
-        <Panel className="p-4 mb-3">
+        <Panel className="p-4">
           {semMeta ? (
             <div className="flex items-start gap-2.5">
               <Target className="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />

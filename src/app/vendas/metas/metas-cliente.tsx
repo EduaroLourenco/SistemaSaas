@@ -221,7 +221,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
         )}
 
         {/* ── Definir ── */}
-        <Panel className="p-4 mb-3">
+        <Panel className="p-4">
           <div className="flex items-end gap-3 flex-wrap">
             <Field label="Mês">
               <Select
@@ -297,7 +297,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
         </Panel>
 
         {/* ── Canais ── */}
-        <Panel className="overflow-hidden mb-3">
+        <Panel className="overflow-hidden">
           <div className="px-4 py-2.5 border-b border-line flex items-center gap-2">
             <p className="text-[13px] font-semibold text-ink">
               Canais na meta
