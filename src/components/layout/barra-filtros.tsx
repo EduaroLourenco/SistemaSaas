@@ -102,7 +102,15 @@ export function FiltroAcoes({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center gap-2 ml-auto shrink-0", className)}>
+    <div
+      className={cn(
+        // `ml-auto` só a partir de `sm`. No celular a faixa já empilhou, e
+        // empurrar as ações para a direita deixava um vão à esquerda com o
+        // botão principal encostado na borda.
+        "flex items-center gap-2 shrink-0 sm:ml-auto",
+        className
+      )}
+    >
       {children}
     </div>
   );
@@ -115,5 +123,7 @@ export function FiltroAcoes({
  * ao mesmo tempo: sem separação, os seis viram uma fileira indistinta.
  */
 export function FiltroDivisor() {
-  return <span aria-hidden className="w-px h-7 bg-line shrink-0" />;
+  // Some no celular: com a faixa empilhada, um traço vertical entre duas
+  // linhas não separa nada — só aparece solto no meio do caminho.
+  return <span aria-hidden className="hidden sm:block w-px h-7 bg-line shrink-0" />;
 }

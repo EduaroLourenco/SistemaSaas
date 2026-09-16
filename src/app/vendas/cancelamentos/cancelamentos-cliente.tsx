@@ -406,14 +406,38 @@ function PorSku({ dados }: { dados: DadosCancelamento }) {
  * ano inteiro vermelho é lido como ano inteiro vermelho.
  */
 
-/** Régua fixa de gravidade, em % — a mesma em toda a matriz. */
+/**
+ * Régua fixa de gravidade, em % — a mesma em toda a matriz.
+ *
+ * A faixa mais grave pinta o fundo com `--down` cheio, e aí o texto
+ * precisa do CONTRÁRIO do fundo. `text-white` resolvia no claro, onde
+ * `--down` é um vermelho escuro, e falhava no escuro, onde ele é um
+ * salmão claro — branco sobre salmão fica ilegível. `--panel` é o token
+ * que já inverte com o tema: branco no claro, quase preto no escuro.
+ * Exatamente o que a legibilidade pede, nos dois.
+ */
 const FAIXAS = [
-  { ate: 5, fundo: "transparent", texto: "text-ink-3" },
-  { ate: 10, fundo: "var(--warn-wash)", texto: "text-ink-2" },
-  { ate: 15, fundo: "color-mix(in srgb, var(--warn-wash) 55%, var(--warn) 45%)", texto: "text-ink" },
-  { ate: 25, fundo: "color-mix(in srgb, var(--down-wash) 60%, var(--down) 40%)", texto: "text-ink" },
-  { ate: Infinity, fundo: "var(--down)", texto: "text-white font-semibold" },
-];
+  { ate: 5, fundo: "transparent", texto: "text-ink-3", cor: undefined },
+  { ate: 10, fundo: "var(--warn-wash)", texto: "text-ink-2", cor: undefined },
+  {
+    ate: 15,
+    fundo: "color-mix(in srgb, var(--warn-wash) 55%, var(--warn) 45%)",
+    texto: "text-ink",
+    cor: undefined,
+  },
+  {
+    ate: 25,
+    fundo: "color-mix(in srgb, var(--down-wash) 60%, var(--down) 40%)",
+    texto: "text-ink",
+    cor: undefined,
+  },
+  {
+    ate: Infinity,
+    fundo: "var(--down)",
+    texto: "font-semibold",
+    cor: "var(--panel)",
+  },
+] as const;
 
 function faixaDe(taxa: number) {
   return FAIXAS.find((f) => taxa < f.ate) ?? FAIXAS[FAIXAS.length - 1];
@@ -543,7 +567,7 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
                         <td
                           key={m}
                           className={`px-2.5 py-1.5 text-center num ${fx.texto}`}
-                          style={{ background: fx.fundo }}
+                          style={{ background: fx.fundo, color: fx.cor }}
                           title={`${count(cel!.cancelados)} de ${count(cel!.pedidos)} pedidos · ${money(cel!.valorCancelado)}`}
                         >
                           {t.toFixed(t >= 10 ? 0 : 1)}%
@@ -552,7 +576,7 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
                     })}
                     <td
                       className={`px-2.5 py-1.5 text-right num border-l border-line-2 ${f.texto}`}
-                      style={{ background: f.fundo }}
+                      style={{ background: f.fundo, color: f.cor }}
                     >
                       {total.toFixed(1)}%
                     </td>
