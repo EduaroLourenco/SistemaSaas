@@ -11,6 +11,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
+import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { type Anuncio } from "@/mock";
 import type { DadosPainel } from "@/lib/dados/painel";
 import { recortar } from "@/lib/periodo";
@@ -225,41 +226,44 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           </>
         }
         filters={
-          <>
+          <BarraFiltros>
             {/*
-              * Seletor de canal E de conta: `canaisInfo` já traz o item do
-              * canal inteiro e, abaixo, cada conta. No consolidado a alta
-              * de um canal cobre a queda de outro e a semana parece
-              * estável — só olhando um por vez dá para responder "quem
-              * caiu".
-              */}
-            <SeletorCanal
-              canais={dados.canaisInfo.map((c) => ({
-                id: c.id,
-                nome: c.nome,
-                cor: c.cor,
-              }))}
-              valor={canalSel}
-              onChange={setCanalSel}
-              rotuloTodos="Todos os canais"
-            />
-          <div className="flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line shrink-0">
-            {PERIODOS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriodo(p)}
-                className={
-                  "h-6 px-2.5 rounded-[4px] text-[12px] font-medium transition-colors whitespace-nowrap " +
-                  (periodo === p
-                    ? "bg-panel text-ink shadow-[var(--sh-1)]"
-                    : "text-ink-3 hover:text-ink")
-                }
-              >
-                {p}
-              </button>
-            ))}
-            </div>
-          </>
+              Seletor de canal E de conta: `canaisInfo` já traz o item do
+              canal inteiro e, abaixo, cada conta. No consolidado a alta de
+              um canal cobre a queda de outro e a semana parece estável —
+              só olhando um por vez dá para responder "quem caiu".
+            */}
+            <Filtro rotulo="Canal">
+              <SeletorCanal
+                canais={dados.canaisInfo.map((c) => ({
+                  id: c.id,
+                  nome: c.nome,
+                  cor: c.cor,
+                }))}
+                valor={canalSel}
+                onChange={setCanalSel}
+                rotuloTodos="Todos os canais"
+              />
+            </Filtro>
+            <Filtro rotulo="Período">
+              <div className="flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line">
+                {PERIODOS.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriodo(p)}
+                    className={
+                      "h-6 px-2.5 rounded-[4px] text-[12px] font-medium transition-colors whitespace-nowrap " +
+                      (periodo === p
+                        ? "bg-panel text-ink shadow-[var(--sh-1)]"
+                        : "text-ink-3 hover:text-ink")
+                    }
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </Filtro>
+          </BarraFiltros>
         }
       />
 

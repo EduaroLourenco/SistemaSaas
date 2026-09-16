@@ -9,6 +9,11 @@ import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Matriz, type IndicadorMatriz, type ColunaMatriz } from "@/components/ui/matriz";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
+import {
+  BarraFiltros,
+  Filtro,
+  FiltroAcoes,
+} from "@/components/layout/barra-filtros";
 import { CompararPeriodo, type LinhaComparacao } from "@/components/ui/comparar-periodo";
 import { agruparSemanas } from "@/lib/periodo";
 import { type SemanaVendas } from "@/mock/semanal";
@@ -509,28 +514,39 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
           </Button>
         }
         filters={
-          <>
-            <SeletorCanal
-              canais={dados.canais}
-              valor={canal}
-              onChange={setCanal}
-            />
-            <Segmented<MetricaId>
-              options={OPCOES_METRICA}
-              value={metricaId}
-              onChange={setMetricaId}
-            />
-            <div className="hidden md:block">
+          <BarraFiltros>
+            <Filtro rotulo="Canal">
+              <SeletorCanal
+                canais={dados.canais}
+                valor={canal}
+                onChange={setCanal}
+              />
+            </Filtro>
+            <Filtro rotulo="Medir por">
+              <Segmented<MetricaId>
+                options={OPCOES_METRICA}
+                value={metricaId}
+                onChange={setMetricaId}
+              />
+            </Filtro>
+            {/*
+              Sem rótulo, "As 53 semanas / Só com dados" ficava colado no
+              seletor de métrica e os dois liam como um controle só de
+              seis botões.
+            */}
+            <Filtro rotulo="Mostrar" className="hidden md:flex">
               <Segmented<Escopo>
                 options={OPCOES_ESCOPO}
                 value={escopo}
                 onChange={setEscopo}
               />
-            </div>
-            <span className="num text-[12px] text-ink-3 shrink-0 ml-auto hidden md:block">
-              {comDados} de {TOTAL_SEMANAS} semanas com movimento
-            </span>
-          </>
+            </Filtro>
+            <FiltroAcoes>
+              <span className="num text-[12px] text-ink-3 hidden md:block">
+                {comDados} de {TOTAL_SEMANAS} semanas com movimento
+              </span>
+            </FiltroAcoes>
+          </BarraFiltros>
         }
       />
 

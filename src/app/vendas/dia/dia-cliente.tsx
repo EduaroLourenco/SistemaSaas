@@ -4,6 +4,7 @@ import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { Panel, Badge, Delta, EmptyState } from "@/components/ui/primitives";
 import { Select } from "@/components/ui/controls";
 import { money, moneyShort, pct, count, nomeDoDia } from "@/lib/format";
@@ -93,18 +94,22 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
         <PageHeader
           title="Dia"
           breadcrumb="Vendas"
-          actions={
+          filters={
             // Sem o seletor aqui, escolher uma conta sem movimento prendia
             // a tela nesse estado vazio: não tinha como voltar sem editar
             // a URL à mão ou recarregar a página.
-            dados.opcoes.length > 0 && (
-              <SelectRecorte
-                grupos={dados.opcoes}
-                valor={dados.canalId}
-                onChange={(v) => ir("canal", v)}
-                className="w-[240px]"
-              />
-            )
+            dados.opcoes.length > 0 ? (
+              <BarraFiltros>
+                <Filtro rotulo="Canal">
+                  <SelectRecorte
+                    grupos={dados.opcoes}
+                    valor={dados.canalId}
+                    onChange={(v) => ir("canal", v)}
+                    className="w-[240px]"
+                  />
+                </Filtro>
+              </BarraFiltros>
+            ) : undefined
           }
         />
         <PageBody>
@@ -138,15 +143,17 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
         ]
           .filter(Boolean)
           .join(" · ")}
-        actions={
-          <div className="flex items-center gap-2">
-            <SelectRecorte
-              grupos={dados.opcoes}
-              valor={dados.canalId}
-              onChange={(v) => ir("canal", v)}
-              className="w-[240px]"
-            />
-          </div>
+        filters={
+          <BarraFiltros>
+            <Filtro rotulo="Canal">
+              <SelectRecorte
+                grupos={dados.opcoes}
+                valor={dados.canalId}
+                onChange={(v) => ir("canal", v)}
+                className="w-[240px]"
+              />
+            </Filtro>
+          </BarraFiltros>
         }
       />
 

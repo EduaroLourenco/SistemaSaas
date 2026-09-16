@@ -3,6 +3,7 @@
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { Button, Panel, PanelHeader, Delta, Badge } from "@/components/ui/primitives";
 import { Select, Segmented } from "@/components/ui/controls";
 import { useRouter } from "next/navigation";
@@ -389,15 +390,16 @@ export default function ComparativoDiario({
           />
         }
         filters={
-          <label className="flex items-center gap-2 shrink-0">
-            <span className="label">Canal</span>
-            <SelectRecorte
-              grupos={dados.opcoes}
-              valor={canalAtual}
-              onChange={trocarCanal}
-              className="w-[240px]"
-            />
-          </label>
+          <BarraFiltros>
+            <Filtro rotulo="Canal">
+              <SelectRecorte
+                grupos={dados.opcoes}
+                valor={canalAtual}
+                onChange={trocarCanal}
+                className="w-[240px]"
+              />
+            </Filtro>
+          </BarraFiltros>
         }
       />
 

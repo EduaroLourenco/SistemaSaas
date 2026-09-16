@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { Button, Panel, PanelHeader, Delta, Badge } from "@/components/ui/primitives";
 import { Sparkline } from "@/components/ui/stat-tile";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
@@ -288,8 +289,9 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
           </>
         }
         filters={
-          <>
-            <div className="flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line shrink-0">
+          <BarraFiltros>
+            <Filtro rotulo="Período">
+            <div className="flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line">
               {PERIODOS.map((p) => (
                 <button
                   key={p}
@@ -305,8 +307,15 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
                 </button>
               ))}
             </div>
+            </Filtro>
 
-            <div className="hidden sm:flex items-center gap-1.5">
+            {/*
+              As fichas de canal são um FILTRO de visibilidade do gráfico,
+              e sem rótulo liam como legenda — alguém clicava achando que
+              ia abrir o canal, e o canal sumia.
+            */}
+            <Filtro rotulo="Mostrar no gráfico" className="hidden sm:flex">
+            <div className="flex items-center gap-1.5">
               {CANAIS.map((c) => {
                 const off = ocultos.includes(c.id);
                 return (
@@ -331,7 +340,8 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
                 );
               })}
             </div>
-          </>
+            </Filtro>
+          </BarraFiltros>
         }
       />
 

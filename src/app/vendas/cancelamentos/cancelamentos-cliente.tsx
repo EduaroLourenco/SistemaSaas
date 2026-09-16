@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { Panel, Badge, EmptyState } from "@/components/ui/primitives";
 import { Segmented } from "@/components/ui/controls";
 import { Leitura, TudoCerto } from "@/components/ui/leitura";
@@ -91,7 +92,13 @@ export default function Cancelamentos({ dados }: { dados: DadosCancelamento }) {
         title="Cancelamentos"
         breadcrumb="Vendas"
         description="O faturamento que voltou — por canal, por SKU e ao longo do tempo"
-        filters={<Segmented options={ABAS} value={aba} onChange={setAba} />}
+        filters={
+          <BarraFiltros>
+            <Filtro rotulo="Ver">
+              <Segmented options={ABAS} value={aba} onChange={setAba} />
+            </Filtro>
+          </BarraFiltros>
+        }
       />
 
       <PageBody>

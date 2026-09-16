@@ -2,6 +2,11 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import {
+  BarraFiltros,
+  Filtro,
+  FiltroAcoes,
+} from "@/components/layout/barra-filtros";
 import { Button, Panel, PanelHeader, Badge, Delta } from "@/components/ui/primitives";
 import {
   Segmented,
@@ -392,10 +397,9 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
           </Button>
         }
         filters={
-          <>
-            <div className="w-[190px] max-md:flex-1 shrink-0">
+          <BarraFiltros>
+            <Filtro rotulo="Medir por" className="w-[190px] max-md:flex-1">
               <Select
-                aria-label="Métrica"
                 value={metricaId}
                 onChange={(e) => setMetricaId(e.target.value as MetricaId)}
                 className="max-md:h-11"
@@ -406,23 +410,25 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
                   </option>
                 ))}
               </Select>
-            </div>
+            </Filtro>
 
-            <div className="hidden md:block">
+            <Filtro rotulo="Canal" className="hidden md:flex">
               <Segmented<EscopoComp>
                 options={ESCOPOS_COMP}
                 value={escopo}
                 onChange={setEscopo}
               />
-            </div>
+            </Filtro>
 
             {melhor && (
-              <span className="hidden lg:block text-[12px] text-ink-3 shrink-0 ml-auto whitespace-nowrap">
-                melhor dia: <span className="text-ink-2">{melhor.nome}</span>{" "}
-                <span className="num">{M.fmtCurto(melhor.media)}</span>
-              </span>
+              <FiltroAcoes>
+                <span className="hidden lg:block text-[12px] text-ink-3 whitespace-nowrap">
+                  melhor dia: <span className="text-ink-2">{melhor.nome}</span>{" "}
+                  <span className="num">{M.fmtCurto(melhor.media)}</span>
+                </span>
+              </FiltroAcoes>
             )}
-          </>
+          </BarraFiltros>
         }
       />
 
