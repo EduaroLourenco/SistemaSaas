@@ -394,13 +394,41 @@ function vazio(
  *
  * Dias fixados à mão no futuro são preservados e saem do bolo, como no
  * rateio normal.
+ *
+ * ── Quem carrega o que falta ──
+ *
+ * Por padrão, cada canal recupera o PRÓPRIO atraso nos próprios dias. É
+ * o comportamento honesto quando não se sabe mais nada — mas ele mantém
+ * um alvo impossível de pé no canal que já se sabe que não vai voltar, e
+ * a operação passa o mês olhando para um número que ninguém acredita.
+ *
+ * Com `destinos`, o atraso vira um bolo só e vai para os canais
+ * escolhidos. Os outros têm os dias futuros zerados — que é o que
+ * "este canal não recupera" quer dizer em números.
+ *
+ * A meta do MÊS é preservada exatamente. A conta é:
+ *
+ *   sobra = meta do mês − realizado de todos (escolhidos ou não)
+ *
+ * e essa sobra se divide entre os destinos pelo peso deles. Somando
+ * tudo de volta — realizado de quem ficou de fora, mais realizado dos
+ * destinos, mais a sobra — dá a meta do mês, por construção.
  */
 export async function redistribuirRestante(
   ano: number,
   mes: number,
   operacaoId: string,
-  canaisSelecionados?: string[]
-): Promise<{ canais: number; dias: number; total: number; semDiasLivres: string[] }> {
+  canaisSelecionados?: string[],
+  /** Canais que absorvem o atraso de todos. Vazio = cada um com o seu. */
+  destinos?: string[]
+): Promise<{
+  canais: number;
+  dias: number;
+  total: number;
+  semDiasLivres: string[];
+  /** Canais que tiveram os dias futuros zerados por não serem destino. */
+  zerados: string[];
+}> {
   const sb = await clienteServidor();
   const { ratearNoMes } = await import("./ratear-meta");
 
@@ -473,13 +501,61 @@ export async function redistribuirRestante(
 
   const linhas: Record<string, unknown>[] = [];
   const semDiasLivres: string[] = [];
+  const zerados: string[] = [];
   let totalRedistribuido = 0;
+
+  /*
+   * Modo bolo: o atraso de todos vira um valor só e vai para os destinos.
+   *
+   * `destinos` é filtrado contra `alvo` de propósito. Um id que não tem
+   * meta no mês não pode receber atraso — ele não tem onde guardar, e o
+   * total deixaria de fechar em silêncio.
+   */
+  const idsAlvo = alvo.map((m) => m.canal_id as string);
+  const destinosValidos = (destinos ?? []).filter((id) => idsAlvo.includes(id));
+  const modoBolo = destinosValidos.length > 0;
+
+  /** Quanto cada canal deve entregar do dia seguinte até o fim do mês. */
+  const restantePorCanal = new Map<string, number>();
+
+  if (modoBolo) {
+    const metaTotal = alvo.reduce((acc, m) => acc + n(m.receita_meta), 0);
+    const realizadoTotal = idsAlvo.reduce(
+      (acc, id) => acc + (realizadoPorCanal.get(id) ?? 0),
+      0
+    );
+    // A sobra pode ser negativa quando o mês já passou da meta. Aí não há
+    // o que redistribuir, e os destinos ficam com zero em vez de com um
+    // alvo negativo.
+    const sobra = Math.max(0, metaTotal - realizadoTotal);
+
+    const pesos = destinosValidos.map((id) => ({
+      canalId: id,
+      peso: realizadoPorCanal.get(id) ?? 0,
+    }));
+    const { ratearPorPeso } = await import("./ratear-meta");
+    for (const f of ratearPorPeso(sobra, pesos)) {
+      restantePorCanal.set(f.canalId, f.valor);
+    }
+    for (const id of idsAlvo) {
+      if (!restantePorCanal.has(id)) {
+        restantePorCanal.set(id, 0);
+        zerados.push(id);
+      }
+    }
+  } else {
+    for (const m of alvo) {
+      const id = m.canal_id as string;
+      restantePorCanal.set(
+        id,
+        Math.max(0, n(m.receita_meta) - (realizadoPorCanal.get(id) ?? 0))
+      );
+    }
+  }
 
   for (const m of alvo) {
     const canalId = m.canal_id as string;
-    const metaCanal = n(m.receita_meta);
-    const realizado = realizadoPorCanal.get(canalId) ?? 0;
-    const restante = Math.max(0, metaCanal - realizado);
+    const restante = restantePorCanal.get(canalId) ?? 0;
     totalRedistribuido += restante;
 
     const fixados = manuaisPorCanal.get(canalId) ?? new Map();
@@ -524,10 +600,36 @@ export async function redistribuirRestante(
     if (error) throw new Error(`Falha ao redistribuir: ${error.message}`);
   }
 
+  /*
+   * No modo bolo a meta MENSAL de cada canal também muda: quem não é
+   * destino passa a valer o que já realizou, e quem é destino passa a
+   * valer o que realizou mais a fatia da sobra. Sem isso, a meta do mês
+   * do canal continuaria dizendo um número que a soma dos dias dele já
+   * não entrega — e as duas telas discordariam sobre o mesmo canal.
+   */
+  if (modoBolo) {
+    const linhasMes = idsAlvo.map((id) => ({
+      operacao_id: operacaoId,
+      canal_id: id,
+      ano,
+      mes,
+      receita_meta: r2(
+        (realizadoPorCanal.get(id) ?? 0) + (restantePorCanal.get(id) ?? 0)
+      ),
+      origem: "manual",
+      atualizado_em: new Date().toISOString(),
+    }));
+    const { error } = await sb
+      .from("metas")
+      .upsert(linhasMes, { onConflict: "operacao_id,canal_id,ano,mes" });
+    if (error) throw new Error(`Falha ao mover a meta do mês: ${error.message}`);
+  }
+
   return {
     canais: alvo.length,
     dias: linhas.length,
     total: r2(totalRedistribuido),
     semDiasLivres,
+    zerados,
   };
 }

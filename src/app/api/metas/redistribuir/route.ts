@@ -22,7 +22,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ erro: "Não autenticado" }, { status: 401 });
   }
 
-  let corpo: { ano?: number; mes?: number; canais?: string[] };
+  let corpo: {
+    ano?: number;
+    mes?: number;
+    canais?: string[];
+    /** Canais que absorvem o atraso de todos. Vazio = cada um com o seu. */
+    destinos?: string[];
+  };
   try {
     corpo = await req.json();
   } catch {
@@ -40,14 +46,18 @@ export async function POST(req: Request) {
   }
 
   try {
-    const r = await redistribuirRestante(ano!, mes!, operacao.id, canais);
+    const destinos = Array.isArray(corpo.destinos) ? corpo.destinos : undefined;
+    const r = await redistribuirRestante(ano!, mes!, operacao.id, canais, destinos);
     return NextResponse.json({
       canais: r.canais,
       dias: r.dias,
       total: r.total,
+      zerados: r.zerados.length,
       aviso: r.semDiasLivres.length
         ? "O mês já acabou para algum canal selecionado — não há dia futuro onde redistribuir."
-        : null,
+        : r.zerados.length
+          ? `${r.zerados.length} canal(is) ficaram com os dias futuros zerados: o que faltava neles foi para os canais escolhidos. A meta do mês continua a mesma.`
+          : null,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Falha ao redistribuir.";

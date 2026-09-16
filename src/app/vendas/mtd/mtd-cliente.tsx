@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
-import { Select } from "@/components/ui/controls";
+import { Select, Segmented } from "@/components/ui/controls";
 import {
   BarraFiltros,
   Filtro,
@@ -118,6 +118,23 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
     router.push(`/vendas/mtd?${q}`);
   }
 
+  /**
+   * Quem carrega o atraso.
+   *
+   * "cada" é o de sempre: cada canal recupera o próprio atraso nos
+   * próprios dias. Honesto quando não se sabe mais nada — e teimoso,
+   * porque mantém um alvo de pé no canal que já se sabe que não volta.
+   *
+   * "bolo" junta o atraso de todos e joga nos canais escolhidos. Os
+   * outros ficam com os dias futuros zerados, que é o que
+   * "este não recupera" quer dizer em número.
+   */
+  const [modo, setModo] = React.useState<"cada" | "bolo">("cada");
+  const [destinos, setDestinos] = React.useState<string[]>([]);
+
+  /* Só canal com meta no mês pode receber atraso: sem meta não há onde guardar. */
+  const podemReceber = d.canais.filter((c) => d.canaisComMeta.includes(c.id));
+
   async function redistribuir() {
     setSalvando(true);
     setErro(null);
@@ -125,7 +142,12 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
       const r = await fetch("/api/metas/redistribuir", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ano: d.ano, mes: d.mes, canais: sel }),
+        body: JSON.stringify({
+          ano: d.ano,
+          mes: d.mes,
+          canais: sel,
+          destinos: modo === "bolo" ? destinos : [],
+        }),
       });
       const corpo = await r.json().catch(() => ({}));
       if (!r.ok) {
@@ -326,10 +348,90 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 mt-4 pt-3 border-t border-line flex-wrap">
+              {/* ── Quem recupera o atraso ── */}
+              <div className="mt-4 pt-3 border-t border-line">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-3 mb-2">
+                  Quem recupera o atraso
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Segmented
+                    options={[
+                      { value: "cada" as const, label: "Cada canal recupera o seu" },
+                      { value: "bolo" as const, label: "Jogar tudo em canais escolhidos" },
+                    ]}
+                    value={modo}
+                    onChange={(v) => {
+                      setModo(v);
+                      setFeito(false);
+                    }}
+                  />
+                </div>
+
+                {modo === "bolo" && (
+                  <div className="mt-2.5">
+                    <div className="flex flex-wrap gap-1.5">
+                      {podemReceber.map((c) => {
+                        const on = destinos.includes(c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              setDestinos((x) =>
+                                on ? x.filter((y) => y !== c.id) : [...x, c.id]
+                              );
+                              setFeito(false);
+                            }}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-r1 border text-[12px] transition-colors ${
+                              on
+                                ? "border-brand bg-brand-wash text-ink"
+                                : "border-line text-ink-3 hover:text-ink-2"
+                            }`}
+                          >
+                            <span
+                              className="w-2 h-2 rounded-[2px] shrink-0"
+                              style={{ background: on ? c.cor : "var(--ink-3)" }}
+                            />
+                            {c.nome}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11.5px] text-ink-3 mt-2 leading-relaxed max-w-2xl">
+                      {destinos.length === 0 ? (
+                        <span className="text-warn">
+                          Escolha ao menos um canal para receber o atraso.
+                        </span>
+                      ) : (
+                        <>
+                          O que falta de <span className="num">todos</span> os canais vai
+                          para{" "}
+                          <span className="text-ink-2">
+                            {podemReceber
+                              .filter((c) => destinos.includes(c.id))
+                              .map((c) => c.nome)
+                              .join(", ")}
+                          </span>
+                          , dividido pelo peso recente de cada um. Os demais ficam com os
+                          dias futuros zerados.{" "}
+                          <span className="text-ink-2 font-medium">
+                            A meta do mês não muda
+                          </span>{" "}
+                          — ela só troca de dono.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
                 <Button
                   variant="primary"
-                  disabled={salvando || d.diasRestantes === 0}
+                  disabled={
+                    salvando ||
+                    d.diasRestantes === 0 ||
+                    (modo === "bolo" && destinos.length === 0)
+                  }
                   onClick={redistribuir}
                 >
                   {salvando ? (
@@ -345,7 +447,9 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
                   ) : (
                     <>
                       <Split className="w-3.5 h-3.5" />
-                      Jogar o que falta nos dias restantes
+                      {modo === "bolo"
+                        ? "Mover o atraso para os canais escolhidos"
+                        : "Jogar o que falta nos dias restantes"}
                     </>
                   )}
                 </Button>
