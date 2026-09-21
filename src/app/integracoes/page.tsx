@@ -5,6 +5,7 @@ import { SectionTitle } from "@/components/ui/controls";
 import { FontesDados } from "@/components/painel/fontes-dados";
 import { carregarFontes } from "@/lib/dados/fontes";
 import { situacaoContas } from "@/lib/meli/cliente";
+import { vtexConfigurada } from "@/lib/vtex/cliente";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { Info } from "lucide-react";
 
@@ -70,6 +71,9 @@ export default async function Integracoes() {
             {situacaoContas().map((c) => {
               const reg = porConta.get(c.slug);
               const comErro = reg?.status === "erro" || reg?.status === "expirada";
+              // Conectada é ter com o que renovar: a autorização guardada no
+              // cofre vale tanto quanto a variável de ambiente — e dura mais.
+              const conectada = c.conectada || reg?.status === "conectada";
               return (
                 <Panel key={c.slug} className="px-4 py-3.5">
                   <div className="flex items-start justify-between gap-3">
@@ -79,17 +83,25 @@ export default async function Integracoes() {
                         Pedidos, visitas, catálogo, estoque, comissão e frete
                       </p>
                     </div>
-                    <Badge tone={!c.conectada ? "neutral" : comErro ? "down" : "up"}>
-                      {!c.conectada ? "Não conectada" : comErro ? "Com erro" : "Conectada"}
+                    <Badge tone={!conectada ? "neutral" : comErro ? "down" : "up"}>
+                      {!conectada ? "Não conectada" : comErro ? "Com erro" : "Conectada"}
                     </Badge>
                   </div>
-                  <p className="num text-[11.5px] text-ink-2 mt-3 pt-3 border-t border-line">
-                    {reg?.ultima_sincronizacao
-                      ? `Última sincronização: ${quando(reg.ultima_sincronizacao)}`
-                      : c.conectada
-                        ? "Ainda sem sincronização registrada"
-                        : "Enquanto não conectada, os números desta conta entram por planilha"}
-                  </p>
+                  <div className="mt-3 pt-3 border-t border-line flex items-center justify-between gap-3">
+                    <p className="num text-[11.5px] text-ink-2">
+                      {reg?.ultima_sincronizacao
+                        ? `Última sincronização: ${quando(reg.ultima_sincronizacao)}`
+                        : conectada
+                          ? "Ainda sem sincronização registrada"
+                          : "Enquanto não conectada, os números desta conta entram por planilha"}
+                    </p>
+                    <Link
+                      href={`/api/meli/conectar?conta=${c.slug}`}
+                      className="text-[11.5px] font-medium text-brand hover:underline shrink-0"
+                    >
+                      {conectada ? "Reconectar" : "Conectar"}
+                    </Link>
+                  </div>
                   {comErro && reg?.ultimo_erro && (
                     <p className="text-[11.5px] text-down mt-1.5">{reg.ultimo_erro}</p>
                   )}
@@ -97,6 +109,29 @@ export default async function Integracoes() {
               );
             })}
           </div>
+        </div>
+
+        <div className="space-y-3">
+          <SectionTitle
+            title="Loja própria · VTEX"
+            hint="Sincroniza sozinha à 01h30 (horário de Brasília)"
+          />
+          <Panel className="px-4 py-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-ink truncate">Loja própria (VTEX)</p>
+                <p className="text-[12px] text-ink-3 mt-0.5">Pedidos, itens e frete</p>
+              </div>
+              <Badge tone={vtexConfigurada() ? "up" : "neutral"}>
+                {vtexConfigurada() ? "Conectada" : "Não conectada"}
+              </Badge>
+            </div>
+            <p className="text-[11.5px] text-ink-2 mt-3 pt-3 border-t border-line">
+              Pedido criado e nunca pago não entra: a VTEX abre o pedido antes de o
+              cartão responder, e contá-lo punha a loja com quase metade de
+              cancelamento que nunca foi venda.
+            </p>
+          </Panel>
         </div>
 
         <div className="space-y-3">
