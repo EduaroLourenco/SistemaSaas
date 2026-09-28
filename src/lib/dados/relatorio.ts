@@ -177,6 +177,7 @@ export type Relatorio = {
     meta: number;
     realizado: number;
     gap: number;
+    diasRestantes: number;
     ritmoNecessario: number;
     ritmoAtual: number;
     decomposicao: { alavanca: string; ganho: number; detalhe: string }[];
@@ -654,7 +655,16 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
 
   /* ══ Estoque ══ */
   const rupturaCurvaA = linhas.filter((l) => l.curva === "A" && (l.estoque === 0 || l.situacao === "paused"));
-  const encerradosCurvaA = linhas.filter((l) => l.curva === "A" && l.situacao === "encerrado");
+  /*
+   * Encerrado só interessa enquanto a venda é recente.
+   *
+   * Anúncio fechado há meses que vendeu em julho não é decisão desta
+   * semana — e havia 146 assim, o que afogava a lista. Com corte de 30
+   * dias sobra o que ainda dá para republicar aproveitando a demanda.
+   */
+  const encerradosCurvaA = linhas.filter(
+    (l) => l.curva === "A" && l.situacao === "encerrado" && (l.diasSemVenda ?? 999) <= 30
+  );
   const criticos = linhas.filter((l) => l.coberturaDias != null && l.coberturaDias <= 14 && l.estoque! > 0);
   const parados = linhas.filter((l) => l.curva !== "C" && (l.diasSemVenda ?? 0) >= 14 && (l.estoque ?? 0) > 0);
   const pausados = Object.values(instantaneo.contas).map((c) => ({
@@ -811,7 +821,9 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
     receitaAtribuida: r2(receitaAds),
     acos: receitaAds ? divide(investimentoAds, receitaAds) : null,
     anunciosNoVermelho: [...porAnuncioAds.entries()]
-      .filter(([, v]) => v.investimento > v.receita * 0.3 && v.investimento > 20)
+      /* Metade da receita atribuída em mídia já é caro; sem receita
+         atribuída nenhuma, é dinheiro sem retorno medido. */
+      .filter(([, v]) => v.investimento > 20 && (v.receita === 0 || v.investimento > v.receita * 0.5))
       .sort((a, b) => b[1].investimento - a[1].investimento)
       .slice(0, 8)
       .map(([mlb, v]) => ({ mlb, sku: anuncioPorCodigo.get(mlb)?.sku_canal ?? null, investimento: r2(v.investimento), receita: r2(v.receita) })),
@@ -1003,6 +1015,7 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
           meta: r2(metaTotal),
           realizado: r2(realizadoMes),
           gap: r2(gap),
+          diasRestantes,
           ritmoNecessario: r2(gap / diasRestantes),
           ritmoAtual: r2(realizadoMes / Math.max(1, diasCorridos)),
           decomposicao,

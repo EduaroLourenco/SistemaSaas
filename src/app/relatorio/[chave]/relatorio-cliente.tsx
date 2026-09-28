@@ -145,7 +145,7 @@ function Interpretacao({
       <button
         onClick={() => { setRascunho(texto || padrao); setEditando(true); }}
         aria-label="Editar este texto"
-        className="absolute right-0 top-0 w-6 h-6 rounded-r1 border border-line text-ink-3 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:border-brand hover:text-brand flex items-center justify-center"
+        className={`absolute right-0 top-0 w-6 h-6 rounded-r1 border border-line text-ink-3 hover:border-brand hover:text-brand flex items-center justify-center ${grande || !mostrar ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100"}`}
       >
         <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z" strokeLinecap="round" strokeLinejoin="round" />
@@ -369,6 +369,9 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
   const [filtro, setFiltro] = React.useState<string>("ab");
   const [busca, setBusca] = React.useState("");
   const [ordem, setOrdem] = React.useState<"receita90" | "janela" | "cobertura" | "distancia">("receita90");
+  /* A tabela inteira tem centenas de linhas e empurra o resto da página
+     para baixo. Começa curta; quem quiser a lista toda abre. */
+  const [quantos, setQuantos] = React.useState(40);
   const [abertoProduto, setAbertoProduto] = React.useState<string | null>(null);
   const [canalAberto, setCanalAberto] = React.useState<string | null>(null);
   const [verPendencias, setVerPendencias] = React.useState(false);
@@ -633,7 +636,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
             {([["ab", "Curva A e B"], ["a", "Só curva A"], ["sem-estoque", "Sem estoque"], ["abaixo", "Abaixo do mínimo"], ["caro", "Acima do melhor preço"], ["catalogo", "Catálogo"], ["todos", "Todos"]] as const).map(([v, r]) => (
               <button
                 key={v}
-                onClick={() => setFiltro(v)}
+                onClick={() => { setFiltro(v); setQuantos(40); }}
                 className={`h-7 px-2.5 rounded-r1 border text-[12px] ${filtro === v ? "border-brand bg-brand-wash text-brand font-medium" : "border-line text-ink-2 hover:border-brand-edge"}`}
               >
                 {r}
@@ -675,7 +678,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                 </tr>
               </thead>
               <tbody>
-                {produtosFiltrados.slice(0, 200).map((l) => {
+                {produtosFiltrados.slice(0, quantos).map((l) => {
                   const abaixo = l.precoMinimo != null && l.precoVisivel != null && l.precoVisivel < l.precoMinimo * 0.99;
                   const caro = l.melhorPreco != null && l.precoVisivel != null && l.precoVisivel > l.melhorPreco * 1.1;
                   const semEstoque = l.estoque === 0 || l.situacao === "paused" || l.situacao === "encerrado";
@@ -716,8 +719,18 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
               </tbody>
             </table>
           </div>
-          {produtosFiltrados.length > 200 && (
-            <p className="text-[11.5px] text-ink-3 mt-2">Mostrando 200 de {produtosFiltrados.length}. Use a busca para chegar no que falta.</p>
+          {produtosFiltrados.length > quantos && (
+            <div className="flex items-center gap-3 mt-2.5">
+              <button
+                onClick={() => setQuantos((q) => q + 60)}
+                className="h-7 px-3 rounded-r1 border border-line text-[12px] text-ink-2 hover:border-brand hover:text-brand"
+              >
+                Mostrar mais 60
+              </button>
+              <span className="text-[11.5px] text-ink-3">
+                mostrando {Math.min(quantos, produtosFiltrados.length)} de {produtosFiltrados.length}
+              </span>
+            </div>
           )}
           <Interpretacao
             id="produtos"
@@ -1021,6 +1034,8 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                   <span className="num text-ink-2 text-right">{reais(dados.metas.ritmoAtual)}/dia</span>
                   <span className="text-ink-2">Ritmo necessário</span>
                   <span className="num text-ink text-right">{reais(dados.metas.ritmoNecessario)}/dia</span>
+                  <span className="text-ink-3 text-[11.5px]">Dias restantes no mês</span>
+                  <span className="num text-ink-3 text-right text-[11.5px]">{dados.metas.diasRestantes}</span>
                 </div>
               </div>
               <div className="panel px-4 py-3.5">
