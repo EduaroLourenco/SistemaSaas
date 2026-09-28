@@ -37,10 +37,10 @@ export default async function Relatorio({
   searchParams,
 }: {
   params: Promise<{ chave: string }>;
-  searchParams: Promise<{ dias?: string }>;
+  searchParams: Promise<{ dias?: string; canal?: string }>;
 }) {
   const { chave } = await params;
-  const { dias } = await searchParams;
+  const { dias, canal } = await searchParams;
 
   if (!chaveCerta(chave)) {
     const usuario = await usuarioAtual();
@@ -48,7 +48,7 @@ export default async function Relatorio({
   }
 
   const janela = Math.min(90, Math.max(1, Number(dias) || 7));
-  const dados = await montarRelatorio({ dias: janela });
+  const dados = await montarRelatorio({ dias: janela, canal: canal ?? null });
 
   return <RelatorioCliente dados={dados} chave={chave} />;
 }

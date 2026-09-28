@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { Relatorio, Variacao, Metricas, LinhaProduto } from "@/lib/dados/relatorio";
+import type { Relatorio, Variacao, Metricas, LinhaProduto, SkuMulticanal } from "@/lib/dados/relatorio";
 
 /**
  * A página do relatório.
@@ -415,7 +415,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
             <div>
               <p className="label">Probel · e-commerce</p>
               <h1 className="text-[26px] font-semibold text-ink tracking-tight mt-1 leading-none">
-                Raio-X da operação
+                {dados.canalAtivo ? dados.canalAtivo.nome : "Raio-X da operação"}
               </h1>
               <p className="text-[13px] text-ink-2 mt-2">
                 {dm(p.de)} a {dm(p.ate)} de {p.ate.slice(0, 4)} · {p.dias} dias completos
@@ -462,6 +462,39 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
           </div>
         </div>
       </header>
+
+      {/* ── Seletor de canal: vale para a página inteira ── */}
+      <div className="border-b border-line bg-panel">
+        <div className="max-w-[1180px] mx-auto px-5 py-2.5 flex items-center gap-2 overflow-x-auto">
+          <span className="label shrink-0 mr-1">Canal</span>
+          <a
+            href={`?dias=${p.dias}`}
+            className={
+              "h-7 px-3 rounded-r1 border text-[12.5px] leading-[26px] whitespace-nowrap " +
+              (!dados.canalAtivo
+                ? "border-brand bg-brand-wash text-brand font-medium"
+                : "border-line text-ink-2 hover:border-brand-edge")
+            }
+          >
+            Operação inteira
+          </a>
+          {dados.canaisDisponiveis.map((c) => (
+            <a
+              key={c.id}
+              href={`?dias=${p.dias}&canal=${c.id}`}
+              className={
+                "h-7 px-3 rounded-r1 border text-[12.5px] leading-[26px] whitespace-nowrap " +
+                (dados.canalAtivo?.id === c.id
+                  ? "border-brand bg-brand-wash text-brand font-medium"
+                  : "border-line text-ink-2 hover:border-brand-edge")
+              }
+            >
+              {c.nome}
+              <span className="num text-[11px] text-ink-3 ml-1.5">{reais(c.receita)}</span>
+            </a>
+          ))}
+        </div>
+      </div>
 
       {/* ── Índice fixo ── */}
       <nav className="sticky top-0 z-20 border-b border-line bg-panel/95 backdrop-blur">
@@ -878,73 +911,42 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
         {/* ══ Multicanal ══ */}
         <Secao
           id="multicanal"
-          titulo="Multicanal"
-          chamada="Mesmo SKU, canais diferentes. Diferença de preço é o gatilho de migração de venda entre canais."
+          titulo="Multicanal — o mesmo produto, loja a loja"
+          chamada="A única seção que ignora o filtro de canal: comparar as lojas entre si é o assunto dela. Clique no SKU para abrir os canais."
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="panel px-4 py-3.5">
-              <p className="label mb-3">Maior diferença de preço entre canais</p>
-              {dados.multicanal.dispersao.length ? (
-                <div className="flex flex-col gap-2">
-                  {dados.multicanal.dispersao.slice(0, 10).map((d) => (
-                    <div key={d.sku} className="border-b border-line last:border-0 pb-2 last:pb-0">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="num text-[12.5px] text-ink font-medium">{d.sku}</span>
-                        <span className="num text-[12px] text-down font-semibold">{pct(d.diferencaPct, 0)}</span>
-                      </div>
-                      <p className="text-[11.5px] text-ink-3 truncate">{d.titulo}</p>
-                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
-                        {d.precos.map((x) => (
-                          <span key={x.canal} className="num text-[11.5px] text-ink-2">
-                            {x.canal}: {reais(x.preco, 2)}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[12.5px] text-ink-3">Nenhum SKU com preço medido em mais de um canal na janela.</p>
-              )}
-            </div>
-            <div className="panel px-4 py-3.5">
-              <p className="label mb-3">
-                <Dica texto="Um canal sobe e o outro cai no mesmo SKU. Quando a soma fica perto de zero, a venda migrou de canal em vez de crescer. Quando a soma sobe, houve venda nova.">
-                  Migração de venda entre canais
-                </Dica>
-              </p>
-              {dados.multicanal.migracao.length ? (
-                <div className="flex flex-col gap-2">
-                  {dados.multicanal.migracao.slice(0, 10).map((m) => (
-                    <div key={m.sku} className="border-b border-line last:border-0 pb-2 last:pb-0">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="num text-[12.5px] text-ink font-medium">{m.sku}</span>
-                        <span className={`num text-[12px] font-semibold ${m.somaMudou > 0 ? "text-up" : m.somaMudou < 0 ? "text-down" : "text-ink-3"}`}>
-                          soma {m.somaMudou > 0 ? "+" : ""}{m.somaMudou}
-                        </span>
-                      </div>
-                      <p className="text-[11.5px] text-ink-2 mt-0.5">
-                        <span className="text-up">{m.subiu.canal} +{m.subiu.delta}</span>
-                        <span className="text-ink-3"> · </span>
-                        <span className="text-down">{m.caiu.canal} {m.caiu.delta}</span>
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[12.5px] text-ink-3">Nenhum SKU subiu num canal e caiu em outro nesta janela.</p>
-              )}
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
+            {[
+              { r: "SKUs em mais de um canal", v: numero(dados.multicanal.resumo.skusEmMaisDeUmCanal), cor: "text-ink" },
+              { r: "Com preço diferente entre canais", v: numero(dados.multicanal.resumo.comPrecoDiferente), cor: "text-warn" },
+              { r: "Com algum canal parado", v: numero(dados.multicanal.resumo.comCanalParado), cor: "text-down" },
+              { r: "Receita parada nesses canais", v: reais(dados.multicanal.resumo.receitaEmRisco), cor: "text-down" },
+            ].map((x) => (
+              <div key={x.r} className="panel px-3.5 py-3">
+                <p className="label leading-tight">{x.r}</p>
+                <p className={`num text-[20px] font-semibold mt-1 leading-none ${x.cor}`}>{x.v}</p>
+              </div>
+            ))}
           </div>
+
+          {dados.multicanal.skus.length ? (
+            <div className="flex flex-col gap-2">
+              {dados.multicanal.skus.map((x) => (
+                <SkuEntreCanais key={x.sku} x={x} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-[13px] text-ink-3">Nenhum SKU aparece em mais de um canal com venda na janela.</p>
+          )}
+
           <Interpretacao
             id="multicanal"
             chave={chave}
             salvo={anot("multicanal")}
-            padrao={`${dados.multicanal.dispersao.length} SKUs aparecem com preço diferente entre canais na janela. ${dados.multicanal.migracao.length} tiveram alta num canal e queda em outro — a coluna da soma diz se o total cresceu ou se a venda só trocou de lugar.`}
+            padrao={`${dados.multicanal.resumo.skusEmMaisDeUmCanal} SKUs estão anunciados em mais de um canal. Em ${dados.multicanal.resumo.comCanalParado} deles um canal vendeu e outro não, somando ${reais(dados.multicanal.resumo.receitaEmRisco)} que o canal parado fazia na janela anterior. O diagnóstico de cada linha diz o que está diferente no canal que parou — preço, pausa, estoque ou campanha.`}
           />
         </Secao>
 
-        {/* ══ Tráfego pago ══ */}
+                {/* ══ Tráfego pago ══ */}
         <Secao
           id="trafego"
           titulo="Tráfego pago"
@@ -1320,6 +1322,106 @@ function DetalheProduto({ l }: { l: LinhaProduto }) {
         <p className="text-[12.5px] text-brand border-t border-line pt-3">
           Este anúncio é elegível ao catálogo e não está inscrito.
         </p>
+      )}
+    </div>
+  );
+}
+
+/** Um SKU, os canais dele, e o que separa cada canal do que mais vende. */
+function SkuEntreCanais({ x }: { x: SkuMulticanal }) {
+  const [aberto, setAberto] = React.useState(false);
+  const comProblema = x.canais.filter((c) => c.diagnostico);
+  return (
+    <div className="panel overflow-hidden">
+      <button
+        onClick={() => setAberto((v) => !v)}
+        className="w-full px-4 py-3 flex items-start justify-between gap-4 text-left hover:bg-brand-wash/30"
+      >
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="num text-[13px] font-semibold text-ink">{x.sku}</span>
+            <span className="text-[12px] text-ink-3 truncate max-w-[420px]">{x.titulo}</span>
+          </div>
+          <p className="text-[11.5px] text-ink-2 mt-1">
+            {x.canais.length} canais · vende mais em <strong className="font-medium text-ink">{x.lider}</strong>
+            {x.precoLider != null && <> a {reais(x.precoLider, 2)}</>}
+            {x.dispersao != null && x.dispersao > 0.05 && (
+              <span className="text-warn"> · {pct(x.dispersao, 0)} de diferença entre o menor e o maior preço</span>
+            )}
+          </p>
+          {comProblema.length > 0 && (
+            <p className="text-[11.5px] text-down mt-1">
+              {comProblema.map((c) => `${c.canal}: ${c.diagnostico}`).join(" · ")}
+            </p>
+          )}
+        </div>
+        <div className="text-right shrink-0">
+          {x.receitaEmRisco > 0 && (
+            <p className="num text-[13px] font-semibold text-down">{reais(x.receitaEmRisco)}</p>
+          )}
+          <p className="num text-[11.5px] text-ink-3">{x.unidades} pç na janela · {x.unidadesAnterior} antes</p>
+          <span className="text-[11px] text-brand">{aberto ? "fechar" : "abrir"}</span>
+        </div>
+      </button>
+
+      {aberto && (
+        <div className="border-t border-line overflow-x-auto">
+          <table className="w-full text-[12px] min-w-[860px]">
+            <thead>
+              <tr className="text-ink-3 border-b border-line">
+                <th className="text-left font-medium px-4 py-2">Canal</th>
+                <th className="text-center font-medium px-2 py-2">Situação</th>
+                <th className="text-right font-medium px-2 py-2">Preço</th>
+                <th className="text-right font-medium px-2 py-2">Mínimo</th>
+                <th className="text-right font-medium px-2 py-2">Estoque</th>
+                <th className="text-center font-medium px-2 py-2">Campanha</th>
+                <th className="text-right font-medium px-2 py-2">Peças</th>
+                <th className="text-right font-medium px-2 py-2">Antes</th>
+                <th className="text-right font-medium px-2 py-2">Visitas</th>
+                <th className="text-right font-medium px-2 py-2">Conversão</th>
+                <th className="text-left font-medium px-3 py-2">O que está diferente</th>
+              </tr>
+            </thead>
+            <tbody>
+              {x.canais.map((c) => {
+                const lider = c.canal === x.lider;
+                const caro = c.preco != null && x.precoLider != null && c.preco > x.precoLider * 1.05;
+                return (
+                  <tr key={c.canal} className={`border-b border-line last:border-0 ${lider ? "bg-brand-wash/30" : ""}`}>
+                    <td className="px-4 py-1.5 text-ink font-medium">
+                      {c.canal}
+                      {lider && <span className="text-[10px] text-brand ml-1.5">vende mais</span>}
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <span className={
+                        c.situacao === "vendendo" ? "text-up"
+                        : c.situacao === "parado" ? "text-warn"
+                        : "text-down font-medium"
+                      }>
+                        {c.situacao}
+                      </span>
+                    </td>
+                    <td className={`px-2 py-1.5 text-right num ${caro ? "text-warn font-semibold" : "text-ink"}`}>{reais(c.preco, 2)}</td>
+                    <td className="px-2 py-1.5 text-right num text-ink-3">{reais(c.precoMinimo, 2)}</td>
+                    <td className="px-2 py-1.5 text-right num text-ink-2">
+                      {c.semControleEstoque ? <span className="text-[11px] text-ink-3">sem controle</span> : numero(c.estoque)}
+                    </td>
+                    <td className="px-2 py-1.5 text-center text-ink-2">{c.emCampanha ? "sim" : "não"}</td>
+                    <td className="px-2 py-1.5 text-right num text-ink">{numero(c.unidades)}</td>
+                    <td className="px-2 py-1.5 text-right num text-ink-3">{numero(c.unidadesAnterior)}</td>
+                    <td className="px-2 py-1.5 text-right num text-ink-2">
+                      {c.temVisita ? numero(c.visitas) : <span className="text-[11px] text-ink-3">sem medição</span>}
+                    </td>
+                    <td className="px-2 py-1.5 text-right num text-ink-2">
+                      {c.conversao == null ? "—" : pct(c.conversao, 2)}
+                    </td>
+                    <td className="px-3 py-1.5 text-ink-2 text-[11.5px]">{c.diagnostico ?? (lider ? "—" : "")}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

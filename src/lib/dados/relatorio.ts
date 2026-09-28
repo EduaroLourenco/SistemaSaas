@@ -123,8 +123,47 @@ export type FonteEstado = {
   detalhe: string;
 };
 
+export type CanalDoSku = {
+  canal: string;
+  contaId: string;
+  temVisita: boolean;
+  anuncios: number;
+  pausados: number;
+  situacao: "vendendo" | "parado" | "pausado" | "sem estoque" | "encerrado";
+  preco: number | null;
+  precoMinimo: number | null;
+  estoque: number | null;
+  semControleEstoque: boolean;
+  emCampanha: boolean;
+  unidades: number;
+  unidadesAnterior: number;
+  receita: number;
+  visitas: number | null;
+  conversao: number | null;
+  /** O que separa este canal do que mais vende. Vazio no próprio líder. */
+  diagnostico: string | null;
+};
+
+export type SkuMulticanal = {
+  sku: string;
+  titulo: string;
+  canais: CanalDoSku[];
+  /** Canal com mais unidades na janela; empate resolve pela receita. */
+  lider: string | null;
+  precoLider: number | null;
+  /** Diferença entre o maior e o menor preço entre canais, em fração. */
+  dispersao: number | null;
+  unidades: number;
+  unidadesAnterior: number;
+  /** Receita que o canal parado fazia antes e deixou de fazer. */
+  receitaEmRisco: number;
+};
+
 export type Relatorio = {
   geradoEm: string;
+  /** Recorte ativo. `null` quando o relatório é da operação inteira. */
+  canalAtivo: { id: string; nome: string; temVisita: boolean } | null;
+  canaisDisponiveis: { id: string; nome: string; receita: number; temVisita: boolean }[];
   instantaneoEm: string;
   periodo: { de: string; ate: string; dias: number; hoje: string };
   /** O dia em andamento, à parte: não entra em nenhuma comparação. */
@@ -152,8 +191,17 @@ export type Relatorio = {
     pausados: { conta: string; quantidade: number }[];
   };
   multicanal: {
-    dispersao: { sku: string; titulo: string; precos: { canal: string; preco: number }[]; diferenca: number; diferencaPct: number }[];
-    migracao: { sku: string; titulo: string; subiu: { canal: string; delta: number }; caiu: { canal: string; delta: number }; somaMudou: number }[];
+    /**
+     * O mesmo SKU, loja a loja. É a análise que não tem recorte: ela existe
+     * justamente para comparar os canais entre si.
+     */
+    skus: SkuMulticanal[];
+    resumo: {
+      skusEmMaisDeUmCanal: number;
+      comPrecoDiferente: number;
+      comCanalParado: number;
+      receitaEmRisco: number;
+    };
   };
   financeiro: {
     coberturaCusto: number;
@@ -260,7 +308,9 @@ const ROTULO_ALAVANCA: Record<string, string> = {
    O relatório
    ══════════════════════════════════════════════════════════════ */
 
-export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<Relatorio> {
+export async function montarRelatorio(
+  opcoes: { dias?: number; canal?: string | null } = {}
+): Promise<Relatorio> {
   const sb = clientePrivilegiado();
   const hoje = hojeSP();
   const dias = opcoes.dias ?? 7;
@@ -498,7 +548,16 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
     };
   }
 
-  const operacao = montarMetricas(null, true);
+  /*
+   * O recorte vale para tudo, menos para a seção multicanal.
+   *
+   * Sem recorte, a operação soma os canais; com recorte, todo número da
+   * página é daquele canal — KPI, produto, estoque, catálogo, mídia. A
+   * comparação entre canais fica no lugar onde ela é o assunto.
+   */
+  const contaEscolhida = opcoes.canal ? contaDe.get(opcoes.canal) ?? null : null;
+  const alvoOperacao = contaEscolhida ? new Set([contaEscolhida.id]) : null;
+  const operacao = montarMetricas(alvoOperacao, contaEscolhida ? contaEscolhida.temVisita : true);
 
   /* ══ Canais ══ */
   const canais: BlocoCanal[] = [];
@@ -544,6 +603,10 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
 
   const linhas: LinhaProduto[] = [];
   for (const [mlb, a] of porMlb) {
+    if (contaEscolhida) {
+      const anuncioDoRecorte = anuncioPorCodigo.get(mlb);
+      if (!anuncioDoRecorte || anuncioDoRecorte.conta_canal_id !== contaEscolhida.id) continue;
+    }
     const anuncio = anuncioPorCodigo.get(mlb);
     const inst = instPorMlb.get(mlb);
     const contaId = anuncio?.conta_canal_id;
@@ -673,75 +736,195 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
   );
   const criticos = linhas.filter((l) => l.coberturaDias != null && l.coberturaDias <= 14 && l.estoque! > 0);
   const parados = linhas.filter((l) => l.curva !== "C" && (l.diasSemVenda ?? 0) >= 14 && (l.estoque ?? 0) > 0);
-  const pausados = Object.values(instantaneo.contas).map((c) => ({
-    conta: c.nome,
-    quantidade: c.anuncios.filter((a) => a.situacao === "paused").length,
-  }));
-
-  /* ══ Multicanal ══ */
-  const porSkuCanal = new Map<string, Map<string, { receita: number; unidades: number; unidadesAnterior: number; preco: number | null; titulo: string }>>();
-  for (const l of linhas) {
-    if (!l.sku) continue;
-    const m = porSkuCanal.get(l.sku) ?? new Map();
-    const atual = m.get(l.conta) ?? { receita: 0, unidades: 0, unidadesAnterior: 0, preco: null, titulo: l.titulo };
-    atual.receita += l.receitaPeriodo;
-    atual.unidades += l.unidadesPeriodo;
-    if (l.precoVisivel != null) atual.preco = atual.preco == null ? l.precoVisivel : Math.min(atual.preco, l.precoVisivel);
-    m.set(l.conta, atual);
-    porSkuCanal.set(l.sku, m);
-  }
-  /* Unidades da janela anterior, para ver migração. */
-  const anteriorPorSkuCanal = new Map<string, Map<string, number>>();
-  for (const v of vendas) {
-    if (v.cancelado || v.data < anteriorDe || v.data > anteriorAte) continue;
-    const anuncio = anuncioPorCodigo.get(v.mlb);
-    const conta = anuncio ? contaDe.get(anuncio.conta_canal_id) : null;
-    const sku = v.sku ?? (anuncio?.sku_canal ? String(anuncio.sku_canal).toUpperCase() : null);
-    if (!sku || !conta) continue;
-    const nome = conta.nome === "Conta principal" ? conta.canal : `${conta.canal} · ${conta.nome}`;
-    const m = anteriorPorSkuCanal.get(sku) ?? new Map<string, number>();
-    m.set(nome, (m.get(nome) ?? 0) + v.q);
-    anteriorPorSkuCanal.set(sku, m);
-  }
-
-  const dispersao: Relatorio["multicanal"]["dispersao"] = [];
-  for (const [sku, canaisDoSku] of porSkuCanal) {
-    const precos = [...canaisDoSku.entries()]
-      .filter(([, v]) => v.preco != null)
-      .map(([canal, v]) => ({ canal, preco: v.preco as number }));
-    if (precos.length < 2) continue;
-    const min = Math.min(...precos.map((p) => p.preco));
-    const max = Math.max(...precos.map((p) => p.preco));
-    if (max - min < 0.5) continue;
-    dispersao.push({
-      sku,
-      titulo: [...canaisDoSku.values()][0].titulo,
-      precos: precos.sort((a, b) => a.preco - b.preco),
-      diferenca: r2(max - min),
-      diferencaPct: divide(max - min, min),
-    });
-  }
-  dispersao.sort((a, b) => b.diferencaPct - a.diferencaPct);
-
-  const migracao: Relatorio["multicanal"]["migracao"] = [];
-  for (const [sku, canaisDoSku] of porSkuCanal) {
-    const antes = anteriorPorSkuCanal.get(sku) ?? new Map<string, number>();
-    const deltas = [...new Set([...canaisDoSku.keys(), ...antes.keys()])].map((canal) => ({
-      canal,
-      delta: (canaisDoSku.get(canal)?.unidades ?? 0) - (antes.get(canal) ?? 0),
+  const pausados = Object.values(instantaneo.contas)
+    .filter((c) => !contaEscolhida || c.nome === contaEscolhida.nome)
+    .map((c) => ({
+      conta: c.nome,
+      quantidade: c.anuncios.filter((a) => a.situacao === "paused").length,
     }));
-    const subiu = deltas.filter((d) => d.delta > 0).sort((a, b) => b.delta - a.delta)[0];
-    const caiu = deltas.filter((d) => d.delta < 0).sort((a, b) => a.delta - b.delta)[0];
-    if (!subiu || !caiu) continue;
-    migracao.push({
+
+  /* ══ Multicanal ══
+   *
+   * O mesmo SKU visto loja a loja, e o motivo de ele vender numa e não na
+   * outra. É a única seção que ignora o filtro de canal — comparar canais
+   * é justamente o que ela faz.
+   *
+   * O diagnóstico compara cada canal com o LÍDER, que é o canal que mais
+   * vendeu peças na janela. Não afirma causa: diz o que está diferente no
+   * canal parado. Preço maior, anúncio pausado, sem estoque e fora de
+   * campanha são fatos; qual deles pesou é decisão de quem lê.
+   */
+  type Agrupado = {
+    unidades: number; unidadesAnterior: number; receita: number;
+    anuncios: number; pausados: number; encerrados: number; ativos: number;
+    preco: number | null; precoMinimo: number | null;
+    estoque: number; semControle: boolean; emCampanha: boolean;
+    visitas: number; temVisita: boolean;
+  };
+  const novo = (): Agrupado => ({
+    unidades: 0, unidadesAnterior: 0, receita: 0,
+    anuncios: 0, pausados: 0, encerrados: 0, ativos: 0,
+    preco: null, precoMinimo: null, estoque: 0, semControle: false, emCampanha: false,
+    visitas: 0, temVisita: false,
+  });
+
+  const porSkuCanal = new Map<string, Map<string, Agrupado>>();
+  const tituloDoSku = new Map<string, string>();
+
+  /* Um anúncio por vez, inclusive os que não venderam: o canal parado só
+     aparece se o anúncio dele entrar na conta. */
+  for (const a of anunciosDb) {
+    const conta = contaDe.get(a.conta_canal_id);
+    if (!conta) continue;
+    const mlb = String(a.codigo_externo).toUpperCase();
+    const inst = instPorMlb.get(mlb);
+    const sku =
+      (a.produto_id ? produtoPorId.get(a.produto_id)?.sku : null) ?? a.sku_canal ?? inst?.sku ?? null;
+    if (!sku) continue;
+    const skuU = String(sku).toUpperCase();
+    if (!tituloDoSku.get(skuU)) tituloDoSku.set(skuU, inst?.titulo ?? a.titulo ?? skuU);
+
+    const nomeCanal = conta.nome === "Conta principal" ? conta.canal : `${conta.canal} · ${conta.nome}`;
+    const m = porSkuCanal.get(skuU) ?? new Map<string, Agrupado>();
+    const g = m.get(nomeCanal) ?? novo();
+    g.anuncios += 1;
+    g.temVisita = g.temVisita || conta.temVisita;
+    if (!inst) g.encerrados += 1;
+    else if (inst.situacao === "paused") g.pausados += 1;
+    else {
+      g.ativos += 1;
+      // 40 mil é o marcador de "sem controle de estoque" do canal, e somar
+      // isso daria 160 mil peças de um colchão.
+      if ((inst.estoque ?? 0) >= 40_000) g.semControle = true;
+      else g.estoque += inst.estoque ?? 0;
+      const p = inst.precoVisivel ?? inst.precoVitrine;
+      if (p != null) g.preco = g.preco == null ? p : Math.min(g.preco, p);
+      if (inst.campanha) g.emCampanha = true;
+    }
+    const min = minimoDe(skuU, mlb);
+    if (min != null) g.precoMinimo = g.precoMinimo == null ? min : Math.min(g.precoMinimo, min);
+
+    if (conta.temVisita) {
+      const vis = visitaAnuncioPorDia.get(mlb);
+      if (vis) for (const [d, n] of vis) if (d >= de && d <= ate) g.visitas += n;
+    }
+    m.set(nomeCanal, g);
+    porSkuCanal.set(skuU, m);
+  }
+
+  /* Vendas das duas janelas, no mesmo agrupamento. */
+  for (const v of vendas) {
+    if (v.cancelado) continue;
+    const anuncio = anuncioPorCodigo.get(v.mlb);
+    const conta = anuncio ? contaDe.get(anuncio.conta_canal_id) : contaDe.get(v.conta);
+    if (!conta) continue;
+    const sku =
+      (anuncio?.produto_id ? produtoPorId.get(anuncio.produto_id)?.sku : null) ??
+      v.sku ?? anuncio?.sku_canal ?? instPorMlb.get(v.mlb)?.sku ?? null;
+    if (!sku) continue;
+    const skuU = String(sku).toUpperCase();
+    const nomeCanal = conta.nome === "Conta principal" ? conta.canal : `${conta.canal} · ${conta.nome}`;
+    const m = porSkuCanal.get(skuU) ?? new Map<string, Agrupado>();
+    const g = m.get(nomeCanal) ?? novo();
+    if (v.data >= de && v.data <= ate) { g.unidades += v.q; g.receita += v.q * v.preco; }
+    if (v.data >= anteriorDe && v.data <= anteriorAte) g.unidadesAnterior += v.q;
+    if (!tituloDoSku.get(skuU)) tituloDoSku.set(skuU, instPorMlb.get(v.mlb)?.titulo ?? skuU);
+    m.set(nomeCanal, g);
+    porSkuCanal.set(skuU, m);
+  }
+
+  const skusMulticanal: SkuMulticanal[] = [];
+  for (const [sku, canaisDoSku] of porSkuCanal) {
+    if (canaisDoSku.size < 2) continue;
+
+    /*
+     * Canal sem anúncio e sem venda nas duas janelas não entra.
+     *
+     * Antes, um canal que vendeu o SKU há três meses aparecia como
+     * "parado" com preço e estoque vazios — três linhas de ruído em cada
+     * produto, e nenhuma delas acionável.
+     */
+    const bruto = [...canaisDoSku.entries()]
+      .filter(([, g]) => g.anuncios > 0 || g.unidades > 0 || g.unidadesAnterior > 0)
+      .map(([canal, g]) => {
+      /* Canal sem anúncio cadastrado — a Loja própria e os marketplaces
+         de planilha — só tem venda. Aí a situação vem da venda, não do
+         estoque, que ninguém mediu. */
+      const semCadastro = g.anuncios === 0;
+      const situacao: CanalDoSku["situacao"] =
+        g.unidades > 0 ? "vendendo"
+        : semCadastro ? "parado"
+        : g.ativos === 0 && g.pausados > 0 ? "pausado"
+        : g.ativos === 0 && g.encerrados > 0 ? "encerrado"
+        : g.ativos > 0 && !g.semControle && g.estoque === 0 ? "sem estoque"
+        : "parado";
+      return {
+        canal,
+        contaId: [...contaDe.values()].find((c) => (c.nome === "Conta principal" ? c.canal : `${c.canal} · ${c.nome}`) === canal)?.id ?? "",
+        temVisita: g.temVisita,
+        anuncios: g.anuncios,
+        pausados: g.pausados,
+        situacao,
+        preco: g.preco,
+        precoMinimo: g.precoMinimo,
+        estoque: semCadastro || (g.semControle && !g.estoque) ? null : g.estoque,
+        semControleEstoque: g.semControle,
+        emCampanha: g.emCampanha,
+        unidades: g.unidades,
+        unidadesAnterior: g.unidadesAnterior,
+        receita: r2(g.receita),
+        visitas: g.temVisita ? g.visitas : null,
+        conversao: g.temVisita && g.visitas ? g.unidades / g.visitas : null,
+        diagnostico: null as string | null,
+      };
+    });
+
+    const lider = [...bruto].sort(
+      (a, b) => b.unidades - a.unidades || b.unidadesAnterior - a.unidadesAnterior || b.receita - a.receita
+    )[0];
+    if (!lider || (lider.unidades === 0 && lider.unidadesAnterior === 0)) continue;
+
+    for (const c of bruto) {
+      if (c.canal === lider.canal) continue;
+      if (c.unidades > 0) continue;
+      const motivos: string[] = [];
+      if (c.anuncios === 0) motivos.push("sem anúncio cadastrado no sistema");
+      if (c.situacao === "pausado") motivos.push("anúncio pausado");
+      if (c.situacao === "sem estoque") motivos.push("sem estoque");
+      if (c.situacao === "encerrado") motivos.push("anúncio encerrado");
+      if (c.preco != null && lider.preco != null && c.preco > lider.preco * 1.05) {
+        motivos.push(`preço ${Math.round(((c.preco - lider.preco) / lider.preco) * 100)}% acima de ${lider.canal}`);
+      }
+      if (!c.emCampanha && lider.emCampanha) motivos.push("fora da campanha que o outro canal tem");
+      if (c.preco != null && c.precoMinimo != null && c.preco > c.precoMinimo * 1.05 && !motivos.length) {
+        motivos.push(`${Math.round(((c.preco - c.precoMinimo) / c.preco) * 100)}% acima do próprio mínimo`);
+      }
+      if (!motivos.length && c.unidadesAnterior > 0) motivos.push("vendia na janela anterior e parou, sem mudança visível");
+      c.diagnostico = motivos.length ? motivos.join(" · ") : null;
+    }
+
+    const precos = bruto.map((c) => c.preco).filter((p): p is number => p != null);
+    const receitaEmRisco = soma(
+      bruto.filter((c) => c.unidades === 0 && c.unidadesAnterior > 0 && c.preco != null).map((c) => c.unidadesAnterior * (c.preco as number))
+    );
+
+    skusMulticanal.push({
       sku,
-      titulo: [...canaisDoSku.values()][0].titulo,
-      subiu,
-      caiu,
-      somaMudou: soma(deltas.map((d) => d.delta)),
+      titulo: tituloDoSku.get(sku) ?? sku,
+      canais: bruto.sort((a, b) => b.unidades - a.unidades || (a.preco ?? Infinity) - (b.preco ?? Infinity)),
+      lider: lider.canal,
+      precoLider: lider.preco,
+      dispersao: precos.length > 1 ? divide(Math.max(...precos) - Math.min(...precos), Math.min(...precos)) : null,
+      unidades: soma(bruto.map((c) => c.unidades)),
+      unidadesAnterior: soma(bruto.map((c) => c.unidadesAnterior)),
+      receitaEmRisco: r2(receitaEmRisco),
     });
   }
-  migracao.sort((a, b) => b.subiu.delta - a.subiu.delta);
+
+  /* Primeiro o que tem receita parada; depois o que só tem preço diferente. */
+  skusMulticanal.sort(
+    (a, b) => b.receitaEmRisco - a.receitaEmRisco || (b.dispersao ?? 0) - (a.dispersao ?? 0)
+  );
 
   /* ══ Financeiro: cobertura de custo ══ */
   const receitaJanela = soma(linhas.map((l) => l.receitaPeriodo));
@@ -816,11 +999,17 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
    */
   const daJanela = ads.filter((a) => a.inicio === de && a.fim === ate);
   const ultimoFimAds = daJanela.length ? ate : ads.length ? ads.map((a) => a.fim).sort().at(-1)! : null;
-  const adsUltimoPeriodo = daJanela.length
+  const doRecorte = (codigo: string) => {
+    if (!contaEscolhida) return true;
+    const a = anuncioPorCodigo.get(String(codigo).toUpperCase());
+    return Boolean(a && a.conta_canal_id === contaEscolhida.id);
+  };
+  const adsUltimoPeriodo = (daJanela.length
     ? daJanela
     : ultimoFimAds
       ? ads.filter((a) => a.fim === ultimoFimAds)
-      : [];
+      : []
+  ).filter((a) => doRecorte(a.codigo_externo));
   const adsInicio = adsUltimoPeriodo.length ? adsUltimoPeriodo[0].inicio : null;
   const investimentoAds = soma(adsUltimoPeriodo.map((a) => Number(a.investimento) || 0));
   const receitaAds = soma(adsUltimoPeriodo.map((a) => Number(a.receita) || 0));
@@ -996,6 +1185,10 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
 
   return {
     geradoEm: new Date().toISOString(),
+    canalAtivo: contaEscolhida
+      ? { id: contaEscolhida.id, nome: contaEscolhida.nome === "Conta principal" ? contaEscolhida.canal : `${contaEscolhida.canal} · ${contaEscolhida.nome}`, temVisita: contaEscolhida.temVisita }
+      : null,
+    canaisDisponiveis: canais.map((c) => ({ id: c.id, nome: c.nome, receita: c.metricas.receita.atual, temVisita: c.temVisita })),
     instantaneoEm: instantaneo.geradoEm,
     periodo: { de, ate, dias, hoje },
     hojeAteAgora: (() => {
@@ -1024,7 +1217,15 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
       alavancas: [...alavancasAbertas.entries()].map(([rotulo, abertas]) => ({ id: rotulo, rotulo, abertas })).sort((a, b) => b.abertas - a.abertas),
     },
     estoque: { rupturaCurvaA, encerradosCurvaA, criticos, parados, pausados },
-    multicanal: { dispersao: dispersao.slice(0, 25), migracao: migracao.slice(0, 15) },
+    multicanal: {
+      skus: skusMulticanal.slice(0, 60),
+      resumo: {
+        skusEmMaisDeUmCanal: skusMulticanal.length,
+        comPrecoDiferente: skusMulticanal.filter((x) => (x.dispersao ?? 0) > 0.05).length,
+        comCanalParado: skusMulticanal.filter((x) => x.canais.some((c) => c.diagnostico)).length,
+        receitaEmRisco: r2(soma(skusMulticanal.map((x) => x.receitaEmRisco))),
+      },
+    },
     financeiro: {
       coberturaCusto: divide(receitaComCusto, receitaJanela),
       receitaComCusto: r2(receitaComCusto),
@@ -1052,7 +1253,9 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
     prioridades,
     pendencias,
     anotacoes,
-    reputacao: Object.values(instantaneo.contas).map((c) => ({
+    reputacao: Object.values(instantaneo.contas)
+      .filter((c) => !contaEscolhida || c.nome === contaEscolhida.nome)
+      .map((c) => ({
       conta: c.nome,
       nivel: c.reputacao.nivel,
       categoria: c.reputacao.categoria,
