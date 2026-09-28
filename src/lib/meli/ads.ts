@@ -1,6 +1,6 @@
 import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
-import { emLotes } from "@/lib/sync/diarias";
+import { emLotes, r2 } from "@/lib/sync/diarias";
 import { meliGet, type Conta } from "./cliente";
 
 /**
@@ -183,6 +183,8 @@ export type ResultadoAds = {
   investimento: number;
   receita: number;
   acos: number | null;
+  /** Dias de `vendas_diarias` que receberam o gasto de mídia. */
+  diasGravados: number;
 };
 
 /**
@@ -197,6 +199,80 @@ export type ResultadoAds = {
  * tabela com centenas de linhas zeradas por execução, e "não gastou" é o
  * que a ausência já diz.
  */
+/**
+ * Quantos dias para trás o gasto diário é reescrito a cada execução.
+ *
+ * O canal só fecha o número do dia às 10h, e a atribuição de venda ainda
+ * muda depois disso. Reescrever uma semana a cada noite deixa o valor se
+ * assentar sozinho. É também o que mantém a rotina longe do período em
+ * que o gasto era digitado à mão: em poucos dias a janela passa a cobrir
+ * só dias que nasceram pela API.
+ */
+const DIAS_DIARIOS = 8;
+
+/**
+ * Grava o gasto do dia em `vendas_diarias`, que é de onde as telas leem.
+ *
+ * O `anuncio_ads` guarda a publicidade por anúncio, e serve para saber
+ * qual SKU consumiu o quê. Mas nenhuma tela lê essa tabela para compor o
+ * gasto do período: a aba semanal, a diária e a de margem leem a coluna
+ * `investimento_ads` de `vendas_diarias`.
+ *
+ * Essa coluna só tinha uma origem: a mão, pela tela de lançamentos. No
+ * dia em que a digitação parou — 20/09 — o gasto virou R$ 0 na tela,
+ * enquanto a conta seguia gastando duzentos e poucos reais por dia.
+ *
+ * A API responde por dia, e a soma dos dias bate com a da semana pedida
+ * de uma vez, então não há rateio nem estimativa aqui: cada dia recebe o
+ * número daquele dia.
+ */
+async function gravarGastoDiario(
+  conta: Conta,
+  adv: Anunciante,
+  de: string,
+  ate: string,
+  ctx: { operacaoId: string; contaCanalId: string }
+) {
+  const dias: string[] = [];
+  for (let d = new Date(`${ate}T00:00:00Z`); dias.length < DIAS_DIARIOS; d.setUTCDate(d.getUTCDate() - 1)) {
+    const iso = d.toISOString().slice(0, 10);
+    if (iso < de) break;
+    dias.push(iso);
+  }
+  if (!dias.length) return 0;
+
+  const sb = clientePrivilegiado();
+  /*
+   * O canal_id é preciso só quando o dia ainda não tem linha — dia com
+   * mídia e sem venda nenhuma. Com a linha já lá, o upsert atualiza
+   * apenas as colunas do payload e o canal_id nem é tocado.
+   */
+  const { data: contaDb } = await sb
+    .from("contas_canal")
+    .select("canal_id")
+    .eq("id", ctx.contaCanalId)
+    .maybeSingle();
+
+  const linhas = [];
+  for (const data of dias.reverse()) {
+    const camps = await campanhas(conta, adv, data, data);
+    linhas.push({
+      operacao_id: ctx.operacaoId,
+      canal_id: contaDb?.canal_id ?? null,
+      conta_canal_id: ctx.contaCanalId,
+      data,
+      investimento_ads: r2(camps.reduce((t, c) => t + c.metricas.investimento, 0)),
+      receita_ads: r2(camps.reduce((t, c) => t + c.metricas.receita, 0)),
+    });
+  }
+
+  const { error } = await sb
+    .from("vendas_diarias")
+    .upsert(linhas, { onConflict: "conta_canal_id,data" });
+  if (error) throw new Error(`Falha ao gravar gasto diário: ${error.message}`);
+  return linhas.length;
+}
+
 export async function sincronizarAds(
   conta: Conta,
   opcoes: { de: string; ate: string; operacaoId: string; contaCanalId: string }
@@ -244,6 +320,8 @@ export async function sincronizarAds(
     if (error) throw new Error(`Falha ao gravar publicidade: ${error.message}`);
   });
 
+  const diasGravados = await gravarGastoDiario(conta, adv, de, ate, { operacaoId, contaCanalId });
+
   const investimento = camps.reduce((s, c) => s + c.metricas.investimento, 0);
   const receita = camps.reduce((s, c) => s + c.metricas.receita, 0);
 
@@ -253,6 +331,7 @@ export async function sincronizarAds(
     campanhas: camps.length,
     anuncios: ads.length,
     gravados: linhas.length,
+    diasGravados,
     investimento: Number(investimento.toFixed(2)),
     receita: Number(receita.toFixed(2)),
     acos: receita ? investimento / receita : null,
