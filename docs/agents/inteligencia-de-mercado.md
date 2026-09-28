@@ -420,8 +420,15 @@ Ordem fixa, sempre a mesma, para virar hábito de leitura:
    completa.
 
 Cada interpretação tem **ícone de lápis**: o Eduardo edita o texto, salva,
-e passa a ser a versão dele. Isso exige tabela de anotações no banco,
-amarrada a organização, seção e período.
+e passa a ser a versão dele. Gravado na tabela `anotacoes`, que já existe,
+com `entidade = 'relatorio'` e `entidade_id = '<seção>:<período>'`.
+
+Na seção de planejamento estratégico entra também um **bloco de notas
+livre**, grande, no centro: campo em branco com botão de editar, onde o
+Eduardo escreve o que quiser — leitura dele, recado para a equipe,
+decisão tomada na reunião. Sem formato imposto, sem texto sugerido por
+mim. É o espaço dele na página, e sobrevive de uma semana para a outra
+porque fica no banco como as outras anotações.
 
 ---
 
