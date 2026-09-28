@@ -22,6 +22,23 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 const PUBLICAS = ["/entrar", "/cadastro", "/auth", "/api/cron/", "/relatorio/", "/api/relatorio/"];
 
+/**
+ * Compara sem entregar o tamanho da coincidência pelo tempo de resposta.
+ *
+ * O `timingSafeEqual` do Node não existe aqui: proxy roda no edge. São
+ * quatro linhas, e o laço percorre a chave esperada inteira em qualquer
+ * caso — sair no primeiro caractere diferente é justamente o que se mede.
+ */
+function chaveCerta(recebida: string) {
+  const esperada = process.env.RELATORIO_CHAVE;
+  if (!esperada) return false;
+  let diff = recebida.length ^ esperada.length;
+  for (let i = 0; i < esperada.length; i++) {
+    diff |= esperada.charCodeAt(i) ^ (recebida.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
 export async function proxy(req: NextRequest) {
   let resposta = NextResponse.next({ request: req });
 
@@ -48,6 +65,22 @@ export async function proxy(req: NextRequest) {
 
   const caminho = req.nextUrl.pathname;
   const publica = PUBLICAS.some((p) => caminho.startsWith(p));
+
+  /*
+   * O 404 da chave errada sai daqui, e não da página.
+   *
+   * A página também confere a chave, mas o `notFound()` dela chega tarde:
+   * o Next despacha o cabeçalho com o `<title>` antes de rodar o corpo,
+   * então a resposta ia com 200 e o 404 aparecia só dentro do HTML. Dado
+   * nenhum vazava — vazava o status, que é o que um varredor lê. Aqui não
+   * renderiza nada.
+   */
+  if (caminho.startsWith("/relatorio/") && !data.user) {
+    const chave = caminho.split("/")[2] ?? "";
+    if (!chaveCerta(decodeURIComponent(chave))) {
+      return new NextResponse(null, { status: 404 });
+    }
+  }
 
   if (!data.user && !publica) {
     // Rota de API responde em JSON, não em redirecionamento.
