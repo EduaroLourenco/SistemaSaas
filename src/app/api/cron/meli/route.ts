@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { sincronizarMeli } from "@/lib/meli/sincronizar";
 import { CONTAS, contaConectada } from "@/lib/meli/cliente";
+import { sincronizarAds } from "@/lib/meli/ads";
 
 export const runtime = "nodejs";
 /** Uma conta leva ~2 min: o freio de 4 chamadas/s × ~430 anúncios nas visitas. */
@@ -24,6 +25,9 @@ export const maxDuration = 300;
  * O catálogo vem nos dois: é ele que traz estoque e pausa, e estoque zerado
  * de manhã não pode esperar até a madrugada para aparecer.
  */
+/** Janela de métrica da publicidade. O canal guarda 90 dias. */
+const ADS_DIAS = 30;
+
 const TURNOS = {
   "13h": { diasPedidos: 1, diasVisitas: 2 },
   "01h": { diasPedidos: 3, diasVisitas: 3 },
@@ -84,12 +88,34 @@ export async function GET(req: NextRequest) {
         diasVisitas,
         registro: { origem: "agendada", turno },
       });
+      /*
+       * Publicidade entra depois do resto, e a falha dela não derruba a
+       * execução: o gasto de mídia é importante, mas pedido e visita são
+       * a espinha do sistema. Só no turno da madrugada, porque a métrica
+       * do dia anterior só fecha às 10h e o canal guarda 90 dias.
+       */
+      let ads: Record<string, unknown> | null = null;
+      if (turno === "01h") {
+        try {
+          const r2 = await sincronizarAds(c.slug, {
+            de: diaSP(-ADS_DIAS),
+            ate: diaSP(0),
+            operacaoId: r.operacaoId,
+            contaCanalId: r.contaCanalId,
+          });
+          ads = r2 ? { campanhas: r2.campanhas, gravados: r2.gravados, investimento: r2.investimento } : { semPublicidade: true };
+        } catch (e) {
+          ads = { erro: e instanceof Error ? e.message : String(e) };
+        }
+      }
+
       contas.push({
         conta: c.slug,
         ok: true,
         segundos: Math.round((Date.now() - comecou) / 1000),
         pedidos: r.pedidos.gravados,
         dias: r.diarias.dias,
+        ads,
         avisos: r.avisos,
       });
     } catch (e) {

@@ -96,6 +96,17 @@ const PERMITIDOS = [
   /^\/sites\/[A-Z]{3}\/search$/,
   // /orders/search e /orders/search/recent
   /^\/orders\/search(\/recent)?$/,
+  /*
+   * Publicidade (Mercado Ads).
+   *
+   * A rota antiga do Product Ads foi descontinuada em junho de 2025 e
+   * responde 404 — o que faz parecer que a conta não anuncia. A que
+   * responde é a de marketplace, e exige `api-version: 2`. Continua
+   * sendo leitura: anunciante, campanha e anúncio, com métrica do
+   * período.
+   */
+  /^\/advertising\/advertisers$/,
+  /^\/marketplace\/advertising\/[A-Z]{3}\/advertisers\/\d+\/product_ads\/(campaigns|ads)\/search$/,
 ];
 
 export class MeliBloqueado extends Error {

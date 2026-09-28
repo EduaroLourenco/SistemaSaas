@@ -261,7 +261,11 @@ async function accessToken(conta: Conta): Promise<string> {
  */
 export async function meliGet<T>(
   caminho: string,
-  conta: Conta = "principal"
+  conta: Conta = "principal",
+  /* Cabeçalho extra. Existe por causa da publicidade, que exige
+     `api-version: 2` — sem ele a mesma URL devolve 404 e parece que a
+     conta não tem anúncio patrocinado. */
+  cabecalhos: Record<string, string> = {}
 ): Promise<T> {
   autorizarLeitura(caminho);
   const token = await accessToken(conta);
@@ -269,7 +273,7 @@ export async function meliGet<T>(
 
   const r = await fetch(`${API}${caminho}`, {
     method: "GET",
-    headers: { authorization: `Bearer ${token}`, accept: "application/json" },
+    headers: { authorization: `Bearer ${token}`, accept: "application/json", ...cabecalhos },
   });
 
   if (!r.ok) {

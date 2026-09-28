@@ -163,7 +163,10 @@ export type Relatorio = {
   };
   trafegoPago: {
     temDado: boolean;
+    de: string | null;
     ate: string | null;
+    /** O dado cobre a mesma janela do relatório, ou é de outro período. */
+    mesmaJanela: boolean;
     investimento: number;
     cliques: number;
     impressoes: number;
@@ -800,8 +803,22 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
    * vez de fingir que é da janela do relatório. Google Ads do site não
    * existe no banco; a pendência diz isso.
    */
-  const ultimoFimAds = ads.length ? ads.map((a) => a.fim).sort().at(-1)! : null;
-  const adsUltimoPeriodo = ultimoFimAds ? ads.filter((a) => a.fim === ultimoFimAds) : [];
+  /*
+   * Prefere a linha que cobre EXATAMENTE a janela do relatório.
+   *
+   * A mesma campanha é gravada em janelas diferentes — a do relatório e a
+   * dos últimos 60 dias, por exemplo. Misturar as duas somaria o mesmo
+   * gasto duas vezes; pegar a mais recente por data de fim traria o
+   * período longo e diria que é da semana.
+   */
+  const daJanela = ads.filter((a) => a.inicio === de && a.fim === ate);
+  const ultimoFimAds = daJanela.length ? ate : ads.length ? ads.map((a) => a.fim).sort().at(-1)! : null;
+  const adsUltimoPeriodo = daJanela.length
+    ? daJanela
+    : ultimoFimAds
+      ? ads.filter((a) => a.fim === ultimoFimAds)
+      : [];
+  const adsInicio = adsUltimoPeriodo.length ? adsUltimoPeriodo[0].inicio : null;
   const investimentoAds = soma(adsUltimoPeriodo.map((a) => Number(a.investimento) || 0));
   const receitaAds = soma(adsUltimoPeriodo.map((a) => Number(a.receita) || 0));
   const porAnuncioAds = new Map<string, { investimento: number; receita: number }>();
@@ -814,7 +831,9 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
   }
   const trafegoPago = {
     temDado: adsUltimoPeriodo.length > 0,
+    de: adsInicio,
     ate: ultimoFimAds,
+    mesmaJanela: daJanela.length > 0,
     investimento: r2(investimentoAds),
     cliques: soma(adsUltimoPeriodo.map((a) => Number(a.cliques) || 0)),
     impressoes: soma(adsUltimoPeriodo.map((a) => Number(a.impressoes) || 0)),

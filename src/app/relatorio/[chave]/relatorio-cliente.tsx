@@ -945,7 +945,11 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
         <Secao
           id="trafego"
           titulo="Tráfego pago"
-          chamada="Product Ads do Mercado Livre. Entra por planilha, então o período é o da última importação — não o da janela deste relatório."
+          chamada={
+            dados.trafegoPago.mesmaJanela
+              ? "Product Ads do Mercado Livre, na mesma janela do relatório. Vem por API, anúncio por anúncio."
+              : "Product Ads do Mercado Livre. O dado disponível é de outro período — a janela aparece no último cartão."
+          }
         >
           {dados.trafegoPago.temDado ? (
             <>
@@ -968,7 +972,9 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                 </div>
                 <div className="panel px-3.5 py-3">
                   <p className="label">Período do dado</p>
-                  <p className="num text-[15px] font-semibold text-ink-2 mt-2 leading-none">até {dados.trafegoPago.ate ? dm(dados.trafegoPago.ate) : "—"}</p>
+                  <p className="num text-[15px] font-semibold text-ink-2 mt-2 leading-none">
+                    {dados.trafegoPago.de ? dm(dados.trafegoPago.de) : "—"} a {dados.trafegoPago.ate ? dm(dados.trafegoPago.ate) : "—"}
+                  </p>
                 </div>
               </div>
               {dados.trafegoPago.anunciosNoVermelho.length > 0 && (

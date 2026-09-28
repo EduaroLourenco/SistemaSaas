@@ -470,7 +470,15 @@ function diasAtras(n: number) {
   return new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 }
 
-type Resultado = Resumo & { conta: string; periodo: { de: string; ate: string } };
+type Resultado = Resumo & {
+  conta: string;
+  periodo: { de: string; ate: string };
+  /* Quem chama depois — a publicidade, por exemplo — precisa saber em
+     qual operação e conta de canal gravar, e descobrir de novo custaria
+     outra ida ao banco. */
+  operacaoId: string;
+  contaCanalId: string;
+};
 
 /**
  * O registro é aberto o quanto antes — ANTES do token, se a integração já
@@ -570,5 +578,5 @@ async function executar(
     resumo.diarias = { dias: await consolidarDiarias(ctx, inicio, ate) };
   }
 
-  return { ...resumo, conta: ctx.nome, periodo: { de, ate } };
+  return { ...resumo, conta: ctx.nome, periodo: { de, ate }, operacaoId: ctx.operacaoId, contaCanalId: ctx.contaCanalId };
 }
