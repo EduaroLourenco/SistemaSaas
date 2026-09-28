@@ -418,8 +418,11 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                 Raio-X da operação
               </h1>
               <p className="text-[13px] text-ink-2 mt-2">
-                {dm(p.de)} a {dm(p.ate)} de {p.ate.slice(0, 4)} · {p.dias} dias
-                <span className="text-ink-3"> · {dm(p.ate)} ainda está em andamento</span>
+                {dm(p.de)} a {dm(p.ate)} de {p.ate.slice(0, 4)} · {p.dias} dias completos
+              </p>
+              <p className="text-[12px] text-ink-3 mt-0.5">
+                Hoje, {dm(dados.hojeAteAgora.data)}, até agora: {reais(dados.hojeAteAgora.receita)} em{" "}
+                {numero(dados.hojeAteAgora.pedidos)} pedidos — fora das comparações, porque o dia não acabou.
               </p>
             </div>
             <div className="text-right">

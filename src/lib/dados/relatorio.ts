@@ -127,6 +127,8 @@ export type Relatorio = {
   geradoEm: string;
   instantaneoEm: string;
   periodo: { de: string; ate: string; dias: number; hoje: string };
+  /** O dia em andamento, à parte: não entra em nenhuma comparação. */
+  hojeAteAgora: { data: string; receita: number; pedidos: number; unidades: number };
   janelas: { anterior: { de: string; ate: string }; media4: string; melhor: string };
   estadoDados: FonteEstado[];
   operacao: Metricas;
@@ -264,14 +266,15 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
   const dias = opcoes.dias ?? 7;
 
   /*
-   * A janela termina HOJE, inclusive.
+   * A janela termina ONTEM, no último dia completo.
    *
-   * O Eduardo pode pedir o relatório numa quarta, e aí o período tem o
-   * pedaço da semana corrente. Comparar 7 dias corridos com os 7
-   * anteriores mantém o mesmo número de dias da semana em cada lado, que
-   * é o que a comparação exige.
+   * Incluir hoje comparava um dia pela metade com sete dias inteiros, e a
+   * conta saía torta para baixo em tudo: na medição de 28/09 a queda de
+   * visita aparecia como 12% quando, por dia completo, era 6%. O dia em
+   * andamento continua na tela, separado, porque ele interessa — só não
+   * entra em média nem em comparação.
    */
-  const ate = hoje;
+  const ate = maisDias(hoje, -1);
   const de = maisDias(ate, -(dias - 1));
   const anteriorAte = maisDias(de, -1);
   const anteriorDe = maisDias(anteriorAte, -(dias - 1));
@@ -995,6 +998,10 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
     geradoEm: new Date().toISOString(),
     instantaneoEm: instantaneo.geradoEm,
     periodo: { de, ate, dias, hoje },
+    hojeAteAgora: (() => {
+      const m = metricasDe(null, hoje, hoje);
+      return { data: hoje, receita: r2(m.receita), pedidos: m.pedidos, unidades: m.unidades };
+    })(),
     janelas: {
       anterior: { de: anteriorDe, ate: anteriorAte },
       media4: "média das 4 janelas anteriores",
