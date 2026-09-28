@@ -5,3 +5,8 @@ out
 *.tsbuildinfo
 next-env.d.ts
 scripts/lib
+
+# Dumps e saídas locais: dado de operação não mora no repositório.
+.scratch/**/*.json
+output/
+tmp/
