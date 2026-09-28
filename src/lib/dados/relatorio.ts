@@ -975,8 +975,8 @@ export async function montarRelatorio(opcoes: { dias?: number } = {}): Promise<R
     },
     {
       titulo: "Mídia do Google Ads não entra",
-      detalhe: "Não há tabela nem tela. O Product Ads do Mercado Livre entra por planilha, com dados até 01/08.",
-      impacto: "Tráfego pago não pode ser analisado, nem o retorno sobre a mídia.",
+      detalhe: "Não há tabela nem tela para a mídia do site. O Product Ads do Mercado Livre já vem por API, anúncio por anúncio.",
+      impacto: "A leitura de tráfego pago cobre o Mercado Livre e deixa de fora a mídia que leva gente à Loja própria, que é 88% da receita.",
       quem: "eduardo",
     },
     {

@@ -18,7 +18,10 @@ node --conditions=react-server scripts/local/sincronizar-vtex.mjs 2026-08-01 202
 # 3. Estoque, preço visível e catálogo (~6 min)
 node scripts/local/instantaneo-meli.mjs
 
-# 4. Canais sem API, a partir da exportação da Vtrina
+# 4. Publicidade do Mercado Livre (~1 min)
+node --conditions=react-server scripts/local/sincronizar-ads.mjs 2026-09-22 2026-09-28
+
+# 5. Canais sem API, a partir da exportação da Vtrina
 node scripts/local/importar-pedidos-vtrina.mjs
 ```
 
@@ -46,6 +49,11 @@ contá-lo põe a loja com metade de cancelamento que nunca foi venda.
 estoque, preço visível, campanha, posição de catálogo, reputação e
 perguntas sem resposta. O relatório lê deste arquivo enquanto a migração
 21 não roda; depois dela, o dado passa a vir do banco.
+
+**sincronizar-ads** — campanhas e anúncios patrocinados das duas contas,
+com gasto, cliques, receita atribuída e ACOS. Sem data, pega os últimos
+60 dias. Passe a janela do relatório para o bloco de tráfego pago falar
+do mesmo período do resto da página.
 
 **importar-pedidos-vtrina** — lê a exportação de pedidos e grava só os
 canais que não têm API (Magalu, Casas Bahia, Madeira Madeira,

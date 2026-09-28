@@ -1004,7 +1004,11 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
             id="trafego"
             chave={chave}
             salvo={anot("trafego")}
-            padrao={dados.trafegoPago.temDado ? `No último período importado, a mídia consumiu ${reais(dados.trafegoPago.investimento)} para ${reais(dados.trafegoPago.receitaAtribuida)} de receita atribuída pelo canal.` : "Sem dado de mídia no período."}
+            padrao={
+              dados.trafegoPago.temDado
+                ? `${dados.trafegoPago.mesmaJanela ? "Na janela do relatório" : "No período disponível"}, a mídia consumiu ${reais(dados.trafegoPago.investimento)} para ${reais(dados.trafegoPago.receitaAtribuida)} de receita atribuída pelo canal, com ACOS de ${pct(dados.trafegoPago.acos, 1)}. ${dados.trafegoPago.anunciosNoVermelho.length} anúncios gastaram mídia sem receita atribuída.`
+                : "Sem dado de mídia no período."
+            }
           />
         </Secao>
 

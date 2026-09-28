@@ -102,13 +102,26 @@ Rota: `GET /users/{id}/items/search?status=paused`
 anúncio, mas ninguém olha a série — quantos pausaram nesta semana é sinal
 de ruptura ou de decisão.
 
-### 2.7 Product Ads por API
+### 2.7 Product Ads por API — RESOLVIDO em 28/09
 
-`GET /advertising/advertisers?product_id=PADS` respondeu com anunciante
-ativo (`advertiser_id 401425`). As rotas de campanha e métrica ainda
-precisam do caminho certo — as tentativas de hoje devolveram erro de
-parâmetro. Quando fechar, substitui a importação de planilha em
-`anuncio_ads` e abre CPC, CTR e ROAS por dia.
+Achado o caminho: a rota antiga foi descontinuada em junho de 2025 e
+devolve 404. A que responde é
+
+```
+/marketplace/advertising/{site}/advertisers/{id}/product_ads/ads/search
+/marketplace/advertising/{site}/advertisers/{id}/product_ads/campaigns/search
+```
+
+com cabeçalho `api-version: 2`. Já implementado em `src/lib/meli/ads.ts`,
+gravando em `anuncio_ads`, e ligado ao turno da madrugada do cron.
+
+As duas contas anunciam: São Paulo (advertiser 401425) e a conta a prazo
+(164783). De 01/08 a 28/09, São Paulo gastou R$ 20.554 para R$ 167.982
+atribuídos — ACOS de 12,2%.
+
+O que a rota traz e a planilha não trazia: `buy_box_winner`,
+`catalog_listing` e `logistic_type` por anúncio, no mesmo lugar do gasto.
+Vale gravar depois, para cruzar mídia com posição de catálogo.
 
 ---
 
