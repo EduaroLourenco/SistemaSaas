@@ -119,7 +119,7 @@ parâmetro. Quando fechar, substitui a importação de planilha em
 | **Google Ads do site** | tabela nova `midia_externa` (data, canal, campanha, investimento, cliques, impressões, receita) e tela de lançamento | Eduardo, por digitação ou API do Google |
 | **Visita da Loja própria (VTEX)** | `vendas_diarias.visitas` da conta VTEX | integração nova (VTEX Analytics ou GA4) |
 | **Custo por SKU** | `produtos.custo_unitario`, `embalagem`, `aliquota_impostos` — as colunas existem e estão **vazias nos 142 produtos** | Eduardo |
-| **Anotação do relatório** | tabela nova `relatorio_anotacoes` (organizacao, secao, periodo, texto, autor, atualizado_em) — é o que salva o texto editado no lápis | o próprio sistema |
+| ~~Anotação do relatório~~ | **já existe:** `anotacoes` (`entidade`, `entidade_id`, `data`, `texto`) serve direto — `entidade = 'relatorio'` e `entidade_id = '<seção>:<período>'`. Tabela nova seria duplicar | o próprio sistema |
 | **Classificação XYZ** | coluna nova em `produtos` ou calculada | calculada |
 | **Meta por produto** | `metas` só tem canal, ano e mês | Eduardo, se quiser gap por SKU |
 | **Lead time do fornecedor** | coluna nova em `produtos` | Eduardo — sem ele, cobertura de estoque não vira data de pedido |
@@ -128,8 +128,7 @@ parâmetro. Quando fechar, substitui a importação de planilha em
 
 ## 4. Ordem sugerida de construção
 
-1. `relatorio_anotacoes` — sem ela o lápis não salva.
-2. `anuncio_catalogo_diario` + coleta na sincronização — é o dado mais
+1. `anuncio_catalogo_diario` + coleta na sincronização — é o dado mais
    estratégico que hoje é jogado fora.
 3. Frete por pedido — destrava margem real e a análise de frete grátis.
 4. Visita da conta em `vendas_diarias`.
