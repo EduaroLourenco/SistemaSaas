@@ -268,7 +268,13 @@ function MobileTabBar({
  * não entrou anuncia o que existe lá dentro, e ainda oferece links que
  * todos levariam de volta para cá.
  */
-const SEM_MOLDURA = ["/entrar", "/auth"];
+/*
+ * Páginas que não são "o sistema": login, cadastro e o relatório aberto
+ * por link. O relatório vai para gestor e diretoria, gente que não tem
+ * conta — mostrar menu de navegação que ninguém pode usar só atrapalha a
+ * leitura e sugere que falta acesso.
+ */
+const SEM_MOLDURA = ["/entrar", "/auth", "/cadastro", "/comecar", "/relatorio/"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

@@ -13,7 +13,14 @@ import { NextResponse, type NextRequest } from "next/server";
  * rota aberta — cada uma confere o CRON_SECRET e recusa sem ele. A barra
  * final impede que uma rota futura como `/api/cronograma` herde a isenção.
  */
-const PUBLICAS = ["/entrar", "/auth", "/api/cron/"];
+/*
+ * `/relatorio/` e `/api/relatorio/` ficam públicos porque a página é
+ * aberta por chave secreta na própria URL — é assim que o link chega à
+ * diretoria sem criar conta para cada pessoa. A rota confere a chave
+ * contra RELATORIO_CHAVE e, sem a variável definida, só abre para quem
+ * está logado. Sem a chave certa, responde 404.
+ */
+const PUBLICAS = ["/entrar", "/cadastro", "/auth", "/api/cron/", "/relatorio/", "/api/relatorio/"];
 
 export async function proxy(req: NextRequest) {
   let resposta = NextResponse.next({ request: req });

@@ -80,17 +80,28 @@ async function gravar(ctx: ContextoCanal, lista: PedidoVtex[]) {
    * devolve sem autorização — ele precisa sair, ou a receita fica com uma
    * venda que não existe. Só linhas de origem `api` e só dentro da janela:
    * o que veio de planilha não é desta rotina mexer.
+   *
+   * A comparação é feita AQUI, e não com `not.in` no banco: a lista de
+   * pedidos da janela passa de setecentos códigos, e a URL do PostgREST
+   * estoura muito antes disso — o filtro voltava 400 e derrubava a
+   * sincronização inteira.
    */
   const janela = lista.map((p) => p.data).sort();
-  const { error: eLimpeza } = await sb
+  const vivos = new Set(lista.map((p) => p.id));
+  const { data: gravadosAntes, error: eLeitura } = await sb
     .from("pedidos")
-    .delete()
+    .select("id,codigo_externo")
     .eq("conta_canal_id", ctx.contaCanalId)
     .eq("origem", "api")
     .gte("data", janela[0])
-    .lte("data", janela[janela.length - 1])
-    .not("codigo_externo", "in", `(${lista.map((p) => `"${p.id}"`).join(",")})`);
-  if (eLimpeza) throw new Error(`Falha ao limpar pedidos vencidos: ${eLimpeza.message}`);
+    .lte("data", janela[janela.length - 1]);
+  if (eLeitura) throw new Error(`Falha ao ler pedidos da janela: ${eLeitura.message}`);
+
+  const sobrando = (gravadosAntes ?? []).filter((p) => !vivos.has(String(p.codigo_externo))).map((p) => p.id as string);
+  await emLotes(sobrando, 200, async (lote) => {
+    const { error } = await sb.from("pedidos").delete().in("id", lote);
+    if (error) throw new Error(`Falha ao limpar pedidos vencidos: ${error.message}`);
+  });
 
   /* Os itens precisam do id do pedido, que só existe depois do upsert. */
   const idPorCodigo = new Map<string, string>();
