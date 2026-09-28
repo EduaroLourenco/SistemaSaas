@@ -6,7 +6,10 @@ export interface ReportItem {
   sku: string;
   tipoCampanha: "Com Redução" | "Sem Redução";
   precoOriginal: number | null;
-  precoOfertadoML: number | null;
+  /** O que o canal PEDIU — não necessariamente o que foi enviado. */
+  propostaML: number | null;
+  /** O preço que a planilha de volta leva para o canal. */
+  precoAplicado: number | null;
   tarifaReduzida: number | null;
   precoTabela: number | null;
   diferencaRS: number | null;
@@ -27,7 +30,8 @@ export async function generateReport(items: ReportItem[]): Promise<Buffer> {
     { header: "SKU", key: "sku", width: 20 },
     { header: "Tipo de Campanha", key: "tipoCampanha", width: 20 },
     { header: "Preço Original", key: "precoOriginal", width: 15 },
-    { header: "Preço Ofertado (ML)", key: "precoOfertadoML", width: 20 },
+    { header: "Proposta do ML", key: "propostaML", width: 18 },
+    { header: "Preço Aplicado", key: "precoAplicado", width: 18 },
     { header: "Tarifa Reduzida (R$)", key: "tarifaReduzida", width: 20 },
     { header: "Preço Tabela (Mínimo)", key: "precoTabela", width: 22 },
     { header: "Diferença (R$)", key: "diferencaRS", width: 18 },
@@ -58,7 +62,8 @@ export async function generateReport(items: ReportItem[]): Promise<Buffer> {
 
     // Number formatting
     if (item.precoOriginal !== null) row.getCell("precoOriginal").numFmt = '"R$" #,##0.00';
-    if (item.precoOfertadoML !== null) row.getCell("precoOfertadoML").numFmt = '"R$" #,##0.00';
+    if (item.propostaML !== null) row.getCell("propostaML").numFmt = '"R$" #,##0.00';
+    if (item.precoAplicado !== null) row.getCell("precoAplicado").numFmt = '"R$" #,##0.00';
     if (item.tarifaReduzida !== null) row.getCell("tarifaReduzida").numFmt = '"R$" #,##0.00';
     if (item.precoTabela !== null) row.getCell("precoTabela").numFmt = '"R$" #,##0.00';
     if (item.diferencaRS !== null) row.getCell("diferencaRS").numFmt = '"R$" #,##0.00';
@@ -67,7 +72,7 @@ export async function generateReport(items: ReportItem[]): Promise<Buffer> {
     // Alignment
     row.eachCell((cell, colNumber) => {
       cell.alignment = { vertical: 'middle' };
-      if (colNumber >= 5 && colNumber <= 10) {
+      if (colNumber >= 5 && colNumber <= 11) {
         cell.alignment = { vertical: 'middle', horizontal: 'right' };
       }
     });

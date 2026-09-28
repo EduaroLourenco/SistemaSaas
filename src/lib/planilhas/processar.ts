@@ -540,9 +540,30 @@ export async function processarPlanilha(
     }
 
     const tabela = result.tabelaCalculada || 0;
-    const diferencaRS = finalPrice !== null ? finalPrice - tabela : null;
+
+    /*
+     * O preço que de fato vai para o canal.
+     *
+     * Estava calculado vinte linhas abaixo, depois do relatório já ter
+     * sido montado — e o relatório usava `finalPrice`, que é a PROPOSTA
+     * lida da planilha de entrada, antes de qualquer decisão. Nas
+     * campanhas sem redução de tarifa os dois números são diferentes: a
+     * proposta é o desconto que o canal pede, e o aplicado é o preço de
+     * tabela que a lógica escreve por cima.
+     *
+     * O resultado era uma linha dizendo "Aprovado" ao lado de um preço
+     * abaixo do mínimo — um preço que nunca foi enviado a lugar nenhum.
+     * Onde o canal já reduziu a tarifa não há preço novo, e o aplicado
+     * cai na própria proposta, que é o certo.
+     */
+    const precoFinalAplicado =
+      !jaParticipando && result.newPrice !== null
+        ? result.newPrice
+        : finalPrice || 0;
+
+    const diferencaRS = tabela > 0 ? precoFinalAplicado - tabela : null;
     const diferencaPerc =
-      finalPrice !== null && tabela > 0 ? (finalPrice - tabela) / tabela : null;
+      tabela > 0 ? (precoFinalAplicado - tabela) / tabela : null;
 
     // Compara com o rótulo positivo DESTA linha, não com uma lista fixa.
     // Quem já participa continua dentro: a planilha volta com a ação
@@ -557,7 +578,8 @@ export async function processarPlanilha(
       sku: rawSku,
       tipoCampanha,
       precoOriginal: originalPrice,
-      precoOfertadoML: finalPrice,
+      propostaML: finalPrice,
+      precoAplicado: precoFinalAplicado,
       tarifaReduzida: saleFee,
       precoTabela: tabela,
       diferencaRS,
@@ -569,12 +591,6 @@ export async function processarPlanilha(
           ? "A célula de ação não oferece entrar na campanha — linha não alterada"
           : result.pendencia || "OK",
     });
-
-    // Linha mantida volta com o preço que já tinha.
-    const precoFinalAplicado =
-      !jaParticipando && result.newPrice !== null
-        ? result.newPrice
-        : finalPrice || 0;
 
     // Folga = quanto o preço proposto pelo canal está acima do preço de
     // tabela. Positiva sobra margem, negativa a margem não fecha.
