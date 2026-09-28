@@ -171,7 +171,7 @@ function Secao({
 }) {
   return (
     <section id={id} className="scroll-mt-16">
-      <div className="flex items-baseline justify-between gap-4 border-b border-line pb-2 mb-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-b border-line pb-2 mb-4">
         <div>
           <h2 className="text-[17px] font-semibold text-ink tracking-tight">{titulo}</h2>
           {chamada && <p className="text-[12.5px] text-ink-3 mt-0.5">{chamada}</p>}
@@ -426,6 +426,22 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
               <p className="num text-[12px] text-ink-2">Gerado em {hora(dados.geradoEm)}</p>
               <p className="num text-[11.5px] text-ink-3">Estoque e catálogo de {hora(dados.instantaneoEm)}</p>
               <div className="flex items-center gap-1.5 justify-end mt-2">
+                {/* A janela vai na URL: o link que o Eduardo manda já abre
+                    no período que ele escolheu. */}
+                <div className="flex rounded-r1 border border-line overflow-hidden mr-1">
+                  {[7, 14, 30].map((d) => (
+                    <a
+                      key={d}
+                      href={`?dias=${d}`}
+                      className={
+                        "h-7 px-2.5 text-[12px] leading-7 " +
+                        (dados.periodo.dias === d ? "bg-brand text-brand-ink font-medium" : "text-ink-2 hover:text-brand")
+                      }
+                    >
+                      {d}d
+                    </a>
+                  ))}
+                </div>
                 <button
                   onClick={() => setTema(tema === "claro" ? "escuro" : "claro")}
                   className="h-7 px-3 rounded-r1 border border-line text-[12px] text-ink-2 hover:border-brand hover:text-brand"
@@ -491,7 +507,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                 <button
                   key={v}
                   onClick={() => setAbaPrioridade(v)}
-                  className={`px-2.5 h-7 rounded-[5px] text-[12px] font-medium ${abaPrioridade === v ? "bg-panel text-ink shadow-sm" : "text-ink-3 hover:text-ink"}`}
+                  className={`px-2.5 h-7 rounded-[5px] text-[12px] font-medium whitespace-nowrap ${abaPrioridade === v ? "bg-panel text-ink shadow-sm" : "text-ink-3 hover:text-ink"}`}
                 >
                   {r}
                   <span className="ml-1.5 text-ink-3">{dados.prioridades.filter((x) => x.prazo === v).length}</span>
