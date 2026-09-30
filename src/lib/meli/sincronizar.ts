@@ -8,6 +8,8 @@ import {
   completarFretes,
   visitasPorAnuncio,
   vendedor,
+  disputaCatalogo,
+  perguntasSemResposta,
   type Conta,
   type AnuncioCompleto,
   type Pedido,
@@ -48,6 +50,9 @@ type Resumo = {
   produtos: { pesoPreenchido: number };
   pedidos: { lidos: number; gravados: number; itens: number; comComissao: number; comFrete: number };
   visitas: { anuncios: number; linhas: number; falharam: number };
+  estoque: { linhas: number };
+  catalogo: { consultados: number; gravados: number };
+  reputacao: { gravada: boolean };
   diarias: { dias: number };
   avisos: string[];
 };
@@ -143,6 +148,16 @@ async function gravarCatalogo(
             ? "finalizado"
             : "sob_revisao",
     preco_atual: a.preco,
+    /*
+     * Estoque e logística vinham sendo lidos e jogados fora.
+     *
+     * Nulo é "o canal não informou", que é diferente de zero. Zero é
+     * ruptura, e é o que a cobertura de estoque precisa distinguir.
+     */
+    estoque: a.estoque,
+    vendidos_total: a.vendidos,
+    frete_gratis: a.freteGratis,
+    logistica: a.logistica,
     url: a.link,
     sincronizado_em: new Date().toISOString(),
   }));
@@ -448,6 +463,165 @@ async function gravarVisitas(
  * `investimento_ads` NÃO é tocado — continua vindo do lançamento manual,
  * que hoje é o único lugar com Product Ads e Brand Ads somados.
  */
+/* ══ Séries do relatório ═══════════════════════════════════════ */
+
+/**
+ * Uma linha de estoque por anúncio por dia.
+ *
+ * `anuncios.estoque` responde "quanto tem agora" e é sobrescrito a cada
+ * sincronização. A pergunta do relatório é outra — há quantos dias está
+ * zerado, quanto caiu na semana — e só uma série responde.
+ *
+ * Roda depois de `gravarCatalogo`, que é quem garante que todo anúncio
+ * tem linha em `anuncios` e portanto id para referenciar.
+ */
+async function gravarEstoqueDiario(
+  ctx: Awaited<ReturnType<typeof resolverConta>>,
+  itens: AnuncioCompleto[],
+  resumo: Resumo
+) {
+  const comEstoque = itens.filter((a) => a.estoque != null && a.estoque >= 0);
+  if (!comEstoque.length) return;
+
+  const sb = clientePrivilegiado();
+  const { data: cadastrados, error } = await sb
+    .from("anuncios")
+    .select("id,codigo_externo")
+    .eq("conta_canal_id", ctx.contaCanalId);
+  if (error) {
+    resumo.avisos.push(`Não consegui ler anúncios para o estoque: ${error.message}`);
+    return;
+  }
+  const idPorMlb = new Map(
+    (cadastrados ?? []).map((a) => [String(a.codigo_externo).toUpperCase(), a.id as string])
+  );
+
+  const dia = hoje();
+  const linhas = comEstoque
+    .map((a) => {
+      const id = idPorMlb.get(a.mlb.toUpperCase());
+      if (!id) return null;
+      return {
+        operacao_id: ctx.operacaoId,
+        anuncio_id: id,
+        data: dia,
+        /* 40.000 e acima é o marcador de "sem controle de estoque" do
+           canal, não estoque de verdade. Somá-lo daria centenas de
+           milhares de peças que não existem. */
+        estoque: a.estoque! >= 40_000 ? 0 : a.estoque!,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  await emLotes(linhas, 500, async (lote) => {
+    const { error: e } = await sb
+      .from("anuncio_estoque_diario")
+      .upsert(lote, { onConflict: "anuncio_id,data" });
+    if (e) throw new Error(`Falha ao gravar estoque diário: ${e.message}`);
+  });
+  resumo.estoque = { linhas: linhas.length };
+}
+
+/**
+ * A disputa do catálogo, um anúncio por dia.
+ *
+ * Só para quem está ou pode estar no catálogo: é um pedido por anúncio, e
+ * perguntar por quem nunca disputou gastaria a cota do canal à toa.
+ *
+ * Falha de um anúncio não derruba os outros — `disputaCatalogo` devolve
+ * null e a linha simplesmente não entra.
+ */
+async function gravarCatalogoDiario(
+  ctx: Awaited<ReturnType<typeof resolverConta>>,
+  itens: AnuncioCompleto[],
+  conta: Conta,
+  resumo: Resumo
+) {
+  const candidatos = itens.filter((a) => a.catalogo && a.status === "active");
+  if (!candidatos.length) return;
+
+  const sb = clientePrivilegiado();
+  const { data: cadastrados } = await sb
+    .from("anuncios")
+    .select("id,codigo_externo")
+    .eq("conta_canal_id", ctx.contaCanalId);
+  const idPorMlb = new Map(
+    (cadastrados ?? []).map((a) => [String(a.codigo_externo).toUpperCase(), a.id as string])
+  );
+
+  const dia = hoje();
+  const linhas: Record<string, unknown>[] = [];
+  /* Em série, e não em paralelo: o limitador do canal é por segundo, e
+     disparar 300 de uma vez volta como 429 para metade delas. */
+  for (const a of candidatos) {
+    const id = idPorMlb.get(a.mlb.toUpperCase());
+    if (!id) continue;
+    const d = await disputaCatalogo(a.mlb, conta);
+    resumo.catalogo.consultados++;
+    if (!d) continue;
+    linhas.push({
+      operacao_id: ctx.operacaoId,
+      anuncio_id: id,
+      data: dia,
+      situacao: d.situacao ?? "desconhecida",
+      preco_atual: d.precoAtual,
+      preco_para_ganhar: d.precoParaGanhar,
+      fatia_visita: d.fatiaVisita,
+      dividindo_primeiro: d.dividindoPrimeiro,
+      vencedor_preco: d.vencedorPreco,
+      catalogo_produto_id: null,
+      elegivel: true,
+      motivos: d.motivos,
+      alavancas: d.alavancas,
+    });
+  }
+
+  await emLotes(linhas, 300, async (lote) => {
+    const { error } = await sb
+      .from("anuncio_catalogo_diario")
+      .upsert(lote, { onConflict: "anuncio_id,data" });
+    if (error) throw new Error(`Falha ao gravar catálogo diário: ${error.message}`);
+  });
+  resumo.catalogo.gravados = linhas.length;
+}
+
+/**
+ * Reputação da conta no dia.
+ *
+ * Vem de `/users/me`, que a sincronização já chama para descobrir o
+ * vendedor — a reputação viaja junto na mesma resposta.
+ */
+async function gravarReputacao(
+  ctx: Awaited<ReturnType<typeof resolverConta>>,
+  conta: Conta,
+  resumo: Resumo
+) {
+  const rep = ctx.vendedor.seller_reputation;
+  if (!rep) return;
+  const m = rep.metrics ?? {};
+  const sb = clientePrivilegiado();
+  const { error } = await sb.from("conta_reputacao_diaria").upsert(
+    {
+      operacao_id: ctx.operacaoId,
+      conta_canal_id: ctx.contaCanalId,
+      data: hoje(),
+      nivel: rep.level_id ?? null,
+      categoria: rep.power_seller_status ?? null,
+      reclamacoes_taxa: m.claims?.rate ?? null,
+      cancelamentos_taxa: m.cancellations?.rate ?? null,
+      atrasos_taxa: m.delayed_handling_time?.rate ?? null,
+      vendas_60d: m.sales?.completed ?? null,
+      perguntas_sem_resposta: await perguntasSemResposta(ctx.vendedor.id, conta),
+    },
+    { onConflict: "conta_canal_id,data" }
+  );
+  if (error) {
+    resumo.avisos.push(`Não consegui gravar a reputação: ${error.message}`);
+    return;
+  }
+  resumo.reputacao = { gravada: true };
+}
+
 /* ══ Orquestração ══════════════════════════════════════════════ */
 
 export type OpcoesSincronizacao = {
@@ -458,16 +632,36 @@ export type OpcoesSincronizacao = {
   /** Janela de visitas, em dias. Máximo 150. */
   diasVisitas?: number;
   /** Desliga etapas, para rodar só o que interessa. */
-  etapas?: { catalogo?: boolean; pedidos?: boolean; visitas?: boolean; diarias?: boolean };
+  etapas?: {
+    catalogo?: boolean;
+    pedidos?: boolean;
+    visitas?: boolean;
+    diarias?: boolean;
+    /** A disputa do catálogo é um pedido por anúncio; pesa mais que as outras. */
+    disputa?: boolean;
+  };
   /** Deixa registro em `sincronizacoes`. Sem isto, a execução não é anotada. */
   registro?: { origem: Origem; turno?: string };
 };
 
+/*
+ * O dia é o de São Paulo, não o do relógio do servidor.
+ *
+ * `toISOString()` devolve UTC, e das 21h em diante o Brasil já está num
+ * dia e o UTC no seguinte. A série diária de estoque saiu com data de
+ * 30/09 numa execução das 21h44 do dia 29 — o dia seguinte receberia a
+ * segunda leitura e sobrescreveria a primeira, e o dia 29 ficaria sem
+ * nenhuma. A Vercel roda em UTC, então isto vale lá também.
+ *
+ * `en-CA` é o atalho para AAAA-MM-DD sem montar a string à mão.
+ */
+const DIA_SP = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" });
+
 function hoje() {
-  return new Date().toISOString().slice(0, 10);
+  return DIA_SP.format(new Date());
 }
 function diasAtras(n: number) {
-  return new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+  return DIA_SP.format(new Date(Date.now() - n * 86_400_000));
 }
 
 type Resultado = Resumo & {
@@ -525,7 +719,7 @@ async function executar(
   const ate = opcoes.ate ?? hoje();
   const diasVisitas = Math.min(150, Math.max(1, opcoes.diasVisitas ?? 30));
   const etapas = {
-    catalogo: true, pedidos: true, visitas: true, diarias: true,
+    catalogo: true, pedidos: true, visitas: true, diarias: true, disputa: true,
     ...(opcoes.etapas ?? {}),
   };
 
@@ -534,6 +728,9 @@ async function executar(
     produtos: { pesoPreenchido: 0 },
     pedidos: { lidos: 0, gravados: 0, itens: 0, comComissao: 0, comFrete: 0 },
     visitas: { anuncios: 0, linhas: 0, falharam: 0 },
+    estoque: { linhas: 0 },
+    catalogo: { consultados: 0, gravados: 0 },
+    reputacao: { gravada: false },
     diarias: { dias: 0 },
     avisos: [],
   };
@@ -552,6 +749,11 @@ async function executar(
     const itens = await catalogoCompleto({ conta });
     mlbs = itens.map((i) => i.mlb);
     await gravarCatalogo(ctx, itens, resumo);
+    /* Depois de `gravarCatalogo`: as três dependem de o anúncio já ter
+       linha em `anuncios` para referenciar por id. */
+    await gravarEstoqueDiario(ctx, itens, resumo);
+    await gravarReputacao(ctx, conta, resumo);
+    if (etapas.disputa) await gravarCatalogoDiario(ctx, itens, conta, resumo);
   }
 
   if (etapas.pedidos) {

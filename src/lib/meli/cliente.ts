@@ -370,7 +370,98 @@ export async function precosAtuais(
 
 /* ── Vendedor ────────────────────────────────────────────────── */
 
-export type Vendedor = { id: number; nickname: string; permalink?: string };
+export type Vendedor = {
+  id: number;
+  nickname: string;
+  permalink?: string;
+  /* `/users/me` já devolve a reputação junto. Buscá-la em
+     `/users/{id}` seria uma segunda chamada para o mesmo dado. */
+  seller_reputation?: {
+    level_id?: string | null;
+    power_seller_status?: string | null;
+    metrics?: {
+      claims?: { rate?: number };
+      cancellations?: { rate?: number };
+      delayed_handling_time?: { rate?: number };
+      sales?: { completed?: number };
+    };
+  };
+};
+
+/** A disputa do catálogo para um anúncio. */
+export type DisputaCatalogo = {
+  mlb: string;
+  situacao: string | null;
+  precoAtual: number | null;
+  precoParaGanhar: number | null;
+  fatiaVisita: string | null;
+  dividindoPrimeiro: number | null;
+  vencedorPreco: number | null;
+  motivos: string[];
+  /** fulfillment, free_shipping… cada uma como boosted ou opportunity. */
+  alavancas: { id: string; situacao: string }[];
+};
+
+type PrecoParaGanharBruto = {
+  status?: string | null;
+  current_price?: number | null;
+  price_to_win?: number | null;
+  visit_share?: string | null;
+  competitors_sharing_first_place?: number | null;
+  winner?: { price?: number | null } | null;
+  reason?: string[] | null;
+  boosts?: { id?: string; status?: string }[] | null;
+};
+
+/**
+ * `price_to_win` de um anúncio.
+ *
+ * Devolve null quando o canal recusa a consulta — anúncio que saiu do
+ * catálogo, por exemplo. Uma falha aqui não pode derrubar a
+ * sincronização inteira: é dado de apoio, não o catálogo em si.
+ */
+export async function disputaCatalogo(
+  mlb: string,
+  conta: Conta = "principal"
+): Promise<DisputaCatalogo | null> {
+  try {
+    const p = await meliGet<PrecoParaGanharBruto>(
+      `/items/${mlb}/price_to_win?version=v2`,
+      conta
+    );
+    return {
+      mlb,
+      situacao: p.status ?? null,
+      precoAtual: p.current_price ?? null,
+      precoParaGanhar: p.price_to_win ?? null,
+      fatiaVisita: p.visit_share ?? null,
+      dividindoPrimeiro: p.competitors_sharing_first_place ?? null,
+      vencedorPreco: p.winner?.price ?? null,
+      motivos: p.reason ?? [],
+      alavancas: (p.boosts ?? [])
+        .filter((b) => b.id)
+        .map((b) => ({ id: String(b.id), situacao: String(b.status ?? "") })),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Quantas perguntas estão sem resposta agora. */
+export async function perguntasSemResposta(
+  sellerId: number,
+  conta: Conta = "principal"
+): Promise<number | null> {
+  try {
+    const r = await meliGet<{ total?: number }>(
+      `/questions/search?seller_id=${sellerId}&status=UNANSWERED&limit=1`,
+      conta
+    );
+    return r.total ?? null;
+  } catch {
+    return null;
+  }
+}
 
 const gv = globalThis as unknown as { __meliVendedor?: Record<string, Vendedor> };
 

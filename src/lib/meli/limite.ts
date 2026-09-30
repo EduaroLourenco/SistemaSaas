@@ -90,6 +90,13 @@ const PERMITIDOS = [
    * chamada ("maximum amount of items to query is 1").
    */
   /^\/items\/[A-Z]{3}\d+\/visits\/time_window$/i,
+  /*
+   * Disputa do catálogo: quem ganha a página, por quanto, e o que além
+   * de preço pesa na decisão. Um anúncio por chamada.
+   */
+  /^\/items\/[A-Z]{3}\d+\/price_to_win$/i,
+  // perguntas sem resposta — só a contagem interessa
+  /^\/questions\/search$/,
   // custo real do envio: `senders[].cost` é o que o vendedor paga
   /^\/shipments\/\d+(\/costs)?$/,
   // o site é parâmetro: MLB no Brasil, mas não fica preso a ele
