@@ -40,7 +40,7 @@ export type Fonte = {
    */
   atrasoDias: number | null;
   /** Como esta fonte entra no sistema. */
-  origem: "planilha" | "manual";
+  origem: "api" | "planilha" | "manual";
 };
 
 export type DadosFontes = {
@@ -62,15 +62,28 @@ export async function carregarFontes(): Promise<DadosFontes> {
   const sb = await clienteServidor();
 
   const [
-    pedidos,
+    pedidosApi,
+    pedidosPlanilha,
     semanal,
     diario,
     anuncios,
+    catalogo,
     manual,
     formula,
     importacoes,
   ] = await Promise.all([
-    sb.from("pedidos").select("data").order("data", { ascending: false }).limit(1),
+    /*
+     * Pedido por API e pedido por planilha são fontes diferentes, e desde
+     * que a VTEX e o Mercado Livre entraram por API precisam ser medidos
+     * separado. Uma consulta só, sem filtro de origem, pegava o dia mais
+     * recente de QUALQUER pedido: a linha "Planilha de pedidos" aparecia
+     * em dia porque a API tinha rodado, enquanto o Magalu e a Casas Bahia
+     * — que só entram por planilha — estavam três e seis dias atrás.
+     */
+    sb.from("pedidos").select("data").eq("origem", "api")
+      .order("data", { ascending: false }).limit(1),
+    sb.from("pedidos").select("data").eq("origem", "planilha")
+      .order("data", { ascending: false }).limit(1),
     sb
       .from("anuncio_desempenho_semanal")
       .select("fim")
@@ -82,6 +95,10 @@ export async function carregarFontes(): Promise<DadosFontes> {
       .order("data", { ascending: false })
       .limit(1),
     sb.from("anuncios").select("id", { count: "exact", head: true }),
+    /* O catálogo deixou de vir por planilha: a sincronização do canal
+       reescreve preço, tipo e estoque a cada passagem. */
+    sb.from("anuncios").select("sincronizado_em").not("sincronizado_em", "is", null)
+      .order("sincronizado_em", { ascending: false }).limit(1),
     sb
       .from("vendas_diarias")
       .select("data")
@@ -103,9 +120,10 @@ export async function carregarFontes(): Promise<DadosFontes> {
     return count ?? 0;
   };
 
-  const [qtdPedidos, qtdSemanal] = await Promise.all([
+  const [qtdPedidos, qtdSemanal, qtdDiario] = await Promise.all([
     contagem("pedidos"),
     contagem("anuncio_desempenho_semanal"),
+    contagem("anuncio_desempenho_diario"),
   ]);
 
   /** Última importação de um tipo. */
@@ -116,46 +134,67 @@ export async function carregarFontes(): Promise<DadosFontes> {
   // intervalo, diário quando cobre um dia. A cobertura é a mais recente
   // das duas, senão importar um diário depois de um semanal pareceria
   // retrocesso.
-  const fimSemanal = semanal.data?.[0]?.fim as string | undefined;
-  const fimDiario = diario.data?.[0]?.data as string | undefined;
-  const coberturaDesempenho =
-    [fimSemanal, fimDiario].filter(Boolean).sort().pop() ?? null;
-
-  const coberturaPedidos = (pedidos.data?.[0]?.data as string) ?? null;
+  const coberturaSemanal = (semanal.data?.[0]?.fim as string) ?? null;
+  const coberturaDiario = (diario.data?.[0]?.data as string) ?? null;
+  const coberturaApi = (pedidosApi.data?.[0]?.data as string) ?? null;
+  const coberturaPlanilha = (pedidosPlanilha.data?.[0]?.data as string) ?? null;
   const coberturaManual = (manual.data?.[0]?.data as string) ?? null;
-  const importCatalogo = ultima("catalogo");
+  const sincronizado = (catalogo.data?.[0]?.sincronizado_em as string) ?? null;
+  /* Enquanto a sincronização não tiver passado, vale a última importação —
+     é o que valia antes de o canal ter API. */
+  const coberturaCatalogo = sincronizado?.slice(0, 10) ?? ultima("catalogo")?.slice(0, 10) ?? null;
 
   const fontes: Fonte[] = [
     {
+      id: "pedidos-api",
+      nome: "Pedidos por API",
+      alimenta: "Mercado Livre e VTEX — receita, comissão e frete",
+      cobertura: coberturaApi,
+      importadoEm: null,
+      registros: qtdPedidos,
+      atrasoDias: atrasoDe(coberturaApi),
+      origem: "api",
+    },
+    {
       id: "pedidos",
       nome: "Planilha de pedidos",
-      alimenta: "Receita, pedidos, ticket, comissão, frete e cancelamento",
-      cobertura: coberturaPedidos,
+      alimenta: "Magalu, Casas Bahia, Madeira e os demais canais",
+      cobertura: coberturaPlanilha,
       importadoEm: ultima("pedidos") ?? ultima("consolidado"),
       registros: qtdPedidos,
-      atrasoDias: atrasoDe(coberturaPedidos),
+      atrasoDias: atrasoDe(coberturaPlanilha),
       origem: "planilha",
     },
     {
+      id: "desempenho-api",
+      nome: "Visitas por anúncio",
+      alimenta: "Visitas diárias do Mercado Livre, por anúncio",
+      cobertura: coberturaDiario,
+      importadoEm: null,
+      registros: qtdDiario,
+      atrasoDias: atrasoDe(coberturaDiario),
+      origem: "api",
+    },
+    {
       id: "desempenho",
-      nome: "Desempenho de anúncios",
-      alimenta: "Visitas, vendas e conversão por anúncio do Mercado Livre",
-      cobertura: coberturaDesempenho,
+      nome: "Desempenho por planilha",
+      alimenta: "A série semanal, anterior à API",
+      cobertura: coberturaSemanal,
       importadoEm: ultima("desempenho_anuncios"),
       registros: qtdSemanal,
-      atrasoDias: atrasoDe(coberturaDesempenho),
+      atrasoDias: atrasoDe(coberturaSemanal),
       origem: "planilha",
     },
     {
       id: "catalogo",
       nome: "Catálogo de anúncios",
       alimenta: "Preço de vitrine, tarifa, tipo e estoque",
-      // Retrato do momento, não série: a cobertura É a data da importação.
-      cobertura: importCatalogo ? importCatalogo.slice(0, 10) : null,
-      importadoEm: importCatalogo,
+      // Retrato do momento, não série: a cobertura é quando foi lido.
+      cobertura: coberturaCatalogo,
+      importadoEm: sincronizado ?? ultima("catalogo"),
       registros: anuncios.count ?? 0,
-      atrasoDias: atrasoDe(importCatalogo ? importCatalogo.slice(0, 10) : null),
-      origem: "planilha",
+      atrasoDias: atrasoDe(coberturaCatalogo),
+      origem: sincronizado ? "api" : "planilha",
     },
     {
       id: "lancamentos",

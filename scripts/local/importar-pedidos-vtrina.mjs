@@ -9,7 +9,12 @@
 import fs from "node:fs";
 import ExcelJS from "file:///C:/Users/dudu4/OneDrive/Desktop/plataforma/node_modules/exceljs/excel.js";
 
-const ARQ = "C:/Users/dudu4/Downloads/listagem_pedidos_28_09_2026.xlsx";
+/* O arquivo vem por argumento; o caminho fixo era de uma rodada só. */
+const ARQ = process.argv[2];
+if (!ARQ) {
+  console.error("uso: node scripts/local/importar-pedidos-vtrina.mjs <listagem_pedidos.xlsx>");
+  process.exit(1);
+}
 const env = {};
 for (const l of fs.readFileSync("C:/Users/dudu4/OneDrive/Desktop/plataforma/.env.local", "utf8").split(/\r?\n/)) {
   const i = l.indexOf("=");

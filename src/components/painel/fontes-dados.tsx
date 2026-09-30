@@ -6,7 +6,7 @@ import { Panel, Badge } from "@/components/ui/primitives";
 import { count } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DadosFontes, Fonte } from "@/lib/dados/fontes";
-import { Database, Upload, PencilLine, ArrowRight } from "lucide-react";
+import { Database, Upload, PencilLine, RefreshCw, ArrowRight } from "lucide-react";
 
 /**
  * Até quando cada fonte vai.
@@ -73,6 +73,11 @@ export function FontesDados({ dados }: { dados: DadosFontes }) {
                         className="w-3 h-3 text-ink-3 shrink-0"
                         strokeWidth={2}
                       />
+                    ) : f.origem === "api" ? (
+                      <RefreshCw
+                        className="w-3 h-3 text-ink-3 shrink-0"
+                        strokeWidth={2}
+                      />
                     ) : (
                       <Upload
                         className="w-3 h-3 text-ink-3 shrink-0"
@@ -120,8 +125,9 @@ export function FontesDados({ dados }: { dados: DadosFontes }) {
 
       <p className="text-[11.5px] text-ink-3 leading-relaxed mt-3">
         A data é até onde o <span className="font-medium text-ink-2">dado</span>{" "}
-        vai, não quando foi importado. Subir hoje uma planilha que termina na
-        semana passada não deixa o painel atualizado.
+        vai, não quando entrou. Subir hoje uma planilha que termina na semana
+        passada não deixa o painel atualizado, e uma fonte por API em dia não
+        cobre outra que ficou para trás.
       </p>
     </Panel>
   );
@@ -131,7 +137,11 @@ function Cobertura({ fonte }: { fonte: Fonte }) {
   if (!fonte.cobertura) {
     return (
       <span className="text-[12px] text-ink-3">
-        {fonte.origem === "manual" ? "nada lançado" : "não importado"}
+        {fonte.origem === "manual"
+          ? "nada lançado"
+          : fonte.origem === "api"
+            ? "nunca sincronizado"
+            : "não importado"}
       </span>
     );
   }
