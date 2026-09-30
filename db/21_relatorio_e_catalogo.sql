@@ -130,9 +130,18 @@ create table if not exists midia_externa (
 
   origem        origem_dado   not null default 'manual',
   criado_em     timestamptz   not null default now(),
-  atualizado_em timestamptz   not null default now(),
-  unique (operacao_id, plataforma, coalesce(campanha, ''), data)
+  atualizado_em timestamptz   not null default now()
 );
+/*
+ * A chave natural precisa tratar campanha nula como uma só.
+ *
+ * `unique (…)` dentro da tabela aceita apenas nome de coluna — expressão
+ * ali é erro de sintaxe. E `unique (…, campanha, …)` sem o coalesce não
+ * serviria: em Postgres dois nulos nunca colidem, então o lançamento da
+ * plataforma inteira, sem campanha, entraria duplicado a cada importação.
+ */
+create unique index if not exists midia_externa_chave
+  on midia_externa (operacao_id, plataforma, coalesce(campanha, ''), data);
 create index if not exists midia_externa_periodo on midia_externa (operacao_id, data desc);
 
 -- ─────────────────────────────────────────────────────────────────────
