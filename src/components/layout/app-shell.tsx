@@ -274,7 +274,16 @@ function MobileTabBar({
  * conta — mostrar menu de navegação que ninguém pode usar só atrapalha a
  * leitura e sugere que falta acesso.
  */
-const SEM_MOLDURA = ["/entrar", "/auth", "/cadastro", "/comecar", "/relatorio/"];
+const SEM_MOLDURA = [
+  "/entrar",
+  "/auth",
+  "/cadastro",
+  "/comecar",
+  "/relatorio/",
+  // Convite vale para quem ainda não tem conta: menu de Integrações e
+  // Configurações ali só oferece porta que a pessoa não pode abrir.
+  "/convite/",
+];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

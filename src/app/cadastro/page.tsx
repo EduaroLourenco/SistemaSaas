@@ -27,6 +27,9 @@ export default function Cadastro() {
    */
   const convidado = busca.get("email") ?? "";
   const destino = busca.get("destino");
+  /* Quem veio de um convite e JÁ tem conta volta para o convite depois de
+     entrar — sem isto o link do convite se perde no meio do caminho. */
+  const paraLogin = destino ? "/entrar?destino=" + encodeURIComponent(destino) : "/entrar";
 
   const [nome, setNome] = React.useState("");
   const [empresa, setEmpresa] = React.useState("");
@@ -94,7 +97,7 @@ export default function Cadastro() {
             criada no primeiro acesso.
           </p>
           <Link
-            href="/entrar"
+            href={paraLogin}
             className="text-[13px] font-medium text-brand hover:underline mt-5 inline-block"
           >
             Ir para o login
@@ -194,7 +197,7 @@ export default function Cadastro() {
 
         <p className="text-[12.5px] text-ink-3 mt-5">
           Já tem conta?{" "}
-          <Link href="/entrar" className="font-medium text-brand hover:underline">
+          <Link href={paraLogin} className="font-medium text-brand hover:underline">
             Entrar
           </Link>
         </p>

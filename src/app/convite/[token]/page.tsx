@@ -35,24 +35,29 @@ const PAPEL: Record<string, string> = {
 function Aviso({
   titulo,
   texto,
-  acao,
+  acoes = [],
 }: {
   titulo: string;
   texto: string;
-  acao?: { href: string; rotulo: string };
+  acoes?: { href: string; rotulo: string }[];
 }) {
   return (
     <main className="min-h-screen grid place-items-center px-4 bg-canvas">
       <div className="w-full max-w-sm flex flex-col gap-4 text-center">
         <h1 className="text-[18px] font-semibold text-ink">{titulo}</h1>
         <p className="text-[13px] text-ink-2 leading-relaxed">{texto}</p>
-        {acao && (
-          <Link
-            href={acao.href}
-            className="text-[13px] font-medium text-brand hover:underline"
-          >
-            {acao.rotulo}
-          </Link>
+        {acoes.length > 0 && (
+          <div className="flex items-center justify-center gap-4">
+            {acoes.map((a) => (
+              <Link
+                key={a.href}
+                href={a.href}
+                className="text-[13px] font-medium text-brand hover:underline"
+              >
+                {a.rotulo}
+              </Link>
+            ))}
+          </div>
         )}
       </div>
     </main>
@@ -91,7 +96,7 @@ export default async function Pagina({ params }: { params: Promise<{ token: stri
       <Aviso
         titulo="Este convite já foi usado"
         texto={`O acesso a ${convite.empresa} já está valendo.`}
-        acao={{ href: "/", rotulo: "Ir para o sistema" }}
+        acoes={[{ href: "/", rotulo: "Ir para o sistema" }]}
       />
     );
   }
@@ -119,10 +124,19 @@ export default async function Pagina({ params }: { params: Promise<{ token: stri
         texto={`O convite é para ${convite.email}, como ${
           PAPEL[convite.papel] ?? convite.papel
         }. Entre ou crie sua conta com esse e-mail para aceitar.`}
-        acao={{
-          href: `/cadastro?email=${encodeURIComponent(convite.email)}&destino=${encodeURIComponent(volta)}`,
-          rotulo: "Criar conta ou entrar",
-        }}
+        acoes={[
+          {
+            href:
+              "/cadastro?email=" +
+              encodeURIComponent(convite.email) +
+              "&destino=" +
+              encodeURIComponent(volta),
+            rotulo: "Criar conta",
+          },
+          // Quem já tem conta não passa pelo cadastro só para achar o link
+          // de entrar — e o destino volta para cá depois do login.
+          { href: "/entrar?destino=" + encodeURIComponent(volta), rotulo: "Já tenho conta" },
+        ]}
       />
     );
   }
