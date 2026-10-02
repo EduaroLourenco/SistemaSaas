@@ -200,37 +200,96 @@ const PERTO = 0.75;
 /* "Quase certo": erro de até 2% ainda é a mesma oferta mal calculada. */
 const QUASE = 0.02;
 
-function avaliar(alvo, regras) {
+/**
+ * Que tipo de oferta é uma regra de preço, pela DURAÇÃO da janela.
+ *
+ * Medido nos dados: as 90 regras dos 63 anúncios do acordo caem em duas
+ * durações só — 54 de 21+ dias (01/10 a 31/10, o acordo do mês) e 36 de 15
+ * dias (28/09 a 13/10, outra campanha). Nenhuma de um dia, nenhuma de horas.
+ */
+function tipoDeJanela(horas, inicio, mesDoAcordo) {
+  if (horas == null) return "sem data";
+  if (horas <= 6) return "rel";
+  if (horas <= 26) return "dia";
+  if (horas < 21 * 24) return "outra";
+
+  /*
+   * Janela longa só é a promoção DO ACORDO se começar no mês dele.
+   *
+   * Um anúncio tinha regra de 38 dias a R$ 2.176 rodando 02/09 a 10/10 — a
+   * duração dizia "mês", mas é a de setembro. Sem esta checagem ela era
+   * comparada com o preço de outubro e saía como "preço errado em R$ 99",
+   * quando a promoção de outubro simplesmente não existe.
+   */
+  if (mesDoAcordo == null || inicio == null) return "mes";
+  const d = new Date(inicio);
+  return d.getUTCFullYear() * 12 + d.getUTCMonth() === mesDoAcordo ? "mes" : "outra";
+}
+
+/**
+ * Qual mês o acordo cobre, deduzido das próprias regras longas.
+ *
+ * Em vez de confiar no nome da aba: o mês do acordo é aquele em que a maior
+ * parte das promoções longas começa. Com 54 das 90 regras começando em
+ * 01/10, outubro ganha sozinho — e se a aba for de outro mês, calibra.
+ */
+function mesPredominante(todasAsRegras) {
+  const contagem = new Map();
+  for (const r of todasAsRegras) {
+    if (r.type === "standard" || r.horas == null || r.horas < 21 * 24 || r.ini == null) continue;
+    const d = new Date(r.ini);
+    // Começou nos primeiros dias do mês? É o que caracteriza "o mês todo".
+    if (d.getUTCDate() > 3) continue;
+    const k = d.getUTCFullYear() * 12 + d.getUTCMonth();
+    contagem.set(k, (contagem.get(k) ?? 0) + 1);
+  }
+  let melhor = null;
+  for (const [k, v] of contagem) if (melhor == null || v > contagem.get(melhor)) melhor = k;
+  return melhor;
+}
+
+/**
+ * O patamar acordado existe entre as regras configuradas?
+ *
+ * Casa pela JANELA primeiro, e só depois confere o preço. A versão anterior
+ * casava por proximidade de valor entre TODAS as regras — e com isso usava
+ * a mesma promoção de outra campanha para responder "mês todo" e "oferta do
+ * dia" ao mesmo tempo, dizendo "preço diferente" nas duas. Lido assim,
+ * parecia erro de valor quando o fato era que a oferta nunca foi criada.
+ */
+function avaliar(alvo, regras, qual) {
   if (alvo == null) return { estado: "", preco: null, dif: null, vigencia: "", ordem: 9 };
-  const promos = (regras ?? []).filter((p) => p.type !== "standard");
-  if (!promos.length) return { estado: "Nenhuma promoção", preco: null, dif: null, vigencia: "", ordem: 0 };
 
-  const comDatas = promos.map((p) => {
-    const ini = p.conditions?.start_time ? Date.parse(p.conditions.start_time) : null;
-    const fim = p.conditions?.end_time ? Date.parse(p.conditions.end_time) : null;
-    const vigente = (!ini || AGORA >= ini) && (!fim || AGORA <= fim);
-    const futura = ini != null && AGORA < ini;
-    return { ...p, ini, fim, vigente, futura };
-  });
-
-  const bate = comDatas.filter((p) => Math.abs(p.amount - alvo) <= PERTO);
-  const alvoPromo = bate.length
-    ? (bate.find((p) => p.vigente) ?? bate.find((p) => p.futura) ?? bate[0])
-    : null;
-
-  if (alvoPromo) {
-    const estado = alvoPromo.vigente ? "Ativa" : alvoPromo.futura ? "Programada" : "Encerrada";
+  const minhas = (regras ?? []).filter((p) => p.type !== "standard" && p.janela === qual);
+  if (!minhas.length) {
+    const temOutra = (regras ?? []).some((p) => p.type !== "standard");
     return {
-      estado,
-      preco: alvoPromo.amount,
-      dif: 0,
-      vigencia: `${dia(alvoPromo.ini)} a ${dia(alvoPromo.fim)}`,
-      ordem: estado === "Ativa" ? 4 : estado === "Programada" ? 3 : 1,
+      estado: temOutra ? "Não criada" : "Nenhuma promoção",
+      preco: null,
+      dif: null,
+      vigencia: "",
+      ordem: 0,
     };
   }
 
-  /* Não bate nenhuma: a mais próxima diz se é erro de preço ou ausência. */
-  const maisPerto = comDatas.reduce(
+  const bate = minhas.filter((p) => Math.abs(p.amount - alvo) <= PERTO);
+  const escolhida = bate.length
+    ? (bate.find((p) => p.vigente) ?? bate.find((p) => p.futura) ?? bate[0])
+    : null;
+
+  if (escolhida) {
+    const estado = escolhida.vigente ? "Ativa" : escolhida.futura ? "Programada" : "Encerrada";
+    return {
+      estado,
+      preco: escolhida.amount,
+      dif: 0,
+      vigencia: `${dia(escolhida.ini)} a ${dia(escolhida.fim)}`,
+      ordem: estado === "Ativa" ? 5 : estado === "Programada" ? 4 : 1,
+    };
+  }
+
+  /* Existe oferta da janela certa, em outro valor. Aí sim é erro de preço. */
+  const maisPerto = minhas.reduce(
     (m, p) => (m == null || Math.abs(p.amount - alvo) < Math.abs(m.amount - alvo) ? p : m),
     null
   );
@@ -240,14 +299,42 @@ function avaliar(alvo, regras) {
     preco: maisPerto.amount,
     dif: maisPerto.amount - alvo,
     vigencia: `${dia(maisPerto.ini)} a ${dia(maisPerto.fim)}`,
-    ordem: erro <= QUASE ? 2 : 1,
+    ordem: erro <= QUASE ? 3 : 2,
   };
 }
 
+/* Datas primeiro, para deduzir o mês do acordo antes de classificar. */
 for (const a of acordo) {
-  a.mes = avaliar(a.mesTodo, a.regras);
-  a.dia = avaliar(a.ofertaDia, a.regras);
-  a.rel = avaliar(a.relampago, a.regras);
+  for (const r of a.regras ?? []) {
+    r.ini = r.conditions?.start_time ? Date.parse(r.conditions.start_time) : null;
+    r.fim = r.conditions?.end_time ? Date.parse(r.conditions.end_time) : null;
+    r.horas = r.ini != null && r.fim != null ? (r.fim - r.ini) / 3600000 : null;
+  }
+}
+const MES_ACORDO = mesPredominante(acordo.flatMap((a) => a.regras ?? []));
+console.log(
+  "mês do acordo deduzido: " +
+    (MES_ACORDO == null
+      ? "(não deduzi)"
+      : new Date(Date.UTC(Math.floor(MES_ACORDO / 12), MES_ACORDO % 12, 1)).toLocaleDateString("pt-BR", {
+          month: "long",
+          year: "numeric",
+          // Sem isto, 1/10 em UTC vira 30/09 no Brasil e o log diz o mês errado.
+          timeZone: "UTC",
+        }))
+);
+
+for (const a of acordo) {
+  /* Anota janela e vigência uma vez; avaliar() e o resto leem daqui. */
+  for (const r of a.regras ?? []) {
+    r.janela = r.type === "standard" ? "padrao" : tipoDeJanela(r.horas, r.ini, MES_ACORDO);
+    r.vigente = (!r.ini || AGORA >= r.ini) && (!r.fim || AGORA <= r.fim);
+    r.futura = r.ini != null && AGORA < r.ini;
+  }
+
+  a.mes = avaliar(a.mesTodo, a.regras, "mes");
+  a.dia = avaliar(a.ofertaDia, a.regras, "dia");
+  a.rel = avaliar(a.relampago, a.regras, "rel");
 
   a.precoPadrao = (a.regras ?? []).find((p) => p.type === "standard")?.amount ?? null;
 
@@ -274,15 +361,15 @@ for (const a of acordo) {
       : "Não, nenhuma";
 
   /* Todas as promoções configuradas, para ver o que existe além do acordo. */
+const ROTULO = { mes: "mês", dia: "1 dia", rel: "relâmp", outra: "outra campanha", "sem data": "sem data" };
   a.todas = (a.regras ?? [])
     .filter((p) => p.type !== "standard")
     .map((p) => {
-      const ini = p.conditions?.start_time ? Date.parse(p.conditions.start_time) : null;
-      const fim = p.conditions?.end_time ? Date.parse(p.conditions.end_time) : null;
-      const marca = ini && AGORA < ini ? "prog" : fim && AGORA > fim ? "fim" : "ativa";
-      return `${p.amount.toFixed(2)} (${marca} ${dia(ini)}-${dia(fim)})`;
+      const marca = p.futura ? "prog" : !p.vigente ? "fim" : "ativa";
+      return `${p.amount.toFixed(2)} [${ROTULO[p.janela] ?? p.janela}] ${marca} ${dia(p.ini)}-${dia(p.fim)}`;
     })
-    .join("  ·  ");
+    .join("   ·   ");
+  a.deOutrasCampanhas = (a.regras ?? []).filter((p) => p.janela === "outra").length;
 
   /*
    * O resumo separa "não tem nada" de "tem, mas no preço errado". Juntar os
@@ -295,6 +382,12 @@ for (const a of acordo) {
   const quase = estados.filter((x) => x.estado === "Preço quase certo").length;
   const temAlgumaPromo = (a.regras ?? []).some((p) => p.type !== "standard");
 
+  /*
+   * O resumo espelha os estados de verdade. Antes ele dizia "Preço errado"
+   * tanto para quem tem a oferta do mês em outro valor quanto para quem não
+   * a tem — e são ações diferentes: a primeira se corrige, a segunda se
+   * cria.
+   */
   a.resumo =
     a.regras == null
       ? "Não consegui ler"
@@ -307,16 +400,19 @@ for (const a of acordo) {
             : !temAlgumaPromo
               ? "Nenhuma promoção criada"
               : quase > 0
-                ? "Preço quase certo"
-                : "Preço errado";
+                ? "Mês quase certo, resto não criado"
+                : a.mes.estado === "Preço diferente"
+                  ? "Mês com preço errado"
+                  : "Acordo não criado";
 
   a.ordemGeral =
     a.regras == null ? 9
       : prontos === pedidos ? 5
         : prontos > 0 ? 4
           : !temAlgumaPromo ? 0
-            : quase > 0 ? 2
-              : 1;
+            : quase > 0 ? 3
+              : a.mes.estado === "Preço diferente" ? 2
+                : 1;
 }
 
 /* O que precisa de ação primeiro. */
@@ -339,6 +435,7 @@ const BANDA = "FFEDF0F4";
 
 const TOM = {
   Ativa: "FF15803D",
+  "Não criada": "FFB91C1C",
   Programada: "FF1D4ED8",
   "Preço quase certo": "FF92400E",
   "Preço diferente": "FFB45309",
@@ -361,6 +458,7 @@ const COLS = [
   { h: "Situação", k: "situacao", w: 10, suave: true },
   { h: "Resumo", k: "resumo", w: 22, forte: true },
   { h: "Promo do mês?", k: "promoDoMes", w: 22, suave: true },
+  { h: "Regras de outra campanha", k: "deOutrasCampanhas", w: 12, fmt: "#,##0", suave: true },
   { h: "Preço padrão", k: "precoPadrao", w: 12, fmt: "#,##0.00" },
 
   { h: "Acordado", k: "mesTodo", w: 12, fmt: "#,##0.00", banda: "Mês todo (5%)" },
