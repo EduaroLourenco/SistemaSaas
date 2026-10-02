@@ -70,10 +70,18 @@ export default async function Integracoes() {
 
       <PageBody>
         <div className="space-y-3">
-          <SectionTitle
-            title="Mercado Livre · API"
-            hint="Sincroniza sozinho às 13h e à 01h (horário de Brasília)"
-          />
+          <div className="flex items-end justify-between gap-3">
+            <SectionTitle
+              title="Mercado Livre · API"
+              hint="Sincroniza sozinho às 13h e à 01h (horário de Brasília)"
+            />
+            <Link
+              href="/integracoes/canais"
+              className="text-[11.5px] font-medium text-brand hover:underline shrink-0 pb-0.5"
+            >
+              Cadastrar canais e contas
+            </Link>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {contas.map((c) => {
               const reg = porConta.get(c.id);

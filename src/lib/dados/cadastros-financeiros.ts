@@ -17,7 +17,16 @@ import "server-only";
  * gravado — é o que impede o navegador de escrever `operacao_id`.
  */
 
-type Tipo = "texto" | "numero" | "inteiro" | "data" | "booleano" | "uuid" | "enum";
+type Tipo =
+  | "texto"
+  | "numero"
+  | "inteiro"
+  | "data"
+  | "booleano"
+  | "uuid"
+  | "enum"
+  /** `text[]` — os apelidos de canal. Aceita lista ou texto com vírgulas. */
+  | "lista";
 
 type Campo = {
   coluna: string;
@@ -239,7 +248,9 @@ export function paraColunas(
         erros.push({ campo: chave, motivo: "não pode ficar vazio" });
         continue;
       }
-      linha[campo.coluna] = null;
+      // Lista vazia é `{}`, não nulo: `apelidos` é `not null default '{}'`,
+      // e nulo ali seria recusado pelo banco ao limpar o campo.
+      linha[campo.coluna] = campo.tipo === "lista" ? [] : null;
       continue;
     }
 
@@ -288,6 +299,19 @@ export function paraColunas(
       case "booleano":
         linha[campo.coluna] = v === true || v === "true" || v === 1;
         break;
+
+      /*
+       * Vem como lista do formulário ou como texto separado por vírgula de
+       * quem digitou numa linha. Vazio some: apelido em branco casaria com
+       * qualquer coisa na importação, que é o oposto do que ele serve.
+       */
+      case "lista": {
+        const itens = (Array.isArray(v) ? v : String(v).split(","))
+          .map((x) => String(x).trim())
+          .filter(Boolean);
+        linha[campo.coluna] = itens;
+        break;
+      }
 
       case "uuid":
         if (!UUID.test(String(v))) {

@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "@/lib/dados/operacao";
-import {
-  RECURSOS,
-  paraColunas,
-  ocorrencias,
-} from "@/lib/dados/cadastros-financeiros";
+import { paraColunas, ocorrencias } from "@/lib/dados/cadastros-financeiros";
+import { RECURSOS } from "@/lib/dados/cadastros";
 
 /**
- * Grava e apaga os cadastros do financeiro.
+ * Grava e apaga os cadastros declarados.
  *
- * Uma rota para os cinco recursos. O que ela aceita de cada um está
- * declarado em `cadastros-financeiros.ts` — o corpo do pedido não escolhe
- * tabela nem coluna, só preenche o que o recurso já permitia.
+ * Uma rota para todos eles. O que ela aceita de cada um está declarado em
+ * `cadastros.ts` — o corpo do pedido não escolhe tabela nem coluna, só
+ * preenche o que o recurso já permitia.
  *
  * Cliente de SESSÃO, como nas outras rotas: quem decide se pode gravar é
  * o RLS, e `leitor` toma recusa do banco em vez de uma checagem escrita
