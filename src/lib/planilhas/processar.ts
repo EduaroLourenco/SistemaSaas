@@ -702,9 +702,20 @@ export async function processarPlanilha(
       precoOferta: precoFinalAplicado,
       precoTabela: tabela,
       precoPiso: tabela > 0 ? precoPiso(tabela) : 0,
-      // Só faz sentido onde existe preço nosso para descontar.
+      /*
+       * Só faz sentido onde existe preço NOSSO para descontar — ou seja,
+       * onde o motor escolhe o preço. Com redução de tarifa o preço é do
+       * canal, e mostrar um número aqui sugeriria uma alavanca que não
+       * existe.
+       *
+       * "Campanha nossa" entra: ali o extra desloca o alvo da porcentagem,
+       * e sem esta linha a coluna mostrava "—" enquanto o motor já tinha
+       * aplicado o desconto.
+       */
       precoComExtra:
-        tabela > 0 && descontoExtra > 0 && tipoCampanha === "Sem Redução"
+        tabela > 0 &&
+        descontoExtra > 0 &&
+        (tipoCampanha === "Sem Redução" || tipoCampanha === "Campanha nossa")
           ? precoComExtra(tabela, descontoExtra)
           : null,
       reducaoTarifa: sfStr || "Não",
