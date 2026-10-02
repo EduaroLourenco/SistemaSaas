@@ -95,6 +95,86 @@ export function precoComExtra(
   return Math.round(precoPiso(tabela, descontoMinimo) * (1 - extra) * 100) / 100;
 }
 
+/**
+ * Preço final como o Mercado Livre o calcula a partir da porcentagem.
+ *
+ * Ele TRUNCA o centavo, não arredonda: 2.773,90 com 41% de desconto vira
+ * 1.137,29 na planilha, e não 1.137,30. Arredondar aqui deixaria o preço um
+ * centavo ABAIXO da tabela em metade dos casos — o suficiente para a linha
+ * voltar recusada, ou pior, entrar no ar fora da margem.
+ */
+export function precoDaPorcentagem(original: number, pct: number): number {
+  return Math.floor(original * (1 - pct / 100) * 100 + 1e-6) / 100;
+}
+
+/**
+ * A porcentagem mais agressiva que ainda respeita o preço mínimo.
+ *
+ * Só nas campanhas que NÓS criamos. Ali a porcentagem é nossa de escolher,
+ * e o preço final é consequência dela — ao contrário das campanhas do
+ * canal, onde o preço vem proposto e só se aceita ou recusa.
+ *
+ * "Mais agressiva" porque o objetivo declarado é o menor preço que a tabela
+ * aguenta: ganhar exposição sem furar a margem. O passo é de um ponto
+ * inteiro porque o canal não aceita decimal na porcentagem, então o preço
+ * alcançável é quantizado — nem sempre dá para encostar no alvo exato.
+ *
+ * Devolve `null` quando nem o desconto mínimo do canal cabe: aí o anúncio
+ * já está sendo vendido perto do mínimo, e participar exigiria vender
+ * abaixo dele.
+ */
+export function melhorPorcentagem(
+  original: number,
+  alvo: number,
+  descontoMinimo = 1 - PISO
+): { pct: number; preco: number } | null {
+  if (!(original > 0) || !(alvo > 0)) return null;
+
+  /*
+   * O épsilon não é supérstição: `1 - PISO` dá 0,050000000000000044, e um
+   * `Math.ceil` cru sobre isso devolve 6 em vez de 5. O desconto mínimo do
+   * canal viraria 6%, e todo item que só cabe com exatamente 5% seria
+   * recusado sem motivo.
+   */
+  const minimo = Math.max(1, Math.ceil(descontoMinimo * 100 - 1e-9));
+
+  /*
+   * O teto vem da desigualdade `original × (1 − n/100) ≥ alvo`. O épsilon
+   * cobre o lixo de ponto flutuante: sem ele, um alvo que cai exatamente
+   * num ponto inteiro perde esse ponto por um resto de 1e-13.
+   */
+  let n = Math.floor(100 * (1 - alvo / original) + 1e-9);
+  if (n > 100) n = 100;
+
+  /*
+   * A truncagem do centavo pode empurrar o preço um centavo abaixo do alvo
+   * justamente no ponto limite. Recua um ponto quando isso acontece — é
+   * mais barato ceder um ponto de desconto que furar a margem.
+   */
+  while (n >= minimo && precoDaPorcentagem(original, n) < alvo) n--;
+
+  if (n < minimo) return null;
+  return { pct: n, preco: precoDaPorcentagem(original, n) };
+}
+
+/**
+ * O que o motor decide sobre um item.
+ *
+ * Declarado em vez de inferido: cada caso devolve um subconjunto diferente
+ * de campos, e a união inferida escondia `newPercentage` de quem chamava —
+ * o compilador recusava ler o campo que o Caso C acabara de preencher.
+ */
+export interface ResultadoItem {
+  action: string;
+  /** Vazio quando deu certo; o motivo da recusa quando não. */
+  pendencia: string;
+  /** Preço a escrever, ou `null` quando este caso não mexe no preço. */
+  newPrice: number | null;
+  /** Porcentagem a escrever. Só o Caso C a usa. */
+  newPercentage?: number | null;
+  tabelaCalculada?: number;
+}
+
 export function getPrecoTabela(data: FormulaBaseData, sku: string, mlb: string, comissao: number): number | null {
   const k = Math.round(comissao * 1000) / 1000;
   
@@ -112,17 +192,35 @@ export function getPrecoTabela(data: FormulaBaseData, sku: string, mlb: string, 
 }
 
 export function processItem(
-  mlb: string, 
-  sku: string, 
-  saleFee: number | null, 
-  finalPrice: number | null, 
+  mlb: string,
+  sku: string,
+  saleFee: number | null,
+  finalPrice: number | null,
   originalPrice: number | null,
   data: FormulaBaseData,
   positiveAction: string = "Participar",
   negativeAction: string = "Não participar",
   extraDiscount: number = 0,
-  config: ConfigCanal = CONFIG_PADRAO
-) {
+  config: ConfigCanal = CONFIG_PADRAO,
+  /**
+   * A campanha foi criada por NÓS, não proposta pelo canal.
+   *
+   * Muda o que é ajustável. Nas campanhas do canal o preço vem proposto e a
+   * decisão é binária; na nossa, a porcentagem é nossa, e o preço final é
+   * consequência dela. Por isso aqui o sistema pode mexer PARA CIMA
+   * também — subir o desconto quando a tabela ainda aguenta é o que
+   * transforma um "não participar" por preço ruim em participação no melhor
+   * preço possível.
+   */
+  campanhaPropria: boolean = false
+): ResultadoItem {
+  // Caso C: campanha nossa — a porcentagem é a alavanca
+  if (campanhaPropria) {
+    return itemCampanhaPropria(
+      mlb, sku, originalPrice, data, positiveAction, negativeAction, extraDiscount, config
+    );
+  }
+
   // Caso A: Com Redução de Tarifa
   if (saleFee !== null && saleFee > 0) {
     if (!finalPrice) return { action: negativeAction, pendencia: "redução ou preço final ausente", newPrice: null };
@@ -243,4 +341,98 @@ export function processItem(
       tabelaCalculada: p
     };
   }
+}
+
+/**
+ * Caso C — a campanha é nossa, e a porcentagem é o que se ajusta.
+ *
+ * Nas campanhas do canal (A e B) a comissão pode vir reduzida como
+ * contrapartida, e é isso que o motor precisa descobrir antes de achar a
+ * faixa de preço. Aqui não há contrapartida nenhuma: quem criou a promoção
+ * fomos nós, então a comissão é a CHEIA do tipo do anúncio — 11,5% no
+ * clássico, 16,5% no premium.
+ *
+ * A diferença de comportamento que importa: o sistema mexe nos DOIS
+ * sentidos. Se o desconto que está na planilha deixa o preço abaixo da
+ * tabela, ele diminui; se sobra margem, ele aumenta. Antes, um preço abaixo
+ * da tabela virava "Não participar" e o anúncio ficava fora da campanha —
+ * quando bastava ajustar a porcentagem para caber.
+ */
+function itemCampanhaPropria(
+  mlb: string,
+  sku: string,
+  originalPrice: number | null,
+  data: FormulaBaseData,
+  positiveAction: string,
+  negativeAction: string,
+  extraDiscount: number,
+  config: ConfigCanal
+): ResultadoItem {
+  if (!originalPrice || originalPrice <= 0) {
+    return { action: negativeAction, pendencia: "sem preço original", newPrice: null, newPercentage: null };
+  }
+
+  const entry = data.baseMlb.get(mlb);
+
+  /*
+   * A alíquota cheia do anúncio. Onde o canal separa por tipo — o Meli —
+   * sem o cadastro não há como saber se são 11,5% ou 16,5%, e cinco pontos
+   * mudam a faixa de preço inteira. Recusar é mais honesto que adivinhar.
+   */
+  let comissao: number;
+  if (config.usaTipoAnuncio) {
+    if (!entry || !entry.tipo) {
+      return {
+        action: negativeAction,
+        pendencia: "anúncio sem tipo cadastrado, e este canal cobra por tipo",
+        newPrice: null,
+        newPercentage: null,
+      };
+    }
+    const chave = norm(entry.tipo).startsWith("cl") ? "classico" : "premium";
+    comissao = config.comissaoPorTipo[chave] ?? config.comissaoPorTipo.geral;
+  } else {
+    comissao = entry?.padrao || config.comissaoPorTipo.geral;
+  }
+
+  if (!comissao) {
+    return { action: negativeAction, pendencia: "canal sem alíquota cadastrada", newPrice: null, newPercentage: null };
+  }
+
+  const tabela = getPrecoTabela(data, sku, mlb, comissao);
+  if (tabela === null) {
+    return { action: negativeAction, pendencia: "sem preço de tabela", newPrice: null, newPercentage: null };
+  }
+
+  /*
+   * O alvo é a tabela cheia. O desconto extra, quando alguém o informa, é
+   * uma decisão consciente de ir abaixo dela — e parte do PISO, igual ao
+   * Caso B, para não ficar 5% acima do pretendido.
+   */
+  const alvo =
+    extraDiscount > 0
+      ? precoComExtra(tabela, extraDiscount, config.descontoMinimo)
+      : Math.round((tabela + 1e-9) * 100) / 100;
+
+  const melhor = melhorPorcentagem(originalPrice, alvo, config.descontoMinimo);
+
+  if (!melhor) {
+    return {
+      action: negativeAction,
+      pendencia:
+        `preço mínimo R$ ${alvo.toFixed(2)} exige desconto abaixo de ` +
+        `${Math.ceil(config.descontoMinimo * 100)}% — o canal não aceita`,
+      newPrice: null,
+      newPercentage: null,
+      tabelaCalculada: tabela,
+    };
+  }
+
+  return {
+    action: positiveAction,
+    pendencia: "",
+    newPrice: melhor.preco,
+    newPercentage: melhor.pct,
+    tabelaCalculada: tabela,
+  };
 }

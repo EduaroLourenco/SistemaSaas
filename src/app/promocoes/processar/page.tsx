@@ -39,7 +39,7 @@ type Linha = {
   titulo: string;
   campanha: string;
   tipoAnuncio: string;
-  tipoCampanha: "Com Redução" | "Sem Redução";
+  tipoCampanha: "Com Redução" | "Sem Redução" | "Campanha nossa";
   precoOriginal: number | null;
   precoPropostoML: number | null;
   precoOferta: number | null;
@@ -300,7 +300,15 @@ export default function ProcessarPromocoes() {
       cell: (l) => (
         <span className="min-w-0 block">
           <span className="text-ink-2 truncate block max-w-[200px]">{l.campanha}</span>
-          <Badge tone={l.tipoCampanha === "Com Redução" ? "info" : "neutral"}>
+          <Badge
+            tone={
+              l.tipoCampanha === "Com Redução"
+                ? "info"
+                : l.tipoCampanha === "Campanha nossa"
+                  ? "up"
+                  : "neutral"
+            }
+          >
             {l.tipoCampanha}
           </Badge>
         </span>
@@ -553,7 +561,7 @@ export default function ProcessarPromocoes() {
                   />
                   <Field
                     label="Desconto extra"
-                    hint="Aplicado sobre o preço de tabela nas campanhas sem redução de tarifa. Aceita 5 ou 0,05."
+                    hint="Aplicado sobre o preço de tabela nas campanhas sem redução de tarifa e nas criadas por nós. Aceita 5 ou 0,05."
                   >
                     <Input
                       inputMode="decimal"
@@ -563,6 +571,54 @@ export default function ProcessarPromocoes() {
                     />
                   </Field>
                 </div>
+              </div>
+            </Panel>
+
+            {/*
+              Não existe botão de "que tipo de planilha é esta" de propósito:
+              o sistema reconhece pelos nomes técnicos das colunas, então dá
+              para subir tipos diferentes juntos e cada um é lido com a sua
+              lógica. Um botão criaria um jeito de errar que hoje não existe.
+            */}
+            <Panel className="lg:col-span-2 overflow-hidden">
+              <PanelHeader
+                title="As três lógicas"
+                hint="o sistema reconhece cada planilha pelas colunas e aplica a regra dela"
+              />
+              <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-r2 border border-line p-3">
+                  <Badge tone="info">Com redução de tarifa</Badge>
+                  <p className="text-[12px] text-ink-2 mt-2 leading-relaxed">
+                    O canal propõe o preço e abate parte da comissão. O preço{" "}
+                    <b className="text-ink">não é alterado</b> — só se aceita ou recusa,
+                    comparando com a faixa de tabela da comissão que sobrou.
+                  </p>
+                </div>
+                <div className="rounded-r2 border border-line p-3">
+                  <Badge tone="neutral">Sem redução de tarifa</Badge>
+                  <p className="text-[12px] text-ink-2 mt-2 leading-relaxed">
+                    Campanha do canal, comissão cheia. O sistema escreve o{" "}
+                    <b className="text-ink">preço de tabela</b> por cima do proposto, e
+                    recusa quando a tabela está acima do preço publicado.
+                  </p>
+                </div>
+                <div className="rounded-r2 border border-line p-3">
+                  <Badge tone="up">Criada por nós</Badge>
+                  <p className="text-[12px] text-ink-2 mt-2 leading-relaxed">
+                    Promoção que nós montamos no painel. Aqui a alavanca é a{" "}
+                    <b className="text-ink">porcentagem</b>, e o sistema a move{" "}
+                    <b className="text-ink">nos dois sentidos</b> — busca o desconto mais
+                    agressivo que o preço de tabela ainda aguenta. Comissão cheia: 11,5%
+                    clássico, 16,5% premium.
+                  </p>
+                </div>
+              </div>
+              <div className="px-4 pb-4">
+                <p className="text-[11.5px] text-ink-3 leading-relaxed">
+                  Em todas as três, linha com oferta já fechada é analisada mas{" "}
+                  <b className="text-ink-2">nunca reescrita</b>: trocar um acordo no ar
+                  tira o anúncio da campanha sem ninguém perceber.
+                </p>
               </div>
             </Panel>
 
@@ -871,6 +927,10 @@ function PainelRevisao({ revisao }: { revisao: Record<Tag, Linha[]> }) {
         <span className="text-ink-2 truncate block max-w-[180px]">{l.campanha}</span>
         {l.tipoCampanha === "Com Redução" && (
           <Badge tone="info">tarifa reduzida</Badge>
+        )}
+        {/* A nossa é a única em que o sistema mexe na porcentagem. */}
+        {l.tipoCampanha === "Campanha nossa" && (
+          <Badge tone="up">criada por nós · % ajustada</Badge>
         )}
       </span>
     ),

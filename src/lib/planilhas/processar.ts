@@ -175,7 +175,7 @@ export type LinhaProcessada = {
   titulo: string;
   campanha: string;
   tipoAnuncio: string;
-  tipoCampanha: "Com Redução" | "Sem Redução";
+  tipoCampanha: "Com Redução" | "Sem Redução" | "Campanha nossa";
   /** Preço cheio publicado hoje, sem promoção. */
   precoOriginal: number | null;
   /** O preço final que o canal propôs na planilha. */
@@ -380,6 +380,50 @@ export async function processarPlanilha(
     ["status da promo"]
   );
 
+  /*
+   * ── Campanha nossa ou do canal? ────────────────────────────────────
+   *
+   * Muda o que é ajustável, e por isso não pode ser adivinhado errado.
+   *
+   * Nas campanhas do CANAL o preço vem proposto e a decisão é binária. Nas
+   * que NÓS criamos no painel do Mercado Livre, a porcentagem é nossa de
+   * escolher e o preço final é consequência dela — então o sistema pode
+   * mexer para cima também, não só para baixo.
+   *
+   * O reconhecimento é pelos nomes TÉCNICOS da primeira linha, que o canal
+   * escreve em inglês em qualquer idioma de conta. Toda planilha proposta
+   * pelo canal traz `PROMO_TYPE` e `CANDIDATE_ID` — são o identificador da
+   * proposta dele. A nossa não tem nenhum dos dois, e usa `PROMOTION_NAME`
+   * e `DATE_VALIDITY` onde as dele usam `PROMO_NAME` e `DATE`.
+   *
+   * `DISCOUNT_PERCENTAGE` sozinho NÃO serve de marca: "O melhor de todos os
+   * dias" também o tem, e é campanha do canal.
+   *
+   * Assim continua valendo subir planilhas de tipos diferentes juntas, cada
+   * uma lida com a sua lógica — que é como o sistema já funcionava.
+   */
+  const tecnicos = new Set<string>();
+  for (const v of (targetWorksheet.getRow(1).values as any[]) ?? []) {
+    const nome = extractText(v).trim().toUpperCase();
+    if (nome) tecnicos.add(nome);
+  }
+
+  const descontoPctColIndex = (() => {
+    const row1 = (targetWorksheet!.getRow(1).values as any[]) ?? [];
+    for (let c = 1; c < row1.length; c++) {
+      if (extractText(row1[c]).trim().toUpperCase() === "DISCOUNT_PERCENTAGE") return c;
+    }
+    return findCol(["discount_percentage"], []);
+  })();
+
+  const campanhaPropria =
+    (tecnicos.has("PROMOTION_NAME") || tecnicos.has("DATE_VALIDITY")) &&
+    !tecnicos.has("PROMO_TYPE") &&
+    !tecnicos.has("CANDIDATE_ID") &&
+    !tecnicos.has("SALE_FEE") &&
+    descontoPctColIndex !== -1 &&
+    originalPriceColIndex !== -1;
+
   if (
     skuColIndex === -1 ||
     mlbColIndex === -1 ||
@@ -487,7 +531,9 @@ export async function processarPlanilha(
       formulaData,
       acaoPositiva,
       acaoNegativa,
-      descontoExtra
+      descontoExtra,
+      undefined,
+      campanhaPropria
     );
 
     /*
@@ -529,6 +575,22 @@ export async function processarPlanilha(
         value: result.action,
       });
 
+      /*
+       * Na campanha NOSSA quem manda é a porcentagem: o canal recalcula o
+       * preço final a partir dela, então escrever só o preço faria a
+       * planilha voltar com o valor antigo, ou recusada por "não é possível
+       * alterar o preço final". Os dois vão juntos — a porcentagem porque é
+       * a alavanca, e o preço para a planilha mostrar o mesmo número que o
+       * canal vai calcular.
+       */
+      if (campanhaPropria && result.newPercentage != null) {
+        xmlUpdates.push({
+          rowIndex: i,
+          colLetter: getColLetter(descontoPctColIndex),
+          value: result.newPercentage,
+        });
+      }
+
       // Só o caso sem redução de tarifa recalcula o preço final.
       if (result.newPrice !== null) {
         xmlUpdates.push({
@@ -569,8 +631,12 @@ export async function processarPlanilha(
     // Quem já participa continua dentro: a planilha volta com a ação
     // original, então conta como aprovado.
     const aprovado = jaParticipando ? true : result.action === acaoPositiva;
-    const tipoCampanha: "Com Redução" | "Sem Redução" =
-      saleFee !== null && saleFee > 0 ? "Com Redução" : "Sem Redução";
+    const tipoCampanha: "Com Redução" | "Sem Redução" | "Campanha nossa" =
+      campanhaPropria
+        ? "Campanha nossa"
+        : saleFee !== null && saleFee > 0
+          ? "Com Redução"
+          : "Sem Redução";
 
     itensRelatorio.push({
       campanha: localCampanha,

@@ -4,7 +4,7 @@ export interface ReportItem {
   campanha: string;
   mlb: string;
   sku: string;
-  tipoCampanha: "Com Redução" | "Sem Redução";
+  tipoCampanha: "Com Redução" | "Sem Redução" | "Campanha nossa";
   precoOriginal: number | null;
   /** O que o canal PEDIU — não necessariamente o que foi enviado. */
   propostaML: number | null;
