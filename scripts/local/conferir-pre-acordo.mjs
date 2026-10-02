@@ -142,7 +142,7 @@ const anuncios = await todas(
   "anuncios",
   "codigo_externo,titulo,preco_atual,status,estoque,sincronizado_em,conta_canal_id,url"
 );
-const contas = await todas("contas_canal", "id,nome");
+const contas = await todas("contas_canal", "id,nome,identificador");
 const nomeConta = new Map(contas.map((c) => [c.id, c.nome]));
 const porMlb = new Map(anuncios.map((a) => [String(a.codigo_externo).toUpperCase(), a]));
 
@@ -151,53 +151,83 @@ let lidoEm = null;
 const vivos = new Map();
 
 if (VIVO) {
-  /* Um token por conta, só o access — nada é renovado aqui. */
-  const headers = [];
+  /*
+   * Token POR CONTA, casado pelo user_id que o próprio arquivo guarda.
+   *
+   * O Mercado Livre só devolve o anúncio de quem o token representa: pedir
+   * um anúncio da conta a prazo com o token de São Paulo volta sem corpo.
+   * A primeira versão disto tentava os tokens em ordem e parava no primeiro
+   * que respondesse 200 — e o multiget responde 200 mesmo quando cada item
+   * dentro dele falhou. Resultado: 15 dos 62 anúncios voltavam vazios.
+   *
+   * Só o access token é lido. Nada é renovado aqui: o refresh do Meli é de
+   * uso único, e queimá-lo daqui derrubaria as automações daquelas pastas.
+   */
+  const porVendedor = new Map();
   for (const caminho of TOKENS) {
     if (!fs.existsSync(caminho)) continue;
-    const t = JSON.parse(fs.readFileSync(caminho, "utf8").replace(/^\uFEFF/, ""));
+    const t = JSON.parse(fs.readFileSync(caminho, "utf8").replace(/^﻿/, ""));
     const criado = Date.parse(t.createdAt ?? t.created_at ?? 0);
-    const vence = criado + (t.expires_in ?? 21600) * 1000;
-    if (vence < Date.now() + 60_000) {
+    if (criado + (t.expires_in ?? 21600) * 1000 < Date.now() + 60_000) {
       console.log(`✗ token vencido em ${caminho}`);
       console.log("  Rode o CLI daquela pasta primeiro: node ./src/cli.mjs me");
       process.exit(1);
     }
-    headers.push({ Authorization: "Bearer " + t.access_token, Accept: "application/json" });
+    porVendedor.set(String(t.user_id), {
+      Authorization: "Bearer " + t.access_token,
+      Accept: "application/json",
+    });
   }
-  if (!headers.length) {
+  if (!porVendedor.size) {
     console.log("✗ nenhum token encontrado nas pastas dos CLIs.");
     process.exit(1);
   }
 
-  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
-  const ids = [...new Set(acordo.map((a) => a.mlb))];
-
-  /* Multiget de 20, como o canal recomenda, e pausa entre lotes. */
-  for (let i = 0; i < ids.length; i += 20) {
-    const lote = ids.slice(i, i + 20);
-    let ok = false;
-    for (const h of headers) {
-      const r = await fetch(
-        `https://api.mercadolibre.com/items?ids=${lote.join(",")}&attributes=id,price,original_price,status,available_quantity`,
-        { headers: h }
-      );
-      if (!r.ok) continue;
-      const corpo = await r.json();
-      for (const item of corpo) {
-        if (item.code === 200 && item.body?.id) {
-          vivos.set(String(item.body.id).toUpperCase(), item.body);
-        }
-      }
-      ok = true;
-      break;
-    }
-    if (!ok) console.log(`  (lote ${i / 20 + 1} falhou)`);
-    await espera(400);
+  /* De qual vendedor é cada anúncio, pelo que o banco já sabe. */
+  const vendedorDaConta = new Map(
+    contas.filter((c) => c.identificador).map((c) => [c.id, String(c.identificador)])
+  );
+  const grupos = new Map();
+  for (const mlb of new Set(acordo.map((a) => a.mlb))) {
+    const conta = porMlb.get(mlb)?.conta_canal_id;
+    const vendedor = conta ? vendedorDaConta.get(conta) : null;
+    const chave = vendedor && porVendedor.has(vendedor) ? vendedor : "?";
+    if (!grupos.has(chave)) grupos.set(chave, []);
+    grupos.get(chave).push(mlb);
   }
-  origemPreco = `API do Mercado Livre (${vivos.size} de ${ids.length})`;
+
+  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  const ATRIBUTOS = "id,price,original_price,status,available_quantity";
+  let pedidos = 0;
+
+  for (const [vendedor, ids] of grupos) {
+    // Vendedor desconhecido: tenta todos os tokens, porque é a única chance.
+    const tentar = vendedor === "?" ? [...porVendedor.values()] : [porVendedor.get(vendedor)];
+    for (let i = 0; i < ids.length; i += 20) {
+      const lote = ids.slice(i, i + 20);
+      for (const h of tentar) {
+        const r = await fetch(
+          `https://api.mercadolibre.com/items?ids=${lote.join(",")}&attributes=${ATRIBUTOS}`,
+          { headers: h }
+        );
+        pedidos++;
+        if (!r.ok) continue;
+        for (const item of await r.json()) {
+          if (item.code === 200 && item.body?.id) {
+            vivos.set(String(item.body.id).toUpperCase(), item.body);
+          }
+        }
+        await espera(350);
+      }
+    }
+  }
+
+  const total = new Set(acordo.map((a) => a.mlb)).size;
+  origemPreco = `API do Mercado Livre (${vivos.size} de ${total})`;
   lidoEm = new Date();
-  console.log(`preço ao vivo: ${vivos.size} de ${ids.length} anúncios`);
+  console.log(`preço ao vivo: ${vivos.size} de ${total} anúncios, em ${pedidos} chamadas`);
+  const faltaram = [...new Set(acordo.map((a) => a.mlb))].filter((m) => !vivos.has(m));
+  if (faltaram.length) console.log("sem resposta do canal: " + faltaram.join(", "));
 }
 
 /*
@@ -249,6 +279,17 @@ for (const a of acordo) {
     a.patamar = "";
   }
 
+  /*
+   * Tem promocao rodando? `original_price` so vem preenchido quando o canal
+   * esta exibindo preco riscado. Separa "nao esta em oferta nenhuma" de
+   * "esta em oferta, mas acima do combinado" — a acao e diferente: a
+   * primeira precisa entrar na campanha, a segunda precisa de ajuste de
+   * porcentagem.
+   */
+  a.temDesconto = a.precoCheio != null && p != null && a.precoCheio > p + 0.01 ? "Sim" : "Não";
+  a.descontoAtivo =
+    a.precoCheio != null && p != null && a.precoCheio > 0 ? 1 - p / a.precoCheio : null;
+
   a.difMinimo = p != null && a.minimo != null ? p - a.minimo : null;
   a.difPct = p != null && a.minimo != null && a.minimo > 0 ? (p - a.minimo) / a.minimo : null;
   /* O desconto que falta aplicar para chegar ao combinado. É a alavanca. */
@@ -285,6 +326,9 @@ const COLUNAS = [
   { h: "Situação", k: "situacao", w: 11 },
   { h: "Estoque", k: "estoque", w: 9, fmt: "#,##0" },
   { h: "Preço hoje", k: "precoHoje", w: 13, fmt: '#,##0.00' },
+  { h: "Preço cheio", k: "precoCheio", w: 13, fmt: '#,##0.00' },
+  { h: "Em oferta?", k: "temDesconto", w: 11 },
+  { h: "Desc. ativo", k: "descontoAtivo", w: 11, fmt: "0.0%" },
   { h: "Mínimo 5%", k: "minimo", w: 13, fmt: '#,##0.00' },
   { h: "Oferta dia 6%", k: "ofertaDia", w: 13, fmt: '#,##0.00' },
   { h: "Relâmpago 7%", k: "relampago", w: 13, fmt: '#,##0.00' },
@@ -353,7 +397,7 @@ for (const a of acordo) {
   cEntrou.font = { size: 9, bold: true, color: { argb: TOM[a.entrou] ?? TINTA } };
   const cPat = linha.getCell(COLUNAS.findIndex((c) => c.k === "patamar") + 1);
   cPat.font = { size: 9, color: { argb: SUAVE } };
-  for (const k of ["situacao", "conta", "retornoMeli", "obs", "datasTexto"]) {
+  for (const k of ["situacao", "conta", "retornoMeli", "obs", "datasTexto", "temDesconto"]) {
     linha.getCell(COLUNAS.findIndex((c) => c.k === k) + 1).font = { size: 9, color: { argb: SUAVE } };
   }
   if (a.situacao === "pausado") {
