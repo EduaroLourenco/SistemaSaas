@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { clienteNavegador } from "@/lib/supabase/navegador";
 import { Button } from "@/components/ui/primitives";
 import { Loader2, MailCheck } from "lucide-react";
@@ -17,10 +17,20 @@ import { Loader2, MailCheck } from "lucide-react";
  */
 export default function Cadastro() {
   const router = useRouter();
+  const busca = useSearchParams();
+
+  /*
+   * Vindo de um convite, o e-mail chega preenchido e `destino` diz para onde
+   * voltar depois de confirmar. Digitar outro e-mail aqui não é impedido:
+   * quem recusa é `aceitar_convite`, e a mensagem de lá é mais exata do que
+   * um palpite desta tela.
+   */
+  const convidado = busca.get("email") ?? "";
+  const destino = busca.get("destino");
 
   const [nome, setNome] = React.useState("");
   const [empresa, setEmpresa] = React.useState("");
-  const [email, setEmail] = React.useState("");
+  const [email, setEmail] = React.useState(convidado);
   const [senha, setSenha] = React.useState("");
   const [erro, setErro] = React.useState<string | null>(null);
   const [enviando, setEnviando] = React.useState(false);
@@ -40,7 +50,12 @@ export default function Cadastro() {
     const { data, error } = await sb.auth.signUp({
       email,
       password: senha,
-      options: { data: { full_name: nome.trim(), empresa: empresa.trim() } },
+      options: {
+        data: { full_name: nome.trim(), empresa: empresa.trim() },
+        // Volta ao convite depois de confirmar, em vez de cair na raiz e
+        // deixar a pessoa procurando o link no e-mail outra vez.
+        ...(destino ? { emailRedirectTo: window.location.origin + destino } : {}),
+      },
     });
 
     if (error) {

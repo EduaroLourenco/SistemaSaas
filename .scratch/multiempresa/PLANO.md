@@ -1,5 +1,9 @@
 # Multiempresa: o que falta para vender a plataforma
 
+> **Andamento** — Fase 1 e Fase 2 feitas e commitadas (`fcbf774`, `63b58ab`).
+> Fase 3 escrita, e depende de rodar `db/22_equipe.sql`. Fase 4 (cobrança)
+> segue fora de escopo. O que ficou pendente do seu lado está no fim.
+
 ## O estado de hoje
 
 O cadastro funciona. `/cadastro` cria o usuário, `/comecar` chama
@@ -103,16 +107,68 @@ Tela de lista e formulário, com o botão de conectar do canal que tiver API.
 
 ## Fase 3 — convidar equipe
 
-O banco já faz o trabalho: `convidar_membro`, `aceitar_convite` e
-`convite_por_token` existem desde a migração 20. Nenhuma tela as chama, e
-a tabela `convites` só ficou pronta hoje.
+O banco já fazia metade: `convidar_membro`, `aceitar_convite` e
+`convite_por_token` existem desde a migração 20, e nenhuma tela as chamava.
 
-Falta a tela de equipe e a página que aceita o convite pelo token.
+A outra metade faltava inteira, e não é comodidade. `membros` só tem
+política de leitura — nenhuma tela conseguia mudar papel nem apagar a linha
+de quem saiu da empresa, ou seja, **ex-funcionário continuaria entrando**.
+
+Isso não se resolve com política de UPDATE/DELETE solta: a tela mandaria o
+id e o banco obedeceria, inclusive para rebaixar o último proprietário e
+deixar a empresa sem ninguém que possa administrar. Por isso
+`db/22_equipe.sql` põe as travas dentro das funções:
+
+- só proprietário ou administrador mexe em membro;
+- ninguém rebaixa nem remove o último proprietário;
+- administrador não promove alguém a proprietário;
+- reconvidar substitui o convite pendente, porque `convites` tem
+  `unique (organizacao_id, email)` e a segunda tentativa para o mesmo
+  e-mail falharia — que é exatamente o que se faz quando o prazo venceu.
+
+Remover um membro **mantém o que ele lançou**. Apagar lançamento junto
+reescreveria o histórico financeiro de quem só saiu da empresa.
+
+### Não há envio de e-mail
+
+Convidar devolve um link, e quem convidou manda pelo canal que já usa. É
+de propósito: a plataforma mandar mensagem em nome de alguém é outra
+decisão, com domínio e remetente a configurar, e o link copiável resolve
+hoje.
 
 ## Fase 4 — cobrança
 
 Não existe nada: nem plano, nem assinatura, nem limite de uso. Fica para
 quando houver quem cobrar — construir antes é desenhar no escuro.
+
+## Do seu lado
+
+Três coisas que só você destrava, em ordem de urgência:
+
+**1. Rodar `db/22_equipe.sql`** no SQL Editor do Supabase. Sem ela a tela de
+Equipe abre mas avisa que falta a migração.
+
+**2. As credenciais do Meli estão VAZIAS no `.env.local`.** As quatro
+variáveis existem como chave sem valor:
+
+```
+MELI_APP_ID=
+MELI_CLIENT_SECRET=
+MELI_REFRESH_TOKEN=
+MELI_REFRESH_TOKEN_2=
+```
+
+É por isso que `credencial_ref` está nulo nas duas integrações: sem
+`MELI_CLIENT_SECRET` nenhuma renovação jamais pôde acontecer. A plataforma
+nunca falou com o Mercado Livre por conta própria — só os scripts locais,
+com os tokens emprestados das suas pastas.
+
+Isso deixa de importar quando o aplicativo novo existir: você cria, eu ponho
+`MELI_APP_ID` e `MELI_CLIENT_SECRET` na Vercel, e aí a conexão pela tela
+grava no cofre. A partir daí a semente do ambiente não é mais necessária.
+
+**3. `CRON_SECRET` na Vercel**, para a sincronização agendada deixar de
+responder 503.
 
 ## Ordem e porquê
 

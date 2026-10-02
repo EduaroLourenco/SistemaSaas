@@ -7,6 +7,7 @@ import {
   Wallet,
   FileBarChart,
   Plug,
+  Users,
   BookMarked,
   Bell,
   MessagesSquare,
@@ -113,6 +114,7 @@ export const NAV: NavGroup[] = [
 
 export const NAV_FOOTER: NavGroup[] = [
   { label: "Integrações", icon: Plug, href: "/integracoes" },
+  { label: "Equipe", icon: Users, href: "/equipe" },
   { label: "Glossário", icon: BookMarked, href: "/glossario" },
   { label: "Configurações", icon: Settings, href: "/configuracoes" },
 ];

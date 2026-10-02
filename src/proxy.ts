@@ -20,7 +20,21 @@ import { NextResponse, type NextRequest } from "next/server";
  * contra RELATORIO_CHAVE e, sem a variável definida, só abre para quem
  * está logado. Sem a chave certa, responde 404.
  */
-const PUBLICAS = ["/entrar", "/cadastro", "/auth", "/api/cron/", "/relatorio/", "/api/relatorio/"];
+/*
+ * `/convite/` é pública porque quem recebe o link precisa saber de qual
+ * empresa ele é ANTES de criar conta — mandá-la para o login primeiro é
+ * pedir que se cadastre às cegas. O token é o segredo, e o aceite em si
+ * continua exigindo sessão.
+ */
+const PUBLICAS = [
+  "/entrar",
+  "/cadastro",
+  "/auth",
+  "/convite/",
+  "/api/cron/",
+  "/relatorio/",
+  "/api/relatorio/",
+];
 
 /**
  * Compara sem entregar o tamanho da coincidência pelo tempo de resposta.
