@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { sincronizarVtex } from "@/lib/vtex/sincronizar";
-import { vtexConfigurada } from "@/lib/vtex/cliente";
+import { lojasVtex, vtexConectada } from "@/lib/vtex/cliente";
 
 export const runtime = "nodejs";
 /** Cada pedido é uma chamada de detalhe; 3 dias da loja são ~150. */
@@ -42,20 +42,33 @@ export async function GET(req: NextRequest) {
   if (!autorizado(req, segredo)) {
     return NextResponse.json({ erro: "Não autorizado" }, { status: 401 });
   }
-  if (!vtexConfigurada()) {
-    return NextResponse.json(
-      { erro: "VTEX não conectada. Defina VTEX_ACCOUNT, VTEX_APP_KEY e VTEX_APP_TOKEN." },
-      { status: 503 }
-    );
+  /*
+   * Uma loja por empresa, varridas do banco. Era uma só, a do ambiente —
+   * numa segunda empresa isso leria os pedidos da primeira.
+   */
+  const lojas = await lojasVtex();
+  if (lojas.length === 0) {
+    return NextResponse.json({ erro: "Nenhuma loja VTEX cadastrada." }, { status: 503 });
   }
 
-  const comecou = Date.now();
-  try {
-    const r = await sincronizarVtex({ de: diaSP(-DIAS), ate: diaSP() });
-    return NextResponse.json({ ok: true, segundos: Math.round((Date.now() - comecou) / 1000), ...r });
-  } catch (e) {
-    const erro = e instanceof Error ? e.message : String(e);
-    console.error("[vtex] sincronização agendada falhou:", erro);
-    return NextResponse.json({ ok: false, erro }, { status: 500 });
+  const resultados: Record<string, unknown>[] = [];
+  for (const loja of lojas) {
+    if (!(await vtexConectada(loja.id))) {
+      resultados.push({ loja: loja.nome, pulada: "não conectada" });
+      continue;
+    }
+    const comecou = Date.now();
+    try {
+      const r = await sincronizarVtex({ de: diaSP(-DIAS), ate: diaSP(), conta: loja.id });
+      resultados.push({ ok: true, segundos: Math.round((Date.now() - comecou) / 1000), ...r });
+    } catch (e) {
+      // Uma loja falhando não pode impedir a outra de atualizar.
+      const erro = e instanceof Error ? e.message : String(e);
+      console.error("[vtex] sincronização agendada falhou em " + loja.nome + ":", erro);
+      resultados.push({ loja: loja.nome, ok: false, erro });
+    }
   }
+
+  const falhou = resultados.some((r) => r.ok === false);
+  return NextResponse.json({ lojas: resultados }, { status: falhou ? 500 : 200 });
 }

@@ -15,33 +15,29 @@ import { pedidos as buscarPedidos, type PedidoVtex } from "./cliente";
  * resolver a divergência entre os 9% da planilha e os 51% que a API mostra.
  */
 
-const NOME_CONTA = "Loja própria (VTEX)";
-
-async function resolverConta(): Promise<ContextoCanal & { nome: string }> {
+/**
+ * Carrega a loja pelo id.
+ *
+ * Antes isto varria todas as `contas_canal` e casava pelo NOME do canal
+ * ("Loja própria (VTEX)"). Com duas empresas as duas têm um canal com esse
+ * nome, e o `find` devolvia o primeiro — os pedidos de uma iriam para a
+ * operação da outra. O id resolve isso por construção.
+ */
+async function resolverConta(conta: string): Promise<ContextoCanal & { nome: string }> {
   const sb = clientePrivilegiado();
-  const { data, error } = await sb
+  const { data: achada, error } = await sb
     .from("contas_canal")
-    .select("id,operacao_id,canal_id,nome,canais(nome)")
-    .limit(200);
+    .select("id,operacao_id,canal_id,nome")
+    .eq("id", conta)
+    .maybeSingle();
   if (error) throw new Error(`Não consegui ler contas_canal: ${error.message}`);
+  if (!achada) throw new Error(`Conta de canal ${conta} não existe.`);
 
-  type Linha = {
-    id: string; operacao_id: string; canal_id: string; nome: string;
-    canais: { nome: string } | { nome: string }[] | null;
-  };
-  const nomeCanal = (l: Linha) => {
-    const c = Array.isArray(l.canais) ? l.canais[0] : l.canais;
-    return (c?.nome ?? "").trim().toLowerCase();
-  };
-  const achada = (data as Linha[] | null)?.find((l) => nomeCanal(l) === NOME_CONTA.toLowerCase());
-  if (!achada) {
-    throw new Error(`Não achei o canal "${NOME_CONTA}" em contas_canal.`);
-  }
   return {
-    operacaoId: achada.operacao_id,
-    canalId: achada.canal_id,
-    contaCanalId: achada.id,
-    nome: achada.nome,
+    operacaoId: achada.operacao_id as string,
+    canalId: achada.canal_id as string,
+    contaCanalId: achada.id as string,
+    nome: achada.nome as string,
   };
 }
 
@@ -183,13 +179,16 @@ export type ResultadoVtex = {
 const virouVenda = (p: PedidoVtex) => p.autorizado;
 
 export async function sincronizarVtex(
-  opcoes: { de?: string; ate?: string } = {}
+  opcoes: { de?: string; ate?: string; conta?: string } = {}
 ): Promise<ResultadoVtex> {
   const de = opcoes.de ?? new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
   const ate = opcoes.ate ?? hoje();
+  if (!opcoes.conta) {
+    throw new Error("Diga qual loja sincronizar — o id em `contas_canal`.");
+  }
 
-  const ctx = await resolverConta();
-  const todos = await buscarPedidos({ de, ate });
+  const ctx = await resolverConta(opcoes.conta);
+  const todos = await buscarPedidos({ de, ate, conta: ctx.contaCanalId, nome: ctx.nome });
   const lista = todos.filter(virouVenda);
   const { gravados, itens } = await gravar(ctx, lista);
   const dias = await consolidarDiarias(ctx, de, ate);

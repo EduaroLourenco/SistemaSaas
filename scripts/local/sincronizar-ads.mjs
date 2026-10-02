@@ -20,10 +20,12 @@ const token = (p) => {
   const criado = Date.parse(t.createdAt ?? t.created_at ?? 0);
   return { valor: t.access_token, expiraEm: criado + (t.expires_in ?? 21600) * 1000 };
 };
-globalThis.__meliToken = {
-  principal: token("C:/Users/dudu4/OneDrive/Desktop/Meli+/.meli/token.json"),
-  segunda: token("C:/Users/dudu4/OneDrive/Desktop/apis/Mercado Livre Principal/.meli/token.json"),
+/* Semeado por conta de canal mais abaixo, quando os ids chegarem do banco. */
+const ARQUIVOS = {
+  principal: "C:/Users/dudu4/OneDrive/Desktop/Meli+/.meli/token.json",
+  segunda: "C:/Users/dudu4/OneDrive/Desktop/apis/Mercado Livre Principal/.meli/token.json",
 };
+globalThis.__meliToken = {};
 
 fs.writeFileSync(path.join(process.cwd(), "vazio.cjs"), "");
 const jiti = createJiti(RAIZ + "/", {
@@ -46,6 +48,11 @@ const CONTAS = [
   { slug: "segunda", conta: achar("prazo") },
 ];
 
+/* O cache do cliente é indexado pela conta de canal, como o resto agora. */
+for (const { slug, conta } of CONTAS) {
+  if (conta) globalThis.__meliToken[conta.id] = token(ARQUIVOS[slug]);
+}
+
 /* Janela: o canal guarda 90 dias de métrica. Padrão, os últimos 60. */
 const hoje = new Date().toISOString().slice(0, 10);
 const de = process.argv[2] ?? new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
@@ -54,7 +61,7 @@ const ate = process.argv[3] ?? hoje;
 for (const { slug, conta } of CONTAS) {
   if (!conta) { console.log(`✗ ${slug}: conta de canal não encontrada`); continue; }
   try {
-    const r = await sincronizarAds(slug, { de, ate, operacaoId: conta.operacao_id, contaCanalId: conta.id });
+    const r = await sincronizarAds(conta.id, { de, ate, operacaoId: conta.operacao_id, contaCanalId: conta.id });
     if (!r) { console.log(`— ${slug}: conta sem publicidade`); continue; }
     console.log(`✓ ${r.conta}: ${r.campanhas} campanhas, ${r.anuncios} anúncios, ${r.gravados} com movimento`);
     console.log(`   ${de} a ${ate} · investimento R$ ${r.investimento.toLocaleString("pt-BR")} · receita atribuída R$ ${r.receita.toLocaleString("pt-BR")} · ACOS ${r.acos ? (r.acos * 100).toFixed(1) + "%" : "—"}`);

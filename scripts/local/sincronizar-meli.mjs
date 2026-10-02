@@ -21,12 +21,39 @@ const token = (p) => {
   const criado = Date.parse(t.createdAt ?? t.created_at ?? 0);
   return { valor: t.access_token, expiraEm: criado + (t.expires_in ?? 21600) * 1000 };
 };
-globalThis.__meliToken = {
-  principal: token("C:/Users/dudu4/OneDrive/Desktop/Meli+/.meli/token.json"),
-  segunda: token("C:/Users/dudu4/OneDrive/Desktop/apis/Mercado Livre Principal/.meli/token.json"),
+
+/*
+ * A conta agora é o id de `contas_canal`, não mais o apelido — era o apelido
+ * que impedia uma segunda empresa de existir. O id vem do banco, pelo nome,
+ * para este script não carregar uuid colado na mão.
+ */
+const SB = {
+  apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  Authorization: "Bearer " + process.env.SUPABASE_SERVICE_ROLE_KEY,
 };
-for (const [k, v] of Object.entries(globalThis.__meliToken))
-  console.log(k, "token vale até", new Date(v.expiraEm).toLocaleString("pt-BR"));
+const contasCanal = await (
+  await fetch(
+    process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/contas_canal?select=id,nome",
+    { headers: SB }
+  )
+).json();
+const achar = (parte) => contasCanal.find((c) => c.nome.toLowerCase().includes(parte));
+
+const APELIDOS = {
+  principal: { conta: achar("são paulo"), arquivo: "C:/Users/dudu4/OneDrive/Desktop/Meli+/.meli/token.json" },
+  segunda: { conta: achar("prazo"), arquivo: "C:/Users/dudu4/OneDrive/Desktop/apis/Mercado Livre Principal/.meli/token.json" },
+};
+
+globalThis.__meliToken = {};
+for (const [apelido, { conta, arquivo }] of Object.entries(APELIDOS)) {
+  if (!conta) {
+    console.log(`✗ ${apelido}: conta de canal não encontrada no banco`);
+    continue;
+  }
+  const t = token(arquivo);
+  globalThis.__meliToken[conta.id] = t;
+  console.log(`${apelido} (${conta.nome}) token vale até`, new Date(t.expiraEm).toLocaleString("pt-BR"));
+}
 
 fs.writeFileSync(path.join(process.cwd(), "vazio.cjs"), "");
 const jiti = createJiti(RAIZ + "/", {
@@ -35,12 +62,16 @@ const jiti = createJiti(RAIZ + "/", {
 const { sincronizarMeli } = await jiti.import(RAIZ + "/src/lib/meli/sincronizar.ts");
 
 const de = process.env.SYNC_DE ?? "2026-08-15";
-for (const conta of process.argv.slice(2).length ? process.argv.slice(2) : ["principal", "segunda"]) {
+const pedidos = process.argv.slice(2).length ? process.argv.slice(2) : ["principal", "segunda"];
+
+for (const apelido of pedidos) {
+  const conta = APELIDOS[apelido]?.conta;
+  if (!conta) { console.log(`\n✗ ${apelido}: sem conta de canal`); continue; }
   const t0 = Date.now();
   try {
-    const r = await sincronizarMeli({ conta, de, diasVisitas: 45, registro: { origem: "manual" } });
+    const r = await sincronizarMeli({ conta: conta.id, de, diasVisitas: 45, registro: { origem: "manual" } });
     console.log(`\n✓ ${r.conta} (${((Date.now() - t0) / 1000).toFixed(0)}s)`, JSON.stringify({ ...r, avisos: r.avisos.slice(0, 5) }));
   } catch (e) {
-    console.log(`\n✗ ${conta}:`, e?.message ?? e);
+    console.log(`\n✗ ${apelido}:`, e?.message ?? e);
   }
 }

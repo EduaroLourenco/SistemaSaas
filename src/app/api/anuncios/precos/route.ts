@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { precosAtuais } from "@/lib/meli/cliente";
-import { comMeli, contaDaQuery } from "@/lib/meli/rota";
+import { comMeli} from "@/lib/meli/rota";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,8 +17,7 @@ export const maxDuration = 60;
  * Corpo: { mlbs: ["MLB123", ...] }
  */
 export async function POST(req: NextRequest) {
-  const conta = contaDaQuery(new URL(req.url));
-
+  
   let corpo: { mlbs?: unknown };
   try {
     corpo = await req.json();
@@ -39,7 +38,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return comMeli(async () => {
+  return comMeli(new URL(req.url), async (conta) => {
     const precos = await precosAtuais(ids, conta);
     return {
       pedidos: ids.length,
@@ -47,5 +46,5 @@ export async function POST(req: NextRequest) {
       comErro: precos.filter((p) => p.erro).length,
       precos,
     };
-  }, conta);
+  });
 }

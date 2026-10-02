@@ -5,7 +5,7 @@ import {
   idsDosAnuncios,
   type VisitaDia,
 } from "@/lib/meli/cliente";
-import { comMeli, intervalo, contaDaQuery } from "@/lib/meli/rota";
+import { comMeli, intervalo} from "@/lib/meli/rota";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -29,8 +29,7 @@ export const maxDuration = 60;
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const faixa = intervalo(url);
-  const conta = contaDaQuery(url);
-
+  
   const mlbs = (url.searchParams.get("mlbs") ?? "")
     .split(",")
     .map((m) => m.trim().toUpperCase())
@@ -56,7 +55,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return comMeli(async () => {
+  return comMeli(url, async (conta) => {
     const alvos = mlbs.length ? mlbs : await idsDosAnuncios({ conta });
     const r = await visitasPorAnuncio({ mlbs: alvos, dias, conta });
 
@@ -99,5 +98,5 @@ export async function GET(req: NextRequest) {
         .map(([data, visitas]) => ({ data, visitas }))
         .sort((a, b) => a.data.localeCompare(b.data)),
     };
-  }, conta);
+  });
 }

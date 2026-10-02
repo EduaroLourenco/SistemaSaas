@@ -2,7 +2,6 @@ import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { paginar } from "@/lib/dados/paginar";
 import {
-  CONTAS,
   catalogoCompleto,
   pedidos as buscarPedidos,
   completarFretes,
@@ -58,51 +57,39 @@ type Resumo = {
 };
 
 /**
- * Resolve a conta do canal no banco a partir do vendedor do Meli.
+ * Carrega a conta de canal e confere com quem o token diz que somos.
  *
- * O casamento é pelo `codigo_externo` da conta, que guarda o user_id do
- * Meli. Sem ele não há como saber em qual das duas contas gravar — e
- * gravar na errada misturaria pronta entrega com venda a prazo, que é o
- * corte que mais importa nesta operação.
+ * `conta` já é o id de `contas_canal`, então achar a linha é direto. O que
+ * esta função ainda faz de útil é a CONFERÊNCIA: pergunta ao Meli "quem
+ * sou eu" e compara com o `identificador` gravado. Divergir significa que
+ * o token daquela linha é de outro vendedor, e seguir gravaria o catálogo
+ * de uma empresa dentro da operação de outra — o pior erro possível aqui.
  */
 async function resolverConta(conta: Conta) {
   const sb = clientePrivilegiado();
-  const v = await vendedor(conta);
 
-  const { data: todas, error } = await sb
+  const { data: achada, error } = await sb
     .from("contas_canal")
-    .select("id,operacao_id,canal_id,nome,identificador");
+    .select("id,operacao_id,canal_id,nome,identificador")
+    .eq("id", conta)
+    .maybeSingle();
 
   if (error) throw new Error(`Não consegui ler contas_canal: ${error.message}`);
+  if (!achada) throw new Error(`Conta de canal ${conta} não existe.`);
 
-  type Linha = {
-    id: string; operacao_id: string; canal_id: string;
-    nome: string; identificador: string | null;
-  };
-  const lista = (todas ?? []) as Linha[];
+  const v = await vendedor(conta);
+  const gravado = String(achada.identificador ?? "");
 
-  /*
-   * Casa primeiro pelo identificador (o user_id do Meli). É exato.
-   *
-   * Quando ainda está vazio — que é o estado de quem nunca sincronizou —
-   * cai para o nome que `CONTAS` declara. É frouxo de propósito e só na
-   * primeira vez: logo abaixo o identificador é gravado, e a partir daí
-   * o casamento passa a ser pelo id.
-   */
-  const esperado = CONTAS.find((c) => c.slug === conta)?.nome ?? "";
-  const achada =
-    lista.find((c) => c.identificador && String(c.identificador) === String(v.id)) ??
-    lista.find((c) => c.nome.trim().toLowerCase() === esperado.trim().toLowerCase());
-
-  if (!achada) {
+  if (gravado && gravado !== String(v.id)) {
     throw new Error(
-      `Não achei a conta de canal do vendedor ${v.id} (${v.nickname}). ` +
-        `Esperava identificador = ${v.id} ou uma conta chamada "${esperado}".`
+      `A conta "${achada.nome}" está gravada como vendedor ${gravado}, mas o token ` +
+        `autenticou como ${v.id} (${v.nickname}). Não vou gravar: os dados iriam ` +
+        "para a conta errada. Reconecte a integração dessa conta."
     );
   }
 
-  // Grava o identificador para a próxima execução não depender do nome.
-  if (String(achada.identificador ?? "") !== String(v.id)) {
+  // Primeira sincronização da conta: registra de quem é o token.
+  if (!gravado) {
     const { error: e } = await sb
       .from("contas_canal")
       .update({ identificador: String(v.id) })
@@ -113,10 +100,10 @@ async function resolverConta(conta: Conta) {
   }
 
   return {
-    contaCanalId: achada.id,
-    operacaoId: achada.operacao_id,
-    canalId: achada.canal_id,
-    nome: achada.nome,
+    contaCanalId: achada.id as string,
+    operacaoId: achada.operacao_id as string,
+    canalId: achada.canal_id as string,
+    nome: achada.nome as string,
     conta,
     vendedor: v,
   };
@@ -685,7 +672,10 @@ type Resultado = Resumo & {
 type RegistroVivo = { atual: Registro };
 
 export async function sincronizarMeli(opcoes: OpcoesSincronizacao = {}): Promise<Resultado> {
-  const conta = opcoes.conta ?? "principal";
+  const conta = opcoes.conta;
+  if (!conta) {
+    throw new Error("Diga qual conta sincronizar — o id em `contas_canal`.");
+  }
   const reg: RegistroVivo = { atual: null };
   if (opcoes.registro) {
     const integ = await integracaoDa(conta);
@@ -738,7 +728,7 @@ async function executar(
   const ctx = await resolverConta(conta);
   // Primeiro momento em que se sabe operação e conta de canal: cria a
   // integração se falta e grava o token que a renovação deixou pendente.
-  const integ = await vincularIntegracao(conta, ctx);
+  const integ = await vincularIntegracao(ctx);
   if (opcoes.registro && !reg.atual && integ) {
     reg.atual = await iniciarRegistro(integ, opcoes.registro.origem, opcoes.registro.turno);
   }

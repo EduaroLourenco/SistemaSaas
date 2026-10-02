@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { meusAnuncios } from "@/lib/meli/cliente";
-import { comMeli, contaDaQuery } from "@/lib/meli/rota";
+import { comMeli} from "@/lib/meli/rota";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -16,13 +16,12 @@ export const maxDuration = 300;
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
-  const conta = contaDaQuery(url);
-  const valido =
+    const valido =
     status === "active" || status === "paused" || status === "closed"
       ? status
       : undefined;
 
-  return comMeli(async () => {
+  return comMeli(url, async (conta) => {
     const itens = await meusAnuncios({ status: valido, conta });
     const comPreco = itens.filter((i) => i.preco !== null);
 
@@ -42,5 +41,5 @@ export async function GET(req: NextRequest) {
       },
       itens,
     };
-  }, conta);
+  });
 }

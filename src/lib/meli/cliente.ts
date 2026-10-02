@@ -12,7 +12,13 @@
  */
 
 import { aguardarVez, autorizarLeitura, MeliBloqueado } from "./limite";
-import { lerToken, gravarToken, registrarErroToken, type TokenSalvo } from "./tokens";
+import {
+  lerToken,
+  gravarToken,
+  registrarErroToken,
+  integracaoDa,
+  type TokenSalvo,
+} from "./tokens";
 
 export { MeliBloqueado };
 
@@ -27,73 +33,68 @@ const TOKEN_URL = `${API}/oauth/token`;
    enxerga os pedidos da outra — não existe token que cubra as duas.
 
    Por isso cada conta tem seu próprio refresh token, e toda consulta diz
-   de qual conta está falando. O app (appId + secret) é o mesmo para as
-   duas: você autoriza o mesmo aplicativo em cada conta, separadamente.
+   de qual conta está falando. O app (appId + secret) é o mesmo para todas:
+   um aplicativo do Mercado Livre atende muitos vendedores, e cada um
+   autoriza esse mesmo aplicativo separadamente. É por isso que o appId
+   segue no ambiente enquanto o token do vendedor vai para o banco.
+
+   `Conta` é o id de `contas_canal`. Antes era um apelido ("principal",
+   "segunda") que virava variável de ambiente — o que impedia uma segunda
+   empresa de existir: ela cairia na conta de quem configurou o servidor.
 */
 
-export type Conta = "principal" | "segunda";
-
-export const CONTAS: { slug: Conta; nome: string; variavel: string }[] = [
-  {
-    slug: "principal",
-    nome: "São Paulo — pronta entrega",
-    variavel: "MELI_REFRESH_TOKEN",
-  },
-  {
-    slug: "segunda",
-    nome: "2ª conta — venda a prazo",
-    variavel: "MELI_REFRESH_TOKEN_2",
-  },
-];
+/** Id de `contas_canal`. */
+export type Conta = string;
 
 export class MeliNaoConfigurado extends Error {
-  constructor(conta?: Conta) {
-    const alvo = conta ? CONTAS.find((c) => c.slug === conta) : null;
+  constructor(public conta?: Conta, nome?: string) {
     super(
-      alvo
-        ? `Conta "${alvo.nome}" não conectada. Defina MELI_APP_ID, MELI_CLIENT_SECRET e ${alvo.variavel}.`
-        : "Integração com o Mercado Livre não configurada. Defina MELI_APP_ID, MELI_CLIENT_SECRET e MELI_REFRESH_TOKEN."
+      conta
+        ? `Conta "${nome ?? conta}" não conectada ao Mercado Livre. ` +
+            "Autorize em Integrações para a plataforma passar a ler os dados dela."
+        : "Integração com o Mercado Livre não configurada. " +
+            "Defina MELI_APP_ID e MELI_CLIENT_SECRET e autorize uma conta em Integrações."
     );
     this.name = "MeliNaoConfigurado";
   }
 }
 
-/** Refresh token do ambiente — só a semente da primeira renovação. */
-function refreshDe(conta: Conta): string | undefined {
-  const def = CONTAS.find((c) => c.slug === conta);
-  return def ? process.env[def.variavel] : undefined;
+/*
+ * Semente do ambiente: as duas contas da Probel, de antes de o cofre
+ * existir. O apelido vem de `integracoes.config.conta`, na mesma linha que
+ * já foi lida — não é identidade, é só onde procurar.
+ *
+ * Num SaaS isso não escala (não há variável de ambiente por cliente) e nem
+ * precisa: quem autoriza pela tela grava direto no cofre. Some sozinho na
+ * primeira renovação que gravar.
+ */
+const SEMENTES: Record<string, string> = {
+  principal: "MELI_REFRESH_TOKEN",
+  segunda: "MELI_REFRESH_TOKEN_2",
+};
+
+function sementeDe(apelido: unknown): string | undefined {
+  if (typeof apelido !== "string" || !apelido) return undefined;
+  const variavel = SEMENTES[apelido];
+  return variavel ? process.env[variavel] : undefined;
+}
+
+/** O aplicativo do Mercado Livre está configurado neste servidor. */
+export function appConfigurado() {
+  return Boolean(process.env.MELI_APP_ID && process.env.MELI_CLIENT_SECRET);
 }
 
 /**
- * A conta tem com o que renovar: semente no ambiente OU token no banco.
+ * A conta tem com o que renovar: token no cofre OU semente no ambiente.
  *
- * Diferente de `meliConfigurado`, olha o banco — depois da primeira
- * renovação a semente do ambiente pode até ser apagada, e a conta segue
- * conectada. É o que a rotina agendada usa para decidir quem sincronizar.
+ * É o que a rotina agendada usa para decidir quem sincronizar, e o que a
+ * rota checa antes de tentar. Depois da primeira renovação a semente pode
+ * até ser apagada e a conta segue conectada.
  */
 export async function contaConectada(conta: Conta): Promise<boolean> {
-  if (!process.env.MELI_APP_ID || !process.env.MELI_CLIENT_SECRET) return false;
-  if (refreshDe(conta)) return true;
-  return Boolean(await lerToken(conta));
-}
-
-/** Sem argumento, responde se ao menos UMA conta está conectada. */
-export function meliConfigurado(conta?: Conta) {
-  const base = Boolean(process.env.MELI_APP_ID && process.env.MELI_CLIENT_SECRET);
-  if (!base) return false;
-  if (conta) return Boolean(refreshDe(conta));
-  return CONTAS.some((c) => Boolean(process.env[c.variavel]));
-}
-
-/** Situação de cada conta — a tela usa para mostrar o que falta ligar. */
-export function situacaoContas() {
-  const base = Boolean(process.env.MELI_APP_ID && process.env.MELI_CLIENT_SECRET);
-  return CONTAS.map((c) => ({
-    slug: c.slug,
-    nome: c.nome,
-    variavel: c.variavel,
-    conectada: base && Boolean(process.env[c.variavel]),
-  }));
+  if (!appConfigurado()) return false;
+  if (await lerToken(conta)) return true;
+  return Boolean(sementeDe((await integracaoDa(conta))?.config.conta));
 }
 
 /**
@@ -163,14 +164,35 @@ async function renovar(appId: string, clientSecret: string, refresh: string): Pr
  * primeira vez, para semear. Depois da primeira renovação o do ambiente
  * já está morto — é por isso que ele não pode ser a fonte.
  */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * `Conta` é um id, e `Conta = string` não deixa o compilador provar isso.
+ *
+ * Sem este portão um apelido antigo ("principal") passaria batido: a busca
+ * no banco não acharia nada, cairia na semente e, pior, numa segunda
+ * empresa poderia achar a linha de outra. Falhar alto é o único jeito de
+ * isso não virar dado trocado entre clientes.
+ */
+function exigirId(conta: Conta): Conta {
+  if (!UUID.test(conta)) {
+    throw new Error(
+      `Conta do Mercado Livre inválida: "${conta}". ` +
+        "Esperava o id de contas_canal, não o apelido antigo (principal/segunda)."
+    );
+  }
+  return conta;
+}
+
 async function accessToken(conta: Conta): Promise<string> {
+  exigirId(conta);
   g.__meliToken = g.__meliToken ?? {};
   const cache = g.__meliToken[conta];
   if (cache && cache.expiraEm > Date.now() + 60_000) return cache.valor;
 
   const appId = process.env.MELI_APP_ID;
   const clientSecret = process.env.MELI_CLIENT_SECRET;
-  if (!appId || !clientSecret) throw new MeliNaoConfigurado(conta);
+  if (!appId || !clientSecret) throw new MeliNaoConfigurado();
 
   const salvo = await lerToken(conta);
   const valeAinda = (t: TokenSalvo | null) =>
@@ -185,7 +207,9 @@ async function accessToken(conta: Conta): Promise<string> {
     return salvo.access_token!;
   }
 
-  const semente = refreshDe(conta);
+  // A semente só interessa aqui, no caminho da renovação — uma consulta a
+  // mais a cada seis horas, não a cada chamada.
+  const semente = sementeDe((await integracaoDa(conta))?.config.conta);
   const primeiro = salvo?.refresh_token ?? cache?.refresh ?? semente;
   if (!primeiro) throw new MeliNaoConfigurado(conta);
 
@@ -261,7 +285,7 @@ async function accessToken(conta: Conta): Promise<string> {
  */
 export async function meliGet<T>(
   caminho: string,
-  conta: Conta = "principal",
+  conta: Conta,
   /* Cabeçalho extra. Existe por causa da publicidade, que exige
      `api-version: 2` — sem ele a mesma URL devolve 404 e parece que a
      conta não tem anúncio patrocinado. */
@@ -326,7 +350,7 @@ type RespostaMulti = {
  */
 export async function precosAtuais(
   mlbs: string[],
-  conta: Conta = "principal"
+  conta: Conta
 ): Promise<PrecoAnuncio[]> {
   const unicos = Array.from(new Set(mlbs.filter(Boolean)));
   const saida: PrecoAnuncio[] = [];
@@ -422,7 +446,7 @@ type PrecoParaGanharBruto = {
  */
 export async function disputaCatalogo(
   mlb: string,
-  conta: Conta = "principal"
+  conta: Conta
 ): Promise<DisputaCatalogo | null> {
   try {
     const p = await meliGet<PrecoParaGanharBruto>(
@@ -450,7 +474,7 @@ export async function disputaCatalogo(
 /** Quantas perguntas estão sem resposta agora. */
 export async function perguntasSemResposta(
   sellerId: number,
-  conta: Conta = "principal"
+  conta: Conta
 ): Promise<number | null> {
   try {
     const r = await meliGet<{ total?: number }>(
@@ -466,7 +490,7 @@ export async function perguntasSemResposta(
 const gv = globalThis as unknown as { __meliVendedor?: Record<string, Vendedor> };
 
 /** `/users/me`. Guardado em memória: não muda dentro do processo. */
-export async function vendedor(conta: Conta = "principal"): Promise<Vendedor> {
+export async function vendedor(conta: Conta): Promise<Vendedor> {
   gv.__meliVendedor = gv.__meliVendedor ?? {};
   const guardado = gv.__meliVendedor[conta];
   if (guardado) return guardado;
@@ -614,7 +638,7 @@ function normalizarPedido(o: OrdemBruta): Pedido {
  */
 export async function completarFretes(
   lista: Pedido[],
-  conta: Conta = "principal",
+  conta: Conta,
   concorrencia = 6
 ): Promise<Pedido[]> {
   const comEnvio = lista.filter((p) => p.envioId != null);

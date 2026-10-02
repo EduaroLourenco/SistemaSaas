@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { clienteServidor } from "@/lib/supabase/servidor";
-import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
-import { CONTAS, type Conta } from "@/lib/meli/cliente";
 import { gravarToken, vincularIntegracao } from "@/lib/meli/tokens";
+import { COOKIE_OAUTH } from "../conectar/route";
 
 export const runtime = "nodejs";
 
@@ -19,7 +19,7 @@ export const runtime = "nodejs";
  */
 
 function pagina(titulo: string, corpo: string, ok: boolean) {
-  return new NextResponse(
+  const resposta = new NextResponse(
     `<!doctype html><html lang="pt-BR"><meta charset="utf-8">
      <meta name="viewport" content="width=device-width,initial-scale=1">
      <title>${titulo}</title>
@@ -32,24 +32,67 @@ function pagina(titulo: string, corpo: string, ok: boolean) {
      </body></html>`,
     { status: ok ? 200 : 400, headers: { "content-type": "text/html; charset=utf-8" } }
   );
+  // O nonce vale uma vez, deu certo ou não.
+  resposta.cookies.delete(COOKIE_OAUTH);
+  return resposta;
+}
+
+function mesmoNonce(a: string, b: string) {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
 }
 
 export async function GET(req: NextRequest) {
   const sb = await clienteServidor();
   const { data: sessao } = await sb.auth.getUser();
-  if (!sessao?.user) return pagina("Entre no sistema primeiro", "A conexão precisa de alguém logado.", false);
+  if (!sessao?.user) {
+    return pagina("Entre no sistema primeiro", "A conexão precisa de alguém logado.", false);
+  }
 
   const erroMeli = req.nextUrl.searchParams.get("error_description");
   if (erroMeli) return pagina("O Mercado Livre recusou", erroMeli, false);
 
   const codigo = req.nextUrl.searchParams.get("code");
-  const estado = req.nextUrl.searchParams.get("state") ?? "principal";
-  const conta = CONTAS.find((c) => c.slug === estado)?.slug as Conta | undefined;
-  if (!codigo || !conta) return pagina("Faltou o código", "Recomece a conexão pela tela de Integrações.", false);
+  const estado = req.nextUrl.searchParams.get("state") ?? "";
+  const [nonce, contaId] = estado.split(".");
+  const esperado = req.cookies.get(COOKIE_OAUTH)?.value ?? "";
+
+  if (!codigo || !nonce || !contaId) {
+    return pagina("Faltou o código", "Recomece a conexão pela tela de Integrações.", false);
+  }
+
+  /*
+   * O nonce do cookie tem que bater com o do `state`. Sem isto, alguém
+   * induziria uma pessoa logada a abrir esta URL e amarraria uma conta de
+   * Mercado Livre à empresa dela.
+   */
+  if (!esperado || !mesmoNonce(nonce, esperado)) {
+    return pagina(
+      "Conexão não reconhecida",
+      "Este retorno não corresponde a uma conexão iniciada aqui. Comece de novo pela tela de Integrações.",
+      false
+    );
+  }
+
+  /* A conta, pelos olhos de quem está logado — RLS faz o isolamento. */
+  const { data: conta } = await sb
+    .from("contas_canal")
+    .select("id,operacao_id,canal_id,nome,identificador")
+    .eq("id", contaId)
+    .maybeSingle();
+  if (!conta) return pagina("Conta não encontrada", "Ela não existe ou não é da sua empresa.", false);
+
+  const { data: podeEditar } = await sb.rpc("pode_editar_operacao", { op: conta.operacao_id });
+  if (!podeEditar) {
+    return pagina("Sem permissão", "Seu acesso é de leitura. Peça a um administrador.", false);
+  }
 
   const appId = process.env.MELI_APP_ID;
   const segredo = process.env.MELI_CLIENT_SECRET;
-  if (!appId || !segredo) return pagina("Falta configurar", "Defina MELI_APP_ID e MELI_CLIENT_SECRET.", false);
+  if (!appId || !segredo) {
+    return pagina("Falta configurar", "Defina MELI_APP_ID e MELI_CLIENT_SECRET.", false);
+  }
 
   /* 1. O código vira o par de tokens. */
   const r = await fetch("https://api.mercadolibre.com/oauth/token", {
@@ -72,37 +115,35 @@ export async function GET(req: NextRequest) {
   }
   const t = (await r.json()) as { access_token: string; refresh_token: string; expires_in: number };
 
-  /* 2. De quem é este token? É o que amarra a integração à conta de canal. */
+  /* 2. De quem é este token? Confere com o que a conta já declarava. */
   const eu = await fetch("https://api.mercadolibre.com/users/me", {
     headers: { Authorization: `Bearer ${t.access_token}` },
   });
-  if (!eu.ok) return pagina("Token recusado", "O Mercado Livre não reconheceu o token recém-emitido.", false);
+  if (!eu.ok) {
+    return pagina("Token recusado", "O Mercado Livre não reconheceu o token recém-emitido.", false);
+  }
   const vendedor = (await eu.json()) as { id: number; nickname: string };
 
-  const esperado = CONTAS.find((c) => c.slug === conta)?.nome ?? "";
-  const { data: contas } = await clientePrivilegiado()
-    .from("contas_canal")
-    .select("id,operacao_id,canal_id,nome,identificador");
-  type Linha = { id: string; operacao_id: string; canal_id: string; nome: string; identificador: string | null };
-  const lista = (contas ?? []) as Linha[];
-  const achada =
-    lista.find((c) => c.identificador && String(c.identificador) === String(vendedor.id)) ??
-    lista.find((c) => c.nome.trim().toLowerCase() === esperado.trim().toLowerCase());
-  if (!achada) {
+  const gravado = String(conta.identificador ?? "");
+  if (gravado && gravado !== String(vendedor.id)) {
     return pagina(
-      "Conta não cadastrada",
-      `Autorizou a conta ${vendedor.nickname} (${vendedor.id}), mas não existe uma conta de canal com esse identificador nem com o nome "${esperado}".`,
+      "Conta trocada",
+      `"${conta.nome}" é do vendedor ${gravado}, mas você autorizou ${vendedor.nickname} (${vendedor.id}). ` +
+        "Conectar assim misturaria o catálogo das duas. Escolha a conta certa na tela de Integrações.",
       false
     );
   }
+  if (!gravado) {
+    await sb.from("contas_canal").update({ identificador: String(vendedor.id) }).eq("id", conta.id);
+  }
 
   /* 3. Cofre. A partir daqui a renovação é sozinha, a cada 6 horas. */
-  await vincularIntegracao(conta, {
-    operacaoId: achada.operacao_id,
-    canalId: achada.canal_id,
-    contaCanalId: achada.id,
+  await vincularIntegracao({
+    operacaoId: conta.operacao_id,
+    canalId: conta.canal_id,
+    contaCanalId: conta.id,
   });
-  await gravarToken(conta, {
+  await gravarToken(conta.id, {
     access_token: t.access_token,
     refresh_token: t.refresh_token,
     expira_em: new Date(Date.now() + t.expires_in * 1000),
@@ -110,7 +151,7 @@ export async function GET(req: NextRequest) {
 
   return pagina(
     "Conta conectada",
-    `${vendedor.nickname} está ligada a "${achada.nome}". A sincronização automática passa a usar esta autorização — não é preciso colar token em lugar nenhum.`,
+    `${vendedor.nickname} está ligada a "${conta.nome}". A sincronização automática passa a usar esta autorização — não é preciso colar token em lugar nenhum.`,
     true
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pedidos } from "@/lib/meli/cliente";
-import { comMeli, intervalo, contaDaQuery } from "@/lib/meli/rota";
+import { comMeli, intervalo} from "@/lib/meli/rota";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -17,15 +17,14 @@ export const maxDuration = 120;
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const faixa = intervalo(url);
-  const conta = contaDaQuery(url);
-  if (!faixa) {
+    if (!faixa) {
     return NextResponse.json(
       { erro: "Informe `de` e `ate` no formato AAAA-MM-DD, com `de` menor ou igual a `ate`." },
       { status: 400 }
     );
   }
 
-  return comMeli(async () => {
+  return comMeli(url, async (conta) => {
     const lista = await pedidos({ ...faixa, conta });
 
     const validos = lista.filter((p) => !p.cancelado);
@@ -106,5 +105,5 @@ export async function GET(req: NextRequest) {
         }))
         .sort((a, b) => b.receita - a.receita),
     };
-  }, conta);
+  });
 }

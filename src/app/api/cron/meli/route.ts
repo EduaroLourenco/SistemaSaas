@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { sincronizarMeli } from "@/lib/meli/sincronizar";
-import { CONTAS, contaConectada } from "@/lib/meli/cliente";
+import { contaConectada } from "@/lib/meli/cliente";
+import { integracoesMeli } from "@/lib/meli/tokens";
 import { sincronizarAds } from "@/lib/meli/ads";
 
 export const runtime = "nodejs";
@@ -74,15 +75,20 @@ export async function GET(req: NextRequest) {
   const contas: Record<string, unknown>[] = [];
   // Uma conta por vez, de propósito: o freio de consumo é por processo, e
   // duas em paralelo dobrariam a rajada na cota dos agentes.
-  for (const c of CONTAS) {
-    if (!(await contaConectada(c.slug))) {
-      contas.push({ conta: c.slug, pulada: "não conectada" });
+  /*
+   * A lista vem do BANCO, não do código: cada empresa tem as suas contas, e
+   * uma varredura que partisse de uma lista fixa atenderia só quem estivesse
+   * nela. Privilegiado de propósito — não há usuário logado numa rotina.
+   */
+  for (const c of await integracoesMeli()) {
+    if (!(await contaConectada(c.contaCanalId))) {
+      contas.push({ conta: c.nome, pulada: "não conectada" });
       continue;
     }
     const comecou = Date.now();
     try {
       const r = await sincronizarMeli({
-        conta: c.slug,
+        conta: c.contaCanalId,
         de: diaSP(-diasPedidos),
         ate: diaSP(0),
         diasVisitas,
@@ -97,7 +103,7 @@ export async function GET(req: NextRequest) {
       let ads: Record<string, unknown> | null = null;
       if (turno === "01h") {
         try {
-          const r2 = await sincronizarAds(c.slug, {
+          const r2 = await sincronizarAds(c.contaCanalId, {
             de: diaSP(-ADS_DIAS),
             ate: diaSP(0),
             operacaoId: r.operacaoId,
@@ -110,7 +116,7 @@ export async function GET(req: NextRequest) {
       }
 
       contas.push({
-        conta: c.slug,
+        conta: c.nome,
         ok: true,
         segundos: Math.round((Date.now() - comecou) / 1000),
         pedidos: r.pedidos.gravados,
@@ -121,7 +127,7 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       // Uma conta falhando não pode impedir a outra de atualizar.
       contas.push({
-        conta: c.slug,
+        conta: c.nome,
         ok: false,
         erro: e instanceof Error ? e.message : String(e),
       });

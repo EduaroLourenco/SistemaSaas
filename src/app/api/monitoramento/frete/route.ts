@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { opcoesFrete } from "@/lib/meli/cliente";
-import { comMeli, contaDaQuery } from "@/lib/meli/rota";
+import { comMeli} from "@/lib/meli/rota";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -29,8 +29,7 @@ export async function POST(req: NextRequest) {
     ? corpo.ceps.map((c) => String(c).replace(/\D/g, "")).filter((c) => c.length === 8)
     : [];
   const quantidade = Number(corpo.quantidade ?? 1) || 1;
-  const conta = contaDaQuery(new URL(req.url));
-
+  
   if (!mlbs.length || !ceps.length) {
     return NextResponse.json(
       { erro: "Envie `mlbs` com códigos MLB e `ceps` com 8 dígitos." },
@@ -47,7 +46,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return comMeli(async () => {
+  return comMeli(new URL(req.url), async (conta) => {
     const linhas: {
       mlb: string;
       cep: string;
@@ -84,5 +83,5 @@ export async function POST(req: NextRequest) {
       },
       linhas,
     };
-  }, conta);
+  });
 }

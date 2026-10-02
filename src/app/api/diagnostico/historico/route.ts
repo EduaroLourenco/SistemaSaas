@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { meliGet, vendedor } from "@/lib/meli/cliente";
-import { comMeli, contaDaQuery } from "@/lib/meli/rota";
+import { comMeli} from "@/lib/meli/rota";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -31,9 +31,8 @@ function mesesAtras(n: number) {
 }
 
 export async function GET(req: NextRequest) {
-  const conta = contaDaQuery(new URL(req.url));
-
-  return comMeli(async () => {
+  
+  return comMeli(new URL(req.url), async (conta) => {
     const v = await vendedor(conta);
 
     type Sonda = {
@@ -121,5 +120,5 @@ export async function GET(req: NextRequest) {
         "Cada sonda olha UM dia. Total zero pode ser dia sem venda, não falta de histórico. Valor acima de zero é prova de que aquele período está acessível.",
       sondas,
     };
-  }, conta);
+  });
 }

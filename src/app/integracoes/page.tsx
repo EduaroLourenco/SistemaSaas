@@ -4,8 +4,8 @@ import { Panel, Badge } from "@/components/ui/primitives";
 import { SectionTitle } from "@/components/ui/controls";
 import { FontesDados } from "@/components/painel/fontes-dados";
 import { carregarFontes } from "@/lib/dados/fontes";
-import { situacaoContas } from "@/lib/meli/cliente";
-import { vtexConfigurada } from "@/lib/vtex/cliente";
+import { contasMeli } from "@/lib/meli/rota";
+import { lojasVtex, vtexConectada } from "@/lib/vtex/cliente";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { Info } from "lucide-react";
 
@@ -25,24 +25,31 @@ export const dynamic = "force-dynamic";
  */
 export default async function Integracoes() {
   const sb = await clienteServidor();
-  const [fontes, integracoes] = await Promise.all([
+  const [fontes, contas, integracoes, vtex] = await Promise.all([
     carregarFontes(),
+    contasMeli(),
     sb
       .from("integracoes")
-      .select("status,ultima_sincronizacao,ultimo_erro,config")
+      .select("status,ultima_sincronizacao,ultimo_erro,conta_canal_id")
       .eq("provedor", "mercado_livre"),
+    lojasVtex(),
   ]);
+
+  // A VTEX não tem apelido nem token rotativo; "conectada" é ter credencial.
+  const lojas = await Promise.all(
+    vtex.map(async (l) => ({ ...l, conectada: await vtexConectada(l.id) }))
+  );
 
   type Linha = {
     status: string;
     ultima_sincronizacao: string | null;
     ultimo_erro: string | null;
-    config: { conta?: string } | null;
+    conta_canal_id: string | null;
   };
-  // Sem a migração 19 a coluna `config.conta` não é preenchida; a tela só
-  // perde a data da última sincronização, e continua dizendo o resto.
+  // Indexado pela conta de canal: é o que amarra integração e conta desde
+  // que o apelido global deixou de identificar nada.
   const porConta = new Map(
-    ((integracoes.data ?? []) as Linha[]).map((l) => [l.config?.conta ?? "", l])
+    ((integracoes.data ?? []) as Linha[]).map((l) => [l.conta_canal_id ?? "", l])
   );
 
   const quando = (iso: string) =>
@@ -68,14 +75,14 @@ export default async function Integracoes() {
             hint="Sincroniza sozinho às 13h e à 01h (horário de Brasília)"
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {situacaoContas().map((c) => {
-              const reg = porConta.get(c.slug);
+            {contas.map((c) => {
+              const reg = porConta.get(c.id);
               const comErro = reg?.status === "erro" || reg?.status === "expirada";
               // Conectada é ter com o que renovar: a autorização guardada no
               // cofre vale tanto quanto a variável de ambiente — e dura mais.
               const conectada = c.conectada || reg?.status === "conectada";
               return (
-                <Panel key={c.slug} className="px-4 py-3.5">
+                <Panel key={c.id} className="px-4 py-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[13px] font-semibold text-ink truncate">{c.nome}</p>
@@ -96,7 +103,7 @@ export default async function Integracoes() {
                           : "Enquanto não conectada, os números desta conta entram por planilha"}
                     </p>
                     <Link
-                      href={`/api/meli/conectar?conta=${c.slug}`}
+                      href={`/api/meli/conectar?conta=${c.id}`}
                       className="text-[11.5px] font-medium text-brand hover:underline shrink-0"
                     >
                       {conectada ? "Reconectar" : "Conectar"}
@@ -116,22 +123,30 @@ export default async function Integracoes() {
             title="Loja própria · VTEX"
             hint="Sincroniza sozinha à 01h30 (horário de Brasília)"
           />
-          <Panel className="px-4 py-3.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-ink truncate">Loja própria (VTEX)</p>
-                <p className="text-[12px] text-ink-3 mt-0.5">Pedidos, itens e frete</p>
-              </div>
-              <Badge tone={vtexConfigurada() ? "up" : "neutral"}>
-                {vtexConfigurada() ? "Conectada" : "Não conectada"}
-              </Badge>
-            </div>
-            <p className="text-[11.5px] text-ink-2 mt-3 pt-3 border-t border-line">
-              Pedido criado e nunca pago não entra: a VTEX abre o pedido antes de o
-              cartão responder, e contá-lo punha a loja com quase metade de
-              cancelamento que nunca foi venda.
-            </p>
-          </Panel>
+          {lojas.length === 0 ? (
+            <Panel className="px-4 py-3.5">
+              <p className="text-[12px] text-ink-3">Nenhuma loja VTEX cadastrada.</p>
+            </Panel>
+          ) : (
+            lojas.map((l) => (
+              <Panel key={l.id} className="px-4 py-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-ink truncate">{l.nome}</p>
+                    <p className="text-[12px] text-ink-3 mt-0.5">Pedidos, itens e frete</p>
+                  </div>
+                  <Badge tone={l.conectada ? "up" : "neutral"}>
+                    {l.conectada ? "Conectada" : "Não conectada"}
+                  </Badge>
+                </div>
+                <p className="text-[11.5px] text-ink-2 mt-3 pt-3 border-t border-line">
+                  Pedido criado e nunca pago não entra: a VTEX abre o pedido antes de o
+                  cartão responder, e contá-lo punha a loja com quase metade de
+                  cancelamento que nunca foi venda.
+                </p>
+              </Panel>
+            ))
+          )}
         </div>
 
         <div className="space-y-3">

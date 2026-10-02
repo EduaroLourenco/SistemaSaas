@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buscarNoCanal } from "@/lib/meli/cliente";
-import { comMeli, contaDaQuery } from "@/lib/meli/rota";
+import { comMeli} from "@/lib/meli/rota";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -19,8 +19,7 @@ export async function GET(req: NextRequest) {
   const termo = (url.searchParams.get("termo") ?? "").trim();
   const limite = Number(url.searchParams.get("limite") ?? 20);
   const meuPreco = Number(url.searchParams.get("meuPreco"));
-  const conta = contaDaQuery(url);
-
+  
   if (termo.length < 3) {
     return NextResponse.json(
       { erro: "Informe `termo` com pelo menos 3 caracteres." },
@@ -28,7 +27,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  return comMeli(async () => {
+  return comMeli(url, async (conta) => {
     const achados = (await buscarNoCanal({ termo, limite, conta })).sort(
       (a, b) => a.preco - b.preco
     );
@@ -62,5 +61,5 @@ export async function GET(req: NextRequest) {
       // devolve tudo, com a marca `meu` — a tela decide se esconde os seus
       resultados: achados,
     };
-  }, conta);
+  });
 }

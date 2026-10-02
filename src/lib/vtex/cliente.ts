@@ -1,41 +1,108 @@
 import "server-only";
+import { integracaoDaConta, lerSegredo } from "@/lib/integracoes/cofre";
+import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 
 /**
  * Cliente da VTEX — a loja própria.
  *
  * Só leitura de pedidos. Credencial é par de chave e token de aplicação
  * (`appKey`/`appToken`), que não expira e não rotaciona: diferente do
- * Mercado Livre, aqui não existe refresh nem cofre a manter.
+ * Mercado Livre, aqui não há renovação a manter. Mas o cofre vale igual —
+ * `integracoes.config` é legível por qualquer membro via RLS, inclusive um
+ * leitor, e esse par dá acesso a todos os pedidos da loja.
+ *
+ * A credencial é POR CONTA DE CANAL, como no Meli. Antes vinha do ambiente,
+ * uma só para o servidor inteiro: a segunda empresa leria os pedidos da
+ * primeira.
  *
  * Todo valor da VTEX vem em CENTAVOS. Converter na borda, uma vez, é o que
  * impede um pedido de R$ 82,80 virar R$ 8.280 lá dentro.
  */
 
 const ENV = "vtexcommercestable.com.br";
+export const PROVEDOR_VTEX = "vtex";
 
 export class VtexNaoConfigurada extends Error {
-  constructor() {
-    super("VTEX não conectada. Defina VTEX_ACCOUNT, VTEX_APP_KEY e VTEX_APP_TOKEN.");
+  constructor(nome?: string) {
+    super(
+      nome
+        ? `A loja "${nome}" não está conectada à VTEX. Conecte em Integrações.`
+        : "VTEX não conectada. Conecte a loja em Integrações."
+    );
     this.name = "VtexNaoConfigurada";
   }
 }
 
-export function vtexConfigurada() {
-  return Boolean(
-    process.env.VTEX_ACCOUNT && process.env.VTEX_APP_KEY && process.env.VTEX_APP_TOKEN
-  );
+export type CredencialVtex = { account: string; appKey: string; appToken: string };
+
+/**
+ * Credencial do ambiente — a loja da Probel, de antes do cofre.
+ *
+ * `VTEX_CONTA_CANAL_ID` diz DE QUEM ela é, e é obrigatório para ela valer.
+ * Sem esse amarrão a credencial de uma empresa atenderia a loja de
+ * qualquer outra: a VTEX não tem linha em `integracoes` ainda, então não
+ * havia nada dizendo a quem o par de chaves pertence.
+ *
+ * Num SaaS isso não escala (não há variável de ambiente por cliente) e nem
+ * precisa: quem conecta pela tela grava no cofre. Some sozinho quando
+ * gravar.
+ */
+function sementeDoAmbiente(contaCanalId: string): CredencialVtex | null {
+  const dona = process.env.VTEX_CONTA_CANAL_ID;
+  if (!dona || dona !== contaCanalId) return null;
+
+  const account = process.env.VTEX_ACCOUNT;
+  const appKey = process.env.VTEX_APP_KEY;
+  const appToken = process.env.VTEX_APP_TOKEN;
+  return account && appKey && appToken ? { account, appKey, appToken } : null;
 }
 
-function credenciais() {
-  const conta = process.env.VTEX_ACCOUNT;
-  const chave = process.env.VTEX_APP_KEY;
-  const token = process.env.VTEX_APP_TOKEN;
-  if (!conta || !chave || !token) throw new VtexNaoConfigurada();
+/** A credencial da conta: cofre primeiro, ambiente como recurso. */
+export async function credencialDaConta(contaCanalId: string): Promise<CredencialVtex | null> {
+  const integ = await integracaoDaConta(PROVEDOR_VTEX, contaCanalId);
+  const guardada = await lerSegredo<Partial<CredencialVtex>>(integ);
+
+  // `account` não é segredo e pode estar em `config`; a chave e o token, não.
+  const account =
+    guardada?.account ??
+    (typeof integ?.config.account === "string" ? integ.config.account : undefined);
+
+  if (account && guardada?.appKey && guardada.appToken) {
+    return { account, appKey: guardada.appKey, appToken: guardada.appToken };
+  }
+  return sementeDoAmbiente(contaCanalId);
+}
+
+/** As lojas VTEX cadastradas, de todas as operações. Para a rotina agendada. */
+export async function lojasVtex(): Promise<{ id: string; operacaoId: string; nome: string }[]> {
+  const sb = clientePrivilegiado();
+  const { data: canais } = await sb.from("canais").select("id").eq("codigo", PROVEDOR_VTEX);
+  const ids = (canais ?? []).map((c) => c.id as string);
+  if (!ids.length) return [];
+
+  const { data } = await sb
+    .from("contas_canal")
+    .select("id,operacao_id,nome")
+    .in("canal_id", ids)
+    .eq("ativa", true);
+  return (data ?? []).map((c) => ({
+    id: c.id as string,
+    operacaoId: c.operacao_id as string,
+    nome: c.nome as string,
+  }));
+}
+
+/** A conta tem com que falar com a VTEX. */
+export async function vtexConectada(contaCanalId: string) {
+  return Boolean(await credencialDaConta(contaCanalId));
+}
+
+function montarAcesso(c: CredencialVtex) {
   return {
-    base: `https://${conta}.${ENV}`,
+    base: `https://${c.account}.${ENV}`,
     headers: {
-      "X-VTEX-API-AppKey": chave,
-      "X-VTEX-API-AppToken": token,
+      "X-VTEX-API-AppKey": c.appKey,
+      "X-VTEX-API-AppToken": c.appToken,
       Accept: "application/json",
     },
   };
@@ -44,12 +111,14 @@ function credenciais() {
 const reais = (centavos: number | null | undefined) =>
   centavos == null ? 0 : Number((centavos / 100).toFixed(2));
 
-async function api<T>(caminho: string, tentativa = 0): Promise<T> {
-  const { base, headers } = credenciais();
+type Acesso = ReturnType<typeof montarAcesso>;
+
+async function api<T>(acesso: Acesso, caminho: string, tentativa = 0): Promise<T> {
+  const { base, headers } = acesso;
   const r = await fetch(base + caminho, { headers, cache: "no-store" });
   if ((r.status === 429 || r.status >= 500) && tentativa < 3) {
     await new Promise((s) => setTimeout(s, 800 * (tentativa + 1)));
-    return api<T>(caminho, tentativa + 1);
+    return api<T>(acesso, caminho, tentativa + 1);
   }
   if (!r.ok) {
     throw new Error(`VTEX respondeu ${r.status} em ${caminho.split("?")[0]}`);
@@ -125,12 +194,28 @@ async function comLimite<T, R>(itens: T[], n: number, fn: (x: T) => Promise<R>):
  * um pedido por chamada. Por isso a janela do dia a dia é curta: 30 dias
  * da loja são ~1.400 chamadas, e é o que torna a leitura cara.
  */
-export async function pedidos({ de, ate }: { de: string; ate: string }): Promise<PedidoVtex[]> {
+export async function pedidos({
+  de,
+  ate,
+  conta,
+  nome,
+}: {
+  de: string;
+  ate: string;
+  /** Id de `contas_canal` — qual loja. */
+  conta: string;
+  nome?: string;
+}): Promise<PedidoVtex[]> {
+  const credencial = await credencialDaConta(conta);
+  if (!credencial) throw new VtexNaoConfigurada(nome);
+  const acesso = montarAcesso(credencial);
+
   const janela = `creationDate:[${de}T00:00:00.000Z TO ${ate}T23:59:59.999Z]`;
   const ids: string[] = [];
 
   for (let pagina = 1; pagina <= 30; pagina++) {
     const l = await api<ListaOms>(
+      acesso,
       `/api/oms/pvt/orders?f_creationDate=${encodeURIComponent(janela)}&per_page=100&page=${pagina}`
     );
     ids.push(...(l.list ?? []).map((o) => o.orderId));
@@ -138,7 +223,7 @@ export async function pedidos({ de, ate }: { de: string; ate: string }): Promise
   }
 
   const detalhes = await comLimite(ids, 4, (id) =>
-    api<DetalheOms>(`/api/oms/pvt/orders/${id}`).catch(() => null)
+    api<DetalheOms>(acesso, `/api/oms/pvt/orders/${id}`).catch(() => null)
   );
 
   const saida: PedidoVtex[] = [];

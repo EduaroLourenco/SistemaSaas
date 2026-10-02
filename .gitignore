@@ -13,3 +13,6 @@ tmp/
 
 .vercel
 .env*
+
+# Stub que os scripts com jiti criam para o alias de `server-only`.
+vazio.cjs

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { sincronizarMeli } from "@/lib/meli/sincronizar";
-import { MeliNaoConfigurado, MeliBloqueado, CONTAS } from "@/lib/meli/cliente";
+import { MeliNaoConfigurado, MeliBloqueado } from "@/lib/meli/cliente";
+import { contaEditavel, contasMeli } from "@/lib/meli/rota";
 
 export const runtime = "nodejs";
 /**
@@ -15,7 +16,7 @@ export const maxDuration = 300;
  * Puxa do Mercado Livre e grava no banco.
  *
  * POST /api/meli/sincronizar
- *   { conta?: "principal"|"segunda", de?, ate?, diasVisitas?, etapas? }
+ *   { conta: "<id de contas_canal>", de?, ate?, diasVisitas?, etapas? }
  *
  * É POST porque escreve. GET seria pré-carregado por navegador e
  * acelerador de link, e uma sincronização disparada por engano gasta cota
@@ -41,10 +42,36 @@ export async function POST(req: NextRequest) {
   try {
     corpo = await req.json();
   } catch {
-    // Corpo vazio é uso legítimo: sincroniza a conta principal com o padrão.
+    // Corpo vazio cai na conta padrão da operação, logo abaixo.
   }
 
-  const conta = corpo.conta === "segunda" ? "segunda" : "principal";
+  /*
+   * Sem conta no corpo, vai a padrão da operação de quem está logado. Era
+   * "principal" fixo — o que, num SaaS, sincronizaria a conta de outra
+   * empresa.
+   */
+  const contas = await contasMeli();
+  const pedida = corpo.conta ?? contas.find((c) => c.padrao)?.id ?? contas[0]?.id;
+  if (!pedida) {
+    return NextResponse.json(
+      { erro: "Nenhuma conta de Mercado Livre cadastrada.", codigo: "sem_conta" },
+      { status: 409 }
+    );
+  }
+
+  const { conta: alvo, motivo } = await contaEditavel(pedida);
+  if (!alvo) {
+    return NextResponse.json(
+      {
+        erro:
+          motivo === "sem_permissao"
+            ? "Seu acesso é de leitura."
+            : "Conta não encontrada.",
+      },
+      { status: motivo === "sem_permissao" ? 403 : 404 }
+    );
+  }
+  const conta = alvo.id;
   const ISO = /^\d{4}-\d{2}-\d{2}$/;
   if ((corpo.de && !ISO.test(corpo.de)) || (corpo.ate && !ISO.test(corpo.ate))) {
     return NextResponse.json(
@@ -79,7 +106,7 @@ export async function POST(req: NextRequest) {
         {
           erro: e.message,
           codigo: "nao_configurado",
-          contas: CONTAS.map((c) => ({ slug: c.slug, nome: c.nome, variavel: c.variavel })),
+          contas,
         },
         { status: 409 }
       );
