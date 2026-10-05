@@ -273,10 +273,49 @@ console.log(`com espaço para baixar o preço: ${comGanho} de ${itens.filter((i)
 
 /* ── Ordem: receita primeiro, como pedido ───────────────── */
 
+/*
+ * O mesmo anúncio aparece em várias campanhas candidatas, e cada uma tem
+ * redução de tarifa diferente — logo faixa de comissão diferente, logo
+ * preço de tabela diferente. Repetido assim, não se sabe qual seguir.
+ *
+ * Marca, por anúncio, a candidata que chega no preço MAIS BAIXO entre as
+ * aceitáveis. É a que vale aceitar; as outras linhas do mesmo MLB ficam
+ * como contexto.
+ */
+const melhorPorMlb = new Map();
+for (const it of itens) {
+  if (it.menor == null || it.situacaoPreco !== "Dá para baixar") continue;
+  const atual = melhorPorMlb.get(it.mlb);
+  if (atual == null || it.menor < atual) melhorPorMlb.set(it.mlb, it.menor);
+}
+/*
+ * UMA linha por anúncio, não todas as que empatam no mínimo.
+ *
+ * Várias candidatas chegam ao mesmo preço (um anúncio tinha cinco), e
+ * marcar as cinco devolve a mesma confusão que a marca existe para
+ * resolver: 297 marcas para 127 anúncios. Fica a primeira, e o resto do
+ * grupo é contexto.
+ */
+const jaMarcado = new Set();
+const porAnuncio = new Map();
+for (const it of itens) porAnuncio.set(it.mlb, (porAnuncio.get(it.mlb) ?? 0) + 1);
+
+for (const it of itens) {
+  const ehMinimo =
+    it.situacaoPreco === "Dá para baixar" &&
+    it.menor != null &&
+    Math.abs(it.menor - (melhorPorMlb.get(it.mlb) ?? Infinity)) < 0.005;
+  it.melhorOpcao = ehMinimo && !jaMarcado.has(it.mlb) ? "Sim" : "";
+  if (it.melhorOpcao) jaMarcado.add(it.mlb);
+  it.candidatasDoAnuncio = porAnuncio.get(it.mlb) ?? 1;
+}
+
 itens.sort(
   (a, b) =>
     b.receita90 - a.receita90 ||
     b.receitaTotal - a.receitaTotal ||
+    // Dentro do mesmo anúncio, a melhor opção primeiro.
+    (b.melhorOpcao === "Sim" ? 1 : 0) - (a.melhorOpcao === "Sim" ? 1 : 0) ||
     (b.podeBaixar ?? 0) - (a.podeBaixar ?? 0)
 );
 
@@ -308,6 +347,8 @@ const COLS = [
   { h: "Campanha", k: "promo", w: 26, suave: true },
   { h: "Status", k: "status", w: 14, suave: true },
   { h: "Decisão", k: "decisao", w: 16, forte: true },
+  { h: "Melhor opção do anúncio", k: "melhorOpcao", w: 11, forte: true },
+  { h: "Campanhas do anúncio", k: "candidatasDoAnuncio", w: 10, fmt: "#,##0", suave: true },
   { h: "Preço cheio", k: "original", w: 12, fmt: "#,##0.00" },
   { h: "Proposta do ML", k: "proposta", w: 13, fmt: "#,##0.00" },
   { h: "Desc. proposto", k: "descontoProposta", w: 12, fmt: "0.0%" },
@@ -375,6 +416,11 @@ for (const it of itens) {
     size: 9, bold: true, color: { argb: TOM_DEC[it.decisao] ?? SUAVE },
   };
   /* Ganho relevante em destaque: é a lista de trabalho do painel. */
+  if (it.melhorOpcao === "Sim") {
+    linha.getCell(COLS.findIndex((c) => c.k === "melhorOpcao") + 1).font = {
+      size: 9, bold: true, color: { argb: "FF15803D" },
+    };
+  }
   if ((it.podeBaixar ?? 0) > 0.5) {
     for (const k of ["menor", "podeBaixar", "podeBaixarPct"]) {
       linha.getCell(COLS.findIndex((c) => c.k === k) + 1).font = {
