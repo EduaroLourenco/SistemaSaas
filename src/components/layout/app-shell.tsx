@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV, NAV_FOOTER, MOBILE_TABS, type NavGroup } from "@/lib/nav";
+import { SeletorEmpresa } from "./seletor-empresa";
 import {
   ChevronDown,
   ChevronsUpDown,
@@ -311,6 +312,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="hidden md:block h-5 w-px bg-line" />
 
+          <SeletorEmpresa />
 
           <div className="flex-1" />
 
