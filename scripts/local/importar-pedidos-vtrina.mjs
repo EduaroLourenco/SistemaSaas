@@ -86,15 +86,28 @@ for (let i = 2; i <= s.rowCount; i++) {
   const data = t(r.getCell(col.data_criacao).value).slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) continue;
 
+  /*
+   * Quantos grupos de item o arquivo traz VARIA.
+   *
+   * A Vtrina exporta um bloco `item_pedido_N_*` por item do pedido mais
+   * cheio da janela: a exportação de 30/09 tinha cinco, a de 05/10 tem
+   * quatro. O laço fixo em cinco pedia uma coluna inexistente, e
+   * `getCell(undefined)` derruba o importador inteiro — a carga não entrava
+   * e o canal ficava com dado velho sem ninguém notar.
+   */
   const itens = [];
-  for (let k = 1; k <= 5; k++) {
-    const sku = t(r.getCell(col[`item_pedido_${k}_sku`])?.value);
+  for (let k = 1; col[`item_pedido_${k}_sku`] != null; k++) {
+    const sku = t(r.getCell(col[`item_pedido_${k}_sku`]).value);
     if (!sku) continue;
+    const celula = (campo) => {
+      const c = col[`item_pedido_${k}_${campo}`];
+      return c != null ? r.getCell(c).value : null;
+    };
     itens.push({
       sku,
-      titulo: t(r.getCell(col[`item_pedido_${k}_nome`]).value),
-      quantidade: Math.max(1, Math.round(num(r.getCell(col[`item_pedido_${k}_quantidade`]).value))),
-      preco: num(r.getCell(col[`item_pedido_${k}_preco`]).value),
+      titulo: t(celula("nome")),
+      quantidade: Math.max(1, Math.round(num(celula("quantidade")))),
+      preco: num(celula("preco")),
     });
   }
 
@@ -106,7 +119,10 @@ for (let i = 2; i <= s.rowCount; i++) {
     cancelado: /cancel/i.test(status),
     total: num(r.getCell(col.total).value),
     frete: num(r.getCell(col.total_frete).value),
-    freteVendedor: num(r.getCell(col["dados_financeiros_Custo de Frete (Vendedor)"]).value) || null,
+    freteVendedor: (() => {
+      const c = col["dados_financeiros_Custo de Frete (Vendedor)"];
+      return c != null ? num(r.getCell(c).value) || null : null;
+    })(),
     itens,
   });
   porCanal.set(conta.id, lista);
