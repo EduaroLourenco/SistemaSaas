@@ -1,7 +1,6 @@
 import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { paginar } from "@/lib/dados/paginar";
-import instantaneoBruto from "./instantaneo-meli.json";
 
 /**
  * O relatório da operação, montado inteiro no servidor.
@@ -18,9 +17,9 @@ import instantaneoBruto from "./instantaneo-meli.json";
  *    canais de planilha, e onde não existe a conversão vem `null`, nunca
  *    zero.
  *  - Dia em andamento não entra em média. Ele aparece marcado à parte.
- *  - Estoque e posição de catálogo vêm de `instantaneo-meli.json` enquanto
- *    a migração 21 não roda. O arquivo carrega a hora em que foi lido, e a
- *    tela mostra essa hora.
+ *  - Estoque e posição de catálogo vêm do BANCO: `anuncios.estoque` e
+ *    `anuncio_catalogo_diario`, a linha mais recente de cada anúncio. Vinham
+ *    de um arquivo gerado à mão, e ficaram uma semana atrasados sem avisar.
  */
 
 /* ══════════════════════════════════════════════════════════════
@@ -279,11 +278,27 @@ function variacao(
   };
 }
 
-type Instantaneo = typeof instantaneoBruto;
-type AnuncioInstantaneo = Instantaneo["contas"]["principal"]["anuncios"][number] & {
+/**
+ * A forma do retrato por conta e anúncio.
+ *
+ * Era `typeof` de um JSON de 672 KB, importado só para servir de tipo — e o
+ * arquivo inteiro ia para o pacote por causa disso. Agora é declarado, e o
+ * dado vem do banco.
+ */
+type AnuncioInstantaneo = {
+  mlb: string;
+  sku: string | null;
+  titulo: string;
+  tipo: string;
+  /** Vocabulário do canal: active | paused | closed | encerrado. */
+  situacao: string;
+  estoque: number | null;
+  vendidos: number | null;
   precoVitrine?: number | null;
   precoVisivel?: number | null;
   campanha?: string | null;
+  emCatalogo?: boolean;
+  elegivelCatalogo?: boolean | null;
   catalogo?: {
     status: string | null;
     precoParaGanhar: number | null;
@@ -294,6 +309,26 @@ type AnuncioInstantaneo = Instantaneo["contas"]["principal"]["anuncios"][number]
     vencedorPreco: number | null;
     alavancas: { id: string; situacao: string }[];
   };
+};
+
+type Instantaneo = {
+  geradoEm: string;
+  contas: Record<
+    string,
+    {
+      nome: string;
+      seller: number;
+      visitasConta: { dia: string; total: number }[];
+      anuncios: AnuncioInstantaneo[];
+      reputacao: {
+        nivel: string | null;
+        categoria: string | null;
+        reclamacoes: number | null;
+        cancelamentos: number | null;
+      };
+      perguntasSemResposta: number | null;
+    }
+  >;
 };
 
 const ROTULO_ALAVANCA: Record<string, string> = {
@@ -333,7 +368,7 @@ export async function montarRelatorio(
   /* ── Leitura ── */
   const [contas, pedidos, itens, visitasItem, anunciosDb, produtos, precosMinimos, metas, anotacoesDb, ads] =
     await Promise.all([
-      sb.from("contas_canal").select("id,nome,operacao_id,canal_id,canais(nome,codigo)").then((r) => r.data ?? []),
+      sb.from("contas_canal").select("id,nome,identificador,operacao_id,canal_id,canais(nome,codigo)").then((r) => r.data ?? []),
       paginar<{ id: string; conta_canal_id: string; data: string; total: number; cancelado: boolean }>(() =>
         sb.from("pedidos").select("id,conta_canal_id,data,total,cancelado").gte("data", inicioAno).order("data")
       ),
@@ -345,8 +380,13 @@ export async function montarRelatorio(
       paginar<{ anuncio_id: string; data: string; visitas: number }>(() =>
         sb.from("anuncio_desempenho_diario").select("anuncio_id,data,visitas").gte("data", maisDias(hoje, -120)).order("data")
       ),
-      paginar<{ id: string; codigo_externo: string; titulo: string; tipo: string; conta_canal_id: string; sku_canal: string | null; produto_id: string | null; sincronizado_em: string | null }>(() =>
-        sb.from("anuncios").select("id,codigo_externo,titulo,tipo,conta_canal_id,sku_canal,produto_id,sincronizado_em")
+      paginar<{
+        id: string; codigo_externo: string; titulo: string; tipo: string; conta_canal_id: string;
+        sku_canal: string | null; produto_id: string | null; sincronizado_em: string | null;
+        status: string | null; estoque: number | null; preco_atual: number | null;
+        vendidos_total: number | null;
+      }>(() =>
+        sb.from("anuncios").select("id,codigo_externo,titulo,tipo,conta_canal_id,sku_canal,produto_id,sincronizado_em,status,estoque,preco_atual,vendidos_total")
       ),
       paginar<{ id: string; sku: string; titulo: string; custo_unitario: number | null; embalagem: number | null; aliquota_impostos: number | null; curva: string | null }>(() =>
         sb.from("produtos").select("id,sku,titulo,custo_unitario,embalagem,aliquota_impostos,curva")
@@ -361,7 +401,138 @@ export async function montarRelatorio(
       ),
     ]);
 
-  const instantaneo = instantaneoBruto as Instantaneo;
+  /*
+   * ── Catálogo, estoque e visita da conta: do BANCO ──
+   *
+   * Isto vinha de `instantaneo-meli.json`, um arquivo gerado à mão e
+   * commitado. O comentário do topo dizia "enquanto a migração 21 não
+   * rodou" — ela rodou, e o arquivo continuou sendo a fonte. Resultado: a
+   * seção de estoque e a de catálogo mostravam o retrato de 28/09 enquanto
+   * `anuncio_catalogo_diario` já tinha 1.957 linhas, a mais recente de hoje.
+   *
+   * O dado velho não se anuncia: a página dizia "ruptura na curva A" com
+   * estoque de uma semana atrás, e quem lesse ia repor o que já foi
+   * reposto.
+   */
+  const [catalogoDiario, visitasConta, reputacaoDiaria] = await Promise.all([
+    paginar<{
+      anuncio_id: string; data: string; situacao: string; preco_atual: number | null;
+      preco_para_ganhar: number | null; fatia_visita: string | null; dividindo_primeiro: number | null;
+      vencedor_preco: number | null; elegivel: boolean | null; motivos: string[] | null;
+      alavancas: { id: string; situacao: string }[] | null;
+    }>(() =>
+      sb
+        .from("anuncio_catalogo_diario")
+        .select("anuncio_id,data,situacao,preco_atual,preco_para_ganhar,fatia_visita,dividindo_primeiro,vencedor_preco,elegivel,motivos,alavancas")
+        .gte("data", maisDias(hoje, -14))
+        .order("data", { ascending: false })
+    ),
+    paginar<{ conta_canal_id: string; data: string; visitas: number }>(() =>
+      sb
+        .from("vendas_diarias")
+        .select("conta_canal_id,data,visitas")
+        .gte("data", maisDias(hoje, -120))
+        .order("data")
+    ),
+    paginar<{ conta_canal_id: string; data: string; nivel: string | null; categoria: string | null; reclamacoes_taxa: number | null; cancelamentos_taxa: number | null; perguntas_sem_resposta: number | null }>(() =>
+      sb
+        .from("conta_reputacao_diaria")
+        .select("conta_canal_id,data,nivel,categoria,reclamacoes_taxa,cancelamentos_taxa,perguntas_sem_resposta")
+        .order("data", { ascending: false })
+    ),
+  ]);
+
+  /*
+   * O instantâneo, montado do banco com a MESMA FORMA do arquivo antigo.
+   *
+   * Trocar só a fonte, e não a estrutura, mantém os vinte pontos que a
+   * consomem funcionando sem alteração. Reescrever cada um deles para ler
+   * do banco direto seria um diff dez vezes maior, com dez vezes mais
+   * chance de errar um campo.
+   */
+  const catalogoPorAnuncio = new Map<string, (typeof catalogoDiario)[number]>();
+  for (const c of catalogoDiario) {
+    // A lista vem com a data mais recente primeiro: o primeiro que chega vence.
+    if (!catalogoPorAnuncio.has(c.anuncio_id)) catalogoPorAnuncio.set(c.anuncio_id, c);
+  }
+
+  /* A leitura mais recente de cada conta: a lista vem em ordem decrescente. */
+  const reputacaoPorConta = new Map<string, (typeof reputacaoDiaria)[number]>();
+  for (const r of reputacaoDiaria) {
+    if (!reputacaoPorConta.has(r.conta_canal_id)) reputacaoPorConta.set(r.conta_canal_id, r);
+  }
+
+  const visitasPorConta = new Map<string, { dia: string; total: number }[]>();
+  for (const v of visitasConta) {
+    const lista = visitasPorConta.get(v.conta_canal_id) ?? [];
+    lista.push({ dia: String(v.data).slice(0, 10), total: Number(v.visitas) || 0 });
+    visitasPorConta.set(v.conta_canal_id, lista);
+  }
+
+  const instantaneo = {
+    geradoEm: new Date().toISOString(),
+    contas: Object.fromEntries(
+      (contas as Record<string, unknown>[]).map((c) => {
+        const id = String(c.id);
+        const doBanco = anunciosDb.filter((a) => a.conta_canal_id === id);
+        return [
+          id,
+          {
+            nome: String(c.nome),
+            // O `seller` do arquivo era o user_id do Meli; aqui vem do cadastro.
+            seller: Number(c.identificador ?? 0),
+            visitasConta: visitasPorConta.get(id) ?? [],
+            reputacao: {
+              nivel: reputacaoPorConta.get(id)?.nivel ?? null,
+              categoria: reputacaoPorConta.get(id)?.categoria ?? null,
+              reclamacoes: reputacaoPorConta.get(id)?.reclamacoes_taxa ?? null,
+              cancelamentos: reputacaoPorConta.get(id)?.cancelamentos_taxa ?? null,
+            },
+            perguntasSemResposta: reputacaoPorConta.get(id)?.perguntas_sem_resposta ?? null,
+            anuncios: doBanco.map((a) => {
+              const cat = catalogoPorAnuncio.get(a.id);
+              return {
+                mlb: String(a.codigo_externo),
+                sku: a.sku_canal,
+                titulo: a.titulo,
+                tipo: a.tipo === "premium" ? "Premium" : a.tipo === "classico" ? "Clássico" : "—",
+                // O banco grava 'ativo'/'pausado'; o arquivo usava o rótulo do canal.
+                situacao:
+                  a.status === "ativo" ? "active"
+                    : a.status === "pausado" ? "paused"
+                      : a.status === "finalizado" ? "closed"
+                        : "encerrado",
+                estoque: a.estoque,
+                vendidos: a.vendidos_total,
+                precoVitrine: a.preco_atual,
+                precoVisivel: a.preco_atual,
+                campanha: null as string | null,
+                /*
+                 * "Está no catálogo" é ter linha em `anuncio_catalogo_diario`
+                 * competindo: `not_listed` é elegível e FORA, que é
+                 * justamente a oportunidade que a seção aponta.
+                 */
+                emCatalogo: Boolean(cat && cat.situacao !== "not_listed"),
+                elegivelCatalogo: cat?.elegivel ?? null,
+                catalogo: cat
+                  ? {
+                      status: cat.situacao,
+                      precoParaGanhar: cat.preco_para_ganhar,
+                      precoAtual: cat.preco_atual,
+                      fatiaVisita: cat.fatia_visita,
+                      dividindoPrimeiro: cat.dividindo_primeiro,
+                      motivo: cat.motivos ?? [],
+                      vencedorPreco: cat.vencedor_preco,
+                      alavancas: cat.alavancas ?? [],
+                    }
+                  : undefined,
+              };
+            }),
+          },
+        ];
+      })
+    ),
+  } as unknown as Instantaneo;
 
   /* ── Índices ── */
   type Conta = { id: string; nome: string; canal: string; codigo: string; temVisita: boolean };
@@ -1160,12 +1331,6 @@ export async function montarRelatorio(
       quem: "eduardo",
     },
     {
-      titulo: "Migração 21 não rodada",
-      detalhe: "Cria estoque no anúncio, série de catálogo, frete detalhado e a tabela de mídia externa.",
-      impacto: "Estoque e catálogo vêm de instantâneo em arquivo, não do banco, e não têm série histórica.",
-      quem: "eduardo",
-    },
-    {
       titulo: "Mídia do Google Ads não entra",
       detalhe: "Não há tabela nem tela para a mídia do site. O Product Ads do Mercado Livre já vem por API, anúncio por anúncio.",
       impacto: "A leitura de tráfego pago cobre o Mercado Livre e deixa de fora a mídia que leva gente à Loja própria, que é 88% da receita.",
@@ -1254,6 +1419,13 @@ export async function montarRelatorio(
     pendencias,
     anotacoes,
     reputacao: Object.values(instantaneo.contas)
+      /*
+       * Só conta com anúncio e leitura de reputação. As demais linhas de
+       * `contas_canal` são de canal sem API — entravam como "Conta
+       * principal" com tudo vazio, quinze vezes, porque o retrato agora
+       * nasce do cadastro inteiro e não de duas contas fixas.
+       */
+      .filter((c) => c.anuncios.length > 0 && c.reputacao.nivel != null)
       .filter((c) => !contaEscolhida || c.nome === contaEscolhida.nome)
       .map((c) => ({
       conta: c.nome,
