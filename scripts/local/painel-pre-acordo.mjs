@@ -90,6 +90,33 @@ if (!ws) {
   process.exit(1);
 }
 
+/*
+ * A tabela de preço por rebate, da aba irmã.
+ *
+ * O rebate É a redução da comissão: Clássico 11,5% com rebate de 7% faz o
+ * Meli cobrar 4,5%. A coluna "Rebate de 7%" já tem esses 4,5% dentro, e por
+ * isso é mais barata que a de 5%. Não são duas contas, é a mesma.
+ *
+ * Serve para conferir se o preço mínimo que entrou no acordo é o que a
+ * tabela do rebate PEDIDO permite — e em outubro quinze linhas Clássico com
+ * rebate de 7% vieram 11,1% acima, que é exatamente dividir a tabela por
+ * 0,9.
+ */
+const tabelaRebate = new Map();
+{
+  const wr = wb.worksheets.find((w) => /rebate/i.test(w.name) && /pre[cç]/i.test(w.name));
+  if (wr) {
+    for (let r = 2; r <= wr.rowCount; r++) {
+      const mlb = txt(wr.getCell(r, 1).value).trim();
+      if (!/^MLB\d+/.test(mlb)) continue;
+      tabelaRebate.set(mlb, { 5: num(wr.getCell(r, 6).value), 6: num(wr.getCell(r, 7).value), 7: num(wr.getCell(r, 8).value), 8: num(wr.getCell(r, 9).value) });
+    }
+    console.log(`tabela por rebate: ${tabelaRebate.size} MLBs (aba "${wr.name}")`);
+  } else {
+    console.log('aviso: não achei a aba "Preços por rebate" — as colunas de tabela sairão vazias');
+  }
+}
+
 let cab = 0;
 for (let r = 1; r <= Math.min(20, ws.rowCount); r++) {
   const linha = [];
@@ -150,6 +177,18 @@ for (let r = cab + 1; r <= ws.rowCount; r++) {
     acMes: num(ws.getCell(r, 7).value),
     acRelampago: num(ws.getCell(r, 11).value),
     acOfertaDia: num(ws.getCell(r, 15).value),
+    /*
+     * O rebate é POR ANÚNCIO, não por patamar. Em outubro: 32 linhas a 5%,
+     * 28 a 7%, 2 a 6%. A primeira versão disto rotulava as colunas como
+     * "Mês (5%)" / "Oferta dia (6%)" / "Relâmpago (7%)", como se o patamar
+     * definisse o rebate, e mentia em 30 das 63 linhas.
+     *
+     * (No bloco da oferta do dia o cabeçalho da planilha troca os nomes: a
+     * coluna 16 traz o valor em R$ e a 17 a porcentagem.)
+     */
+    rebMes: num(ws.getCell(r, 6).value),
+    rebRelampago: num(ws.getCell(r, 12).value),
+    rebOfertaDia: num(ws.getCell(r, 17).value),
     retornoMeli: retorno,
     retornoClasse: lido.classe,
     crivelMeli: lido.crivel,
@@ -374,6 +413,22 @@ for (const it of itens) {
   it.dia = avaliar(it.acOfertaDia, it.regras, "dia");
   it.rel = avaliar(it.acRelampago, it.regras, "rel");
 
+  /* O acordo respeita a tabela do rebate que foi pedido? */
+  it.rebMesTxt = it.rebMes != null ? `${Math.round(it.rebMes * 100)}%` : "";
+  const tb = tabelaRebate.get(it.mlb);
+  it.tabelaDoRebate = tb && it.rebMes != null ? (tb[Math.round(it.rebMes * 100)] ?? null) : null;
+  it.acordoMenosTabela = it.tabelaDoRebate != null && it.acMes != null ? it.acMes - it.tabelaDoRebate : null;
+  it.acordoMenosTabelaPct =
+    it.acordoMenosTabela != null && it.tabelaDoRebate ? it.acordoMenosTabela / it.tabelaDoRebate : null;
+  it.acordoBateTabela =
+    it.acordoMenosTabelaPct == null
+      ? ""
+      : Math.abs(it.acordoMenosTabelaPct) < 0.005
+        ? "Bate"
+        : it.acordoMenosTabelaPct > 0
+          ? "ACORDO ACIMA DA TABELA"
+          : "Acordo abaixo da tabela";
+
   const v = vivo.get(it.mlb);
   const b = porMlb.get(it.mlb);
   it.vitrine = v?.price != null ? Number(v.price) : b?.preco_atual != null ? Number(b.preco_atual) : null;
@@ -502,9 +557,14 @@ const COLS = [
   { h: "Receita 90d", k: "receita90", w: 12, b: "ident", fmt: "#,##0.00" },
   { h: "Un. 90d", k: "unidades90", w: 8, b: "ident", fmt: "#,##0" },
 
-  { h: "Mês (5%)", k: "acMes", w: 12, b: "acordo", fmt: "#,##0.00" },
-  { h: "Oferta dia (6%)", k: "acOfertaDia", w: 12, b: "acordo", fmt: "#,##0.00" },
-  { h: "Relâmpago (7%)", k: "acRelampago", w: 12, b: "acordo", fmt: "#,##0.00" },
+  { h: "Rebate pedido", k: "rebMesTxt", w: 11, b: "acordo", forte: true },
+  { h: "Preço mínimo do mês", k: "acMes", w: 13, b: "acordo", fmt: "#,##0.00" },
+  { h: "Tabela desse rebate", k: "tabelaDoRebate", w: 13, b: "acordo", fmt: "#,##0.00" },
+  { h: "Acordo − tabela", k: "acordoMenosTabela", w: 12, b: "acordo", fmt: "#,##0.00", forte: true },
+  { h: "Acordo − tabela %", k: "acordoMenosTabelaPct", w: 12, b: "acordo", fmt: "0.0%", forte: true },
+  { h: "Acordo respeita a tabela?", k: "acordoBateTabela", w: 22, b: "acordo", forte: true },
+  { h: "Oferta do dia", k: "acOfertaDia", w: 12, b: "acordo", fmt: "#,##0.00" },
+  { h: "Relâmpago", k: "acRelampago", w: 12, b: "acordo", fmt: "#,##0.00" },
   { h: "Resposta do Meli", k: "retornoClasse", w: 28, b: "acordo", forte: true },
   { h: "Crível que o Meli deu", k: "crivelMeli", w: 13, b: "acordo", fmt: "#,##0.00" },
   { h: "Configurado bate com o crível?", k: "bateCrivel", w: 13, b: "acordo" },
@@ -640,6 +700,15 @@ for (const it of itens) {
   pinta("mesEstado", TOM_ESTADO, it.mes.estado);
   pinta("diaEstado", TOM_ESTADO, it.dia.estado);
   pinta("relEstado", TOM_ESTADO, it.rel.estado);
+
+  const TOM_TABELA = {
+    "ACORDO ACIMA DA TABELA": "FFB91C1C",
+    "Acordo abaixo da tabela": "FFB45309",
+    Bate: "FF15803D",
+  };
+  pinta("acordoBateTabela", TOM_TABELA, it.acordoBateTabela);
+  pinta("acordoMenosTabela", TOM_TABELA, it.acordoBateTabela);
+  pinta("acordoMenosTabelaPct", TOM_TABELA, it.acordoBateTabela);
 
   /* Fora de estoque pesa tanto quanto preço errado: não vende de qualquer jeito. */
   if (it.estoque != null && Number(it.estoque) <= 0) {

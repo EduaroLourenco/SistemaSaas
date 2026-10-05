@@ -8,6 +8,13 @@ dado entra por aqui.
 Todos leem `.env.local` para chegar no Supabase, e nenhum grava segredo
 em lugar nenhum.
 
+`instantaneo-meli.mjs` saiu da lista: ele gravava
+`src/lib/dados/instantaneo-meli.json`, que o relatório não lê mais —
+estoque, preço visível, catálogo, visitas e reputação passaram a vir do
+banco, gravados pelo próprio `sincronizar-meli.mjs`. O arquivo ainda está
+no repositório e tem um erro de sintaxe de nascença (`/^//`), então não
+roda; é código morto esperando ser apagado.
+
 ```powershell
 # 1. Mercado Livre, as duas contas (~7 min)
 node --conditions=react-server scripts/local/sincronizar-meli.mjs
@@ -15,17 +22,14 @@ node --conditions=react-server scripts/local/sincronizar-meli.mjs
 # 2. Loja própria (~3 min)
 node --conditions=react-server scripts/local/sincronizar-vtex.mjs 2026-08-01 2026-09-28
 
-# 3. Estoque, preço visível e catálogo (~6 min)
-node scripts/local/instantaneo-meli.mjs
-
-# 4. Publicidade do Mercado Livre (~1 min)
+# 3. Publicidade do Mercado Livre (~1 min)
 node --conditions=react-server scripts/local/sincronizar-ads.mjs 2026-09-22 2026-09-28
 
-# 5. Canais sem API, a partir da exportação da Vtrina
+# 4. Canais sem API, a partir da exportação da Vtrina
 node scripts/local/importar-pedidos-vtrina.mjs
 ```
 
-## Antes de rodar o 1 e o 3
+## Antes de rodar o 1
 
 O token de acesso do Mercado Livre dura 6 horas. Renove pelo CLI de cada
 pasta — **nunca daqui**, porque o refresh token é de uso único e rotacioná-lo
