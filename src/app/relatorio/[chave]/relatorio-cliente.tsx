@@ -341,6 +341,7 @@ const SECOES = [
   { id: "multicanal", nome: "Multicanal" },
   { id: "trafego", nome: "Tráfego pago" },
   { id: "financeiro", nome: "Financeiro" },
+  { id: "promocoes", nome: "Promoções" },
   { id: "estrategia", nome: "Estratégia" },
   { id: "dados", nome: "Dados e pendências" },
 ];
@@ -1046,6 +1047,170 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
             salvo={anot("financeiro")}
             padrao={`O custo cadastrado cobre ${pct(dados.financeiro.coberturaCusto, 0)} da receita da janela, com ${dados.financeiro.produtosComCusto} produtos de ${dados.financeiro.produtosTotal}. A margem mostrada é de contribuição — mercadoria e imposto — e não desconta despesa fixa.`}
           />
+        </Secao>
+
+        {/* ══ Promoções ══ */}
+        <Secao
+          id="promocoes"
+          titulo="Promoções — o que já foi decidido"
+          chamada="Registro do que a tela de Processar enviou ao canal. Não é proposta: é a decisão que está valendo."
+        >
+          {dados.promocoes.ultimo == null ? (
+            <p className="text-[13px] text-ink-3">Nenhum processamento de promoção registrado.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                <div className="panel px-3.5 py-3">
+                  <p className="label">Última rodada</p>
+                  <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">
+                    {numero(dados.promocoes.ultimo.lidos)}
+                    <span className="text-ink-3 text-[15px]"> anúncios</span>
+                  </p>
+                  <p className="text-[11.5px] text-ink-3 mt-1">{hora(dados.promocoes.ultimo.quando)}</p>
+                </div>
+                <div className="panel px-3.5 py-3">
+                  <p className="label">
+                    <Dica texto="Quantos entraram na campanha. O resto foi recusado porque a proposta do canal não cabia no preço de tabela.">
+                      Taxa de aceite
+                    </Dica>
+                  </p>
+                  <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">
+                    {pct(dados.promocoes.ultimo.taxa, 0)}
+                  </p>
+                  <p className="text-[11.5px] text-ink-3 mt-1">
+                    {numero(dados.promocoes.ultimo.aprovados)} aceitos ·{" "}
+                    {numero(dados.promocoes.ultimo.reprovados)} recusados
+                  </p>
+                </div>
+                <div className="panel px-3.5 py-3">
+                  <p className="label">
+                    <Dica texto="Quanto da receita da janela vem dos anúncios que a rodada decidiu. Decisão em mil anúncios que não vendem vale menos que em vinte que sustentam o mês.">
+                      Receita alcançada
+                    </Dica>
+                  </p>
+                  <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">
+                    {dados.promocoes.cobertura == null ? "—" : pct(dados.promocoes.cobertura.fatiaDaReceita, 0)}
+                  </p>
+                  <p className="text-[11.5px] text-ink-3 mt-1">
+                    {dados.promocoes.cobertura == null
+                      ? "sem cruzamento"
+                      : `${reais(dados.promocoes.cobertura.receitaCoberta)} em ${numero(dados.promocoes.cobertura.anunciosDecididos)} anúncios`}
+                  </p>
+                </div>
+                <div className="panel px-3.5 py-3">
+                  <p className="label">Desconto extra usado</p>
+                  <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">
+                    {dados.promocoes.ultimo.descontoExtra
+                      ? pct(dados.promocoes.ultimo.descontoExtra, 0)
+                      : "nenhum"}
+                  </p>
+                  <p className="text-[11.5px] text-ink-3 mt-1">aplicado sobre o piso da tabela</p>
+                </div>
+              </div>
+
+              {dados.promocoes.porTipo.length > 0 && (
+                <div className="mt-4">
+                  <p className="label mb-2">Por tipo de campanha</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {dados.promocoes.porTipo.map((t) => (
+                      <div key={t.tipo} className="panel px-3.5 py-2.5">
+                        <p className="text-[12.5px] text-ink font-medium">{t.tipo}</p>
+                        <p className="num text-[15px] text-ink mt-1">
+                          {pct(t.taxa, 0)}
+                          <span className="text-ink-3 text-[12px]">
+                            {" "}
+                            · {numero(t.aprovados)} de {numero(t.aprovados + t.reprovados)}
+                          </span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {dados.promocoes.motivos.length > 0 && (
+                <div className="mt-4">
+                  <p className="label mb-2">Por que o restante foi recusado</p>
+                  <div className="panel divide-y divide-line">
+                    {dados.promocoes.motivos.map((m) => (
+                      <div key={m.motivo} className="flex items-baseline justify-between gap-3 px-3.5 py-2">
+                        <span className="text-[12.5px] text-ink-2">{m.motivo}</span>
+                        <span className="num text-[13px] text-ink shrink-0">{numero(m.quantidade)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {dados.promocoes.semEspaco.length > 0 && (
+                <div className="mt-4">
+                  <p className="label mb-2">
+                    <Dica texto="A tabela pede mais do que o canal ofereceu. Aceitar venderia abaixo da margem; a conversa é com o consultor, não com o preço.">
+                      Onde a proposta não cabe na margem
+                    </Dica>
+                  </p>
+                  <div className="panel overflow-x-auto">
+                    <table className="w-full text-[12.5px]">
+                      <thead>
+                        <tr className="text-ink-3 text-left">
+                          <th className="font-normal px-3.5 py-2">Anúncio</th>
+                          <th className="font-normal px-3.5 py-2">Campanha</th>
+                          <th className="font-normal px-3.5 py-2 text-right">Tabela</th>
+                          <th className="font-normal px-3.5 py-2 text-right">Proposta</th>
+                          <th className="font-normal px-3.5 py-2 text-right">Falta</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line">
+                        {dados.promocoes.semEspaco.map((x) => (
+                          <tr key={x.mlb}>
+                            <td className="px-3.5 py-2">
+                              <span className="num text-ink">{x.sku ?? x.mlb}</span>
+                              {x.sku && <span className="num text-ink-3 text-[11.5px]"> · {x.mlb}</span>}
+                            </td>
+                            <td className="px-3.5 py-2 text-ink-3 truncate max-w-[160px]">{x.campanha}</td>
+                            <td className="px-3.5 py-2 text-right num text-ink-2">{reais(x.tabela, 2)}</td>
+                            <td className="px-3.5 py-2 text-right num text-ink-2">{reais(x.oferta, 2)}</td>
+                            <td className="px-3.5 py-2 text-right num text-down font-medium">{reais(x.falta, 2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {dados.promocoes.historico.length > 1 && (
+                <div className="mt-4">
+                  <p className="label mb-2">Taxa de aceite nas últimas rodadas</p>
+                  <div className="panel px-3.5 py-3 flex flex-wrap gap-x-5 gap-y-2">
+                    {dados.promocoes.historico.map((h, i) => (
+                      <div key={`${h.quando}-${i}`} className="min-w-[72px]">
+                        <p className="num text-[15px] text-ink leading-none">{pct(h.taxa, 0)}</p>
+                        <p className="text-[11px] text-ink-3 mt-0.5">
+                          {dm(h.quando)} · {numero(h.lidos)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Interpretacao
+                id="promocoes"
+                chave={chave}
+                salvo={anot("promocoes")}
+                padrao={`A última rodada decidiu ${numero(dados.promocoes.ultimo.lidos)} anúncios e aceitou ${pct(dados.promocoes.ultimo.taxa, 0)}. ${
+                  dados.promocoes.motivos[0]
+                    ? `A recusa principal é "${dados.promocoes.motivos[0].motivo}", em ${numero(dados.promocoes.motivos[0].quantidade)} linhas — ali a proposta do canal fica abaixo do preço que a margem aguenta, e aceitar venderia no prejuízo.`
+                    : ""
+                }${
+                  dados.promocoes.cobertura
+                    ? ` A decisão alcançou ${pct(dados.promocoes.cobertura.fatiaDaReceita, 0)} da receita da janela.`
+                    : ""
+                }`}
+              />
+            </>
+          )}
         </Secao>
 
         {/* ══ Estratégia ══ */}

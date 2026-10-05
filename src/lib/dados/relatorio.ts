@@ -238,6 +238,35 @@ export type Relatorio = {
   pendencias: Pendencia[];
   anotacoes: Record<string, string>;
   reputacao: { conta: string; nivel: string | null; categoria: string | null; reclamacoes: number | null; cancelamentos: number | null; perguntas: number | null }[];
+  /**
+   * Promoções: o que já foi decidido e o que sobrou de espaço.
+   *
+   * Sai de `processamentos_promocao` e `historico_promocoes`, que é o
+   * registro do que a tela de Processar decidiu. Não é proposta — é o que
+   * foi enviado ao canal.
+   */
+  promocoes: {
+    ultimo: {
+      quando: string;
+      lidos: number;
+      aprovados: number;
+      reprovados: number;
+      descontoExtra: number;
+      taxa: number;
+    } | null;
+    /** Os processamentos da janela, para ver a taxa de aprovação andar. */
+    historico: { quando: string; lidos: number; aprovados: number; taxa: number }[];
+    porTipo: { tipo: string; aprovados: number; reprovados: number; taxa: number }[];
+    /** Por que o canal recusou, agrupado. É a lista de trabalho. */
+    motivos: { motivo: string; quantidade: number }[];
+    /**
+     * Onde o preço de tabela ficou ACIMA do que o canal propôs: a oferta não
+     * cabe na margem, e é aqui que está a conversa com o consultor.
+     */
+    semEspaco: { mlb: string; sku: string | null; tabela: number; oferta: number; falta: number; campanha: string }[];
+    /** Quanto a decisão cobriu da receita da janela. */
+    cobertura: { anunciosDecididos: number; receitaCoberta: number; fatiaDaReceita: number } | null;
+  };
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -257,6 +286,8 @@ function hojeSP() {
 const soma = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
 const divide = (a: number, b: number) => (b ? a / b : 0);
 const r2 = (v: number) => Number(v.toFixed(2));
+/** Taxas e fatias: quatro casas, para 12,34% não virar 12%. */
+const r4 = (v: number) => Number(v.toFixed(4));
 const reaisCurto = (v: number) => `R$ ${Math.round(v).toLocaleString("pt-BR")}`;
 
 function variacao(
@@ -414,7 +445,7 @@ export async function montarRelatorio(
    * estoque de uma semana atrás, e quem lesse ia repor o que já foi
    * reposto.
    */
-  const [catalogoDiario, visitasConta, reputacaoDiaria] = await Promise.all([
+  const [catalogoDiario, visitasConta, processamentos, historicoPromo, reputacaoDiaria] = await Promise.all([
     paginar<{
       anuncio_id: string; data: string; situacao: string; preco_atual: number | null;
       preco_para_ganhar: number | null; fatia_visita: string | null; dividindo_primeiro: number | null;
@@ -433,6 +464,19 @@ export async function montarRelatorio(
         .select("conta_canal_id,data,visitas")
         .gte("data", maisDias(hoje, -120))
         .order("data")
+    ),
+    paginar<{ executado_em: string; itens_lidos: number; itens_aprovados: number; itens_reprovados: number; desconto_extra: number | null }>(() =>
+      sb
+        .from("processamentos_promocao")
+        .select("executado_em,itens_lidos,itens_aprovados,itens_reprovados,desconto_extra")
+        .order("executado_em", { ascending: false })
+    ),
+    paginar<{ mlb: string; sku: string | null; campanha: string | null; tipo_campanha: string | null; status_aprovacao: string | null; motivo: string | null; preco_tabela: number | null; preco_oferta: number | null; data_processamento: string | null }>(() =>
+      sb
+        .from("historico_promocoes")
+        .select("mlb,sku,campanha,tipo_campanha,status_aprovacao,motivo,preco_tabela,preco_oferta,data_processamento")
+        .order("data_processamento", { ascending: false })
+        .limit(4000)
     ),
     paginar<{ conta_canal_id: string; data: string; nivel: string | null; categoria: string | null; reclamacoes_taxa: number | null; cancelamentos_taxa: number | null; perguntas_sem_resposta: number | null }>(() =>
       sb
@@ -907,7 +951,16 @@ export async function montarRelatorio(
   );
   const criticos = linhas.filter((l) => l.coberturaDias != null && l.coberturaDias <= 14 && l.estoque! > 0);
   const parados = linhas.filter((l) => l.curva !== "C" && (l.diasSemVenda ?? 0) >= 14 && (l.estoque ?? 0) > 0);
+  /*
+   * Pausados só das contas que TÊM anúncio.
+   *
+   * O retrato passou a nascer do cadastro inteiro, e o cadastro tem uma
+   * conta de canal por canal sem API — dezessete linhas chamadas "Conta
+   * principal", todas com zero. Além de não informar nada, o React reclamava
+   * de chave repetida vinte e oito vezes, porque a chave era o nome.
+   */
   const pausados = Object.values(instantaneo.contas)
+    .filter((c) => c.anuncios.length > 0)
     .filter((c) => !contaEscolhida || c.nome === contaEscolhida.nome)
     .map((c) => ({
       conta: c.nome,
@@ -1348,6 +1401,150 @@ export async function montarRelatorio(
   const anotacoes: Record<string, string> = {};
   for (const a of anotacoesDb as { entidade_id: string; texto: string }[]) anotacoes[a.entidade_id] = a.texto;
 
+  /* ══ Promoções: o que foi decidido, e onde não houve espaço ══
+   *
+   * Tudo aqui é REGISTRO, não proposta: `processamentos_promocao` guarda o
+   * que a tela de Processar enviou ao canal, e `historico_promocoes` a
+   * decisão de cada anúncio. A seção existe porque a decisão de promoção é
+   * a alavanca de preço mais usada na operação e não aparecia em lugar
+   * nenhum do relatório — ficava só no arquivo que foi enviado.
+   */
+  const ultimoProc = processamentos[0] ?? null;
+  const promoUltimo = ultimoProc
+    ? {
+        quando: String(ultimoProc.executado_em),
+        lidos: Number(ultimoProc.itens_lidos) || 0,
+        aprovados: Number(ultimoProc.itens_aprovados) || 0,
+        reprovados: Number(ultimoProc.itens_reprovados) || 0,
+        descontoExtra: Number(ultimoProc.desconto_extra) || 0,
+        taxa: r4(divide(Number(ultimoProc.itens_aprovados) || 0, Number(ultimoProc.itens_lidos) || 0)),
+      }
+    : null;
+
+  const promoHistorico = processamentos.slice(0, 12).map((p) => ({
+    quando: String(p.executado_em).slice(0, 10),
+    lidos: Number(p.itens_lidos) || 0,
+    aprovados: Number(p.itens_aprovados) || 0,
+    taxa: r4(divide(Number(p.itens_aprovados) || 0, Number(p.itens_lidos) || 0)),
+  }));
+
+  /*
+   * O recorte é o ÚLTIMO dia de processamento, não a janela do relatório.
+   *
+   * Promoção se decide em lote: olhar "os últimos sete dias" misturaria a
+   * rodada de hoje com a de terça e somaria o mesmo anúncio duas vezes com
+   * decisões diferentes. O que interessa é o estado da última decisão.
+   */
+  const diaUltimoProc = historicoPromo[0]?.data_processamento
+    ? String(historicoPromo[0].data_processamento).slice(0, 10)
+    : null;
+  const promoDaRodada = diaUltimoProc
+    ? historicoPromo.filter((h) => String(h.data_processamento).slice(0, 10) === diaUltimoProc)
+    : [];
+
+  const porTipoMap = new Map<string, { aprovados: number; reprovados: number }>();
+  for (const h of promoDaRodada) {
+    const k = h.tipo_campanha ?? "—";
+    const a = porTipoMap.get(k) ?? { aprovados: 0, reprovados: 0 };
+    if (h.status_aprovacao === "aprovado") a.aprovados += 1;
+    else a.reprovados += 1;
+    porTipoMap.set(k, a);
+  }
+  const promoPorTipo = [...porTipoMap]
+    .map(([tipo, v]) => ({ tipo, ...v, taxa: r4(divide(v.aprovados, v.aprovados + v.reprovados)) }))
+    .sort((a, b) => b.aprovados + b.reprovados - (a.aprovados + a.reprovados));
+
+  /*
+   * O motivo, quando o motor não escreveu nenhum.
+   *
+   * Na campanha COM redução a recusa é por tolerância: o motor compara e
+   * devolve a ação, sem texto. "Sem motivo registrado" em 471 linhas não
+   * informa nada — e o motivo está nos próprios números, que estão ali ao
+   * lado.
+   */
+  const motivoMap = new Map<string, number>();
+  for (const h of promoDaRodada) {
+    if (h.status_aprovacao === "aprovado") continue;
+    let m = (h.motivo ?? "").trim();
+    if (!m) {
+      const t = h.preco_tabela == null ? null : Number(h.preco_tabela);
+      const o = h.preco_oferta == null ? null : Number(h.preco_oferta);
+      m =
+        t == null || o == null
+          ? "sem preço de tabela para comparar"
+          : t > o
+            ? "proposta do canal abaixo do preço de tabela"
+            : "fora da tolerância do canal";
+    }
+    motivoMap.set(m, (motivoMap.get(m) ?? 0) + 1);
+  }
+  const promoMotivos = [...motivoMap]
+    .map(([motivo, quantidade]) => ({ motivo, quantidade }))
+    .sort((a, b) => b.quantidade - a.quantidade)
+    .slice(0, 8);
+
+  /*
+   * Sem espaço: a tabela pede mais do que o canal propôs.
+   *
+   * Ordenado pela FALTA, não pelo preço: o que está R$ 700 abaixo da margem
+   * é outra conversa do que o que está R$ 5 abaixo, e é a primeira que vale
+   * levar ao consultor.
+   */
+  /**
+   * O nome da campanha legível.
+   *
+   * O que vem gravado é `<arquivo do canal> | <vigência>`, e o arquivo
+   * carrega uuid e carimbo de hora — 74 caracteres que não dizem nada na
+   * tela. Fica a vigência, que é o que identifica a campanha para quem lê.
+   */
+  const nomeCampanha = (bruto: string) => {
+    const partes = bruto.split("|").map((x) => x.trim()).filter(Boolean);
+    const legivel = partes.find((x) => !/[0-9a-f]{8}-[0-9a-f]{4}/i.test(x) && !/^d|_/.test(x));
+    return (legivel ?? partes.at(-1) ?? bruto).slice(0, 60);
+  };
+
+  const promoSemEspaco = promoDaRodada
+    .filter(
+      (h) =>
+        h.status_aprovacao !== "aprovado" &&
+        h.preco_tabela != null &&
+        h.preco_oferta != null &&
+        Number(h.preco_tabela) > Number(h.preco_oferta)
+    )
+    .map((h) => ({
+      mlb: String(h.mlb),
+      sku: h.sku,
+      tabela: Number(h.preco_tabela),
+      oferta: Number(h.preco_oferta),
+      falta: r2(Number(h.preco_tabela) - Number(h.preco_oferta)),
+      campanha: h.campanha ? nomeCampanha(h.campanha) : "—",
+    }))
+    .sort((a, b) => b.falta - a.falta)
+    /*
+     * Um anúncio por linha. Ele aparece numa candidata por campanha — um
+     * deles cinco vezes — e repetido assim a lista mostrava cinco vezes o
+     * mesmo problema em vez dos cinco maiores.
+     */
+    .filter((x, i, l) => l.findIndex((y) => y.mlb === x.mlb) === i)
+    .slice(0, 15);
+
+  /*
+   * Quanto a rodada cobriu da receita: decisão em mil anúncios que não
+   * vendem vale menos que em vinte que sustentam o mês.
+   */
+  const mlbsDecididos = new Set(promoDaRodada.map((h) => String(h.mlb).toUpperCase()));
+  const receitaCoberta = soma(
+    linhas.filter((l) => mlbsDecididos.has(l.mlb.toUpperCase())).map((l) => l.receitaPeriodo ?? 0)
+  );
+  const receitaDaJanela = soma(linhas.map((l) => l.receitaPeriodo ?? 0));
+  const promoCobertura = mlbsDecididos.size
+    ? {
+        anunciosDecididos: mlbsDecididos.size,
+        receitaCoberta: r2(receitaCoberta),
+        fatiaDaReceita: r4(divide(receitaCoberta, receitaDaJanela)),
+      }
+    : null;
+
   return {
     geradoEm: new Date().toISOString(),
     canalAtivo: contaEscolhida
@@ -1435,5 +1632,13 @@ export async function montarRelatorio(
       cancelamentos: c.reputacao.cancelamentos,
       perguntas: c.perguntasSemResposta,
     })),
+    promocoes: {
+      ultimo: promoUltimo,
+      historico: promoHistorico,
+      porTipo: promoPorTipo,
+      motivos: promoMotivos,
+      semEspaco: promoSemEspaco,
+      cobertura: promoCobertura,
+    },
   };
 }
