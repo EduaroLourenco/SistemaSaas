@@ -165,13 +165,17 @@ export function SeletorEmpresa() {
                   />
                   <span className="flex-1 min-w-0">
                     <span className="block text-[12px] text-ink truncate">{o.nome}</span>
-                    <span className="block text-[10px] text-ink-3">
-                      {o.canais === 0
-                        ? "nenhum canal"
-                        : o.canais === 1
-                          ? "1 canal"
-                          : `${o.canais} canais`}
-                    </span>
+                    {/*
+                      Zero some em vez de virar "nenhum canal". Para o admin
+                      da plataforma a contagem só enxerga as empresas de que
+                      ele é membro — nas outras viria zero, e escrever
+                      "nenhum canal" numa loja que tem canais seria mentira.
+                    */}
+                    {o.canais > 0 && (
+                      <span className="block text-[10px] text-ink-3">
+                        {o.canais === 1 ? "1 canal" : `${o.canais} canais`}
+                      </span>
+                    )}
                   </span>
                   {trocando === o.id && (
                     <span className="text-[10px] text-ink-3">trocando…</span>

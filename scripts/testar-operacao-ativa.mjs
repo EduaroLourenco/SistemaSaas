@@ -143,5 +143,43 @@ if (ANON) {
   console.log("  (sem NEXT_PUBLIC_SUPABASE_ANON_KEY no .env.local, pulei)");
 }
 
+console.log("\nADMIN DA PLATAFORMA (migração 24)\n");
+{
+  const { error } = await rpc("eh_admin_plataforma");
+  if (error?.code === "PGRST202") {
+    console.log("  (migração 24 não aplicada — pulei)");
+  } else {
+    ok(true, "eh_admin_plataforma() existe");
+    const { error: e2 } = await rpc("operacoes_listaveis");
+    ok(e2?.code !== "PGRST202", "operacoes_listaveis() existe");
+
+    /*
+     * A marca precisa existir em ALGUÉM, senão a migração está aplicada e
+     * inerte — o sintoma seria "entrei e não vejo a empresa do cliente",
+     * sem nada apontando para cá.
+     */
+    const { data: admins, error: e3 } = await sb
+      .from("usuarios")
+      .select("email")
+      .eq("admin_plataforma", true);
+    ok(!e3, "coluna admin_plataforma existe", e3?.message ?? "");
+    ok(
+      (admins ?? []).length > 0,
+      "alguém está marcado como admin",
+      (admins ?? []).length === 0
+        ? "ninguém — rode o update do fim de db/24_admin_plataforma.sql"
+        : (admins ?? []).map((a) => a.email).join(", ")
+    );
+
+    /*
+     * O acesso de suporte só vale com empresa escolhida. Sem cabeçalho o
+     * admin tem de continuar vendo apenas onde é membro — é isso que
+     * impede duas empresas somadas na tela dele.
+     */
+    const semCabecalho = await rpc("operacoes_do_usuario");
+    ok(!semCabecalho.error, "sem cabeçalho a leitura responde", semCabecalho.error?.message ?? "");
+  }
+}
+
 console.log(`\n${falhas === 0 ? "\u2713 tudo certo" : `\u2717 ${falhas} verificação(ões) falharam`}`);
 process.exit(falhas === 0 ? 0 : 1);
