@@ -16,6 +16,7 @@ import {
 import { iniciarRegistro, concluirRegistro, type Origem, type Registro } from "./historico";
 import { integracaoDa, vincularIntegracao } from "./tokens";
 import { consolidarDiarias, emLotes, r2 } from "@/lib/sync/diarias";
+import { consolidarSemanais } from "@/lib/sync/semanais";
 
 /**
  * Traz do Mercado Livre para o banco.
@@ -53,6 +54,7 @@ type Resumo = {
   catalogo: { consultados: number; gravados: number };
   reputacao: { gravada: boolean };
   diarias: { dias: number };
+  semanais: { linhas: number };
   avisos: string[];
 };
 
@@ -722,6 +724,7 @@ async function executar(
     catalogo: { consultados: 0, gravados: 0 },
     reputacao: { gravada: false },
     diarias: { dias: 0 },
+    semanais: { linhas: 0 },
     avisos: [],
   };
 
@@ -768,6 +771,16 @@ async function executar(
     // A janela das diárias cobre a maior das duas: pedidos e visitas.
     const inicio = [de, diasAtras(diasVisitas)].sort()[0];
     resumo.diarias = { dias: await consolidarDiarias(ctx, inicio, ate) };
+
+    /*
+     * A semanal sai da diária que acabou de ser gravada.
+     *
+     * Nove telas leem a semanal e o único lugar que escrevia nela era o
+     * importador de planilha — por isso ela parou em 07/09, a data do
+     * último arquivo subido. Consolidar aqui tira a dependência de alguém
+     * lembrar de subir planilha toda semana.
+     */
+    resumo.semanais = { linhas: await consolidarSemanais(ctx, inicio, ate) };
   }
 
   return { ...resumo, conta: ctx.nome, periodo: { de, ate }, operacaoId: ctx.operacaoId, contaCanalId: ctx.contaCanalId };
