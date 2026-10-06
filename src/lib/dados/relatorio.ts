@@ -375,9 +375,24 @@ const ROTULO_ALAVANCA: Record<string, string> = {
    ══════════════════════════════════════════════════════════════ */
 
 export async function montarRelatorio(
-  opcoes: { dias?: number; canal?: string | null } = {}
+  opcoes: { dias?: number; canal?: string | null; operacaoId: string }
 ): Promise<Relatorio> {
   const sb = clientePrivilegiado();
+  /*
+   * A operação é obrigatória, e o filtro é explícito em toda consulta.
+   *
+   * Este relatório abre sem login, e por isso é montado com a chave de
+   * serviço — que passa por fora do RLS de propósito. Com uma empresa isso
+   * bastava; com três, o mesmo endereço mostraria o faturamento das três
+   * somado, para quem tivesse o link. O RLS não socorre aqui: ele foi
+   * contornado para a página existir.
+   *
+   * Nenhuma leitura abaixo pode ficar sem `operacao_id`. Esquecer uma não
+   * dá erro — mistura empresas em silêncio, que é o defeito que esta
+   * função inteira existe para impedir.
+   */
+  const daOperacao = opcoes.operacaoId;
+  if (!daOperacao) throw new Error("O relatório precisa saber de qual operação é.");
   const hoje = hojeSP();
   const dias = opcoes.dias ?? 7;
 
@@ -399,17 +414,17 @@ export async function montarRelatorio(
   /* ── Leitura ── */
   const [contas, pedidos, itens, visitasItem, anunciosDb, produtos, precosMinimos, metas, anotacoesDb, ads] =
     await Promise.all([
-      sb.from("contas_canal").select("id,nome,identificador,operacao_id,canal_id,canais(nome,codigo)").then((r) => r.data ?? []),
+      sb.from("contas_canal").select("id,nome,identificador,operacao_id,canal_id,canais(nome,codigo)").eq("operacao_id", daOperacao).then((r) => r.data ?? []),
       paginar<{ id: string; conta_canal_id: string; data: string; total: number; cancelado: boolean }>(() =>
-        sb.from("pedidos").select("id,conta_canal_id,data,total,cancelado").gte("data", inicioAno).order("data")
+        sb.from("pedidos").select("id,conta_canal_id,data,total,cancelado").eq("operacao_id", daOperacao).gte("data", inicioAno).order("data")
       ),
       paginar<{
         pedido_id: string; codigo_externo: string; sku: string | null; quantidade: number; preco_unitario: number;
       }>(() =>
-        sb.from("pedido_itens").select("pedido_id,codigo_externo,sku,quantidade,preco_unitario").order("pedido_id")
+        sb.from("pedido_itens").select("pedido_id,codigo_externo,sku,quantidade,preco_unitario").eq("operacao_id", daOperacao).order("pedido_id")
       ),
       paginar<{ anuncio_id: string; data: string; visitas: number }>(() =>
-        sb.from("anuncio_desempenho_diario").select("anuncio_id,data,visitas").gte("data", maisDias(hoje, -120)).order("data")
+        sb.from("anuncio_desempenho_diario").select("anuncio_id,data,visitas").eq("operacao_id", daOperacao).gte("data", maisDias(hoje, -120)).order("data")
       ),
       paginar<{
         id: string; codigo_externo: string; titulo: string; tipo: string; conta_canal_id: string;
@@ -417,18 +432,18 @@ export async function montarRelatorio(
         status: string | null; estoque: number | null; preco_atual: number | null;
         vendidos_total: number | null;
       }>(() =>
-        sb.from("anuncios").select("id,codigo_externo,titulo,tipo,conta_canal_id,sku_canal,produto_id,sincronizado_em,status,estoque,preco_atual,vendidos_total")
+        sb.from("anuncios").select("id,codigo_externo,titulo,tipo,conta_canal_id,sku_canal,produto_id,sincronizado_em,status,estoque,preco_atual,vendidos_total").eq("operacao_id", daOperacao)
       ),
       paginar<{ id: string; sku: string; titulo: string; custo_unitario: number | null; embalagem: number | null; aliquota_impostos: number | null; curva: string | null }>(() =>
-        sb.from("produtos").select("id,sku,titulo,custo_unitario,embalagem,aliquota_impostos,curva")
+        sb.from("produtos").select("id,sku,titulo,custo_unitario,embalagem,aliquota_impostos,curva").eq("operacao_id", daOperacao)
       ),
       paginar<{ chave_tipo: string; chave: string; preco: number; vigente_de: string }>(() =>
-        sb.from("formula_base_precos").select("chave_tipo,chave,preco,vigente_de").eq("comissao", 0.045).order("vigente_de", { ascending: false })
+        sb.from("formula_base_precos").select("chave_tipo,chave,preco,vigente_de").eq("operacao_id", daOperacao).eq("comissao", 0.045).order("vigente_de", { ascending: false })
       ),
-      sb.from("metas").select("ano,mes,receita_meta,canal_id").then((r) => r.data ?? []),
-      sb.from("anotacoes").select("entidade_id,texto").eq("entidade", "relatorio").then((r) => r.data ?? []),
+      sb.from("metas").select("ano,mes,receita_meta,canal_id").eq("operacao_id", daOperacao).then((r) => r.data ?? []),
+      sb.from("anotacoes").select("entidade_id,texto").eq("operacao_id", daOperacao).eq("entidade", "relatorio").then((r) => r.data ?? []),
       paginar<{ codigo_externo: string; inicio: string; fim: string; investimento: number; cliques: number; impressoes: number; receita: number }>(() =>
-        sb.from("anuncio_ads").select("codigo_externo,inicio,fim,investimento,cliques,impressoes,receita").order("fim", { ascending: false })
+        sb.from("anuncio_ads").select("codigo_externo,inicio,fim,investimento,cliques,impressoes,receita").eq("operacao_id", daOperacao).order("fim", { ascending: false })
       ),
     ]);
 

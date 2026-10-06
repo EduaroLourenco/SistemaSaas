@@ -16,9 +16,9 @@ import { NextResponse, type NextRequest } from "next/server";
 /*
  * `/relatorio/` e `/api/relatorio/` ficam públicos porque a página é
  * aberta por chave secreta na própria URL — é assim que o link chega à
- * diretoria sem criar conta para cada pessoa. A rota confere a chave
- * contra RELATORIO_CHAVE e, sem a variável definida, só abre para quem
- * está logado. Sem a chave certa, responde 404.
+ * diretoria sem criar conta para cada pessoa. A chave vive
+ * em `operacoes.relatorio_chave`, uma por empresa, e é ela que decide de
+ * qual loja o relatório é. Sem chave que resolva, responde 404.
  */
 /*
  * `/convite/` é pública porque quem recebe o link precisa saber de qual
@@ -43,14 +43,31 @@ const PUBLICAS = [
  * quatro linhas, e o laço percorre a chave esperada inteira em qualquer
  * caso — sair no primeiro caractere diferente é justamente o que se mede.
  */
-function chaveCerta(recebida: string) {
-  const esperada = process.env.RELATORIO_CHAVE;
-  if (!esperada) return false;
-  let diff = recebida.length ^ esperada.length;
-  for (let i = 0; i < esperada.length; i++) {
-    diff |= esperada.charCodeAt(i) ^ (recebida.charCodeAt(i) || 0);
+async function chaveResolve(recebida: string) {
+  if (!recebida || recebida.length < 32) return false;
+  try {
+    const r = await fetch(
+      process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/rpc/operacao_por_chave_relatorio",
+      {
+        method: "POST",
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: "Bearer " + process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_chave: recebida }),
+      }
+    );
+    if (!r.ok) return false;
+    const linhas = await r.json();
+    return Array.isArray(linhas) && linhas.length > 0;
+  } catch {
+    /*
+     * Banco fora do ar não pode virar porta aberta. Sem resposta, 404 — e
+     * quem está logado continua entrando pelo outro caminho.
+     */
+    return false;
   }
-  return diff === 0;
 }
 
 export async function proxy(req: NextRequest) {
@@ -91,7 +108,7 @@ export async function proxy(req: NextRequest) {
    */
   if (caminho.startsWith("/relatorio/") && !data.user) {
     const chave = caminho.split("/")[2] ?? "";
-    if (!chaveCerta(decodeURIComponent(chave))) {
+    if (!(await chaveResolve(decodeURIComponent(chave)))) {
       return new NextResponse(null, { status: 404 });
     }
   }

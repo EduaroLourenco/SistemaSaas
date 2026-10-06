@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { operacaoPadrao } from "@/lib/dados/operacao";
 
 export const runtime = "nodejs";
 
@@ -17,12 +17,21 @@ export const runtime = "nodejs";
  * `entidade = 'relatorio'`. Criar tabela nova seria manter duas.
  */
 
-function chaveCerta(recebida: string | null) {
-  const esperada = process.env.RELATORIO_CHAVE;
-  if (!esperada || !recebida) return false;
-  const a = Buffer.from(recebida);
-  const b = Buffer.from(esperada);
-  return a.length === b.length && timingSafeEqual(a, b);
+/*
+ * A chave diz QUAL empresa, não só se pode escrever.
+ *
+ * A versão anterior comparava com `RELATORIO_CHAVE` e depois gravava na
+ * primeira operação ativa que encontrasse. Com uma empresa dava na mesma;
+ * com três, a anotação escrita no relatório de uma cairia na outra, sem
+ * erro nenhum — e o texto apareceria no relatório de quem não o escreveu.
+ */
+async function operacaoDaChave(chave: string | null) {
+  if (!chave || chave.length < 32) return null;
+  const sb = clientePrivilegiado();
+  const { data, error } = await sb.rpc("operacao_por_chave_relatorio", { p_chave: chave });
+  if (error) return null;
+  const linha = Array.isArray(data) ? data[0] : data;
+  return (linha?.operacao_id as string | undefined) ?? null;
 }
 
 export async function POST(req: NextRequest) {
@@ -39,32 +48,20 @@ export async function POST(req: NextRequest) {
   }
 
   // Ou a chave do link, ou alguém logado no sistema.
-  let autorizado = chaveCerta(chave ?? null);
+  let operacaoId = await operacaoDaChave(chave ?? null);
   let usuarioId: string | null = null;
-  if (!autorizado) {
-    const sb = await clienteServidor();
-    const { data } = await sb.auth.getUser();
+  if (!operacaoId) {
+    const cliente = await clienteServidor();
+    const { data } = await cliente.auth.getUser();
     if (data?.user) {
-      autorizado = true;
       usuarioId = data.user.id;
+      operacaoId = (await operacaoPadrao())?.id ?? null;
     }
   }
-  if (!autorizado) return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
+  if (!operacaoId) return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
 
   const sb = clientePrivilegiado();
 
-  /*
-   * A operação é resolvida com o cliente privilegiado, não com
-   * `operacaoPadrao()`.
-   *
-   * Aquela função lê pela sessão do usuário, e quem abre o relatório por
-   * link não tem sessão — a consulta voltava vazia e a gravação
-   * respondia "nenhuma operação encontrada" para todo mundo que não
-   * estivesse logado. É a mesma operação de onde o relatório foi montado.
-   */
-  const { data: operacoes } = await sb.from("operacoes").select("id").eq("ativa", true).order("criado_em").limit(1);
-  const op = operacoes?.[0];
-  if (!op) return NextResponse.json({ erro: "Nenhuma operação encontrada." }, { status: 400 });
   const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
   /*
@@ -81,7 +78,7 @@ export async function POST(req: NextRequest) {
   const limpar = await sb
     .from("anotacoes")
     .delete()
-    .eq("operacao_id", op.id)
+    .eq("operacao_id", operacaoId)
     .eq("entidade", "relatorio")
     .eq("entidade_id", id);
   if (limpar.error) return NextResponse.json({ erro: limpar.error.message }, { status: 500 });
@@ -89,7 +86,7 @@ export async function POST(req: NextRequest) {
   if (!texto.trim()) return NextResponse.json({ ok: true, apagado: true });
 
   const { error } = await sb.from("anotacoes").insert({
-    operacao_id: op.id,
+    operacao_id: operacaoId,
     entidade: "relatorio",
     entidade_id: id,
     data: hoje,
