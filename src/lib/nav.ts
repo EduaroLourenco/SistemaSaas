@@ -1,13 +1,15 @@
 import {
   LayoutDashboard,
+  CalendarDays,
   TrendingUp,
   Tags,
-  Percent,
+  Percent, // eslint-disable-line @typescript-eslint/no-unused-vars -- volta se Promoções virar grupo próprio
   Radar, // eslint-disable-line @typescript-eslint/no-unused-vars -- volta com Monitoramento
   Wallet,
   FileBarChart,
   Plug,
   Users,
+  Building2,
   BookMarked,
   Bell,
   MessagesSquare,
@@ -32,6 +34,7 @@ export type NavGroup = {
 /** Estrutura de no máximo 2 níveis. */
 export const NAV: NavGroup[] = [
   { label: "Visão geral", icon: LayoutDashboard, href: "/" },
+  { label: "Planejamento", icon: CalendarDays, href: "/planejamento" },
   { label: "Conversar", icon: MessagesSquare, href: "/conversa" },
   { label: "Alertas", icon: Bell, href: "/alertas" },
   { label: "Importar", icon: Upload, href: "/importar" },
@@ -52,25 +55,31 @@ export const NAV: NavGroup[] = [
       { label: "Lançamentos", href: "/vendas/lancamentos" },
     ],
   },
+  /*
+   * Mercado Livre, num grupo só.
+   *
+   * Anúncios e Promoções eram dois grupos de primeiro nível, como se
+   * valessem para qualquer canal. Nenhuma das telas existe sem a API do
+   * Mercado Livre: anúncio, estoque, preço de vitrine, visita, catálogo e
+   * regra de preço só vêm de lá, e não há planilha equivalente.
+   *
+   * Numa loja que ainda não conectou, esse grupo inteiro fica vazio — e
+   * deixar isso explícito no nome é melhor do que espalhar sete telas
+   * mortas pelo menu de quem só tem planilha.
+   *
+   * Fora da lista, por não estarem prontas: Performance de preço,
+   * Tráfego pago, Preço-alvo e Comparar ofertas. As rotas continuam de pé,
+   * só não são anunciadas — apagar obrigaria a reescrever depois.
+   */
   {
-    label: "Anúncios",
+    label: "Mercado Livre",
     icon: Tags,
     items: [
       { label: "Análise de anúncios", href: "/anuncios/analise" },
       { label: "Catálogo", href: "/anuncios/catalogo" },
-      { label: "Performance de preço", href: "/anuncios/preco-performance" },
-      { label: "Tráfego pago", href: "/anuncios/trafego-pago" },
-      { label: "Preço-alvo", href: "/anuncios/preco-alvo" },
-      { label: "Lógica de promoção", href: "/anuncios/preco-ideal" },
       { label: "Clássico vs Premium", href: "/anuncios/tipo" },
-    ],
-  },
-  {
-    label: "Promoções",
-    icon: Percent,
-    items: [
+      { label: "Lógica de promoção", href: "/anuncios/preco-ideal" },
       { label: "Campanhas", href: "/promocoes/campanhas" },
-      { label: "Comparar ofertas", href: "/promocoes/comparar" },
       { label: "Processar planilha", href: "/promocoes/processar" },
       { label: "Histórico", href: "/promocoes/historico" },
     ],
@@ -103,26 +112,31 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    /* Apresentação sai: ocupa lugar e não entrega nada ainda. */
     label: "Relatórios",
     icon: FileBarChart,
-    items: [
-      { label: "Apresentação", href: "/relatorios/apresentacao" },
-      { label: "Exportações", href: "/relatorios/exportacoes" },
-    ],
+    items: [{ label: "Exportações", href: "/relatorios/exportacoes" }],
   },
 ];
 
 export const NAV_FOOTER: NavGroup[] = [
-  { label: "Integrações", icon: Plug, href: "/integracoes" },
+  /*
+   * "Integrações" era uma tela de vitrine, sem nada ligado. O que importa
+   * dela — conectar a conta do canal — vive em /integracoes/canais, e é
+   * para lá que o nome aponta agora.
+   */
+  { label: "Empresas", icon: Building2, href: "/empresas" },
+  { label: "Canais e contas", icon: Plug, href: "/integracoes/canais" },
   { label: "Equipe", icon: Users, href: "/equipe" },
   { label: "Glossário", icon: BookMarked, href: "/glossario" },
   { label: "Configurações", icon: Settings, href: "/configuracoes" },
 ];
 
 /** Barra inferior do mobile — 5 itens, o resto vai em "Mais". */
+/* Acompanha o menu: Anúncios e Promoções viraram um grupo só, Mercado Livre. */
 export const MOBILE_TABS = [
   { label: "Visão", href: "/", icon: LayoutDashboard },
   { label: "Vendas", href: "/vendas/canais", icon: TrendingUp },
-  { label: "Anúncios", href: "/anuncios/analise", icon: Tags },
-  { label: "Promoções", href: "/promocoes/campanhas", icon: Percent },
+  { label: "Meli", href: "/anuncios/analise", icon: Tags },
+  { label: "Importar", href: "/importar", icon: Upload },
 ];
