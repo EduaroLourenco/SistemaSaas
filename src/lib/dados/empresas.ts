@@ -50,7 +50,7 @@ export async function carregarEmpresas(): Promise<DadosEmpresas> {
       return {
         empresas: [],
         souAdmin: false,
-        faltaMigracao: "db/26_admin_cria_empresa.sql",
+        faltaMigracao: "db/27_admin_cria_empresa.sql",
       };
     }
     throw new Error(`Não consegui listar as empresas: ${lista.error.message}`);

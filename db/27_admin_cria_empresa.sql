@@ -33,7 +33,7 @@
 --  Equipe. Não há envio de e-mail: quem convida copia e manda pelo canal
 --  que já usa.
 --
---  Executar depois de 25_empresa_nova_nasce_usavel.sql. Seguro rodar de novo.
+--  Executar depois de 26_planejamento.sql. Seguro rodar de novo.
 -- ═══════════════════════════════════════════════════════════════════════
 
 create or replace function criar_empresa_para(
