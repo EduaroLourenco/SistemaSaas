@@ -64,6 +64,34 @@ export type Comparacao = {
   variacao: number | null;
 };
 
+/** Uma conta de canal no dia em foco. */
+export type DiaCanal = {
+  contaId: string;
+  canal: string;
+  conta: string;
+  receitaLiquida: number;
+  pedidosValidos: number;
+  cancelados: number;
+  valorCancelado: number;
+  visitas: number;
+  conversao: number | null;
+  ads: number;
+  /** ads ÷ receita líquida, em %. */
+  tacos: number | null;
+  ticket: number | null;
+};
+
+/** Um produto vendido no dia em foco. */
+export type DiaProduto = {
+  sku: string;
+  titulo: string;
+  unidades: number;
+  receita: number;
+  pedidos: number;
+  /** Em quais contas de canal ele vendeu. */
+  canais: string[];
+};
+
 export type DadosDia = {
   vazio: boolean;
   /** O dia em foco. Sem `data` na URL, é o último com movimento. */
@@ -89,6 +117,13 @@ export type DadosDia = {
   metaPorConta: boolean;
   /** Última data com movimento na base. */
   ultimaData: string | null;
+  /** Primeira data com movimento: o limite para voltar de mês. */
+  primeiraData: string | null;
+  /** O recorte em lista (vazio = todos os canais). */
+  canaisSelecionados: string[];
+  /** O dia em foco aberto por conta de canal e por produto. */
+  porCanal: DiaCanal[];
+  produtos: DiaProduto[];
   /** Última sincronização com o canal; nulo sem a migração 19. */
   atualizacao: Atualizacao | null;
 };
@@ -149,7 +184,9 @@ const MESES = [
 
 export async function carregarDia(
   dataPedida?: string,
-  canalId?: string
+  canalId?: string,
+  /** "AAAA-MM": abrir esse mês (navegação), focando o último dia com dado. */
+  mesPedido?: string
 ): Promise<DadosDia> {
   const sb = await clienteServidor();
 
@@ -170,9 +207,19 @@ export async function carregarDia(
     carregarExclusoes(),
     carregarAtualizacao(sb),
   ]);
-  const recorte = lerRecorte(canalId);
-  const metaPorConta = recorteParcial(recorte, contas);
-  const canalDaMeta = canalDoRecorte(recorte, contas);
+  /*
+   * O recorte aceita LISTA: "canalA,conta:contaB". Vazio é todos. Escolher
+   * dois ou três canais e ver o dia só deles é o que a visão do dia pede —
+   * um canal só, ou todos, não respondia "e o marketplace sem o site?".
+   */
+  const canaisSelecionados = (canalId ?? "").split(",").map((v) => v.trim()).filter(Boolean);
+  const recortes = canaisSelecionados.map((v) => lerRecorte(v));
+  const dentro = (l: { canalId?: string | null; contaCanalId?: string | null }) =>
+    recortes.length === 0 || recortes.some((rc) => noRecorte(rc, l));
+  const metaPorConta = recortes.some((rc) => recorteParcial(rc, contas));
+  const canaisDaMeta = new Set(
+    recortes.map((rc) => canalDoRecorte(rc, contas)).filter((c): c is string => Boolean(c))
+  );
 
   type Linha = {
     data: string;
@@ -195,9 +242,7 @@ export async function carregarDia(
     exclusoes
   );
   let linhas = mantidas as unknown as Linha[];
-  linhas = linhas.filter((l) =>
-    noRecorte(recorte, { canalId: l.canal_id, contaCanalId: l.conta_canal_id })
-  );
+  linhas = linhas.filter((l) => dentro({ canalId: l.canal_id, contaCanalId: l.conta_canal_id }));
 
   const opcoes = opcoesRecorte(contas);
 
@@ -206,6 +251,7 @@ export async function carregarDia(
       vazio: true, hoje: null, mes: [], mesRotulo: "", comparacoes: [],
       melhor: null, pior: null, bateram: 0, comMeta: 0,
       opcoes, canalId: canalId ?? "", metaPorConta, ultimaData: null, atualizacao,
+      primeiraData: null, canaisSelecionados, porCanal: [], produtos: [],
     };
   }
 
@@ -246,7 +292,7 @@ export async function carregarDia(
     data: string; receita_meta: string | number; canal_id: string;
   }[]) {
     if (metaPorConta) continue;
-    if (canalDaMeta && m.canal_id !== canalDaMeta) continue;
+    if (canaisDaMeta.size && !canaisDaMeta.has(m.canal_id)) continue;
     const k = String(m.data).slice(0, 10);
     metas.set(k, (metas.get(k) ?? 0) + n(m.receita_meta));
   }
@@ -260,7 +306,16 @@ export async function carregarDia(
    * A operação alimenta os dados com atraso. Ancorar em hoje faria a tela
    * abrir zerada toda manhã, parecendo que a loja parou.
    */
-  const foco = dataPedida && porDia.has(dataPedida) ? dataPedida : ultimaData;
+  const primeiraData = datas[0];
+  const doMesPedido = mesPedido && /^\d{4}-\d{2}$/.test(mesPedido)
+    ? datas.filter((d) => d.startsWith(mesPedido))
+    : [];
+  const foco =
+    dataPedida && porDia.has(dataPedida)
+      ? dataPedida
+      : mesPedido && /^\d{4}-\d{2}$/.test(mesPedido)
+        ? (doMesPedido[doMesPedido.length - 1] ?? `${mesPedido}-01`)
+        : ultimaData;
 
   const montar = (data: string): DiaLinha => {
     const a = porDia.get(data);
@@ -361,8 +416,91 @@ export async function carregarDia(
     },
   ];
 
+  /* ── O dia em foco por conta de canal ── */
+  const nomeConta = new Map(contas.map((c) => [c.contaId, c]));
+  const porConta = new Map<string, Acum & { canal: string; conta: string }>();
+  for (const l of linhas) {
+    if (String(l.data).slice(0, 10) !== foco) continue;
+    const c = nomeConta.get(l.conta_canal_id);
+    const a = porConta.get(l.conta_canal_id) ?? {
+      receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedidosCancelados: 0, pedidosComVisita: 0,
+      canal: c?.canalNome ?? "Outros", conta: c?.contaNome ?? "",
+    };
+    a.receita += n(l.receita);
+    a.pedidos += l.pedidos;
+    a.visitas += l.visitas;
+    a.ads += n(l.investimento_ads);
+    a.cancelado += n(l.valor_cancelado);
+    a.pedidosCancelados += l.pedidos_cancelados;
+    if (l.visitas > 0) a.pedidosComVisita += l.pedidos;
+    porConta.set(l.conta_canal_id, a);
+  }
+  const porCanal: DiaCanal[] = [...porConta.entries()]
+    .map(([contaId, a]) => {
+      const liquida = r2(a.receita - a.cancelado);
+      return {
+        contaId,
+        canal: a.canal,
+        conta: a.conta,
+        receitaLiquida: liquida,
+        pedidosValidos: pedidosValidos(a.pedidos, a.pedidosCancelados),
+        cancelados: a.pedidosCancelados,
+        valorCancelado: r2(a.cancelado),
+        visitas: a.visitas,
+        conversao: a.visitas > 0 ? r2((a.pedidosComVisita / a.visitas) * 100) : null,
+        ads: r2(a.ads),
+        tacos: a.ads > 0 && liquida > 0 ? r2((a.ads / liquida) * 100) : null,
+        ticket: ticketMedio(a.receita, a.cancelado, a.pedidos, a.pedidosCancelados),
+      };
+    })
+    .sort((x, y) => y.receitaLiquida - x.receitaLiquida);
+
+  /*
+   * ── Produtos do dia ──
+   * Itens dos pedidos do dia, fora os cancelados, no mesmo recorte de
+   * canais. Junção com pedidos (!inner) e filtro pela data do pedido: um
+   * .in(pedido_id) com centenas de ids já estourou o limite da URL.
+   */
+  type Item = {
+    sku: string | null; titulo: string | null; quantidade: number; preco_unitario: string | number;
+    pedido_id: string;
+    pedidos: { data: string; cancelado: boolean; canal_id: string; conta_canal_id: string } | null;
+  };
+  const itens = (await paginar(() =>
+    sb
+      .from("pedido_itens")
+      .select("sku,titulo,quantidade,preco_unitario,pedido_id,pedidos!inner(data,cancelado,canal_id,conta_canal_id)")
+      .eq("pedidos.data", foco)
+      .eq("pedidos.cancelado", false)
+      .order("pedido_id")
+  )) as unknown as Item[];
+  const porSku = new Map<string, DiaProduto & { _pedidos: Set<string>; _canais: Set<string> }>();
+  for (const it of itens) {
+    const ped = it.pedidos;
+    if (!ped || !dentro({ canalId: ped.canal_id, contaCanalId: ped.conta_canal_id })) continue;
+    const chave = it.sku || it.titulo || "sem código";
+    const a = porSku.get(chave) ?? {
+      sku: it.sku ?? "—", titulo: it.titulo ?? "", unidades: 0, receita: 0, pedidos: 0, canais: [],
+      _pedidos: new Set<string>(), _canais: new Set<string>(),
+    };
+    a.unidades += Number(it.quantidade) || 0;
+    a.receita += (Number(it.quantidade) || 0) * n(it.preco_unitario);
+    a._pedidos.add(it.pedido_id);
+    const c = nomeConta.get(ped.conta_canal_id);
+    a._canais.add(c ? (c.contaNome && c.contaNome !== "Conta principal" ? c.contaNome : c.canalNome) : "Outros");
+    if (!a.titulo && it.titulo) a.titulo = it.titulo;
+    porSku.set(chave, a);
+  }
+  const produtos: DiaProduto[] = [...porSku.values()]
+    .map(({ _pedidos, _canais, ...p }) => ({ ...p, receita: r2(p.receita), pedidos: _pedidos.size, canais: [..._canais] }))
+    .sort((x, y) => y.receita - x.receita);
+
   return {
     vazio: false,
+    primeiraData,
+    canaisSelecionados,
+    porCanal,
+    produtos,
     hoje,
     mes: doMes,
     mesRotulo: `${MESES[mes - 1]} de ${ano}`,

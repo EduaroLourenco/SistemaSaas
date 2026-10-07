@@ -15,9 +15,10 @@ export const dynamic = "force-dynamic";
 export default async function Pagina({
   searchParams,
 }: {
-  searchParams: Promise<{ data?: string; canal?: string }>;
+  searchParams: Promise<{ data?: string; canal?: string; mes?: string }>;
 }) {
-  const { data, canal } = await searchParams;
-  const dados = await carregarDia(data, canal || undefined);
+  const { data, canal, mes } = await searchParams;
+  // canal aceita lista ("a,conta:b"); mes ("AAAA-MM") é a navegação do calendário.
+  const dados = await carregarDia(data, canal || undefined, mes || undefined);
   return <DiaCliente dados={dados} />;
 }

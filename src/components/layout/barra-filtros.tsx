@@ -71,11 +71,27 @@ export function Filtro({
   rotulo,
   children,
   className,
+  composto,
 }: {
   rotulo: string;
   children: React.ReactNode;
   className?: string;
+  /*
+   * Controle composto (menu que abre por cima, com caixas de marcar
+   * próprias): vira <div> sem rolagem. Com <label>, os rótulos do menu
+   * ficariam dentro de outro rótulo — HTML inválido, e o clique no menu
+   * acionaria o botão de abrir —, e a rolagem lateral cortaria o menu.
+   */
+  composto?: boolean;
 }) {
+  if (composto) {
+    return (
+      <div role="group" aria-label={rotulo} className={cn("flex flex-col gap-1 min-w-0 max-w-full shrink-0", className)}>
+        <span className="text-[12px] font-semibold tracking-normal text-ink-3 leading-none">{rotulo}</span>
+        {children}
+      </div>
+    );
+  }
   return (
     /*
      * `max-w-full` + rolagem própria no conteúdo: com `shrink-0` sozinho, um
