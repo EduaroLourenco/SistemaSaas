@@ -195,6 +195,72 @@ export async function registrarErro(
   }
 }
 
+/*
+ * ── Integração da OPERAÇÃO ──
+ *
+ * O ERP não é conta de canal: um Bling só traz pedido de Mercado Livre,
+ * Magalu e site misturados. Então a integração fica presa à operação, com
+ * `conta_canal_id` nulo, e cada pedido é distribuído para a conta certa
+ * depois, pela loja de origem.
+ *
+ * O índice único de (operacao, provedor, conta) não protege aqui — dois
+ * nulos nunca colidem no Postgres —, por isso `garantir` procura antes de
+ * criar.
+ */
+
+export async function integracaoDaOperacao(
+  provedor: string,
+  operacaoId: string
+): Promise<Integracao | null> {
+  const { data, error } = await clientePrivilegiado()
+    .from("integracoes")
+    .select(COLUNAS)
+    .eq("provedor", provedor)
+    .eq("operacao_id", operacaoId)
+    .is("conta_canal_id", null)
+    .order("criado_em")
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    if (semMigracao(error.code)) return null;
+    throw new Error(`Não consegui ler a integração: ${error.message}`);
+  }
+  return data ? montar(data as Linha) : null;
+}
+
+export async function garantirIntegracaoDaOperacao(
+  provedor: string,
+  operacaoId: string
+): Promise<Integracao | null> {
+  const existe = await integracaoDaOperacao(provedor, operacaoId);
+  if (existe) return existe;
+  const { data, error } = await clientePrivilegiado()
+    .from("integracoes")
+    .insert({ operacao_id: operacaoId, provedor, status: "conectada", config: {} })
+    .select(COLUNAS)
+    .single();
+  if (error) {
+    console.warn(`[integrações] Não consegui criar a integração: ${error.message}`);
+    return null;
+  }
+  return montar(data as Linha);
+}
+
+/** Toda integração de operação daquele provedor — o que o agendamento varre. */
+export async function integracoesDeOperacao(provedor: string): Promise<Integracao[]> {
+  const { data, error } = await clientePrivilegiado()
+    .from("integracoes")
+    .select(COLUNAS)
+    .eq("provedor", provedor)
+    .is("conta_canal_id", null)
+    .not("credencial_ref", "is", null);
+  if (error) {
+    if (semMigracao(error.code)) return [];
+    throw new Error(`Não consegui listar as integrações: ${error.message}`);
+  }
+  return (data as Linha[]).map(montar);
+}
+
 /** Cria a linha de `integracoes` se ainda não existe. */
 export async function garantirIntegracao(
   provedor: string,

@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/primitives";
 import { Cadastro, type Coluna, type CampoForm } from "@/components/financeiro/cadastro";
-import type { Canal, ContaCanal } from "@/lib/dados/canais";
+import type { Canal, ContaCanal, Erp } from "@/lib/dados/canais";
+import { ErpPainel } from "./erp-painel";
 
 /** Canais que a plataforma lê por API. O resto entra por planilha. */
 const COM_API = new Set(["mercado_livre", "vtex"]);
@@ -19,13 +20,17 @@ const TIPOS = [
 export default function CanaisCliente({
   canais,
   contas,
+  erp,
+  abaInicial,
   faltaMigracao,
 }: {
   canais: Canal[];
   contas: ContaCanal[];
+  erp: Erp | null;
+  abaInicial: "contas" | "canais" | "erp";
   faltaMigracao: string | null;
 }) {
-  const [aba, setAba] = React.useState<"contas" | "canais">("contas");
+  const [aba, setAba] = React.useState<"contas" | "canais" | "erp">(abaInicial);
 
   const quando = (iso: string | null) =>
     iso
@@ -298,6 +303,7 @@ export default function CanaisCliente({
         [
           ["contas", `Contas de venda (${contas.length})`],
           ["canais", `Canais (${canais.length})`],
+          ["erp", "ERP"],
         ] as const
       ).map(([chave, rotulo]) => (
         <button
@@ -316,6 +322,15 @@ export default function CanaisCliente({
       ))}
     </div>
   );
+
+  if (aba === "erp") {
+    return (
+      <div className="flex flex-col gap-4">
+        {abas}
+        <ErpPainel erp={erp} contas={contas} quando={quando} />
+      </div>
+    );
+  }
 
   if (aba === "canais") {
     return (

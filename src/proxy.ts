@@ -34,6 +34,8 @@ const PUBLICAS = [
   "/api/cron/",
   "/relatorio/",
   "/api/relatorio/",
+  // Manual de integração: o Bling exige o link, e quem lê ainda não é cliente.
+  "/manual/",
 ];
 
 /**

@@ -15,19 +15,33 @@ export const dynamic = "force-dynamic";
  * Mercado Livre, pronta entrega e venda a prazo. Separá-las é o que permite
  * ver margem por conta, que foi o corte que mostrou a reputação amarela da
  * conta a prazo.
+ *
+ * `?aba=erp` abre direto na aba do ERP: é para lá que a volta da conexão do
+ * Bling manda quem precisa ligar loja a canal.
  */
-export default async function Pagina() {
-  const { canais, contas, faltaMigracao } = await carregarCanais();
+export default async function Pagina({
+  searchParams,
+}: {
+  searchParams: Promise<{ aba?: string }>;
+}) {
+  const { aba } = await searchParams;
+  const { canais, contas, erp, faltaMigracao } = await carregarCanais();
 
   return (
     <>
       <PageHeader
         title="Canais e contas"
         breadcrumb="Integrações"
-        description="Onde a empresa vende, e com quais contas"
+        description="Onde a empresa vende, com quais contas, e de qual ERP vêm os pedidos"
       />
       <PageBody>
-        <CanaisCliente canais={canais} contas={contas} faltaMigracao={faltaMigracao} />
+        <CanaisCliente
+          canais={canais}
+          contas={contas}
+          erp={erp}
+          abaInicial={aba === "erp" ? "erp" : aba === "canais" ? "canais" : "contas"}
+          faltaMigracao={faltaMigracao}
+        />
       </PageBody>
     </>
   );

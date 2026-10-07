@@ -47,6 +47,19 @@ export type ContaCanal = {
   } | null;
 };
 
+/** O ERP conectado à operação. Hoje só o Bling. */
+export type Erp = {
+  provedor: "bling";
+  conectado: boolean;
+  empresa: { nome: string | null; cnpj: string | null } | null;
+  sincronizadaEm: string | null;
+  erro: string | null;
+  /** loja do Bling → conta de canal. */
+  lojas: Record<string, string>;
+  /** Lojas com pedido e sem canal escolhido: os pedidos delas estão parados. */
+  pendentes: Record<string, { pedidos: number; exemplo: string }>;
+};
+
 /** Coluna ou tabela que só existe depois de uma migração pendente. */
 function faltando(code?: string) {
   return code === "42P01" || code === "42703" || code === "PGRST205" || code === "PGRST204";
@@ -55,6 +68,7 @@ function faltando(code?: string) {
 export async function carregarCanais(): Promise<{
   canais: Canal[];
   contas: ContaCanal[];
+  erp: Erp | null;
   faltaMigracao: string | null;
 }> {
   const sb = await clienteServidor();
@@ -73,7 +87,7 @@ export async function carregarCanais(): Promise<{
     ]);
 
   if (eCanais && faltando(eCanais.code)) {
-    return { canais: [], contas: [], faltaMigracao: "db/01_schema.sql" };
+    return { canais: [], contas: [], erp: null, faltaMigracao: "db/01_schema.sql" };
   }
   if (eCanais) throw new Error(`Não consegui ler os canais: ${eCanais.message}`);
 
@@ -152,7 +166,20 @@ export async function carregarCanais(): Promise<{
       a.nome.localeCompare(b.nome, "pt-BR")
   );
 
-  return { canais: lista, contas: linhas, faltaMigracao: null };
+  const b = ((integs ?? []) as Integ[]).find((i) => i.provedor === "bling" && !i.conta_canal_id);
+  const erp: Erp | null = b
+    ? {
+        provedor: "bling",
+        conectado: Boolean(b.credencial_ref),
+        empresa: (b.config?.empresa as Erp["empresa"]) ?? null,
+        sincronizadaEm: b.ultima_sincronizacao,
+        erro: b.ultimo_erro,
+        lojas: (b.config?.lojas as Erp["lojas"]) ?? {},
+        pendentes: (b.config?.lojasPendentes as Erp["pendentes"]) ?? {},
+      }
+    : null;
+
+  return { canais: lista, contas: linhas, erp, faltaMigracao: null };
 }
 
 /** Canais que a plataforma sabe ler por API. O resto entra por planilha. */

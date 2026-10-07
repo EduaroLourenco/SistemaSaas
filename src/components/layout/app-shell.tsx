@@ -278,6 +278,7 @@ function MobileTabBar({
 const SEM_MOLDURA = [
   "/entrar",
   "/auth",
+  "/manual/",
   "/cadastro",
   "/comecar",
   "/relatorio/",

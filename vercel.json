@@ -5,6 +5,7 @@
     { "path": "/api/cron/meli?turno=13h", "schedule": "0 16 * * *" },
     { "path": "/api/cron/meli?turno=01h", "schedule": "0 4 * * *" },
     { "path": "/api/cron/vtex", "schedule": "30 4 * * *" },
-    { "path": "/api/cron/ga4", "schedule": "0 5 * * *" }
+    { "path": "/api/cron/ga4", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/bling", "schedule": "30 5 * * *" }
   ]
 }
