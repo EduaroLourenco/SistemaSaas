@@ -1379,13 +1379,27 @@ export async function montarRelatorio(
   ];
 
   /* ══ Pendências ══ */
+  // A pendência do Analytics só é verdade enquanto o GA4 não estiver ligado
+  // com propriedade escolhida — antes era texto fixo, e passaria a mentir.
+  const { data: ga4 } = await sb
+    .from("integracoes")
+    .select("credencial_ref,config")
+    .eq("operacao_id", daOperacao)
+    .eq("provedor", "ga4");
+  const comGa4 = (ga4 ?? []).some(
+    (g) => g.credencial_ref && (g.config as Record<string, unknown> | null)?.propriedade
+  );
   const pendencias: Pendencia[] = [
-    {
-      titulo: "Visitas da Loja própria não existem",
-      detalhe: "A VTEX não está conectada ao Analytics, então não há sessão nem visita da loja.",
-      impacto: "Conversão e taxa de abandono da Loja própria ficam sem medição. Receita e pedido estão completos.",
-      quem: "eduardo",
-    },
+    ...(comGa4
+      ? []
+      : [
+          {
+            titulo: "Visitas da Loja própria não existem",
+            detalhe: "A loja não está conectada ao Google Analytics, então não há sessão nem visita do site.",
+            impacto: "Conversão e taxa de abandono da Loja própria ficam sem medição. Receita e pedido estão completos.",
+            quem: "eduardo" as const,
+          },
+        ]),
     {
       titulo: "Sincronização automática desligada",
       detalhe: "Falta CRON_SECRET, MELI_APP_ID, MELI_CLIENT_SECRET e a autorização nova na Vercel.",

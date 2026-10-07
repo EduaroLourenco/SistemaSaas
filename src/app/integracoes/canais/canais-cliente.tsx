@@ -121,8 +121,41 @@ export default function CanaisCliente({
       chave: "conexao",
       titulo: "API",
       render: (c) => {
+        /*
+         * O GA4 mede o SITE, então vale para toda loja própria — VTEX ou
+         * não. Fica numa linha à parte porque é outra integração: a loja
+         * pode ter pedido por planilha e visita pelo Google ao mesmo tempo.
+         */
+        const ga4 = c.canalTipo === "loja_propria" && (
+          <div className="flex flex-col gap-0.5 items-start mt-1.5 pt-1.5 border-t border-line w-full">
+            <span className="text-[11px] text-ink-3">Google Analytics</span>
+            {c.ga4 && (
+              <Badge tone={c.ga4.erro ? "down" : c.ga4.conectada && c.ga4.propriedade ? "up" : "warn"}>
+                {c.ga4.erro
+                  ? "Com erro"
+                  : !c.ga4.conectada
+                    ? "Não conectado"
+                    : c.ga4.propriedade ?? "Falta escolher a propriedade"}
+              </Badge>
+            )}
+            <a
+              href={`/api/ga4/conectar?conta=${c.id}`}
+              className="text-[11px] font-medium text-brand hover:underline"
+            >
+              {c.ga4?.conectada ? "Reconectar" : "Conectar Google Analytics"}
+            </a>
+            {quando(c.ga4?.sincronizadaEm ?? null) && (
+              <span className="num text-[11px] text-ink-3">sync {quando(c.ga4?.sincronizadaEm ?? null)}</span>
+            )}
+          </div>
+        );
         if (!COM_API.has(c.canalCodigo)) {
-          return <span className="text-[11.5px] text-ink-3">por planilha</span>;
+          return (
+            <div className="flex flex-col items-start">
+              <span className="text-[11.5px] text-ink-3">por planilha</span>
+              {ga4}
+            </div>
+          );
         }
         return (
           <div className="flex flex-col gap-0.5 items-start">
@@ -142,6 +175,7 @@ export default function CanaisCliente({
                 sync {quando(c.sincronizadaEm)}
               </span>
             )}
+            {ga4}
           </div>
         );
       },

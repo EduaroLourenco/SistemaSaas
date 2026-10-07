@@ -37,6 +37,14 @@ export type ContaCanal = {
   /** Última sincronização registrada, quando houver integração. */
   sincronizadaEm: string | null;
   ultimoErro: string | null;
+  canalTipo: string;
+  /** Google Analytics da loja própria — integração à parte da do canal. */
+  ga4: {
+    conectada: boolean;
+    propriedade: string | null;
+    sincronizadaEm: string | null;
+    erro: string | null;
+  } | null;
 };
 
 /** Coluna ou tabela que só existe depois de uma migração pendente. */
@@ -61,7 +69,7 @@ export async function carregarCanais(): Promise<{
         ),
       sb
         .from("integracoes")
-        .select("conta_canal_id,credencial_ref,ultima_sincronizacao,ultimo_erro"),
+        .select("provedor,conta_canal_id,credencial_ref,ultima_sincronizacao,ultimo_erro,config"),
     ]);
 
   if (eCanais && faltando(eCanais.code)) {
@@ -82,15 +90,25 @@ export async function carregarCanais(): Promise<{
 
   const porCanal = new Map(lista.map((c) => [c.id, c]));
   type Integ = {
+    provedor: string;
     conta_canal_id: string | null;
     credencial_ref: string | null;
     ultima_sincronizacao: string | null;
     ultimo_erro: string | null;
+    config: Record<string, unknown> | null;
   };
+  /*
+   * Separado por provedor: a loja própria pode ter a integração do canal
+   * (VTEX) e a do Google Analytics na mesma conta. Um Map só por conta
+   * deixava a última lida vencer, e o GA4 conectado fazia a VTEX parecer
+   * conectada — ou o contrário.
+   */
+  const comConta = ((integs ?? []) as Integ[]).filter((i) => i.conta_canal_id);
   const porConta = new Map(
-    ((integs ?? []) as Integ[])
-      .filter((i) => i.conta_canal_id)
-      .map((i) => [i.conta_canal_id as string, i])
+    comConta.filter((i) => i.provedor !== "ga4").map((i) => [i.conta_canal_id as string, i])
+  );
+  const ga4PorConta = new Map(
+    comConta.filter((i) => i.provedor === "ga4").map((i) => [i.conta_canal_id as string, i])
   );
 
   const linhas: ContaCanal[] = (contas ?? []).map((c) => {
@@ -113,6 +131,17 @@ export async function carregarCanais(): Promise<{
       conectada: Boolean(integ?.credencial_ref),
       sincronizadaEm: integ?.ultima_sincronizacao ?? null,
       ultimoErro: integ?.ultimo_erro ?? null,
+      canalTipo: canal?.tipo ?? "",
+      ga4: (() => {
+        const g = ga4PorConta.get(c.id as string);
+        if (!g) return null;
+        return {
+          conectada: Boolean(g.credencial_ref),
+          propriedade: (g.config?.propriedadeNome as string | undefined) ?? null,
+          sincronizadaEm: g.ultima_sincronizacao,
+          erro: g.ultimo_erro,
+        };
+      })(),
     };
   });
 
