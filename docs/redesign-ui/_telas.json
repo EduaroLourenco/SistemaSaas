@@ -1,0 +1,1800 @@
+[
+ {
+  "rota": "/alertas",
+  "arquivos": [
+   "src/app/alertas/page.tsx",
+   "src/app/alertas/alertas-cliente.tsx"
+  ],
+  "linhas": 92,
+  "comps": [
+   "Alertas",
+   "PageHeader",
+   "Segmented",
+   "PageBody",
+   "PainelExclusoes",
+   "Panel",
+   "TudoCerto",
+   "CartaoAlerta"
+  ],
+  "labels": [
+   "Todos",
+   "Críticos",
+   "Atenção"
+  ],
+  "nCond": 5
+ },
+ {
+  "rota": "/anuncios/analise",
+  "arquivos": [
+   "src/app/anuncios/analise/page.tsx",
+   "src/app/anuncios/analise/analise-cliente.tsx"
+  ],
+  "linhas": 1100,
+  "comps": [
+   "AnaliseAnuncios",
+   "Badge",
+   "Checkbox",
+   "Package",
+   "Progress",
+   "Sparkline",
+   "IndicadorPreco",
+   "PageHeader",
+   "Button",
+   "SlidersHorizontal",
+   "RefreshCw",
+   "BarraFiltros",
+   "Filtro",
+   "SeletorCanal",
+   "Select",
+   "Segmented",
+   "FiltroDivisor",
+   "Search",
+   "X",
+   "FiltroAcoes",
+   "PageBody",
+   "Panel",
+   "TriangleAlert",
+   "StatTile",
+   "MatrizAnuncios",
+   "PanelHeader",
+   "Columns2",
+   "DataTable",
+   "EmptyState",
+   "RaioX",
+   "CompararAnuncios",
+   "FilterSheet",
+   "Field",
+   "Sheet",
+   "ExternalLink",
+   "Delta",
+   "ResponsiveContainer",
+   "ComposedChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "Bar",
+   "Line",
+   "Legend",
+   "Elasticidade",
+   "LinhaDoTempo",
+   "TabelaSemanal"
+  ],
+  "labels": [
+   "n === total ? `${n} semanas (tudo)` : `${n} semanas`",
+   "nome: c",
+   "header: ",
+   "header: Anúncio",
+   "header: Conta",
+   "header: Visitas",
+   "header: Vendas",
+   "header: Conversão",
+   "header: Receita",
+   "header: Evolução",
+   "header: Preço vs. ideal",
+   "header: Subsídio"
+  ],
+  "nCond": 30
+ },
+ {
+  "rota": "/anuncios/catalogo",
+  "arquivos": [
+   "src/app/anuncios/catalogo/page.tsx",
+   "src/app/anuncios/catalogo/catalogo-cliente.tsx"
+  ],
+  "linhas": 1082,
+  "comps": [
+   "CatalogoAnuncios",
+   "Package",
+   "Badge",
+   "PageHeader",
+   "Button",
+   "Loader2",
+   "RefreshCw",
+   "Info",
+   "SlidersHorizontal",
+   "BarraFiltros",
+   "Filtro",
+   "Segmented",
+   "Select",
+   "FiltroDivisor",
+   "Search",
+   "X",
+   "FiltroAcoes",
+   "PageBody",
+   "Panel",
+   "TriangleAlert",
+   "StatTile",
+   "PanelHeader",
+   "BarraComposicao",
+   "DataTable",
+   "EmptyState",
+   "FichaAnuncio",
+   "FilterSheet",
+   "Field",
+   "OrigemDosDados",
+   "Sheet",
+   "ExternalLink",
+   "ResponsiveContainer",
+   "LineChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "ChartTooltip",
+   "Line",
+   "Legend",
+   "KeyValue"
+  ],
+  "labels": [
+   "header: Título",
+   "header: MLB",
+   "header: SKU",
+   "header: Tipo",
+   "header: Preço atual",
+   "header: Comissão padrão",
+   "header: Comissão praticada",
+   "header: Status",
+   "header: Atualizado",
+   "ROTULO_STATUS[s]",
+   "rotulo: Clássico",
+   "rotulo: Premium"
+  ],
+  "nCond": 19
+ },
+ {
+  "rota": "/anuncios/preco-alvo",
+  "arquivos": [
+   "src/app/anuncios/preco-alvo/page.tsx",
+   "src/app/anuncios/preco-alvo/preco-alvo-cliente.tsx"
+  ],
+  "linhas": 548,
+  "comps": [
+   "PrecoAlvoCliente",
+   "PageHeader",
+   "Badge",
+   "PageBody",
+   "Panel",
+   "AlertCircle",
+   "Field",
+   "Select",
+   "Input",
+   "Button",
+   "Trash2",
+   "Plus",
+   "Loader2",
+   "Save",
+   "Link",
+   "ArrowRight",
+   "React.Fragment"
+  ],
+  "labels": [],
+  "nCond": 16
+ },
+ {
+  "rota": "/anuncios/preco-ideal",
+  "arquivos": [
+   "src/app/anuncios/preco-ideal/page.tsx",
+   "src/app/anuncios/preco-ideal/preco-ideal-cliente.tsx"
+  ],
+  "linhas": 868,
+  "comps": [
+   "PrecoIdeal",
+   "FileSpreadsheet",
+   "Badge",
+   "PageHeader",
+   "Button",
+   "SlidersHorizontal",
+   "BarraFiltros",
+   "Filtro",
+   "Segmented",
+   "Select",
+   "FiltroDivisor",
+   "Search",
+   "X",
+   "FiltroAcoes",
+   "PageBody",
+   "Panel",
+   "PanelHeader",
+   "CartaoRelatorio",
+   "StatTile",
+   "ResponsiveContainer",
+   "BarChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "ChartTooltip",
+   "Bar",
+   "Cell",
+   "DataTable",
+   "EmptyState",
+   "ComparativoLinha",
+   "FilterSheet",
+   "Field",
+   "Sheet",
+   "KeyValue"
+  ],
+  "labels": [
+   "rotulo: ≤ −6%",
+   "rotulo: −6 a −2%",
+   "rotulo: −2 a 2%",
+   "rotulo: 2 a 6%",
+   "rotulo: ≥ 6%",
+   "header: Título",
+   "header: MLB",
+   "header: SKU",
+   "header: Preço praticado",
+   "header: Preço ideal",
+   "header: Desvio",
+   "header: Comissão negociada"
+  ],
+  "nCond": 11
+ },
+ {
+  "rota": "/anuncios/preco-performance",
+  "arquivos": [
+   "src/app/anuncios/preco-performance/page.tsx",
+   "src/app/anuncios/preco-performance/performance-cliente.tsx"
+  ],
+  "linhas": 671,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "SemFonte",
+   "PerformancePrecoCliente",
+   "BarraFiltros",
+   "Filtro",
+   "Segmented",
+   "SelectRecorte",
+   "FiltroDivisor",
+   "Input",
+   "FiltroAcoes",
+   "Button",
+   "Loader2",
+   "Download",
+   "Panel",
+   "AlertCircle",
+   "X",
+   "ResponsiveContainer",
+   "BarChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "ChartTooltip",
+   "ReferenceLine",
+   "Bar",
+   "Cell",
+   "Badge",
+   "Info"
+  ],
+  "labels": [
+   "rotulo: no melhor preço",
+   "rotulo: subiu e caiu venda",
+   "rotulo: acima do melhor",
+   "rotulo: abaixo do melhor",
+   "rotulo: caiu sem mudar preço",
+   "7 dias",
+   "30 dias",
+   "90 dias",
+   "Todas",
+   "A",
+   "B",
+   "C"
+  ],
+  "nCond": 24
+ },
+ {
+  "rota": "/anuncios/tipo",
+  "arquivos": [
+   "src/app/anuncios/tipo/page.tsx",
+   "src/app/anuncios/tipo/tipo-cliente.tsx"
+  ],
+  "linhas": 477,
+  "comps": [
+   "TipoAnuncio",
+   "BarraFiltros",
+   "Filtro",
+   "Segmented",
+   "SelectRecorte",
+   "Checkbox",
+   "PageHeader",
+   "PageBody",
+   "Panel",
+   "EmptyState",
+   "Cartao",
+   "LeituraMedias",
+   "Pares",
+   "Badge",
+   "Delta",
+   "Metrica",
+   "Leitura",
+   "Celula",
+   "Tabela"
+  ],
+  "labels": [
+   "30 dias",
+   "90 dias",
+   "180 dias",
+   "1 ano",
+   "Tudo"
+  ],
+  "nCond": 19
+ },
+ {
+  "rota": "/anuncios/trafego-pago",
+  "arquivos": [
+   "src/app/anuncios/trafego-pago/page.tsx",
+   "src/app/anuncios/trafego-pago/trafego-pago-cliente.tsx"
+  ],
+  "linhas": 494,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "SemFonte",
+   "TrafegoPagoCliente",
+   "Badge",
+   "Panel",
+   "AlertCircle",
+   "Tabs",
+   "Input",
+   "TrendingDown"
+  ],
+  "labels": [
+   "rotulo: mídia > margem",
+   "rotulo: sem venda nenhuma",
+   "rotulo: vendeu sem o ads",
+   "Por anúncio",
+   "Por campanha",
+   "Gasto sem retorno",
+   "titulo: Não vendeu nem com ads, nem sozinho",
+   "titulo: Vendeu bem, mas nada foi atribuído ao ads",
+   "titulo: A mídia custou mais que a margem"
+  ],
+  "nCond": 26
+ },
+ {
+  "rota": "/cadastro",
+  "arquivos": [
+   "src/app/cadastro/page.tsx"
+  ],
+  "linhas": 208,
+  "comps": [
+   "MailCheck",
+   "Link",
+   "Button",
+   "Loader2"
+  ],
+  "labels": [],
+  "nCond": 2
+ },
+ {
+  "rota": "/comecar",
+  "arquivos": [
+   "src/app/comecar/page.tsx",
+   "src/app/comecar/criar-empresa.tsx"
+  ],
+  "linhas": 131,
+  "comps": [
+   "CriarEmpresa",
+   "Button",
+   "Loader2"
+  ],
+  "labels": [],
+  "nCond": 2
+ },
+ {
+  "rota": "/configuracoes",
+  "arquivos": [
+   "src/app/configuracoes/page.tsx"
+  ],
+  "linhas": 253,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "Panel",
+   "Aparencia",
+   "SectionTitle",
+   "Check"
+  ],
+  "labels": [
+   "Geral",
+   "Aparência",
+   "Contas e operações",
+   "Notificações",
+   "Dados",
+   "rotulo: Claro",
+   "descricao: Padrão. Melhor para tabela densa sob luz forte.",
+   "rotulo: Escuro",
+   "descricao: Menos brilho em sala fechada e à noite.",
+   "rotulo: Sistema",
+   "descricao: Acompanha a preferência do aparelho.",
+   "rotulo: Compacta"
+  ],
+  "nCond": 2
+ },
+ {
+  "rota": "/conversa",
+  "arquivos": [
+   "src/app/conversa/page.tsx",
+   "src/app/conversa/conversa-cliente.tsx"
+  ],
+  "linhas": 359,
+  "comps": [
+   "Conversa",
+   "PageHeader",
+   "Button",
+   "RotateCcw",
+   "PageBody",
+   "Panel",
+   "Sparkles",
+   "Bolha",
+   "Loader2",
+   "ErroComSaida",
+   "Send",
+   "Database"
+  ],
+  "labels": [
+   "texto: limpa",
+   "texto: ",
+   "texto: ultima.texto + evento.texto",
+   "nome: evento.nome!"
+  ],
+  "nCond": 10
+ },
+ {
+  "rota": "/convite/[token]",
+  "arquivos": [
+   "src/app/convite/[token]/page.tsx",
+   "src/app/convite/[token]/aceitar.tsx"
+  ],
+  "linhas": 235,
+  "comps": [
+   "Link",
+   "Aviso",
+   "AceitarConvite",
+   "Button"
+  ],
+  "labels": [
+   "rotulo: Ir para o sistema",
+   "rotulo: Criar conta",
+   "rotulo: Já tenho conta"
+  ],
+  "nCond": 5
+ },
+ {
+  "rota": "/empresas",
+  "arquivos": [
+   "src/app/empresas/page.tsx",
+   "src/app/empresas/empresas-cliente.tsx"
+  ],
+  "linhas": 469,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "EmpresasCliente",
+   "Panel",
+   "AlertTriangle",
+   "Check",
+   "Button",
+   "Copy",
+   "Plus",
+   "LinhaEmpresa",
+   "ChevronDown",
+   "ChevronRight",
+   "Building2",
+   "X",
+   "Badge",
+   "Plug",
+   "Pencil",
+   "LinhaOperacao",
+   "Trash2"
+  ],
+  "labels": [
+   "nome: nome.trim()",
+   "nome: n",
+   "nome: novaOp"
+  ],
+  "nCond": 21
+ },
+ {
+  "rota": "/entrar",
+  "arquivos": [
+   "src/app/entrar/page.tsx"
+  ],
+  "linhas": 134,
+  "comps": [
+   "Button",
+   "Loader2"
+  ],
+  "labels": [],
+  "nCond": 2
+ },
+ {
+  "rota": "/equipe",
+  "arquivos": [
+   "src/app/equipe/page.tsx",
+   "src/app/equipe/equipe-cliente.tsx"
+  ],
+  "linhas": 340,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "EquipeCliente",
+   "Panel",
+   "AlertTriangle",
+   "EmptyState",
+   "SectionTitle",
+   "Field",
+   "Input",
+   "Select",
+   "Button",
+   "UserPlus",
+   "Check",
+   "Copy",
+   "Trash2",
+   "Badge"
+  ],
+  "labels": [],
+  "nCond": 13
+ },
+ {
+  "rota": "/financeiro/categorias",
+  "arquivos": [
+   "src/app/financeiro/categorias/page.tsx",
+   "src/app/financeiro/categorias/categorias-cliente.tsx"
+  ],
+  "linhas": 182,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "CategoriasCliente",
+   "Badge",
+   "Cadastro"
+  ],
+  "labels": [
+   "rotulo: Nome",
+   "rotulo: Tipo",
+   "rotulo: Saída — dinheiro que sai",
+   "rotulo: Entrada — dinheiro que entra",
+   "rotulo: Comportamento",
+   "rotulo: Variável — só existe se houver venda",
+   "rotulo: Fixa — sai de qualquer jeito",
+   "rotulo: Grupo",
+   "rotulo: Ordem na DRE",
+   "rotulo: Descrição",
+   "rotulo: Ativa",
+   "titulo: Categoria"
+  ],
+  "nCond": 5
+ },
+ {
+  "rota": "/financeiro/contas",
+  "arquivos": [
+   "src/app/financeiro/contas/page.tsx",
+   "src/app/financeiro/contas/contas-cliente.tsx"
+  ],
+  "linhas": 349,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "ContasCliente",
+   "Repeat",
+   "Badge",
+   "StatusBadge",
+   "Cadastro",
+   "Checkbox"
+  ],
+  "labels": [
+   "rotulo: Não se repete",
+   "rotulo: Mensal",
+   "rotulo: Bimestral",
+   "rotulo: Trimestral",
+   "rotulo: Semestral",
+   "rotulo: Anual",
+   "rotulo: Previsto — ainda não é dívida",
+   "rotulo: Em aberto — a pagar",
+   "rotulo: Pago",
+   "rotulo: Atrasado",
+   "rotulo: Cancelado",
+   "rotulo: Descrição"
+  ],
+  "nCond": 6
+ },
+ {
+  "rota": "/financeiro/custos",
+  "arquivos": [
+   "src/app/financeiro/custos/page.tsx",
+   "src/app/financeiro/custos/custos-cliente.tsx"
+  ],
+  "linhas": 1102,
+  "comps": [
+   "CustosCliente",
+   "PageHeader",
+   "PageBody",
+   "Panel",
+   "AlertCircle",
+   "Input",
+   "SelectRecorte",
+   "Tabs",
+   "Button",
+   "Loader2",
+   "Check",
+   "Save",
+   "ArrowDownToLine",
+   "Select",
+   "Par",
+   "Celula",
+   "Trash2",
+   "Plus",
+   "Field",
+   "Badge"
+  ],
+  "labels": [
+   "rotulo: Fixa recorrente",
+   "rotulo: Variável recorrente",
+   "rotulo: Variável avulsa",
+   "descricao: ",
+   "descricao: nova.descricao",
+   "Por SKU",
+   "Frete por peso",
+   "Custos do canal",
+   "descricao: e.target.value"
+  ],
+  "nCond": 26
+ },
+ {
+  "rota": "/financeiro/folha",
+  "arquivos": [
+   "src/app/financeiro/folha/page.tsx",
+   "src/app/financeiro/folha/folha-cliente.tsx"
+  ],
+  "linhas": 272,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "FolhaCliente",
+   "Badge",
+   "Cadastro"
+  ],
+  "labels": [
+   "rotulo: Mensal",
+   "rotulo: Bimestral",
+   "rotulo: Trimestral",
+   "rotulo: Semestral",
+   "rotulo: Anual",
+   "rotulo: Pagamento único",
+   "rotulo: Nome",
+   "rotulo: Cargo",
+   "rotulo: Setor",
+   "rotulo: Salário bruto",
+   "rotulo: Salário líquido",
+   "rotulo: Benefícios"
+  ],
+  "nCond": 5
+ },
+ {
+  "rota": "/financeiro/fornecedores",
+  "arquivos": [
+   "src/app/financeiro/fornecedores/page.tsx",
+   "src/app/financeiro/fornecedores/fornecedores-cliente.tsx"
+  ],
+  "linhas": 227,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "FornecedoresCliente",
+   "Badge",
+   "Cadastro"
+  ],
+  "labels": [
+   "rotulo: Razão social",
+   "rotulo: Nome fantasia",
+   "rotulo: CNPJ",
+   "rotulo: Categoria",
+   "rotulo: c.nome",
+   "rotulo: Condição",
+   "rotulo: Dia de vencimento",
+   "rotulo: Contato",
+   "rotulo: Telefone",
+   "rotulo: E-mail",
+   "rotulo: Observação",
+   "rotulo: Ativo"
+  ],
+  "nCond": 3
+ },
+ {
+  "rota": "/financeiro",
+  "arquivos": [
+   "src/app/financeiro/page.tsx",
+   "src/app/financeiro/financeiro-cliente.tsx"
+  ],
+  "linhas": 557,
+  "comps": [
+   "FinanceiroCliente",
+   "PageHeader",
+   "BarraFiltros",
+   "Filtro",
+   "Input",
+   "SelectRecorte",
+   "Button",
+   "PageBody",
+   "Panel",
+   "AlertCircle",
+   "Link",
+   "ArrowRight",
+   "ResumoDre",
+   "Linha",
+   "GrupoDre",
+   "Tabs",
+   "Badge",
+   "DreMensal"
+  ],
+  "labels": [
+   "rotulo: Mês",
+   "rotulo: Semana",
+   "rotulo: Canal",
+   "rotulo: Conta",
+   "rotulo: SKU",
+   "rotulo: Anúncio",
+   "d.rotulo"
+  ],
+  "nCond": 13
+ },
+ {
+  "rota": "/glossario",
+  "arquivos": [
+   "src/app/glossario/page.tsx",
+   "src/app/glossario/glossario-cliente.tsx"
+  ],
+  "linhas": 167,
+  "comps": [
+   "Glossario",
+   "PageHeader",
+   "Search",
+   "X",
+   "Segmented",
+   "PageBody",
+   "Panel",
+   "EmptyState",
+   "Button",
+   "VerbeteGlossario",
+   "Badge",
+   "MapPin"
+  ],
+  "labels": [],
+  "nCond": 5
+ },
+ {
+  "rota": "/importar",
+  "arquivos": [
+   "src/app/importar/page.tsx",
+   "src/app/importar/importar-cliente.tsx"
+  ],
+  "linhas": 648,
+  "comps": [
+   "ImportarCliente",
+   "PageHeader",
+   "PageBody",
+   "Panel",
+   "FileDrop",
+   "Loader2",
+   "ErroComSaida",
+   "Resultado",
+   "EmptyState",
+   "Badge",
+   "Metrica",
+   "Leitura",
+   "ShieldAlert",
+   "CalendarDays",
+   "Button",
+   "Upload",
+   "TudoCerto"
+  ],
+  "labels": [],
+  "nCond": 31
+ },
+ {
+  "rota": "/integracoes/canais",
+  "arquivos": [
+   "src/app/integracoes/canais/page.tsx",
+   "src/app/integracoes/canais/canais-cliente.tsx"
+  ],
+  "linhas": 381,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "CanaisCliente",
+   "Badge",
+   "Link",
+   "Cadastro"
+  ],
+  "labels": [
+   "rotulo: Marketplace",
+   "rotulo: Loja própria",
+   "rotulo: Atacado",
+   "rotulo: Outro",
+   "rotulo: Canal",
+   "rotulo: c.nome",
+   "rotulo: Nome da conta",
+   "rotulo: Id do vendedor no canal",
+   "rotulo: Apelidos nas planilhas",
+   "rotulo: Reputação",
+   "rotulo: Opera no Full",
+   "rotulo: Conta padrão do canal"
+  ],
+  "nCond": 8
+ },
+ {
+  "rota": "/integracoes",
+  "arquivos": [
+   "src/app/integracoes/page.tsx"
+  ],
+  "linhas": 179,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "SectionTitle",
+   "Link",
+   "Panel",
+   "Badge",
+   "FontesDados",
+   "Info"
+  ],
+  "labels": [],
+  "nCond": 8
+ },
+ {
+  "rota": "/monitoramento/fretes",
+  "arquivos": [
+   "src/app/monitoramento/fretes/page.tsx"
+  ],
+  "linhas": 22,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "SemFonte"
+  ],
+  "labels": [],
+  "nCond": 0
+ },
+ {
+  "rota": "/monitoramento/precos",
+  "arquivos": [
+   "src/app/monitoramento/precos/page.tsx",
+   "src/app/monitoramento/precos/precos-cliente.tsx"
+  ],
+  "linhas": 401,
+  "comps": [
+   "MonitoramentoPrecos",
+   "PageHeader",
+   "PageBody",
+   "SemFonte",
+   "SeletorCanal",
+   "Segmented",
+   "Search",
+   "Panel",
+   "PanelHeader",
+   "ResponsiveContainer",
+   "ComposedChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "Bar",
+   "Line",
+   "ChevronDown",
+   "ChevronRight",
+   "Badge"
+  ],
+  "labels": [
+   "rotulo: data.slice(8)",
+   "Todas",
+   "Curva A",
+   "B",
+   "C"
+  ],
+  "nCond": 7
+ },
+ {
+  "rota": "/",
+  "arquivos": [
+   "src/app/page.tsx",
+   "src/app/painel-cliente.tsx"
+  ],
+  "linhas": 513,
+  "comps": [
+   "VisaoGeral",
+   "PageHeader",
+   "CalendarDays",
+   "BarraFiltros",
+   "Filtro",
+   "SeletorCanal",
+   "PageBody",
+   "FontesDados",
+   "FilaRecomendacoes",
+   "PainelExclusoes",
+   "StatTile",
+   "Panel",
+   "PanelHeader",
+   "ResponsiveContainer",
+   "AreaChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "ChartTooltip",
+   "Area",
+   "BarChart",
+   "Bar",
+   "Legend",
+   "Link",
+   "DataTable",
+   "Delta",
+   "SkusEmQueda"
+  ],
+  "labels": [
+   "header: Produto",
+   "header: SKU",
+   "header: Vendas",
+   "header: Receita",
+   "header: Conversão",
+   "nome: c.nome",
+   "c.nome"
+  ],
+  "nCond": 8
+ },
+ {
+  "rota": "/planejamento",
+  "arquivos": [
+   "src/app/planejamento/page.tsx",
+   "src/app/planejamento/planejamento-cliente.tsx",
+   "src/app/planejamento/componentes.tsx",
+   "src/app/planejamento/calendario.tsx",
+   "src/app/planejamento/editor.tsx",
+   "src/app/planejamento/estrategia-editor.tsx",
+   "src/app/planejamento/mapa.tsx",
+   "src/app/planejamento/quadro.tsx",
+   "src/app/planejamento/ficha.tsx",
+   "src/app/planejamento/estudio-shell.tsx",
+   "src/app/planejamento/foco.tsx"
+  ],
+  "linhas": 5040,
+  "comps": [
+   "Planejamento",
+   "EstudioShell",
+   "Search",
+   "Quadro",
+   "Mapa",
+   "ChevronLeft",
+   "ChevronRight",
+   "Calendario",
+   "Foco",
+   "Plus",
+   "Layers",
+   "Package",
+   "NovaCampanha",
+   "Ficha",
+   "Editor",
+   "Painel",
+   "Campo",
+   "ArrowUpRight",
+   "Produtos",
+   "Trash2",
+   "Check",
+   "ResumoPromocao",
+   "X",
+   "ExternalLink",
+   "Sparkles",
+   "Tag",
+   "Flag",
+   "EstrategiaEditor",
+   "ExecucaoEditor",
+   "AnunciosEditor",
+   "ContextoPromocoes",
+   "Copy",
+   "Save",
+   "Target",
+   "BookOpen",
+   "Resultados",
+   "BarChart3",
+   "Grip",
+   "Cartao",
+   "Expand",
+   "Hand",
+   "Minus",
+   "RotateCcw",
+   "GripVertical",
+   "CalendarDays",
+   "CheckCheck",
+   "LayoutGrid",
+   "FolderOpen",
+   "Settings2",
+   "Icon",
+   "SlidersHorizontal",
+   "Undo2",
+   "Compass",
+   "CheckCircle2"
+  ],
+  "labels": [
+   "title: Planejamento · Plataforma",
+   "nome: ",
+   "titulo: acao.titulo",
+   "titulo: o.nome",
+   "nome: e.target.value",
+   "nome: tipoNome",
+   "titulo: i.titulo",
+   "titulo: p.nome",
+   "nome: Institucional / sem canal",
+   "titulo: e.target.value",
+   "texto: tarefa.trim()",
+   "titulo: item.titulo +  (cópia)"
+  ],
+  "nCond": 157
+ },
+ {
+  "rota": "/promocoes/campanhas",
+  "arquivos": [
+   "src/app/promocoes/campanhas/page.tsx",
+   "src/app/promocoes/campanhas/campanhas-cliente.tsx"
+  ],
+  "linhas": 411,
+  "comps": [
+   "Campanhas",
+   "PageHeader",
+   "PageBody",
+   "SemFonte",
+   "Segmented",
+   "Search",
+   "Panel",
+   "PanelHeader",
+   "Badge",
+   "Trash2",
+   "ConfirmarApagar",
+   "Loader2"
+  ],
+  "labels": [
+   "Todas",
+   "Com redução",
+   "Sem redução"
+  ],
+  "nCond": 11
+ },
+ {
+  "rota": "/promocoes/comparar",
+  "arquivos": [
+   "src/app/promocoes/comparar/page.tsx",
+   "src/app/promocoes/comparar/comparar-cliente.tsx"
+  ],
+  "linhas": 571,
+  "comps": [
+   "Comparar",
+   "PageHeader",
+   "PageBody",
+   "SemFonte",
+   "Segmented",
+   "Button",
+   "Loader2",
+   "Download",
+   "Search",
+   "Panel",
+   "AlertCircle",
+   "PanelHeader",
+   "LinhaAnuncio",
+   "ChevronDown",
+   "ChevronRight",
+   "Resultado",
+   "LinhaOferta",
+   "Badge"
+  ],
+  "labels": [
+   "Mais de uma",
+   "Nenhuma passa",
+   "Alguma passa",
+   "Todos"
+  ],
+  "nCond": 32
+ },
+ {
+  "rota": "/promocoes/historico",
+  "arquivos": [
+   "src/app/promocoes/historico/page.tsx",
+   "src/app/promocoes/historico/historico-cliente.tsx"
+  ],
+  "linhas": 382,
+  "comps": [
+   "HistoricoPromocoes",
+   "PageHeader",
+   "PageBody",
+   "SemFonte",
+   "Segmented",
+   "Search",
+   "Panel",
+   "PanelHeader",
+   "React.Fragment",
+   "ChevronDown",
+   "ChevronRight",
+   "Badge"
+  ],
+  "labels": [
+   "titulo: h.titulo",
+   "Todas",
+   "Participaram",
+   "Fora",
+   "ABC",
+   "A",
+   "B",
+   "C",
+   "Tipo",
+   "Clássico",
+   "Premium"
+  ],
+  "nCond": 20
+ },
+ {
+  "rota": "/promocoes/processar",
+  "arquivos": [
+   "src/app/promocoes/processar/page.tsx"
+  ],
+  "linhas": 1089,
+  "comps": [
+   "Badge",
+   "PageHeader",
+   "Button",
+   "ArrowLeft",
+   "PageBody",
+   "Panel",
+   "Check",
+   "CircleAlert",
+   "PanelHeader",
+   "SectionTitle",
+   "FileDrop",
+   "Field",
+   "Input",
+   "Loader2",
+   "ArrowRight",
+   "StatTile",
+   "Info",
+   "Segmented",
+   "DataTable",
+   "EmptyState",
+   "PainelRevisao",
+   "FileSpreadsheet",
+   "Download",
+   "Link",
+   "History"
+  ],
+  "labels": [
+   "rotulo: Sem espaço para desconto",
+   "rotulo: Proposta abaixo da tabela",
+   "rotulo: Recusado por pouco",
+   "rotulo: Não alteradas",
+   "rotulo: Dava para descontar mais",
+   "titulo: Enviar planilhas",
+   "hint: Central de Promoções — a Fórmula base é opcional",
+   "titulo: Conferir",
+   "hint: decisão item a item",
+   "titulo: Exportar",
+   "hint: planilha pronta para subir",
+   "Todos"
+  ],
+  "nCond": 23
+ },
+ {
+  "rota": "/relatorio/[chave]",
+  "arquivos": [
+   "src/app/relatorio/[chave]/page.tsx",
+   "src/app/relatorio/[chave]/relatorio-cliente.tsx"
+  ],
+  "linhas": 1675,
+  "comps": [
+   "RelatorioCliente",
+   "Dica",
+   "Delta",
+   "Kpi",
+   "Secao",
+   "Interpretacao",
+   "GradeKpi",
+   "Colunas",
+   "Barras",
+   "React.Fragment",
+   "GradeKpiCompacta",
+   "DetalheProduto",
+   "ListaProdutos",
+   "SkuEntreCanais"
+  ],
+  "labels": [
+   "title: Raio-X da operação",
+   "nome: linha.nome as string",
+   "texto: valor",
+   "nome: Prioridades",
+   "nome: Operação",
+   "nome: Por loja",
+   "nome: Produtos",
+   "nome: Catálogo",
+   "nome: Estoque",
+   "nome: Multicanal",
+   "nome: Tráfego pago",
+   "nome: Financeiro"
+  ],
+  "nCond": 79
+ },
+ {
+  "rota": "/relatorios/apresentacao",
+  "arquivos": [
+   "src/app/relatorios/apresentacao/page.tsx",
+   "src/app/relatorios/apresentacao/apresentacao-cliente.tsx"
+  ],
+  "linhas": 416,
+  "comps": [
+   "Apresentacao",
+   "PageHeader",
+   "Button",
+   "Play",
+   "Segmented",
+   "PageBody",
+   "Panel",
+   "PanelHeader",
+   "Checkbox",
+   "SectionTitle",
+   "Delta",
+   "ModoApresentacao",
+   "Presentation",
+   "X",
+   "ResponsiveContainer",
+   "LineChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Line",
+   "BarChart",
+   "Bar",
+   "ChevronLeft",
+   "ChevronRight"
+  ],
+  "labels": [
+   "Diária",
+   "descricao: O último dia com movimento, contra o dia anterior.",
+   "Semanal",
+   "descricao: Os últimos 7 dias, contra os 7 anteriores.",
+   "Personalizada",
+   "descricao: Escolha o intervalo — a comparação é com o período de mesmo tamanho logo antes.",
+   "f.label"
+  ],
+  "nCond": 4
+ },
+ {
+  "rota": "/relatorios/exportacoes",
+  "arquivos": [
+   "src/app/relatorios/exportacoes/page.tsx"
+  ],
+  "linhas": 275,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "Panel",
+   "Package",
+   "Sparkles",
+   "Button",
+   "Loader2",
+   "Download",
+   "AlertCircle",
+   "PanelHeader",
+   "Badge"
+  ],
+  "labels": [
+   "titulo: Lançamentos diários",
+   "descricao: Uma linha por canal por dia, com visitas, receita, pedidos, mídia, cancelamentos, ticket, ACOS e ROAS.",
+   "titulo: Consolidado mensal",
+   "descricao: Uma linha por canal por mês, com ticket, conversão e TACOS já calculados.",
+   "titulo: Desempenho de anúncios",
+   "descricao: Histórico semanal por anúncio: visitas, unidades, receita, preço pago, comissão real e conversão.",
+   "titulo: Histórico de promoções",
+   "descricao: Cada decisão com os quatro preços — ofertado pelo canal, tabela, piso e com desconto extra."
+  ],
+  "nCond": 4
+ },
+ {
+  "rota": "/vendas/anual",
+  "arquivos": [
+   "src/app/vendas/anual/page.tsx",
+   "src/app/vendas/anual/anual-cliente.tsx"
+  ],
+  "linhas": 836,
+  "comps": [
+   "VendasAnual",
+   "Progress",
+   "Delta",
+   "PageHeader",
+   "Button",
+   "SlidersHorizontal",
+   "Segmented",
+   "PageBody",
+   "StatTile",
+   "Panel",
+   "PanelHeader",
+   "Badge",
+   "ResponsiveContainer",
+   "ComposedChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "ChartTooltip",
+   "Bar",
+   "Line",
+   "Legend",
+   "ChevronRight",
+   "DetalheMes",
+   "FilterSheet",
+   "Sheet",
+   "KeyValue"
+  ],
+  "labels": [
+   "Todos os canais",
+   "c.nome",
+   "header: Receita",
+   "header: Pedidos",
+   "header: Ticket médio",
+   "header: Visitas",
+   "header: Conversão",
+   "header: ADS",
+   "header: TACOS",
+   "header: Cancelado",
+   "header: Cancel. %",
+   "header: Receita líquida"
+  ],
+  "nCond": 15
+ },
+ {
+  "rota": "/vendas/canais",
+  "arquivos": [
+   "src/app/vendas/canais/page.tsx",
+   "src/app/vendas/canais/canais-cliente.tsx"
+  ],
+  "linhas": 603,
+  "comps": [
+   "VendasPorCanal",
+   "Delta",
+   "Badge",
+   "Sparkline",
+   "PageHeader",
+   "CalendarDays",
+   "Button",
+   "SlidersHorizontal",
+   "BarraFiltros",
+   "Filtro",
+   "PageBody",
+   "Panel",
+   "PanelHeader",
+   "ResponsiveContainer",
+   "LineChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "ChartTooltip",
+   "Line",
+   "Legend",
+   "DataTable",
+   "CompararPeriodo",
+   "X"
+  ],
+  "labels": [
+   "nome: c.nome",
+   "header: Canal",
+   "header: Faturamento",
+   "header: Variação",
+   "header: Participação",
+   "header: Pedidos",
+   "header: Ticket médio",
+   "header: Conversão",
+   "header: Margem",
+   "header: Tendência",
+   "c.nome"
+  ],
+  "nCond": 5
+ },
+ {
+  "rota": "/vendas/cancelamentos",
+  "arquivos": [
+   "src/app/vendas/cancelamentos/page.tsx",
+   "src/app/vendas/cancelamentos/cancelamentos-cliente.tsx"
+  ],
+  "linhas": 734,
+  "comps": [
+   "Cancelamentos",
+   "PageHeader",
+   "PageBody",
+   "Panel",
+   "EmptyState",
+   "BarraFiltros",
+   "Filtro",
+   "Segmented",
+   "Metrica",
+   "Leitura",
+   "TudoCerto",
+   "PainelExclusoes",
+   "PorCanal",
+   "CanalPorMes",
+   "PorSku",
+   "PorMes",
+   "Celula",
+   "Tabela",
+   "Legenda",
+   "ResponsiveContainer",
+   "BarChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "Linha",
+   "Bar"
+  ],
+  "labels": [
+   "Por canal",
+   "Canal × mês",
+   "Por SKU",
+   "Ao longo do ano",
+   "Valor",
+   "Quantidade",
+   "texto: text-ink-3",
+   "texto: text-ink-2",
+   "texto: text-ink",
+   "texto: font-semibold",
+   "rotulo: < 5%",
+   "rotulo: 5–10%"
+  ],
+  "nCond": 14
+ },
+ {
+  "rota": "/vendas/comparativos",
+  "arquivos": [
+   "src/app/vendas/comparativos/page.tsx",
+   "src/app/vendas/comparativos/comparativos-cliente.tsx"
+  ],
+  "linhas": 755,
+  "comps": [
+   "VendasComparativos",
+   "PageHeader",
+   "Button",
+   "SlidersHorizontal",
+   "BarraFiltros",
+   "Filtro",
+   "Select",
+   "Segmented",
+   "FiltroAcoes",
+   "PageBody",
+   "Panel",
+   "PanelHeader",
+   "Matriz",
+   "SectionTitle",
+   "Badge",
+   "Progress",
+   "ResponsiveContainer",
+   "BarChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "ChartTooltip",
+   "Bar",
+   "Legend",
+   "HeatCell",
+   "CompararPeriodo",
+   "FilterSheet"
+  ],
+  "labels": [
+   "Receita",
+   "Pedidos",
+   "Ticket médio",
+   "Visitas",
+   "Taxa de conversão",
+   "Todos os canais",
+   "c.nome",
+   "rotulo: m",
+   "rotulo: nome.charAt(0).toUpperCase() + nome.slice(1)",
+   "nome: t.rotulo",
+   "Por mês",
+   "Por dia"
+  ],
+  "nCond": 8
+ },
+ {
+  "rota": "/vendas/dia",
+  "arquivos": [
+   "src/app/vendas/dia/page.tsx",
+   "src/app/vendas/dia/dia-cliente.tsx"
+  ],
+  "linhas": 451,
+  "comps": [
+   "DiaCliente",
+   "AlertTriangle",
+   "PageHeader",
+   "BarraFiltros",
+   "Filtro",
+   "SelectRecorte",
+   "PageBody",
+   "Panel",
+   "EmptyState",
+   "AvisoFalha",
+   "Cartao",
+   "Delta",
+   "Badge",
+   "Calendario",
+   "Destaque",
+   "Icone"
+  ],
+  "labels": [],
+  "nCond": 25
+ },
+ {
+  "rota": "/vendas/diario",
+  "arquivos": [
+   "src/app/vendas/diario/page.tsx",
+   "src/app/vendas/diario/diario-cliente.tsx"
+  ],
+  "linhas": 830,
+  "comps": [
+   "ComparativoDiario",
+   "PageHeader",
+   "Segmented",
+   "BarraFiltros",
+   "Filtro",
+   "SelectRecorte",
+   "PageBody",
+   "PainelExclusoes",
+   "Panel",
+   "Select",
+   "Button",
+   "RotateCcw",
+   "Check",
+   "PanelHeader",
+   "Badge",
+   "Delta",
+   "ResponsiveContainer",
+   "LineChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "ChartTooltip",
+   "Line",
+   "Legend"
+  ],
+  "labels": [
+   "nome: Resultado",
+   "nome: Receita bruta",
+   "nome: Receita líquida",
+   "nome: Pedidos",
+   "nome: Pedidos válidos",
+   "nome: Ticket médio",
+   "nome: Tráfego e eficiência",
+   "nome: Visitas",
+   "nome: Conversão",
+   "nome: Investimento em ADS",
+   "nome: TACOS",
+   "nome: Cancelamento"
+  ],
+  "nCond": 15
+ },
+ {
+  "rota": "/vendas/lancamentos",
+  "arquivos": [
+   "src/app/vendas/lancamentos/page.tsx",
+   "src/app/vendas/lancamentos/lancamentos-cliente.tsx"
+  ],
+  "linhas": 943,
+  "comps": [
+   "VendasLancamentos",
+   "Button",
+   "PageHeader",
+   "RotateCcw",
+   "Select",
+   "PageBody",
+   "Panel",
+   "Lock",
+   "StatTile",
+   "PanelHeader",
+   "Badge",
+   "CelulaNumerica",
+   "Vazio",
+   "Confirmacao"
+  ],
+  "labels": [
+   "titulo: Visitas",
+   "titulo: Receita",
+   "titulo: Pedidos",
+   "titulo: ADS",
+   "titulo: Ped. cancel.",
+   "titulo: Valor cancel.",
+   "nome: Todos os canais",
+   "nome: c.nome"
+  ],
+  "nCond": 24
+ },
+ {
+  "rota": "/vendas/metas",
+  "arquivos": [
+   "src/app/vendas/metas/page.tsx",
+   "src/app/vendas/metas/metas-cliente.tsx"
+  ],
+  "linhas": 670,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "SemFonte",
+   "PlanejarMetas",
+   "Panel",
+   "AlertCircle",
+   "Field",
+   "Select",
+   "Input",
+   "Button",
+   "Loader2",
+   "Check",
+   "Target",
+   "Checkbox",
+   "Lock",
+   "Unlock",
+   "Info"
+  ],
+  "labels": [],
+  "nCond": 17
+ },
+ {
+  "rota": "/vendas/mtd",
+  "arquivos": [
+   "src/app/vendas/mtd/page.tsx",
+   "src/app/vendas/mtd/mtd-cliente.tsx"
+  ],
+  "linhas": 622,
+  "comps": [
+   "MtdCliente",
+   "PageHeader",
+   "BarraFiltros",
+   "Filtro",
+   "Select",
+   "FiltroAcoes",
+   "Button",
+   "PageBody",
+   "Panel",
+   "AlertCircle",
+   "Target",
+   "Link",
+   "ArrowRight",
+   "Segmented",
+   "Loader2",
+   "Check",
+   "Split",
+   "LinhaAlavanca"
+  ],
+  "labels": [
+   "Cada canal recupera o seu",
+   "Jogar tudo em canais escolhidos"
+  ],
+  "nCond": 20
+ },
+ {
+  "rota": "/vendas/semanal",
+  "arquivos": [
+   "src/app/vendas/semanal/page.tsx",
+   "src/app/vendas/semanal/semanal-cliente.tsx"
+  ],
+  "linhas": 767,
+  "comps": [
+   "VendasSemanal",
+   "Vazio",
+   "Badge",
+   "Delta",
+   "BarraParticipacao",
+   "PageHeader",
+   "Button",
+   "SlidersHorizontal",
+   "BarraFiltros",
+   "Filtro",
+   "SeletorCanal",
+   "Segmented",
+   "FiltroAcoes",
+   "PageBody",
+   "StatTile",
+   "Panel",
+   "PanelHeader",
+   "ResponsiveContainer",
+   "ComposedChart",
+   "CartesianGrid",
+   "XAxis",
+   "YAxis",
+   "Tooltip",
+   "ChartTooltip",
+   "Bar",
+   "Cell",
+   "Line",
+   "Legend",
+   "Matriz",
+   "DataTable",
+   "CompararPeriodo",
+   "FilterSheet"
+  ],
+  "labels": [
+   "Receita",
+   "titulo: Receita por semana",
+   "Pedidos",
+   "titulo: Pedidos por semana",
+   "Ticket",
+   "titulo: Ticket médio por semana",
+   "Visitas",
+   "titulo: Visitas por semana",
+   "Conversão",
+   "titulo: Conversão por semana",
+   "m.label",
+   "As 53 semanas"
+  ],
+  "nCond": 6
+ },
+ {
+  "rota": "/vendas/skus",
+  "arquivos": [
+   "src/app/vendas/skus/page.tsx",
+   "src/app/vendas/skus/analise-sku-cliente.tsx"
+  ],
+  "linhas": 660,
+  "comps": [
+   "PageHeader",
+   "PageBody",
+   "SemFonte",
+   "AnaliseSkuCliente",
+   "BarraFiltros",
+   "Filtro",
+   "Input",
+   "SelectRecorte",
+   "Button",
+   "FiltroDivisor",
+   "Segmented",
+   "FiltroAcoes",
+   "Loader2",
+   "Download",
+   "Panel",
+   "AlertCircle",
+   "Tabs",
+   "Badge",
+   "Variacao"
+  ],
+  "labels": [
+   "rotulo: 7 × 7",
+   "rotulo: 30 × 30",
+   "rotulo: 90 × 90",
+   "rotulo: c.nome",
+   "rotulo: p.rotulo",
+   "rotulo: rotuloMes(m)",
+   "Receita",
+   "Unidades",
+   "Por mês",
+   "Por canal",
+   "Comparar períodos",
+   "Curva ABC"
+  ],
+  "nCond": 15
+ }
+]

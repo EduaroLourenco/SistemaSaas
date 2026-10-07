@@ -16,3 +16,15 @@ tmp/
 
 # Stub que os scripts com jiti criam para o alias de `server-only`.
 vazio.cjs
+docs/auditoria-visual-2026-10-07/.credencial-teste.json
+docs/auditoria-visual-2026-10-07/.chave-relatorio.txt
+
+# Auditoria visual: as capturas e o ZIP são entregáveis, não fonte.
+# São 120MB de PNG — no histórico do git isso não sai mais.
+# Para refazer: node docs/redesign-ui/evidencias/capturar.mjs
+docs/redesign-ui/screenshots/
+docs/redesign-ui.zip
+
+# Cópia das evidências, feita só para o ZIP ser autocontido.
+# O original fica em docs/auditoria-visual-2026-10-07/evidencias/.
+docs/redesign-ui/evidencias/

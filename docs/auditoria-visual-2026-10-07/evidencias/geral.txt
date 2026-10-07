@@ -1,0 +1,277 @@
+# src/app/alertas/alertas-cliente.tsx (82 linhas)
+
+ESTADOS
+23: [filtro, setFiltro] = React.useState<Filtro>("todos")
+
+ESTRUTURA
+34: PageHeader title="Alertas" breadcrumb="Operação" description={ alertas.length ? `${count(alertas.length)} achados · ${count(criticos)} críticos` : "Nada exige atenção agora" } filters={ alertas.length > 0 ? ( <Segmented options={FILTROS} value={filtro} onChange={setFiltro} /> ) : undefined }
+44: Segmented options={FILTROS} value={filtro} onChange={setFiltro}
+61: TudoCerto titulo={ alertas.length ? "Nenhum alerta nesta severidade" : "Nada exige sua atenção" } detalhe={ alertas.length ? "Troque o filtro para ver os demais." : "Cancelamento, receita e conversão estão dentro do padrão do período. Este estado também é uma resposta — não precisa procurar." }
+
+RÓTULOS
+16: label: "Todos"
+17: label: "Críticos"
+18: label: "Atenção"
+
+TEXTOS
+
+
+CONDIÇÕES
+37: alertas.length
+42: alertas.length > 0
+59: visiveis.length === 0
+62: alertas.length
+67: alertas.length
+
+# src/app/alertas/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/conversa/conversa-cliente.tsx (351 linhas)
+
+ESTADOS
+39: [mensagens, setMensagens] = React.useState<Mensagem[]>([])
+40: [entrada, setEntrada] = React.useState("")
+41: [pensando, setPensando] = React.useState(false)
+42: [erro, setErro] = React.useState<string | null>(null)
+43: [aguardando, setAguardando] = React.useState<string | null>(null)
+44: fim = React.useRef<HTMLDivElement>(null)
+
+ESTRUTURA
+158: PageHeader title="Conversar sobre a operação" breadcrumb="Operação" description="Pergunte em português — as respostas saem de consulta ao banco, não de resumo" actions={ mensagens.length > 0 ? ( <Button variant="ghost" size="sm" onClick={() => { setMensagens([]); setErro(null); }} > <RotateCcw className="w-3 h-3" strokeWidth={2.25} /> Recomeçar </Button> ) : undefined }
+164: Button variant="ghost" size="sm" onClick={() => { setMensagens([]); setErro(null); }}
+197: button onClick={() => perguntar(s)}
+225: ErroComSaida titulo="A conversa não completou" causa={erro} passo={ erro.toLowerCase().includes("chave") ? "A própria mensagem acima diz onde pegar a chave e em qual variável colocá-la. Depois de salvar, reinicie o servidor." : erro.toLowerCase().includes("limite") ? "Espere um minuto e pergunte de novo. Se acontecer sempre, vale trocar de provedor em IA_PROVEDOR." : erro.toLowerCase().includes("sobrecarregado") ? "Não é a sua pergunta. Espere um minuto e mande de novo — o servidor já tentou algumas vezes sozinho." : "Tente de novo. Se persistir, me diga o que apareceu." }
+242: form onSubmit={(e) => { e.preventDefault(); perguntar(entrada); }}
+249: textarea value={entrada} onChange={(e) => setEntrada(e.target.value)} onKeyDown={(e) => { // Enter envia, Shift+Enter quebra linha: é a convenção que // as pessoas já têm no dedo. if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); perguntar(entrada); } }} rows={1} placeholder="O que você quer entender?" disabled={pensando}
+265: Button type="submit" variant="primary" disabled={!entrada.trim() || pensando}
+
+RÓTULOS
+60: texto: limpa
+62: texto: ""
+119: texto: ultima.texto + evento.texto
+131: nome: evento.nome!
+
+TEXTOS
+173: Recomeçar
+186: Pergunte sobre a operação
+190: As respostas vêm de consulta ao banco no momento da pergunta — pedidos, anúncios, cancelamentos. Nada é resumido de antemão, e cada consulta feita aparece na tela para você julgar a resposta em vez de aceitá-la.
+314: ·
+330: Consultando os dados…
+
+CONDIÇÕES
+162: mensagens.length > 0
+181: vazio
+213: pensando
+217: aguardando
+224: erro
+228: erro.toLowerCase().includes("chave")
+271: pensando
+303: (mensagem.consultas?.length ?? 0) > 0
+312: resumoEntrada(c.entrada)
+322: mensagem.texto
+
+# src/app/conversa/page.tsx (8 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/importar/importar-cliente.tsx (640 linhas)
+
+ESTADOS
+136: [arquivo, setArquivo] = React.useState<File | null>(null)
+137: [previa, setPrevia] = React.useState<Previa | null>(null)
+138: [carregando, setCarregando] = React.useState(false)
+139: [erro, setErro] = React.useState<{ msg: string; tec?: string } | null>( null )
+142: [conta, setConta] = React.useState("")
+143: [caminho, setCaminho] = React.useState<string | null>(null)
+144: [operacaoId, setOperacaoId] = React.useState<string | null>(null)
+145: [enviando, setEnviando] = React.useState(false)
+146: [gravando, setGravando] = React.useState(false)
+147: [feito, setFeito] = React.useState<{ criadas: number; atualizadas: number; ignoradas: number; avisos: string[]; } | null>(null)
+
+ESTRUTURA
+257: PageHeader title="Importar planilhas" breadcrumb="Dados" description="Desempenho de anúncios, pedidos e catálogo — numa tela só"
+304: ErroComSaida titulo="A leitura falhou" causa={erro.msg} passo="Confira se o arquivo é a exportação original, sem abas removidas nem linhas apagadas no topo." detalheTecnico={erro.tec} onTentarDeNovo={() => arquivo && analisar(arquivo)}
+327: EmptyState icon={FileSpreadsheet} title="Três planilhas, uma porta" description="Desempenho de anúncios do Mercado Livre, listagem de pedidos do hub e catálogo de anúncios. Cada uma alimenta uma parte diferente do sistema."
+384: Metrica rotulo="Linhas lidas" valor={count(previa.linhas)}
+385: Metrica rotulo="Novas" valor={count(Math.max(0, previa.novas))} detalhe="entram pela primeira vez"
+390: Metrica rotulo="Atualizadas" valor={count(previa.atualizadas)} detalhe="sobrescrevem o que existe"
+395: Metrica rotulo="Período" valor={ umDia ? dataBr(previa.periodo.inicio) : `${dataBr(previa.periodo.inicio)}` } detalhe={ umDia ? "dia único" : previa.periodo.fim ? `até ${dataBr(previa.periodo.fim)}` : "sem data" }
+413: Leitura tom={bloqueado ? "atencao" : "bom"} titulo={bloqueado ? "Bloqueado" : "Pronto para importar"}
+523: Leitura tom="atencao" titulo="Atenção"
+531: Leitura tom="neutro" titulo="Este arquivo já entrou"
+545: Leitura tom="bom" titulo="Importado"
+584: input type="radio" name="conta-catalogo" value={c.id} checked={conta === c.id} onChange={(e) => onConta(e.target.value)}
+607: Button variant="primary" disabled={!podeGravar || gravando} onClick={onGravar}
+631: TudoCerto titulo="Nada pendente neste arquivo" detalhe="Todos os canais reconhecidos, período identificado e nenhum órfão."
+
+RÓTULOS
+
+
+TEXTOS
+278: Não precisa dizer qual é: o formato sai da estrutura do arquivo. Nada é gravado antes de você conferir a prévia.
+294: Arquivo grande vai direto para o armazenamento, sem passar pelo servidor — é o que permite passar do limite de 4,5 MB da plataforma.
+373: Já importado
+419: A importação não pode seguir como está. Resolvido o que está marcado abaixo, ela libera — nada foi gravado.
+424: Este arquivo alimenta
+428: .
+432: linhas já existem e serão sobrescritas, não somadas — reimportar o mesmo período é seguro.
+436: Todas as linhas são novas.
+448: Canais reconhecidos
+461: ·
+478: Canais sem apelido cadastrado
+482: Estes nomes não casam com nenhum canal. A importação fica parada aqui de propósito: gravar na conta errada não muda o total, e o erro só apareceria quando alguém comparasse conta a conta com o painel do canal.
+495: /
+510: sem correspondência
+533: Importado em
+537: , com
+538: linhas. Subir de novo sobrescreve pelo mesmo conteúdo — inofensivo, mas provavelmente desnecessário.
+546: linhas gravadas
+549: ,
+550: sobrescritas
+555: ,
+555: de fora
+558: . Subir este mesmo arquivo de novo não duplica nada.
+572: De qual conta é este catálogo?
+574: O arquivo não carrega essa informação, e as duas contas do Mercado Livre vendem coisas diferentes. Escolher errado aqui mistura os anúncios das duas.
+616: Gravando
+621: Importar
+
+CONDIÇÕES
+270: arquivo
+283: carregando
+289: enviando
+292: enviando
+303: erro
+313: previa
+325: !arquivo && !carregando
+370: previa.tipo === "desconhecido"
+373: previa.jaImportado
+381: previa.tipo !== "desconhecido"
+397: umDia
+402: umDia
+414: bloqueado
+415: bloqueado
+417: bloqueado
+429: previa.atualizadas > 0
+446: previa.reconhecidos.length > 0
+460: r.mostrarConta
+473: previa.naoReconhecidos.length > 0
+495: n.conta
+515: o.total > o.exemplos.length
+520: previa.avisos.length > 0
+530: previa.jaImportado
+543: feito
+547: feito.atualizadas > 0
+553: feito.ignoradas > 0
+568: previa.tipo !== "desconhecido" && !feito
+570: precisaConta
+601: bloqueado
+613: gravando
+629: !bloqueado && previa.tipo !== "desconhecido" && previa.avisos.length === 0
+
+# src/app/importar/page.tsx (8 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/page.tsx (36 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/painel-cliente.tsx (477 linhas)
+
+ESTADOS
+45: [periodo, setPeriodo] = React.useState("30 dias")
+47: [canalSel, setCanalSel] = React.useState("")
+
+ESTRUTURA
+204: span title="sem visita registrada para este anúncio"
+215: PageHeader title="Visão geral" description={ canalAtual ? canalAtual.nome : "Consolidado de todos os canais" } actions={ <> <span className="num hidden sm:inline-flex items-center gap-1.5 text-[12px] text-ink-3"> <CalendarDays className="w-3.5 h-3.5" /> {recorte.intervalo} </span> </> } filters={ <BarraFiltros> {/* Seletor de canal E de conta: `canaisInfo` já traz o item do canal inteiro e, abaixo, cada conta. No consolidado a alta de um canal cobre a queda de outro e a semana parece estável — só olhando um por vez dá para responder "quem caiu". */} <Filtro rotulo="Canal"> <SeletorCanal canais={dados.canaisInfo.map((c) => ({ id: c.id, nome: c.nome, cor: c.cor, }))} valor={canalSel} onChange={setCanalSel} rotuloTodos="Todos os canais" /> </Filtro> <Filtro rotulo="Período"> <div className="flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line"> {PERIODOS.map((p) => ( <button key={p} onClick={() => setPeriodo(p)} className={ "h-6 px-2.5 rounded-[4px] text-[12px] font-
+229: BarraFiltros 
+237: SeletorCanal canais={dados.canaisInfo.map((c) => ({ id: c.id, nome: c.nome, cor: c.cor, }))} valor={canalSel} onChange={setCanalSel} rotuloTodos="Todos os canais"
+251: button onClick={() => setPeriodo(p)}
+295: StatTile label={k.label} value={semBase ? "—" : formatKpi(k.value, k.format)} delta={semBase ? undefined : k.delta} inverse={k.inverse} hint={semBase ? "sem visita registrada no recorte" : k.hint} spark={semBase ? undefined : k.spark}
+311: PanelHeader title="Faturamento por dia" hint={`${recorte.dias} dias com movimento`} action={ <span className="num text-[12px] text-ink-2"> {money(FATURAMENTO_30D.reduce((s, d) => s + d.faturamento, 0))} </span> }
+322: AreaChart data={FATURAMENTO_30D} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+344: Tooltip cursor={{ stroke: "var(--line-2)", strokeWidth: 1 }} content={ <ChartTooltip formatter={(v) => money(v)} /> } labelFormatter={(l) => (typeof l === "string" ? shortDate(l) : l)}
+366: PanelHeader title="Participação por canal" hint={ canalAtual ? "12 semanas · todos os canais" : "12 semanas" }
+374: BarChart data={CANAIS_12_SEMANAS} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+412: PanelHeader title="Produtos com maior receita" hint={canalAtual ? `no período · ${canalAtual.nome}` : "no período"} action={ <Link href={linkVerTodos} className="h-7 px-2 inline-flex items-center rounded-r1 text-[12.5px] text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors" > Ver todos </Link> }
+424: DataTable columns={colunas} rows={topSkus} rowKey={(r) => r.mlb} defaultSort={{ key: "receita", dir: "desc" }}
+435: PanelHeader title="Canais" hint={ canalAtual ? "faturamento e variação no período · todos os canais, para comparar" : "faturamento e variação no período" }
+
+RÓTULOS
+157: header: "Produto"
+168: header: "SKU"
+176: header: "Vendas"
+185: header: "Receita"
+196: header: "Conversão"
+240: nome: c.nome
+401: label: c.nome
+
+TEXTOS
+205: —
+420: Ver todos
+461: do total
+
+CONDIÇÕES
+217: canalAtual
+298: semBase
+299: semBase
+301: semBase
+302: semBase
+368: canalAtual
+414: canalAtual
+437: canalAtual

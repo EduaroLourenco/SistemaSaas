@@ -1,0 +1,992 @@
+# src/components/analise/comparar.tsx (313 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+149: Sheet title="Comparar anúncios" subtitle={`${itens.length} anúncios · ${semanas.length} semanas`} onClose={onClose} width="760px" footer={ <Button variant="primary" className="flex-1 max-sm:h-11" onClick={onClose}> Fechar </Button> }
+155: Button variant="primary" onClick={onClose}
+244: LineChart data={serie} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}
+
+RÓTULOS
+44: rotulo: "Receita"
+50: rotulo: "Unidades vendidas"
+56: rotulo: "Visitas"
+62: rotulo: "Conversão"
+69: rotulo: "Preço pago"
+76: rotulo: "Desvio do ideal"
+84: rotulo: "Margem subsidiada"
+92: rotulo: "Comissão do canal"
+
+TEXTOS
+156: Fechar
+183: /
+241: Vendas por semana
+275: un
+302: Leitura:
+303: O anúncio
+303: de
+303: (
+303: ) venceu em
+304: das
+305: métricas. Uma métrica isolada é ruído; o padrão no conjunto é que decide.
+
+CONDIÇÕES
+177: i.tipo === "Premium"
+180: !empate && idx === lider
+204: m.dica
+300: !empate
+
+# src/components/analise/elasticidade.tsx (238 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+143: ScatterChart margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+163: ReferenceLine x={item.metricas.precoIdeal} stroke="var(--brand)" strokeDasharray="4 4" label={{ value: "ideal", position: "top", fill: "var(--brand)", fontSize: 10, }}
+
+RÓTULOS
+
+
+TEXTOS
+85: Preço e volume
+87: Poucas semanas com venda para desenhar a relação. São necessárias pelo menos três.
+127: Preço e volume
+129: cada ponto é uma semana ·
+129: semanas com venda
+135: r²
+188: ·
+191: ·
+191: un
+194: visitas ·
+225: Leitura:
+231: A faixa observada vai de
+231: a
+231: . Fora dela é chute — e correlação não é causa: sazonalidade e campanha mexem nos dois eixos ao mesmo tempo.
+
+CONDIÇÕES
+132: reg
+133: confiavel
+162: item.metricas.precoIdeal > 0
+208: tendencia
+223: leitura
+
+# src/components/analise/linha-do-tempo.tsx (360 linhas)
+
+ESTADOS
+102: [anotacoes, setAnotacoes] = React.useState<Anotacao[]>([])
+103: [aberto, setAberto] = React.useState(false)
+104: [tipo, setTipo] = React.useState<TipoAnotacao>("preco")
+105: [texto, setTexto] = React.useState("")
+106: [data, setData] = React.useState("")
+
+ESTRUTURA
+239: Button size="sm" onClick={() => setAberto((v) => !v)}
+248: Field label="O que foi"
+249: Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoAnotacao)}
+261: Field label="Quando"
+262: Input type="date" value={data} onChange={(e) => setData(e.target.value)}
+270: Field label="Descrição"
+271: Input value={texto} onChange={(e) => setTexto(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="Troquei a foto principal / subi o preço fora do sistema"
+280: Button size="sm" variant="primary" onClick={adicionar} disabled={!texto.trim() || !data}
+288: Button size="sm" variant="ghost" onClick={() => setAberto(false)}
+344: button onClick={() => remover(e.anotacaoId!)} title="Apagar anotação"
+
+RÓTULOS
+61: rotulo: "Mudança de preço"
+62: rotulo: "Campanha"
+63: rotulo: "Estoque"
+64: rotulo: "Foto, título ou ficha"
+65: rotulo: "Outro"
+137: texto: `Preço da vitrine ${subiu ? "subiu" : "caiu"} de ${money( ant.precoAnunciado )} para ${money(w.precoAnunciado)}`
+152: texto: `Entrou em campanha: ${w.campanhas[0].nome}`
+162: texto: "Saiu de campanha"
+177: texto: `Vendas ${variacao > 0 ? "subiram" : "caíram"} ${Math.abs( variacao ).toFixed(0)}% — de ${count(ant.vendas)} para ${count(w.vendas)} un`
+197: texto: a.texto
+215: texto: texto.trim()
+
+TEXTOS
+234: Linha do tempo
+236: o que o sistema detectou e o que você fez, na mesma régua
+241: Anotar
+286: Salvar
+289: Cancelar
+293: Fica gravado neste navegador até o banco entrar no ar.
+300: Nada registrado no período. Anote o que você mudou — é o que explica a curva depois.
+336: sua nota
+
+CONDIÇÕES
+245: aberto
+298: linha.length === 0
+333: e.semana
+336: !e.automatico
+343: e.anotacaoId
+
+# src/components/analise/matriz-anuncios.tsx (427 linhas)
+
+ESTADOS
+96: [metrica, setMetrica] = React.useState<Metrica>("receita")
+97: [busca, setBusca] = React.useState("")
+98: [aberto, setAberto] = React.useState<string | null>(null)
+99: [limite, setLimite] = React.useState(30)
+
+ESTRUTURA
+190: PanelHeader title="Quem cresceu, quem caiu" hint="Média das últimas semanas contra as primeiras — oscilação de uma semana não muda o sinal"
+201: BarChart data={movimento} layout="vertical" margin={{ top: 4, right: 40, left: 4, bottom: 0 }}
+266: PanelHeader title="SKU por semana" hint="Um produto por linha · semanas nas colunas" action={ <span className="num text-[12px] text-ink-3"> {filtrados.length} SKUs </span> }
+277: Segmented options={METRICAS} value={metrica} onChange={setMetrica}
+284: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="SKU, título ou MLB"
+295: table 
+316: tr onClick={() => setAberto(expandido ? null : g.chave)}
+414: button onClick={() => setLimite((l) => l + 50)}
+
+RÓTULOS
+38: label: "Receita"
+39: label: "Unidades"
+40: label: "Visitas"
+41: label: "Conversão"
+42: label: "Preço pago"
+113: titulo: a.titulo
+181: titulo: g.titulo
+
+TEXTOS
+197: Sem semanas suficientes para comparar.
+243: %
+245: ·
+271: SKUs
+299: SKU · produto
+307: Tendência
+340: anúncios
+365: —
+372: %
+402: Anúncio deste SKU — os números da linha acima somam todos.
+419: Mostrar mais
+419: de
+420: restantes
+
+CONDIÇÕES
+195: movimento.length === 0
+237: d.variacao >= 0
+239: d.variacao >= 0
+255: d.variacao >= 0
+326: expandido
+338: g.mlbs.length > 1
+357: c.valor == null
+364: g.tendencia == null
+367: g.tendencia >= 0
+368: g.tendencia >= 0
+378: expandido
+390: m.tipo === "Premium"
+413: filtrados.length > limite
+
+# src/components/analise/tabela-semanal.tsx (307 linhas)
+
+ESTADOS
+75: [ordem, setOrdem] = React.useState<{ col: ColunaSemana; dir: "asc" | "desc"; }>({ col: "semana", dir: "asc" })
+79: [aberta, setAberta] = React.useState<string | null>(null)
+
+ESTRUTURA
+135: table 
+141: th title={c.dica}
+150: button onClick={() => ordenar(c.id)}
+192: tr onClick={() => setAberta(escolhida ? null : w.semana)}
+
+RÓTULOS
+33: rotulo: "Semana"
+34: rotulo: "Visitas"
+35: rotulo: "Vendas"
+36: rotulo: "Conv."
+37: rotulo: "Receita"
+40: rotulo: "Preço pago"
+46: rotulo: "Na vitrine"
+52: rotulo: "Tarifa tabela"
+58: rotulo: "Tarifa cobrada"
+64: rotulo: "vs. ideal"
+
+TEXTOS
+128: Semana a semana
+130: ordene pelo cabeçalho · clique na semana para ver os dias
+223: —
+238: —
+265: Nenhuma venda nesta semana. Na vitrine o preço era
+266: .
+270: Quando vendeu
+281: /
+285: un
+
+CONDIÇÕES
+158: ativa
+222: w.precoRealizado === null
+225: comDesconto
+234: w.comissao > 0
+237: w.tarifaCobrada == null
+241: w.comissao > 0 && w.tarifaCobrada < w.comissao - 0.5
+260: escolhida
+263: w.dias.length === 0
+
+# src/components/financeiro/cadastro.tsx (433 linhas)
+
+ESTADOS
+95: [aberto, setAberto] = React.useState<null | { id?: string }>(null)
+96: [valores, setValores] = React.useState<Registro>({})
+97: [salvando, setSalvando] = React.useState(false)
+98: [erro, setErro] = React.useState<string | null>(null)
+99: [aviso, setAviso] = React.useState<string | null>(null)
+100: [confirmar, setConfirmar] = React.useState<T | null>(null)
+101: [filtro, setFiltro] = React.useState("")
+
+ESTRUTURA
+194: Input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder={`Buscar ${singular.toLowerCase()}`}
+205: Button onClick={novo}
+214: EmptyState title={vazio.titulo} description={vazio.descricao}
+218: table 
+255: button onClick={() => editar(l)} title="Editar"
+262: button onClick={() => setConfirmar(l)} title="Apagar"
+280: Sheet title={aberto.id ? `Editar ${singular.toLowerCase()}` : `Nova ${singular.toLowerCase()}`} subtitle={titulo} onClose={() => setAberto(null)} width="560px" footer={ <> <Button variant="primary" onClick={gravar} disabled={salvando}> {salvando ? "Gravando…" : "Gravar"} </Button> <Button onClick={() => setAberto(null)}>Cancelar</Button> {extraFooter?.(valores, set)} </> }
+287: Button variant="primary" onClick={gravar} disabled={salvando}
+290: Button onClick={() => setAberto(null)}
+299: Field label={c.obrigatorio ? `${c.rotulo} *` : c.rotulo} hint={c.dica}
+305: CampoEntrada campo={c} valor={valores[c.chave]} onChange={(v) => set(c.chave, v)}
+324: Sheet title={`Apagar ${singular.toLowerCase()}?`} onClose={() => setConfirmar(null)} width="420px" footer={ <> <Button variant="danger" onClick={() => apagar(confirmar, true)} disabled={salvando}> {salvando ? "Apagando…" : "Apagar"} </Button> <Button onClick={() => setConfirmar(null)}>Cancelar</Button> </> }
+330: Button variant="danger" onClick={() => apagar(confirmar, true)} disabled={salvando}
+333: Button onClick={() => setConfirmar(null)}
+365: Select value={(valor as string) ?? ""} onChange={(e) => onChange(e.target.value || null)}
+381: Select value={valor === false ? "nao" : "sim"} onChange={(e) => onChange(e.target.value === "sim")}
+393: textarea value={(valor as string) ?? ""} onChange={(e) => onChange(e.target.value)} rows={2}
+403: Input type={campo.tipo === "data" ? "date" : campo.tipo === "texto" ? "text" : "number"} inputMode={campo.tipo === "dinheiro" ? "decimal" : undefined} step={campo.tipo === "dinheiro" ? "0.01" : campo.tipo === "numero" ? "1" : undefined} value={(valor as string | number) ?? ""} onChange={(e) => onChange( campo.tipo === "texto" || campo.tipo === "data" ? e.target.value : e.target.value === "" ? null : Number(e.target.value) ) }
+
+RÓTULOS
+424: rotulo: "Previsto"
+425: rotulo: "Em aberto"
+426: rotulo: "Pago"
+427: rotulo: "Atrasado"
+428: rotulo: "Cancelado"
+430: rotulo: status
+
+TEXTOS
+207: Novo
+290: Cancelar
+333: Cancelar
+342: Isso não pode ser desfeito. Se houver ocorrências futuras geradas por recorrência, as que ainda não foram pagas somem junto; as pagas ficam, porque já aconteceram.
+369: —
+385: Sim
+386: Não
+
+CONDIÇÕES
+181: faltaMigracao
+202: visiveis.length === 1
+212: visiveis.length === 0
+228: c.largura
+279: aberto
+281: aberto.id
+288: salvando
+301: c.obrigatorio
+303: c.largo
+313: erro
+316: aviso
+323: confirmar
+331: salvando
+346: erro
+382: valor === false
+404: campo.tipo === "data"
+405: campo.tipo === "dinheiro"
+406: campo.tipo === "dinheiro"
+
+# src/components/financeiro/dre-mensal.tsx (437 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+109: table 
+283: svg viewBox={`0 0 ${largura} ${T + alturaPlot + B}`} style={{ width: "100%", minWidth: largura, height: "auto" }} role="img" aria-label="Evolução da margem de contribuição e do resultado, em porcentagem da receita líquida."
+
+RÓTULOS
+44: rotulo: "Receita"
+46: rotulo: "Receita bruta"
+47: rotulo: "(−) Cancelamentos"
+48: rotulo: "= Receita líquida"
+52: rotulo: "Custos variáveis — só existem porque houve venda"
+54: rotulo: "(−) Comissão do canal"
+55: rotulo: "(−) Frete"
+56: rotulo: "(−) Juros de parcelamento"
+57: rotulo: "(−) Impostos"
+58: rotulo: "(−) Embalagem"
+59: rotulo: "(−) Mercadoria"
+60: rotulo: "= Margem de contribuição"
+64: rotulo: "Despesas — saem exista venda ou não"
+66: rotulo: "(−) Mídia (Ads)"
+67: rotulo: "(−) Fixas recorrentes"
+68: rotulo: "(−) Variáveis recorrentes"
+69: rotulo: "(−) Variáveis avulsas"
+70: rotulo: "= RESULTADO"
+228: rotulo: rotuloMes(r)
+
+TEXTOS
+102: Demonstrativo mês a mês
+104: cada linha em reais e como % da receita líquida
+113: Conta
+170: —
+198: %
+271: Margem de contribuição
+276: Resultado
+279: % da receita líquida
+302: %
+305: %
+372: %
+
+CONDIÇÕES
+123: ehTotal(i)
+193: l.custo && v > 0
+196: p != null
+273: temResultado
+291: min < 0
+309: temResultado
+316: p.resultado != null
+368: nota
+370: p != null
+383: tipo === "custo" && valor > 0
+
+# src/components/layout/app-shell.tsx (472 linhas)
+
+ESTADOS
+54: [dark, setDark] = React.useState(false)
+129: [open, setOpen] = React.useState(hasActive)
+291: [moreOpen, setMoreOpen] = React.useState(false)
+
+ESTRUTURA
+72: button onClick={toggle} aria-label="Alternar tema"
+98: Link href={href} onClick={onNavigate}
+138: Link href={group.href} onClick={onNavigate}
+156: button onClick={() => setOpen((v) => !v)}
+251: button onClick={onMore}
+321: Link href="/alertas" aria-label="Alertas" title="Alertas"
+359: div style={{ background: "var(--veil)" }} onClick={() => setMoreOpen(false)}
+367: button onClick={() => setMoreOpen(false)}
+414: h1 
+457: PageHeader title={title} breadcrumb={breadcrumb}
+
+RÓTULOS
+
+
+TEXTOS
+30: ▟
+35: Plataforma
+111: em breve
+256: Mais
+333: EL
+366: Menu
+460: Em breve
+462: Módulo ainda não construído
+465: A estrutura de navegação já reserva o lugar. A tela entra na fase 2.
+
+CONDIÇÕES
+33: !compact
+77: dark
+109: soon
+173: open
+246: active
+357: moreOpen
+408: breadcrumb
+419: description
+423: actions
+435: filters
+
+# src/components/layout/barra-filtros.tsx (130 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/components/layout/busca-global.tsx (254 linhas)
+
+ESTADOS
+56: [aberta, setAberta] = React.useState(false)
+57: [termo, setTermo] = React.useState("")
+58: [ativo, setAtivo] = React.useState(0)
+59: campo = React.useRef<HTMLInputElement>(null)
+
+ESTRUTURA
+139: button onClick={() => setAberta(true)}
+150: button onClick={() => setAberta(true)} aria-label="Buscar"
+160: div style={{ background: "var(--veil)" }} onClick={() => setAberta(false)}
+172: input ref={campo} value={termo} onChange={(e) => { setTermo(e.target.value); setAtivo(0); }} onKeyDown={onKeyCampo} placeholder="MLB, SKU, título, tela ou termo do glossário"
+183: button onClick={() => setAberta(false)}
+205: button onClick={() => ir(a)} onMouseEnter={() => setAtivo(i)}
+
+RÓTULOS
+35: rotulo: g.label
+38: rotulo: i.label
+45: rotulo: g.label
+
+TEXTOS
+144: Buscar anúncio, tela, termo
+146: /
+194: Nada encontrado para
+198: Tente o código do anúncio, o SKU ou parte do título.
+244: ↑ ↓ navegar
+245: ↵ abrir
+246: esc fechar
+
+CONDIÇÕES
+158: aberta
+191: achados.length === 0
+222: a.detalhe
+231: i === ativo
+
+# src/components/layout/seletor-empresa.tsx (192 linhas)
+
+ESTADOS
+36: [atual, setAtual] = React.useState<string | null>(null)
+37: [lista, setLista] = React.useState<Operacao[]>([])
+38: [aberto, setAberto] = React.useState(false)
+39: [trocando, setTrocando] = React.useState<string | null>(null)
+40: [erro, setErro] = React.useState<string | null>(null)
+41: caixa = React.useRef<HTMLDivElement>(null)
+
+ESTRUTURA
+117: button type="button" onClick={() => setAberto((v) => !v)} aria-haspopup="listbox" aria-expanded={aberto} title={escolhida ? `${escolhida.empresa} · ${escolhida.nome}` : "Trocar de empresa"}
+148: button type="button" role="option" aria-selected={o.id === atual} disabled={trocando != null} onClick={() => trocar(o.id)}
+
+RÓTULOS
+
+
+TEXTOS
+181: trocando…
+
+CONDIÇÕES
+122: escolhida
+127: escolhida
+132: aberto
+137: erro
+142: !umaEmpresaSo
+174: o.canais > 0
+176: o.canais === 1
+180: trocando === o.id
+
+# src/components/painel/fila-recomendacoes.tsx (204 linhas)
+
+ESTADOS
+53: [resolvidas, setResolvidas] = React.useState<Set<string>>(new Set())
+54: [pronto, setPronto] = React.useState(false)
+55: trilho = React.useRef<HTMLDivElement>(null)
+
+ESTRUTURA
+118: PanelHeader title="Recomendações do dia" hint="o que mudou e merece decisão · resolver esconde até amanhã" action={ <span className="flex items-center gap-1"> {resolvidasHoje > 0 && ( <Button size="sm" variant="ghost" onClick={desfazer}> <RotateCcw className="w-3.5 h-3.5" /> {resolvidasHoje} resolvida{resolvidasHoje > 1 ? "s" : ""} </Button> )} <Button size="sm" variant="ghost" onClick={() => rolar(-1)} aria-label="Anterior"> <ChevronLeft className="w-4 h-4" /> </Button> <Button size="sm" variant="ghost" onClick={() => rolar(1)} aria-label="Próxima"> <ChevronRight className="w-4 h-4" /> </Button> </span> }
+124: Button size="sm" variant="ghost" onClick={desfazer}
+129: Button size="sm" variant="ghost" onClick={() => rolar(-1)} aria-label="Anterior"
+132: Button size="sm" variant="ghost" onClick={() => rolar(1)} aria-label="Próxima"
+161: button onClick={() => resolver(r.id)}
+
+RÓTULOS
+
+
+TEXTOS
+107: Nada mudou o bastante
+109: Nenhum movimento relevante nos últimos 7 dias contra os 7 anteriores.
+126: resolvida
+142: Tudo resolvido por hoje. A fila volta amanhã com o que mudar.
+166: resolver
+194: Investigar
+
+CONDIÇÕES
+123: resolvidasHoje > 0
+126: resolvidasHoje > 1
+139: visiveis.length === 0
+
+# src/components/painel/fontes-dados.tsx (188 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+56: table 
+
+RÓTULOS
+
+
+TEXTOS
+38: Fontes de dados
+49: Importar
+59: Fonte
+60: Abastece
+62: Atualizado até
+93: registros
+127: A data é até onde o
+127: dado
+128: vai, não quando entrou. Subir hoje uma planilha que termina na semana passada não deixa o painel atualizado, e uma fonte por API em dia não cobre outra que ficou para trás.
+
+CONDIÇÕES
+39: dados.piorAtraso !== null
+71: f.origem === "manual"
+91: f.registros > 0
+140: fonte.origem === "manual"
+
+# src/components/painel/skus-em-queda.tsx (255 linhas)
+
+ESTADOS
+68: [aberto, setAberto] = React.useState<string | null>(null)
+69: [metrica, setMetrica] = React.useState<Metrica>("receita")
+70: [curva, setCurva] = React.useState("todas")
+
+ESTRUTURA
+93: PanelHeader title="SKUs em queda" hint="segunda metade das semanas contra a primeira · curva A primeiro" action={ <span className="flex items-center gap-2"> <Segmented options={[ { value: "todas", label: "Todas" }, { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "C", label: "C" }, ]} value={curva} onChange={setCurva} /> </span> }
+98: Segmented options={[ { value: "todas", label: "Todas" }, { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "C", label: "C" }, ]} value={curva} onChange={setCurva}
+113: table 
+133: tr onClick={() => setAberto(expandido ? null : s.sku)}
+178: Segmented options={METRICAS} value={metrica} onChange={setMetrica}
+194: LineChart data={s.semanas} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}
+
+RÓTULOS
+37: label: "Receita"
+38: label: "Visitas"
+39: label: "Conversão"
+40: label: "Preço pago"
+100: label: "Todas"
+101: label: "A"
+102: label: "B"
+103: label: "C"
+
+TEXTOS
+57: —
+62: %
+80: Nenhum SKU em queda
+82: Nada caiu mais de 10% comparando a segunda metade das semanas contra a primeira.
+117: SKU · produto
+119: Receita
+120: Visitas
+121: Conversão
+122: Preço
+124: Causa provável
+187: Abrir o anúncio
+
+CONDIÇÕES
+61: v > 0
+139: expandido
+174: expandido
+220: v == null
+
+# src/components/ui/alerta.tsx (148 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+92: AreaChart data={alerta.evidencia} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+89: alerta.evidencia.length > 1
+134: alerta.destino
+
+# src/components/ui/carregando.tsx (29 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+25: Carregando dados
+
+CONDIÇÕES
+
+
+# src/components/ui/chart.tsx (103 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+55: label !== undefined
+71: formatter && typeof p.value === "number"
+
+# src/components/ui/comparar-periodo.tsx (193 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+80: Sheet title={titulo} subtitle={`${rotuloAnterior} → ${rotuloAtual}`} onClose={onClose} width="620px" footer={ <Button variant="primary" className="flex-1 max-sm:h-11" onClick={onClose}> Fechar </Button> }
+86: Button variant="primary" onClick={onClose}
+
+RÓTULOS
+61: rotulo: l.rotulo.toLowerCase()
+
+TEXTOS
+87: Fechar
+92: Indicador
+95: Diferença
+147: —
+
+CONDIÇÕES
+125: l.dica
+133: l.anterior != null
+142: l.atual != null
+146: dif == null
+165: dif > 0
+168: pct != null && Math.abs(pct) >= 0.05
+179: (leitura || rodape)
+181: leitura
+187: rodape
+
+# src/components/ui/controls.tsx (570 linhas)
+
+ESTADOS
+292: [dragging, setDragging] = React.useState(false)
+293: ref = React.useRef<HTMLInputElement>(null)
+
+ESTRUTURA
+37: button onClick={() => onChange(o.value)}
+75: button onClick={() => onChange(t.value)}
+103: input ref={ref}
+148: select 
+196: button onClick={() => onChange(!checked)}
+203: button onClick={() => onChange(!checked)}
+228: button onClick={() => onChange(!checked)}
+297: button onClick={() => ref.current?.click()} onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(e) => { e.preventDefault(); setDragging(false); onFiles?.(Array.from(e.dataTransfer.files)); }}
+324: input ref={ref} type="file" accept={accept} multiple=true onChange={(e) => onFiles?.(Array.from(e.target.files ?? []))}
+349: button onClick={() => onRemove(i)}
+391: div style={{ background: "var(--veil)" }} onClick={onClose}
+409: button onClick={onClose}
+451: div style={{ background: "var(--veil)" }} onClick={onClose}
+459: button onClick={onClose}
+474: button onClick={onClear}
+481: button onClick={onClose}
+536: h2 
+558: span title={title} style={{ background: `color-mix(in srgb, var(--brand) ${(i * 78).toFixed(0)}%, var(--panel))`, color: i > 0.55 ? "var(--brand-ink)" : "var(--ink)", }}
+
+RÓTULOS
+27: label: o as string
+
+TEXTOS
+345: KB
+478: Limpar
+
+CONDIÇÕES
+84: t.count !== undefined
+87: value === t.value
+134: hint
+209: hint
+238: checked
+242: label
+333: files.length > 0
+343: f.size !== undefined
+348: onRemove
+405: subtitle
+419: footer
+473: onClear
+537: hint
+
+# src/components/ui/data-table.tsx (190 linhas)
+
+ESTADOS
+43: [sort, setSort] = React.useState(defaultSort ?? null)
+
+ESTRUTURA
+76: table 
+99: button onClick={() => toggleSort(c.key)}
+120: tr onClick={onRowClick ? () => onRowClick(row) : undefined}
+153: button onClick={onRowClick ? () => onRowClick(row) : undefined} disabled={!onRowClick}
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+98: sortable
+122: onRowClick
+154: onRowClick
+162: subtitleCol
+167: metricCols.length > 0
+180: onRowClick
+
+# src/components/ui/exclusoes.tsx (263 linhas)
+
+ESTADOS
+49: [aberto, setAberto] = React.useState(ativo)
+50: [data, setData] = React.useState("")
+51: [dataFim, setDataFim] = React.useState("")
+52: [canal, setCanal] = React.useState("")
+53: [motivo, setMotivo] = React.useState("")
+54: [salvando, setSalvando] = React.useState(false)
+55: [erro, setErro] = React.useState<string | null>(null)
+
+ESTRUTURA
+97: button onClick={() => setAberto((v) => !v)}
+162: button onClick={() => reverter(e.id)} title="Volta a contar na análise"
+179: input type="date" value={data} onChange={(e) => setData(e.target.value)}
+191: input type="date" value={dataFim} min={data || undefined} onChange={(e) => setDataFim(e.target.value)}
+202: Select value={canal} onChange={(e) => setCanal(e.target.value)}
+214: input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: lote de teste do hub"
+234: Button variant="primary" disabled={!pode || salvando} onClick={aplicar}
+
+RÓTULOS
+
+
+TEXTOS
+107: Períodos fora da análise
+123: Os números desta tela
+123: não
+124: incluem o que está listado abaixo.
+128: de
+129: registros foram deixados de fora — nada foi apagado do banco.
+133: Nada foi apagado do banco.
+168: Reverter
+178: Data
+189: Até
+189: (opcional)
+201: Canal
+203: Todos os canais
+213: Motivo
+231: Nada é apagado. A linha continua no banco e volta a contar assim que você reverter — por isso excluir aqui é barato.
+243: Aplicando
+248: Aplicar exclusão
+
+CONDIÇÕES
+96: ativo
+103: ativo
+109: ativo
+112: removidas
+117: aberto
+121: ativo
+125: removidas && totalOriginal
+138: aberto
+140: exclusoes.length > 0
+149: e.dataInicio === e.dataFim
+156: e.conta
+223: erro
+240: salvando
+
+# src/components/ui/leitura.tsx (168 linhas)
+
+ESTADOS
+117: [aberto, setAberto] = React.useState(false)
+
+ESTRUTURA
+140: button onClick={onTentarDeNovo}
+149: button onClick={() => setAberto((v) => !v)}
+
+RÓTULOS
+
+
+TEXTOS
+53: :
+134: O que fazer:
+145: Tentar de novo
+
+CONDIÇÕES
+85: detalhe
+90: acao
+128: causa
+139: onTentarDeNovo
+148: detalheTecnico
+153: aberto
+158: aberto && detalheTecnico
+
+# src/components/ui/matriz.tsx (199 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+89: table 
+99: th onClick={onAbrirColuna ? () => onAbrirColuna(i) : undefined}
+112: span title="Período incompleto — não comparável"
+
+RÓTULOS
+
+
+TEXTOS
+66: %
+96: Indicador
+116: parcial
+
+CONDIÇÕES
+105: onAbrirColuna
+111: c.parcial
+119: onAbrirColuna
+123: c.sub
+158: ind.dica
+180: v == null
+182: mostrarVariacao
+
+# src/components/ui/metrica.tsx (134 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+58: estreia
+
+CONDIÇÕES
+40: destaque
+53: comparacao && comparacao.bases.length > 0
+57: b.variacao === null
+68: detalhe
+
+# src/components/ui/primitives.tsx (184 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+22: button 
+68: h3 
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+69: hint
+160: Icon
+166: description
+169: action
+
+# src/components/ui/select-recorte.tsx (51 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+25: Select value={valor} onChange={(e) => onChange(e.target.value)} aria-label="Canal ou conta"
+33: optgroup label={g.rotulo}
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/components/ui/seletor-canal.tsx (180 linhas)
+
+ESTADOS
+37: [aberto, setAberto] = React.useState(false)
+38: [caixa, setCaixa] = React.useState<{ x: number; y: number; w: number } | null>(null)
+39: botao = React.useRef<HTMLButtonElement>(null)
+40: menu = React.useRef<HTMLDivElement>(null)
+
+ESTRUTURA
+93: button onClick={() => onChange(c.id)}
+112: button ref={botao} onClick={() => setAberto((a) => !a)}
+149: button onClick={() => { onChange(c.id); setAberto(false); }}
+
+RÓTULOS
+81: nome: rotuloTodos
+
+TEXTOS
+
+
+CONDIÇÕES
+122: atual?.cor
+132: aberto && caixa
+163: valor === c.id
+165: c.cor
+
+# src/components/ui/sem-fonte.tsx (34 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/components/ui/stat-tile.tsx (97 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+20: AreaChart data={points} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+72: delta !== undefined
+73: hint
+79: spark && spark.length > 1
+83: delta === undefined || Math.abs(delta) < 0.05
+
+# src/components/ui/tabela.tsx (211 linhas)
+
+ESTADOS
+154: [aberto, setAberto] = React.useState(false)
+
+ESTRUTURA
+72: Button size="sm" variant="ghost" onClick={() => baixarCsv(nomeExportacao, linhas, exportaveis)} title={`Exporta as ${linhas.length} linhas visíveis, com os filtros atuais`}
+86: table 
+105: tr onClick={onLinhaClick ? () => onLinhaClick(l) : undefined}
+133: Cartao linha={l} colunas={colunas} onClick={onLinhaClick}
+176: button onClick={() => onClick(linha)} aria-label="Abrir"
+200: button onClick={() => setAberto((v) => !v)}
+
+RÓTULOS
+
+
+TEXTOS
+79: Exportar
+
+CONDIÇÕES
+70: nomeExportacao && exportaveis.length > 0
+107: onLinhaClick
+175: onClick
+186: ocultas.length > 0
+188: aberto
+204: aberto

@@ -1,0 +1,1591 @@
+# src/app/anuncios/analise/analise-cliente.tsx (1090 linhas)
+
+ESTADOS
+177: [recorte, setRecorte] = React.useState(() => String(Math.min(8, SEMANAS.length || 8)) )
+180: [precos, setPrecos] = React.useState<EstadoPrecos>({ fase: "ocioso" })
+181: [busca, setBusca] = React.useState("")
+182: [conta, setConta] = React.useState("")
+183: [tipo, setTipo] = React.useState<(typeof TIPOS)[number]>("Todos")
+184: [status, setStatus] = React.useState<(typeof STATUS)[number]>("Todos")
+185: [selecionado, setSelecionado] = React.useState<AnuncioAnalisado | null>(null)
+186: [marcados, setMarcados] = React.useState<string[]>([])
+187: [filtrosAbertos, setFiltrosAbertos] = React.useState(false)
+188: [comparando, setComparando] = React.useState(false)
+
+ESTRUTURA
+301: span onClick={(e) => e.stopPropagation()}
+302: Checkbox checked={marcados.includes(a.mlb)} onChange={() => alternarMarca(a.mlb)}
+464: PageHeader title="Análise de anúncios" breadcrumb="Anúncios" description="Desempenho semanal, aderência de preço e diagnóstico por anúncio" actions={ <> <Button size="sm" className="md:hidden" onClick={() => setFiltrosAbertos(true)} > <SlidersHorizontal className="w-3.5 h-3.5" /> Filtros {filtrosAtivos > 0 && ( <span className="num text-[11px]">({filtrosAtivos})</span> )} </Button> <Button size="sm" onClick={atualizarPrecos} disabled={precos.fase === "buscando"} title="Consulta no canal o preço que está na vitrine agora" > <RefreshCw className={ "w-3.5 h-3.5 " + (precos.fase === "buscando" ? "animate-spin" : "") } /> <span className="hidden sm:inline"> {precos.fase === "buscando" ? "Consultando…" : "Atualizar preços"} </span> </Button> </> } filters={ <BarraFiltros> <Filtro rotulo="Conta"> <SeletorCanal canais={CONTAS} valor={conta} onChange={setConta} rotuloTodos="Todas as contas" /> </Filtro> <Filtro rotulo="Semanas" > <Select value={recorte} onChange={(e) => setRecorte(e.target.value)} className="w-[168px]" > {RECORTES.map((r) => ( <option key={r.value} value={r.value}> {r.label} </option> ))} </Select> </Filtro> <Filtro rotulo="Tipo" className="hidden md:flex"> <Segmented<(typeof TIPOS)[number]> options={TIPOS} value={tipo} onChange={setTipo} /> </Filtro> <Filtro rotulo="Situação" className="hidden md:flex"> <Segmented<(typeof STATUS)[number]> options={STATUS.map((s) => ({ value: s, label: s === "Todos" ? "Todos" : s === "ativo" ? "
+470: Button size="sm" onClick={() => setFiltrosAbertos(true)}
+481: Button size="sm" onClick={atualizarPrecos} disabled={precos.fase === "buscando"} title="Consulta no canal o preço que está na vitrine agora"
+499: BarraFiltros 
+501: SeletorCanal canais={CONTAS} valor={conta} onChange={setConta} rotuloTodos="Todas as contas"
+510: Select value={recorte} onChange={(e) => setRecorte(e.target.value)}
+524: Segmented options={TIPOS} value={tipo} onChange={setTipo}
+532: Segmented options={STATUS.map((s) => ({ value: s, label: s === "Todos" ? "Todos" : s === "ativo" ? "Ativos" : "Pausados", }))} value={status} onChange={setStatus}
+547: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Título, SKU ou MLB"
+554: button onClick={() => setBusca("")}
+638: StatTile label="Receita acumulada" value={money(resumo.receita)} delta={11.8} hint={`${recorte} semanas`}
+644: StatTile label="Unidades vendidas" value={count(resumo.vendas)} delta={6.4}
+645: StatTile label="Conversão média" value={pct(resumo.conversao, 2)} delta={-2.1}
+650: StatTile label="Visitas acumuladas" value={count(resumo.visitas)} delta={9.2}
+651: StatTile label="Margem subsidiada" value={money(resumo.subsidio)} delta={-15} inverse=true hint="deixada na mesa"
+665: PanelHeader title="Lista por anúncio" hint="um MLB por linha · clique para abrir o raio-X" action={ marcados.length > 0 ? ( <span className="flex items-center gap-2"> <span className="num text-[12px] text-ink-2"> {marcados.length} selecionados </span> <Button size="sm" variant="primary" onClick={() => setComparando(true)} disabled={marcados.length < 2 || marcados.length > 3} title={ marcados.length < 2 ? "Selecione ao menos dois anúncios" : marcados.length > 3 ? "Compare no máximo três de cada vez" : "Ver lado a lado" } > <Columns2 className="w-3.5 h-3.5" /> Comparar </Button> <Button size="sm" variant="ghost" onClick={() => setMarcados([])}> Limpar </Button> </span> ) : ( <span className="num text-[12px] text-ink-3 md:hidden"> {filtrados.length} </span> ) }
+674: Button size="sm" variant="primary" onClick={() => setComparando(true)} disabled={marcados.length < 2 || marcados.length > 3} title={ marcados.length < 2 ? "Selecione ao menos dois anúncios" : marcados.length > 3 ? "Compare no máximo três de cada vez" : "Ver lado a lado" }
+690: Button size="sm" variant="ghost" onClick={() => setMarcados([])}
+701: DataTable columns={colunas} rows={filtrados} rowKey={(a) => a.mlb} defaultSort={{ key: "receita", dir: "desc" }} onRowClick={setSelecionado} empty={ <EmptyState icon={SearchX} title="Nenhum anúncio neste recorte" description="Ajuste a busca, troque a quantidade de semanas ou limpe os filtros de tipo e situação." action={ <Button size="sm" onClick={limparFiltros}> Limpar filtros </Button> } /> }
+708: EmptyState icon={SearchX} title="Nenhum anúncio neste recorte" description="Ajuste a busca, troque a quantidade de semanas ou limpe os filtros de tipo e situação." action={ <Button size="sm" onClick={limparFiltros}> Limpar filtros </Button> }
+713: Button size="sm" onClick={limparFiltros}
+740: Field label="Semanas analisadas"
+741: Select value={recorte} onChange={(e) => setRecorte(e.target.value)}
+758: button onClick={() => setTipo(t)}
+778: button onClick={() => setStatus(s)}
+829: Sheet title={item.titulo} subtitle={`${item.mlb} · ${item.sku} · ${item.conta}`} onClose={onClose} width="640px" footer={ <> {linkDoAnuncio(item.mlb) ? ( <a href={linkDoAnuncio(item.mlb)!} target="_blank" rel="noopener noreferrer" className="flex-1 h-8 max-sm:h-11 inline-flex items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] text-ink hover:bg-panel-3 transition-colors" > <ExternalLink className="w-3.5 h-3.5" /> Abrir no Mercado Livre </a> ) : ( <Button className="flex-1 max-sm:h-11" onClick={onClose}> Fechar </Button> )} </> }
+847: Button onClick={onClose}
+958: ComposedChart data={serie} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}
+
+RÓTULOS
+173: label: n === total ? `${n} semanas (tudo)` : `${n} semanas`
+212: nome: c
+298: header: ""
+311: header: "Anúncio"
+338: header: "Conta"
+346: header: "Visitas"
+354: header: "Vendas"
+363: header: "Conversão"
+390: header: "Receita"
+401: header: "Evolução"
+418: header: "Preço vs. ideal"
+432: header: "Subsídio"
+447: header: "Campanhas"
+535: label: s === "Todos" ? "Todos" : s === "ativo" ? "Ativos" : "Pausados"
+1044: label: "Vendas"
+1045: label: "Preço praticado"
+1046: label: "Preço ideal"
+
+TEXTOS
+97: —
+121: ideal
+135: abaixo do ideal
+139: acima do ideal
+326: A
+327: pausado
+330: ·
+442: —
+453: —
+476: Filtros
+478: (
+478: )
+566: de
+599: Enquanto isso a tela usa o preço da última importação de planilha.
+615: preços atualizados
+617: às
+624: .
+627: anúncios não responderam.
+631: O preço pago continua vindo dos pedidos, com o histórico completo.
+672: selecionados
+688: Comparar
+691: Limpar
+714: Limpar filtros
+755: Tipo de anúncio
+775: Situação
+844: Abrir no Mercado Livre
+848: Fechar
+856: Curva A · receita
+857: Curva A · tráfego
+864: em campanha
+872: Diagnóstico
+891: Sugestão:
+919: Aderência de preço
+922: Comissão do canal
+926: Subsídio acumulado
+935: Peso na receita do item
+939: Elasticidade ao desconto
+942: positiva
+944: não observada
+953: Vendas e preço por semana
+1062: Campanhas no período
+
+CONDIÇÕES
+326: a.metricas.curvaAReceita
+327: a.status === "pausado"
+373: a.metricas.conversao >= resumo.mediaConversao
+410: a.metricas.tendencia >= 0
+477: filtrosAtivos > 0
+493: precos.fase === "buscando"
+553: busca
+575: precos.fase === "erro"
+591: precos.configurado
+596: !precos.configurado
+607: precos.fase === "ok"
+625: precos.comErro > 0
+668: marcados.length > 0
+679: marcados.length < 2
+723: selecionado
+727: comparando
+734: filtrosAbertos
+788: s === "Todos"
+836: linkDoAnuncio(item.mlb)
+856: m.curvaAReceita
+857: m.curvaATrafego
+860: item.status === "ativo"
+861: m.campanhasAtivas > 0
+870: diagnosticos.length > 0
+933: m.subsidio > 0
+937: m.subsidio > 0
+941: m.elasticidadePositiva
+980: s
+998: p.name === "Vendas"
+1060: item.semanas.some((w) => w.campanhas.length > 0)
+
+# src/app/anuncios/analise/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/analise/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/catalogo/catalogo-cliente.tsx (1072 linhas)
+
+ESTADOS
+162: [sincronizando, setSincronizando] = React.useState(false)
+163: [erroSync, setErroSync] = React.useState<string | null>(null)
+164: [origemAberta, setOrigemAberta] = React.useState(false)
+197: [busca, setBusca] = React.useState("")
+198: [tipo, setTipo] = React.useState<(typeof TIPOS)[number]>("Todos")
+199: [status, setStatus] = React.useState<(typeof STATUS)[number]>("Todos")
+200: [categoria, setCategoria] = React.useState("Todas")
+201: [conta, setConta] = React.useState("Todas")
+202: [filtrosAbertos, setFiltrosAbertos] = React.useState(false)
+203: [selecionado, setSelecionado] = React.useState<ItemCatalogo | null>(null)
+204: [importAberto, setImportAberto] = React.useState(true)
+205: [arquivos, setArquivos] = React.useState<File[]>([])
+
+ESTRUTURA
+412: PageHeader title="Catálogo" breadcrumb="Anúncios" description="Espelho das publicações do canal — preço praticado, comissão e situação por MLB" actions={ <> <Button size="sm" variant="primary" disabled={sincronizando} onClick={sincronizar}> {sincronizando ? ( <> <Loader2 className="w-3.5 h-3.5 animate-spin" /> Consultando o canal </> ) : ( <> <RefreshCw className="w-3.5 h-3.5" strokeWidth={2.25} /> Atualizar </> )} </Button> <Button size="sm" onClick={() => setOrigemAberta(true)}> <Info className="w-3.5 h-3.5" /> De onde vem </Button> <Button size="sm" className="md:hidden" onClick={() => setFiltrosAbertos(true)} > <SlidersHorizontal className="w-3.5 h-3.5" /> Filtros {filtrosAtivos > 0 && ( <span className="num text-[11px]">({filtrosAtivos})</span> )} </Button> </> } filters={ <BarraFiltros> <Filtro rotulo="Tipo" className="hidden md:flex"> <Segmented<(typeof TIPOS)[number]> options={TIPOS} value={tipo} onChange={setTipo} /> </Filtro> <Filtro rotulo="Situação" className="hidden md:flex"> <Segmented<(typeof STATUS)[number]> options={STATUS.map((s) => ({ value: s, label: ROTULO_STATUS[s] }))} value={status} onChange={setStatus} /> </Filtro> <Filtro rotulo="Categoria" className="hidden md:flex"> <Select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-40" > <option value="Todas">Todas as categorias</option> {CATEGORIAS_CATALOGO.map((c) => ( <option key={c} value={c}> {c} </option> ))} </Select> </Filtro> {/* O seletor de conta só existi
+418: Button size="sm" variant="primary" disabled={sincronizando} onClick={sincronizar}
+431: Button size="sm" onClick={() => setOrigemAberta(true)}
+435: Button size="sm" onClick={() => setFiltrosAbertos(true)}
+449: BarraFiltros 
+451: Segmented options={TIPOS} value={tipo} onChange={setTipo}
+459: Segmented options={STATUS.map((s) => ({ value: s, label: ROTULO_STATUS[s] }))} value={status} onChange={setStatus}
+467: Select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+488: Select value={conta} onChange={(e) => setConta(e.target.value)}
+508: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="MLB, SKU ou título"
+515: button onClick={() => setBusca("")}
+566: button onClick={() => setOrigemAberta(true)}
+598: StatTile label="Anúncios no catálogo" value={count(resumo.total)} hint={`${resumo.finalizados} finalizados`}
+603: StatTile label="Ativos" value={count(resumo.ativos)} hint={`${pct((resumo.ativos / resumo.total) * 100, 0)} da carteira`}
+608: StatTile label="Pausados" value={count(resumo.pausados)} hint="fora da vitrine agora"
+613: StatTile label="Comissão praticada" value={ resumo.comissaoPraticada == null ? "—" : pct(resumo.comissaoPraticada) } hint={ resumo.comissaoPraticada == null ? "nenhum pedido com comissão informada" : `padrão é ${pct(resumo.comissao)} · ${count(resumo.anunciosComPraticada)} anúncios com apuração` }
+629: PanelHeader title="Composição por tipo" hint="Premium paga comissão maior e entrega mais exposição"
+644: PanelHeader title="Situação das publicações" hint={`${count(resumo.publicados)} anúncios publicados`}
+666: PanelHeader title="Anúncios" hint="clique numa linha para abrir a ficha do anúncio" action={ <span className="num text-[12px] text-ink-3"> {filtrados.length} </span> }
+675: DataTable columns={colunas} rows={filtrados} rowKey={(i) => i.mlb} defaultSort={{ key: "preco", dir: "desc" }} onRowClick={setSelecionado} empty={ <EmptyState icon={SearchX} title="Nenhum anúncio encontrado" description="Ajuste a busca ou limpe os filtros de tipo, situação e categoria." action={ <Button size="sm" onClick={limparFiltros}> Limpar filtros </Button> } /> }
+682: EmptyState icon={SearchX} title="Nenhum anúncio encontrado" description="Ajuste a busca ou limpe os filtros de tipo, situação e categoria." action={ <Button size="sm" onClick={limparFiltros}> Limpar filtros </Button> }
+687: Button size="sm" onClick={limparFiltros}
+711: button onClick={() => setTipo(t)}
+731: button onClick={() => setStatus(s)}
+747: Field label="Categoria"
+748: Select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+762: Field label="Conta"
+763: Select value={conta} onChange={(e) => setConta(e.target.value)}
+869: Sheet title="De onde vem cada dado" subtitle="Catálogo · o que é lido do canal, o que é seu e o que é calculado" onClose={onClose} width="560px"
+947: Sheet title={item.titulo} subtitle={`${item.mlb} · ${item.sku} · ${item.conta}`} onClose={onClose} width="620px" footer={ <> {linkDoAnuncio(item.mlb) ? ( <a href={linkDoAnuncio(item.mlb)!} target="_blank" rel="noopener noreferrer" className="flex-1 h-8 max-sm:h-11 inline-flex items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] text-ink hover:bg-panel-3 transition-colors" > <ExternalLink className="w-3.5 h-3.5" /> Abrir no Mercado Livre </a> ) : ( <Button className="flex-1 max-sm:h-11" onClick={onClose}> Fechar </Button> )} </> }
+965: Button onClick={onClose}
+1023: LineChart data={serie} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}
+1059: KeyValue label="MLB" value={item.mlb}
+1060: KeyValue label="SKU" value={item.sku}
+1061: KeyValue label="Conta" value={item.conta}
+1062: KeyValue label="Categoria" value={item.categoria}
+1063: KeyValue label="Criado em" value={dataBR(item.criadoEm)}
+1064: KeyValue label="Última atualização" value={`${dataBR(item.atualizadoEm)} · ${desdeQuando(item.atualizadoEm)}`}
+
+RÓTULOS
+276: header: "Título"
+299: header: "MLB"
+307: header: "SKU"
+314: header: "Tipo"
+323: header: "Preço atual"
+334: header: "Comissão padrão"
+349: header: "Comissão praticada"
+383: header: "Status"
+394: header: "Atualizado"
+460: label: ROTULO_STATUS[s]
+636: rotulo: "Clássico"
+637: rotulo: "Premium"
+651: rotulo: "Ativos"
+652: rotulo: "Pausados"
+654: rotulo: "Finalizados"
+813: nome: "MLB"
+814: nome: "Título"
+815: nome: "SKU"
+816: nome: "Tipo"
+817: nome: "Status"
+818: nome: "Preço atual"
+819: nome: "Comissão padrão"
+827: nome: "Comissão praticada"
+838: nome: "Categoria"
+843: nome: "Histórico de preço"
+1051: label: "Preço praticado"
+
+TEXTOS
+291: ·
+356: —
+369: sobre
+422: Consultando o canal
+427: Atualizar
+433: De onde vem
+441: Filtros
+443: (
+443: )
+472: Todas as categorias
+493: Todas as contas
+527: de
+539: Não deu para atualizar.
+540: O que está na tela é a última leitura guardada.
+548: Tudo nesta tela vem da API do Mercado Livre.
+551: Última leitura em
+560: .
+563: Nunca sincronizado.
+570: Ver a origem de cada coluna
+578: Cargas recentes do catálogo
+580: Importar nova carga
+588: ·
+588: linhas
+688: Limpar filtros
+708: Tipo de anúncio
+728: Situação
+753: Todas as categorias
+768: Todas as contas
+879: A última leitura do canal foi em
+883: . O botão
+883: Atualizar
+883: , no topo, força uma nova agora — ele consulta só o catálogo, então leva segundos e não a sincronização inteira.
+889: Este catálogo nunca foi sincronizado com o canal. O que está na tela veio de importação de planilha.
+902: de
+902: anúncios
+910: —
+919: O que esta tela
+919: não
+919: mostra: preço vendido, unidades e receita. Nada disso é catálogo — é pedido, e fica em Vendas e em Performance de preço. Misturar os dois aqui daria a impressão de que o preço de vitrine é o preço que entrou.
+962: Abrir no Mercado Livre
+966: Fechar
+981: frete grátis
+1007: Preço nas últimas 12 semanas
+1058: Cadastro
+
+CONDIÇÕES
+318: i.tipo === "Premium"
+360: i.comissaoPraticada < i.comissaoAtual - 0.5
+419: sincronizando
+442: filtrosAtivos > 0
+486: CONTAS_CATALOGO.length > 1
+514: busca
+535: erroSync
+549: dados.sincronizadoEm
+575: IMPORTACOES_CATALOGO.length > 0
+615: resumo.comissaoPraticada == null
+618: resumo.comissaoPraticada == null
+697: selecionado
+701: filtrosAbertos
+779: origemAberta
+877: sincronizadoEm
+900: o.tom === "pedidos"
+954: linkDoAnuncio(item.mlb)
+974: item.tipo === "Premium"
+981: item.freteGratis
+
+# src/app/anuncios/catalogo/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/catalogo/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/preco-alvo/page.tsx (23 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/preco-alvo/preco-alvo-cliente.tsx (525 linhas)
+
+ESTADOS
+58: [alvos, setAlvos] = React.useState<Record<string, string>>(() => Object.fromEntries(tipos.map((t) => [t ?? "", "20"])) )
+61: [busca, setBusca] = React.useState("")
+62: [erro, setErro] = React.useState<string | null>(null)
+63: [salvando, setSalvando] = React.useState(false)
+66: [editando, setEditando] = React.useState(false)
+67: [rascunho, setRascunho] = React.useState(comissoesDoCanal)
+68: [apagar, setApagar] = React.useState<string[]>([])
+
+ESTRUTURA
+117: PageHeader title="Preço-alvo" breadcrumb="Anúncios" description="O preço que fecha a margem que você quer" badge={<Badge tone="warn">Em desenvolvimento</Badge>}
+135: Field label="Canal"
+136: Select value={canalId ?? ""} onChange={(e) => router.push(`/anuncios/preco-alvo?canal=${e.target.value}`)}
+152: Field label={`Margem em ${rotuloTipo(t)}`} hint={aliq ? `comissão ${pct(aliq.comissao, 2)}` : undefined}
+157: Input inputMode="decimal" value={alvos[chave] ?? ""} onChange={(e) => setAlvos({ ...alvos, [chave]: e.target.value }) }
+170: Button onClick={() => setEditando((v) => !v)}
+197: table 
+210: Select value={c.tipo ?? ""} onChange={(e) => { const v = (e.target.value || null) as TipoAnuncio | null; setRascunho((a) => a.map((x, j) => (j === i ? { ...x, tipo: v } : x)) ); }}
+225: Input inputMode="decimal" value={String(c.comissao).replace(".", ",")} onChange={(e) => { const v = ler(e.target.value) ?? 0; setRascunho((a) => a.map((x, j) => (j === i ? { ...x, comissao: v } : x)) ); }}
+237: Input type="date" value={c.vigenciaInicio} onChange={(e) => setRascunho((a) => a.map((x, j) => j === i ? { ...x, vigenciaInicio: e.target.value } : x ) ) }
+250: button onClick={() => { if (!String(c.id).startsWith("novo-")) { setApagar((a) => [...a, c.id]); } setRascunho((a) => a.filter((_, j) => j !== i)); }} aria-label="Remover"
+269: Button onClick={() => setRascunho((a) => [ ...a, { id: `novo-${a.length}`, canalId: canalId ?? "", canalNome: "", tipo: null, comissao: 0, vigenciaInicio: new Date().toISOString().slice(0, 10), }, ]) }
+287: Button variant="primary" disabled={salvando} onClick={salvarComissoes}
+307: Input placeholder="Buscar SKU ou título" value={busca} onChange={(e) => setBusca(e.target.value)}
+328: table 
+456: span title={alvo.motivo}
+463: span title={l.faltando.join(", ")}
+
+RÓTULOS
+
+
+TEXTOS
+121: Em desenvolvimento
+177: Este canal não tem alíquota cadastrada, então não há como calcular preço. Clique em
+178: Comissões do canal
+179: e informe a taxa que ele cobra.
+188: Comissões de
+191: Deixe o tipo em branco quando o canal cobra uma taxa só. Para registrar um reajuste, adicione uma linha nova com a data em que ele passou a valer — assim o preço de antes continua sendo comparado com a taxa daquela época.
+200: Tipo de anúncio
+201: Comissão %
+202: Vale a partir de
+219: Alíquota única
+220: Clássico
+221: Premium
+285: Adicionar
+291: Gravando
+296: Gravar
+314: de
+314: com custo completo
+322: Preencher custos
+332: SKU
+335: Custo
+338: Frete
+354: Hoje
+356: Margem
+357: Alvo
+389: —
+433: —
+460: margem impossível
+467: falta
+483: Nenhum produto encontrado.
+493: Mostrando os 200 de maior faturamento. Use a busca para chegar aos demais.
+501: Como o preço é calculado
+504: preço = (mercadoria + embalagem + frete) ÷ (1 − comissão − imposto − margem)
+508: Comissão, imposto e margem são percentuais do próprio preço, então a conta se resolve — não se marca em cima do custo. Marcar por cima (custo ÷ 0,80 para 20%) entrega
+511: 3,7%
+511: de margem real neste exemplo, não 20%.
+515: O juro de parcelamento fica de fora do alvo: só se sabe depois da venda, quando o comprador escolhe parcelar. Ele entra na margem medida, em Financeiro — e é lá que a diferença entre o alvo e o realizado aparece.
+
+CONDIÇÕES
+125: erro
+155: aliq
+171: editando
+175: !tipos.length
+185: editando
+288: salvando
+373: l.mercadoria != null
+379: l.frete != null
+385: l.freteOrigem === "praticado"
+420: c.precoAtual != null
+424: c.atual
+437: alvo?.ok
+442: c.precoAtual != null
+450: alvo.preco > c.precoAtual
+477: !visiveis.length
+491: visiveis.length > 200
+
+# src/app/anuncios/preco-ideal/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/preco-ideal/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/preco-ideal/preco-ideal-cliente.tsx (858 linhas)
+
+ESTADOS
+179: [relId, setRelId] = React.useState(ordenados[0].id)
+180: [busca, setBusca] = React.useState("")
+181: [faixa, setFaixa] = React.useState<Faixa>("Todas")
+182: [tipo, setTipo] = React.useState<(typeof TIPOS)[number]>("Todos")
+183: [categoria, setCategoria] = React.useState("Todas")
+184: [conta, setConta] = React.useState("Todas")
+185: [filtrosAbertos, setFiltrosAbertos] = React.useState(false)
+186: [selecionado, setSelecionado] = React.useState<LinhaCruzada | null>(null)
+187: [arquivos, setArquivos] = React.useState<File[]>([])
+188: [dataBase, setDataBase] = React.useState("")
+
+ESTRUTURA
+113: button onClick={onSelect}
+347: PageHeader title="Lógica de promoção" breadcrumb="Anúncios" description="Onde a Fórmula base entra: o preço mínimo de campanha, por MLB, e o desvio do que está no ar" actions={ <> <Button size="sm" className="md:hidden" onClick={() => setFiltrosAbertos(true)} > <SlidersHorizontal className="w-3.5 h-3.5" /> Filtros {filtrosAtivos > 0 && ( <span className="num text-[11px]">({filtrosAtivos})</span> )} </Button> </> } filters={ <BarraFiltros> {/* A faixa de desvio é o filtro que decide nesta tela — quem abre quer ver quem está fora do preço, não a carteira inteira. Vem primeiro por isso. */} <Filtro rotulo="Desvio do ideal" className="hidden md:flex"> <Segmented<Faixa> options={FAIXAS.map((f) => ({ value: f, label: ROTULO_FAIXA[f] }))} value={faixa} onChange={setFaixa} /> </Filtro> <Filtro rotulo="Tipo" className="hidden md:flex"> <Segmented<(typeof TIPOS)[number]> options={TIPOS} value={tipo} onChange={setTipo} /> </Filtro> <Filtro rotulo="Categoria" className="hidden md:flex"> <Select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-40" > <option value="Todas">Todas as categorias</o
+353: Button size="sm" onClick={() => setFiltrosAbertos(true)}
+367: BarraFiltros 
+374: Segmented options={FAIXAS.map((f) => ({ value: f, label: ROTULO_FAIXA[f] }))} value={faixa} onChange={setFaixa}
+382: Segmented options={TIPOS} value={tipo} onChange={setTipo}
+390: Select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+410: Select value={conta} onChange={(e) => setConta(e.target.value)}
+430: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="MLB, SKU ou título"
+437: button onClick={() => setBusca("")}
+459: PanelHeader title="Relatórios importados" hint="selecione um recorte para ver a tabela abaixo" action={ <span className="num text-[12px] text-ink-3"> {ordenados.length} </span> }
+482: StatTile label="No alvo" value={count(resumo.alvo)} hint={`${pct((resumo.alvo / (resumo.total || 1)) * 100, 0)} do relatório`}
+487: StatTile label="Acima do ideal" value={count(resumo.acima)} hint="preço praticado maior que o alvo"
+492: StatTile label="Abaixo do ideal" value={count(resumo.abaixo)} hint={`${money(Math.abs(resumo.economia))} deixados na mesa`}
+497: StatTile label="Desvio médio" value={pct(resumo.medio)} hint={`comissão negociada ${pct(resumo.comissao)}`}
+506: PanelHeader title="Distribuição do desvio" hint={`base ${dataBR(relatorio.dataBase)} · ${relatorio.linhas.length} itens`}
+512: BarChart data={distribuicao} margin={{ top: 6, right: 12, left: 0, bottom: 0 }}
+548: PanelHeader title={`Itens do relatório · ${dataBR(relatorio.dataBase)}`} hint="clique numa linha para comparar praticado e ideal" action={ <span className="num text-[12px] text-ink-3"> {filtrados.length} </span> }
+557: DataTable columns={colunas} rows={filtrados} rowKey={(l) => l.mlb} defaultSort={{ key: "desvio", dir: "desc" }} onRowClick={setSelecionado} empty={ <EmptyState icon={SearchX} title="Nenhum item nesta faixa" description="Ajuste a busca ou volte para todas as faixas de desvio." action={ <Button size="sm" onClick={limparFiltros}> Limpar filtros </Button> } /> }
+564: EmptyState icon={SearchX} title="Nenhum item nesta faixa" description="Ajuste a busca ou volte para todas as faixas de desvio." action={ <Button size="sm" onClick={limparFiltros}> Limpar filtros </Button> }
+569: Button size="sm" onClick={limparFiltros}
+598: button onClick={() => setFaixa(f)}
+618: button onClick={() => setTipo(t)}
+634: Field label="Categoria"
+635: Select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+650: Field label="Conta"
+651: Select value={conta} onChange={(e) => setConta(e.target.value)}
+670: button onClick={() => setRelId(r.id)}
+728: Sheet title={linha.titulo} subtitle={`${linha.mlb} · ${linha.sku} · base ${dataBR(relatorio.dataBase)}`} onClose={onClose} width="560px" footer={ <> <Button className="flex-1 max-sm:h-11" onClick={onClose}> Fechar </Button> </> }
+735: Button onClick={onClose}
+786: KeyValue label="MLB" value={linha.mlb}
+787: KeyValue label="SKU" value={linha.sku}
+788: KeyValue label="Preço praticado" value={money(linha.precoPraticado)}
+789: KeyValue label="Preço ideal" value={money(linha.precoIdeal)}
+790: KeyValue label="Desvio" value={fmtDelta(linha.desvio)} tone={tom}
+795: KeyValue label="Comissão do tipo" value={pct(linha.comissaoAtual)}
+796: KeyValue label="Comissão negociada" value={pct(linha.comissaoNegociada)} tone={linha.comissaoNegociada < linha.comissaoAtual ? "up" : undefined}
+806: table 
+
+RÓTULOS
+92: rotulo: "≤ −6%"
+93: rotulo: "−6 a −2%"
+94: rotulo: "−2 a 2%"
+95: rotulo: "2 a 6%"
+96: rotulo: "≥ 6%"
+251: header: "Título"
+269: header: "MLB"
+277: header: "SKU"
+284: header: "Preço praticado"
+297: header: "Preço ideal"
+306: header: "Desvio"
+319: header: "Comissão negociada"
+375: label: ROTULO_FAIXA[f]
+
+TEXTOS
+144: base
+144: ·
+144: itens
+147: enviado
+262: ·
+359: Filtros
+361: (
+361: )
+395: Todas as categorias
+415: Todas as contas
+449: de
+538: Leitura:
+539: até 2% de distância o preço está no alvo; entre 2% e 6% vale revisar na próxima rodada; acima de 6% o anúncio está fora da tabela e pede correção imediata.
+570: Limpar filtros
+595: Faixa de desvio
+615: Tipo de anúncio
+640: Todas as categorias
+656: Todas as contas
+667: Relatório
+736: Fechar
+761: ideal
+775: abaixo do ideal
+780: acima do ideal
+785: Linha do relatório
+804: Preço ideal por data-base
+851: O desvio de cada linha usa o preço praticado de hoje contra o alvo daquele recorte.
+
+CONDIÇÕES
+325: l.comissaoNegociada < l.comissaoAtual
+360: filtrosAtivos > 0
+408: CONTAS.length > 1
+436: busca
+579: selecionado
+588: filtrosAbertos
+649: CONTAS.length > 1
+742: linha.tipo === "Premium"
+745: linha.status === "ativo"
+777: diferenca >= 0
+799: linha.comissaoNegociada < linha.comissaoAtual
+
+# src/app/anuncios/preco-performance/page.tsx (35 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+22: PageHeader title="Performance de preço" breadcrumb="Anúncios"
+24: SemFonte titulo="Sem venda no recorte" origem="A análise vem da listagem de pedidos, comparando o preço praticado com o que foi vendido. Importe-a ou amplie o período."
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/preco-performance/performance-cliente.tsx (636 linhas)
+
+ESTADOS
+77: [busca, setBusca] = React.useState("")
+78: [curva, setCurva] = React.useState<"" | "A" | "B" | "C">("")
+79: [so, setSo] = React.useState<"" | "problema" | "evidencia">("")
+80: [aberto, setAberto] = React.useState<string | null>(null)
+82: [baixando, setBaixando] = React.useState(false)
+83: [erro, setErro] = React.useState<string | null>(null)
+
+ESTRUTURA
+181: PageHeader title="Performance de preço" breadcrumb="Anúncios" description={ periodo.inicio ? `${periodo.inicio.slice(8, 10)}/${periodo.inicio.slice(5, 7)} a ${periodo.fim.slice(8, 10)}/${periodo.fim.slice(5, 7)}` : undefined } filters={ <BarraFiltros> <Filtro rotulo="Período"> <Segmented options={PERIODOS} value={String(dias) as "7" | "30" | "90"} onChange={(v) => ir(Number(v), dados.canalId)} /> </Filtro> <Filtro rotulo="Canal"> <SelectRecorte grupos={dados.opcoes} valor={dados.canalId ?? ""} onChange={(v) => ir(dias, v || null)} className="w-[220px]" /> </Filtro> <FiltroDivisor /> <Filtro rotulo="Buscar"> <Input placeholder="SKU, título ou MLB" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-[240px]" /> </Filtro> <FiltroAcoes> <Button disabled={baixando} onClick={exportar}> {baixando ? ( <> <Loader2 className="w-3.5 h-3.5 animate-spin" /> Montando </> ) : ( <> <Download className="w-3.5 h-3.5" stro
+190: BarraFiltros 
+192: Segmented options={PERIODOS} value={String(dias) as "7" | "30" | "90"} onChange={(v) => ir(Number(v), dados.canalId)}
+199: SelectRecorte grupos={dados.opcoes} valor={dados.canalId ?? ""} onChange={(v) => ir(dias, v || null)}
+210: Input placeholder="SKU, título ou MLB" value={busca} onChange={(e) => setBusca(e.target.value)}
+219: Button disabled={baixando} onClick={exportar}
+320: button onClick={() => setAberto(null)} aria-label="Fechar"
+331: BarChart data={detalhe.faixas.map((f) => ({ preco: f.preco, unDia: f.unDia, unidades: f.unidades, dias: f.dias, melhor: f.melhor, atual: f.atual, }))} margin={{ top: 4, right: 8, bottom: 4, left: 8 }}
+355: ReferenceLine x={detalhe.precoUltimo} stroke="var(--brand)" strokeDasharray="4 3" label={{ value: "agora", position: "top", fill: "var(--ink-3)", fontSize: 10, }}
+399: Segmented options={[ { value: "" as const, label: "Todas" }, { value: "A" as const, label: "A" }, { value: "B" as const, label: "B" }, { value: "C" as const, label: "C" }, ]} value={curva} onChange={setCurva}
+409: Segmented options={[ { value: "" as const, label: "Tudo" }, { value: "evidencia" as const, label: "Com referência" }, { value: "problema" as const, label: "Subiu e caiu" }, ]} value={so} onChange={setSo}
+424: table 
+443: tr onClick={() => setAberto(aberto === l.sku ? null : l.sku)}
+
+RÓTULOS
+56: rotulo: "no melhor preço"
+57: rotulo: "subiu e caiu venda"
+58: rotulo: "acima do melhor"
+59: rotulo: "abaixo do melhor"
+60: rotulo: "caiu sem mudar preço"
+64: label: "7 dias"
+65: label: "30 dias"
+66: label: "90 dias"
+401: label: "Todas"
+402: label: "A"
+403: label: "B"
+404: label: "C"
+411: label: "Tudo"
+412: label: "Com referência"
+413: label: "Subiu e caiu"
+
+TEXTOS
+223: Montando
+228: Exportar Excel
+250: A coluna
+250: Vitrine / desconto
+250: é a única que depende do canal; todo o resto vem dos pedidos e continua correto. Sincronize o canal para a vitrine voltar a valer.
+259: dos
+259: anúncios do recorte estão sem preço de vitrine — nessas linhas a coluna sai vazia.
+308: — unidades por dia em cada preço
+389: Verde é a faixa de melhor desempenho. Cinza são faixas com menos de 3 dias ou 3 unidades — aparecem porque houve venda, mas não disputam o melhor preço. A linha tracejada é o preço do último pedido.
+419: SKUs
+427: SKU
+428: Un.
+429: Melhor preço vendido
+430: Un/dia nele
+431: Último preço vendido
+432: Média vendida 14 dias
+433: Vitrine / desconto
+434: Variação
+435: Impacto na venda
+436: Situação
+475: un /
+475: dias
+480: sem evidência
+503: sem venda
+514: —
+536: —
+554: —
+569: un/dia agora
+574: sem venda recente
+582: —
+594: Mostrando os 200 de maior receita. Use a busca ou os filtros.
+603: Como ler, e o que isto não prova
+607: Todo preço desta tela é preço VENDIDO
+609: — o que o cliente efetivamente pagou no pedido, já com desconto, campanha e cupom. A única exceção é a coluna
+611: Vitrine
+611: , que é o preço publicado no anúncio. Os dois divergem bastante, e é de propósito que estão lado a lado: a distância entre eles é o desconto que a operação vem dando.
+616: O melhor preço é o que teve mais
+617: unidades por dia
+617: enquanto esteve valendo — não o que somou mais unidades, que premiaria o preço praticado por mais tempo. Só entram faixas com pelo menos 3 dias e 3 unidades; sem isso, um pedido grande num único dia venceria.
+624: Isto é correlação.
+625: O preço mais baixo costuma coincidir com campanha, e campanha traz tráfego que venderia mais a qualquer preço. Serve para escolher o que testar, não como prova de que baixar o preço aumenta a venda.
+
+CONDIÇÕES
+184: periodo.inicio
+220: baixando
+238: erro
+245: avisoVitrine
+257: !avisoVitrine && faltamPrecos
+295: k.nota
+303: detalhe
+314: detalhe.mlbs.length > 0
+354: detalhe.precoUltimo != null
+371: f.melhor
+453: l.curva === "A"
+469: l.melhor
+485: l.melhor
+491: l.precoUltimo != null
+497: l.dataUltimo
+509: l.precoRecente != null
+521: l.precoVitrine != null
+526: l.precoUltimo != null && l.precoVitrine > 0
+540: l.variacao != null
+550: l.variacao > 0
+558: l.impacto != null
+565: l.impacto > 0
+579: s
+592: visiveis.length > 200
+
+# src/app/anuncios/tipo/page.tsx (20 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/tipo/tipo-cliente.tsx (457 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+74: BarraFiltros 
+76: Segmented options={PERIODOS} value={String(dados.dias)} onChange={(v) => ir({ dias: Number(v) })}
+83: SelectRecorte grupos={dados.opcoes} valor={dados.canalId} onChange={(v) => ir({ canal: v })}
+96: Checkbox checked={Boolean(dados.anterior)} onChange={(v) => ir({ comparar: v })} label="Comparar com o período anterior"
+109: PageHeader title="Clássico vs Premium" breadcrumb="Anúncios" filters={filtros}
+117: EmptyState icon={Layers} title="Sem dados de desempenho neste recorte" description="Suba o catálogo e o relatório de desempenho em Importar, ou amplie o período e o canal acima."
+137: PageHeader title="Clássico vs Premium" breadcrumb="Anúncios" description={ dados.periodo ? `${dados.rotuloRecorte} · ${rotuloPeriodo(dados.periodo)}` : dados.rotuloRecorte } filters={filtros}
+196: Metrica rotulo="Conversão" valor={pct(r.conversao, 2)} detalhe={`${count(r.vendas)} vendas em ${count(r.visitas)} visitas`}
+201: Metrica rotulo="Visitas por anúncio" valor={count(Math.round(r.visitasPorAnuncio))} detalhe="no período"
+206: Metrica rotulo="Tarifa de tabela" valor={pct(r.tarifaMedia)} detalhe="alíquota do canal"
+211: Metrica rotulo="Tarifa praticada" valor={r.tarifaPraticada == null ? "—" : pct(r.tarifaPraticada)} detalhe={ r.tarifaPraticada == null ? "nenhum pedido com comissão informada" : `o que foi cobrado · ${pct(r.coberturaTarifa, 0)} da receita` }
+220: Metrica rotulo="Custo de tarifa" valor={ r.custoTarifaPraticada == null ? moneyShort(r.custoTarifa) : moneyShort(r.custoTarifaPraticada) } detalhe={ r.custoTarifaPraticada == null ? `pela tabela, sobre ${moneyShort(r.receita)}` : `pela praticada · ${moneyShort(r.custoTarifa)} se fosse tabela` }
+233: Metrica rotulo="Receita" valor={moneyShort(r.receita)} detalhe={antes ? `antes: ${moneyShort(antes.receita)}` : "no período"}
+254: Leitura tom={premiumPiorConversao && premiumMenosVisitas ? "atencao" : "neutro"} titulo="O que as médias sugerem"
+296: EmptyState icon={Layers} title="Nenhum SKU nos dois tipos" description="A comparação justa exige o mesmo produto anunciado como Clássico e como Premium, com visita nos dois. Sem isso, só há a comparação de médias — que mistura tipo e mix."
+401: span title="sem tarifa praticada nos dois lados"
+427: Tabela linhas={pares} colunas={colunas} chave={(p) => p.sku} nomeExportacao="classico-vs-premium"
+435: Leitura tom={premiumGanhou < pares.length / 2 ? "atencao" : "bom"} titulo="Leitura"
+
+RÓTULOS
+43: label: "30 dias"
+44: label: "90 dias"
+45: label: "180 dias"
+46: label: "1 ano"
+47: label: "Tudo"
+
+TEXTOS
+152: Comparando com
+154: .
+186: anúncios
+189: receita
+258: O Premium paga
+258: a mais de tarifa que o Clássico
+262: (pela tarifa
+262: realmente cobrada
+262: ; pela tabela a diferença seria de
+264: )
+267: (pela alíquota de tabela — não há pedido com comissão informada no recorte)
+269: . Em troca, recebe
+271: visitas por anúncio contra
+273: , e converte
+273: contra
+274: .
+278: Ou seja: nas médias o Premium recebe menos visita, converte pior e custa mais.
+280: Isso levanta a pergunta, não a responde
+282: — os dois grupos anunciam produtos diferentes, e mix explica diferença sem que o tipo tenha culpa. A tabela abaixo é que decide.
+286: A tabela abaixo compara o mesmo SKU nos dois tipos.
+402: *
+417: O mesmo SKU nos dois tipos
+418: —
+418: produtos
+421: Aqui o produto é o mesmo dos dois lados, então o que sobra na diferença é o tipo do anúncio. É a única comparação desta tela que decide alguma coisa. A tarifa extra usa a alíquota
+423: praticada
+424: quando ela existe nos dois lados; as linhas marcadas com
+425: *
+425: caíram de volta na de tabela, e valem menos.
+436: Em
+436: dos
+437: produtos comparáveis o Premium converteu melhor que o Clássico. A tarifa extra somou
+439: no período, com
+440: produtos usando a alíquota realmente cobrada e o resto a de tabela.
+444: Na maioria dos casos o Premium não devolveu em conversão o que cobrou a mais — vale rever os que estão no topo da tabela, que são os que mais custaram.
+449: Na maioria dos casos o Premium se pagou em conversão. Os que aparecem em vermelho na coluna de diferença são as exceções.
+
+CONDIÇÕES
+94: dados.dias > 0
+140: dados.periodo
+150: dados.anterior
+166: cl && pr
+185: r.tipo === "premium"
+187: antes
+213: r.tarifaPraticada == null
+214: r.tarifaPraticada == null
+222: r.custoTarifaPraticada == null
+227: r.custoTarifaPraticada == null
+236: antes
+255: premiumPiorConversao && premiumMenosVisitas
+260: temPraticada
+275: premiumPiorConversao && premiumMenosVisitas
+386: p.classico.tarifaPraticada == null
+388: p.premium.tarifaPraticada == null
+400: p.custoExtraPraticado == null
+435: premiumGanhou < pares.length / 2
+442: premiumGanhou < pares.length / 2
+
+# src/app/anuncios/trafego-pago/page.tsx (33 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+20: PageHeader title="Tráfego pago" breadcrumb="Anúncios"
+22: SemFonte titulo="Nenhum relatório de mídia importado" origem="Exporte o relatório de anúncios patrocinados no Mercado Livre e suba na tela de Importar. Ele traz investimento, cliques e receita atribuída por anúncio e por campanha."
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/anuncios/trafego-pago/trafego-pago-cliente.tsx (461 linhas)
+
+ESTADOS
+45: [aba, setAba] = React.useState<Aba>("anuncios")
+46: [busca, setBusca] = React.useState("")
+
+ESTRUTURA
+70: PageHeader title="Tráfego pago" breadcrumb="Anúncios" description="A mídia contra a margem que ela produz" badge={<Badge tone="warn">Em desenvolvimento</Badge>}
+199: Tabs tabs={[ { value: "anuncios" as const, label: "Por anúncio", count: linhas.length }, { value: "campanhas" as const, label: "Por campanha", count: campanhas.length }, { value: "desperdicio" as const, label: "Gasto sem retorno", count: semRetorno.length + semAds.length + prejuizo.length, }, ]} value={aba} onChange={setAba}
+216: Input placeholder="Buscar MLB, SKU, título ou campanha" value={busca} onChange={(e) => setBusca(e.target.value)}
+224: table 
+330: table 
+432: span title={l.titulo}
+
+RÓTULOS
+39: rotulo: "mídia > margem"
+40: rotulo: "sem venda nenhuma"
+41: rotulo: "vendeu sem o ads"
+201: label: "Por anúncio"
+202: label: "Por campanha"
+205: label: "Gasto sem retorno"
+401: titulo: "Não vendeu nem com ads, nem sozinho"
+407: titulo: "Vendeu bem, mas nada foi atribuído ao ads"
+413: titulo: "A mídia custou mais que a margem"
+
+TEXTOS
+74: Em desenvolvimento
+88: ACOS
+91: ROAS
+97: Total investido
+102: anúncios
+112: Margem depois de pagar a mídia
+124: precisa do custo dos SKUs
+128: Margem de contribuição
+128: menos
+129: de mídia. Cobre
+130: dos anúncios com mídia.
+137: Quanto o canal credita à mídia
+143: atribuídos sobre
+144: que esses anúncios faturaram de verdade.
+150: Receita indireta
+159: A pessoa clicou no anúncio e comprou outra coisa. Entra no ROAS publicado, mas não é venda daquele anúncio.
+172: O investimento lançado à mão não bate com o relatório
+180: vs
+186: (
+187: )
+227: Anúncio
+228: Investido
+229: Cliques
+230: CPC
+231: Receita ads
+232: ACOS
+233: Faturou
+234: Margem
+235: Sobra
+249: premium
+281: —
+298: sem custo
+311: —
+322: Mostrando os 300 de maior investimento. Use a busca para o resto.
+333: Campanha
+334: Anúncios
+335: Investido
+336: Cliques
+337: Receita ads
+338: ACOS
+339: Margem
+340: Sobra
+369: nada vendeu
+385: —
+422: ·
+445: +
+450: Nenhum.
+
+CONDIÇÕES
+88: p.acos != null
+114: totais.sobraAposMidia != null
+128: totais.margem != null
+140: totais.atribuicao != null
+152: totais.receitaAtribuida > 0
+167: conferencia.some((c) => Math.abs(c.relatorio - c.lancado) > 1)
+182: Math.abs(dif) > 1
+186: dif > 0
+213: aba === "anuncios"
+248: l.tipo === "premium"
+251: s
+264: l.cpc != null
+267: l.receitaAtribuida > 0
+270: l.acos != null
+285: l.receitaReal > 0
+288: l.margem != null
+302: l.sobraAposMidia != null
+320: visiveis.length > 300
+328: aba === "campanhas"
+357: c.receitaAtribuida > 0
+360: c.acos != null
+373: c.margem != null
+376: c.sobraAposMidia != null
+395: aba === "desperdicio"
+427: lista.length
+443: lista.length > 12
+
+# src/app/monitoramento/fretes/page.tsx (22 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+12: PageHeader title="Fretes" breadcrumb="Monitoramento"
+14: SemFonte titulo="Depende da API do Mercado Livre" origem="Frete por anúncio e CEP é consulta ao vivo — nenhuma planilha traz esse número. A rota /api/monitoramento/frete já existe e passa a responder quando as credenciais do canal forem configuradas."
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/monitoramento/precos/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/monitoramento/precos/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/monitoramento/precos/precos-cliente.tsx (391 linhas)
+
+ESTADOS
+76: [canal, setCanal] = React.useState("")
+77: [curva, setCurva] = React.useState("todas")
+78: [busca, setBusca] = React.useState("")
+79: [aberto, setAberto] = React.useState<string | null>(null)
+80: [mesAberto, setMesAberto] = React.useState<number | null>(null)
+81: [limite, setLimite] = React.useState(25)
+
+ESTRUTURA
+148: PageHeader title="Preços" breadcrumb="Monitoramento"
+150: SemFonte titulo="Nenhuma venda importada" origem="O preço praticado sai dos itens de pedido. Importe a listagem de pedidos e esta tela se preenche sozinha."
+163: PageHeader title="Preços praticados" breadcrumb="Monitoramento" description="O que o cliente pagou, por SKU — média ponderada pela quantidade" filters={ <> <SeletorCanal canais={dados.canais} valor={canal} onChange={setCanal} /> <Segmented options={[ { value: "todas", label: "Todas" }, { value: "A", label: "Curva A" }, { value: "B", label: "B" }, { value: "C", label: "C" }, ]} value={curva} onChange={setCurva} /> <span className="relative shrink-0 w-full sm:w-56"> <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3" /> <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="SKU, produto ou MLB" className="w-full h-7 pl-8 pr-3 rounded-r1 bg-panel border border-line text-[12.5px] text-ink outline-none focus:border-brand" /> </span> </> }
+169: SeletorCanal canais={dados.canais} valor={canal} onChange={setCanal}
+170: Segmented options={[ { value: "todas", label: "Todas" }, { value: "A", label: "Curva A" }, { value: "B", label: "B" }, { value: "C", label: "C" }, ]} value={curva} onChange={setCurva}
+182: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="SKU, produto ou MLB"
+197: PanelHeader title={selecionado.titulo} hint={`${selecionado.sku} · ${selecionado.anuncios.length} anúncio(s) · curva ${selecionado.curva}`} action={ mesAberto != null ? ( <button onClick={() => setMesAberto(null)} className="text-[12px] text-brand hover:underline" > ← voltar ao ano </button> ) : ( <span className="text-[12px] text-ink-3"> clique num mês para abrir os dias </span> ) }
+202: button onClick={() => setMesAberto(null)}
+217: ComposedChart data={mesAberto == null ? serieMensal : serieDiaria} margin={{ top: 6, right: 10, left: 0, bottom: 0 }} onClick={(e) => { if (mesAberto != null) return; const i = e?.activeTooltipIndex; if (typeof i === "number" && serieMensal[i]?.preco != null) { setMesAberto(i); } }}
+292: PanelHeader title="SKUs vendidos" hint="clique para ver a evolução de preço" action={ <span className="num text-[12px] text-ink-3">{filtrados.length}</span> }
+300: table 
+318: tr onClick={() => { setAberto(ativo ? null : s.sku); setMesAberto(null); }}
+378: button onClick={() => setLimite((l) => l + 50)}
+
+RÓTULOS
+136: rotulo: data.slice(8)
+172: label: "Todas"
+173: label: "Curva A"
+174: label: "B"
+175: label: "C"
+
+TEXTOS
+206: ← voltar ao ano
+210: clique num mês para abrir os dias
+246: Sem venda no período
+259: un ·
+304: SKU · produto
+306: Preço médio
+307: Mínimo
+308: Máximo
+309: Amplitude
+310: Unidades
+311: Receita
+356: —
+383: Mostrar mais
+
+CONDIÇÕES
+195: selecionado
+200: mesAberto != null
+218: mesAberto == null
+260: p.min != null && p.max != null && p.min !== p.max
+331: ativo
+355: s.amplitude < 0.5
+377: filtrados.length > limite
+
+# src/app/promocoes/campanhas/campanhas-cliente.tsx (401 linhas)
+
+ESTADOS
+27: [busca, setBusca] = React.useState("")
+28: [reducao, setReducao] = React.useState("todas")
+29: [de, setDe] = React.useState("")
+30: [ate, setAte] = React.useState("")
+38: [aApagar, setAApagar] = React.useState<CampanhaResumo | null>(null)
+39: [apagando, setApagando] = React.useState(false)
+40: [erro, setErro] = React.useState<string | null>(null)
+
+ESTRUTURA
+100: PageHeader title="Campanhas" breadcrumb="Promoções"
+102: SemFonte titulo="Nenhuma campanha processada" origem="As campanhas saem das planilhas da Central de Promoções: o nome de cada uma vem na própria planilha. Processe uma e ela aparece aqui, com quantos itens participaram e quantos ficaram de fora."
+113: PageHeader title="Campanhas" breadcrumb="Promoções" description="Adesão por campanha, do que foi processado" filters={ <> <Segmented options={[ { value: "todas", label: "Todas" }, { value: "com", label: "Com redução" }, { value: "sem", label: "Sem redução" }, ]} value={reducao} onChange={setReducao} /> <span className="flex items-center gap-1.5 shrink-0"> <input type="date" value={de} onChange={(e) => setDe(e.target.value)} className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline-none focus:border-brand" /> <span className="text-[12px] text-ink-3">até</span> <input type="date" value={ate} onChange={(e) => setAte(e.target.value)} className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline-none focus:border-brand" /> </span> <span className="
+119: Segmented options={[ { value: "todas", label: "Todas" }, { value: "com", label: "Com redução" }, { value: "sem", label: "Sem redução" }, ]} value={reducao} onChange={setReducao}
+129: input type="date" value={de} onChange={(e) => setDe(e.target.value)}
+136: input type="date" value={ate} onChange={(e) => setAte(e.target.value)}
+145: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome da campanha"
+159: PanelHeader title="Adesão por campanha" hint="participam sobre itens lidos" action={ <span className="num text-[12px] text-ink-2"> {count(totais.participam)} de {count(totais.itens)} {totais.itens > 0 && ( <span className="text-ink-3"> {" "} · {pct((totais.participam / totais.itens) * 100)} </span> )} </span> }
+175: table 
+243: button onClick={() => { setAApagar(c); setErro(null); }} title="Apagar esta campanha e seu histórico"
+275: PanelHeader title="Ficaram fora por pouco" hint="itens marcados como quase no piso, do menor para o maior"
+340: div onClick={onCancelar}
+344: div onClick={(e) => e.stopPropagation()}
+379: button onClick={onCancelar} disabled={apagando}
+387: button onClick={onConfirmar} disabled={apagando}
+
+RÓTULOS
+121: label: "Todas"
+122: label: "Com redução"
+123: label: "Sem redução"
+
+TEXTOS
+135: até
+164: de
+168: ·
+179: Campanha
+181: Itens
+182: Participam
+183: Fora
+185: Adesão
+187: Processada em
+288: ·
+288: ·
+293: ofertado
+296: piso
+303: Nenhum item ficou de fora por pouco nas rodadas processadas.
+349: Apagar esta campanha?
+357: linhas de histórico e suas ofertas
+361: a rodada de processamento, se nenhuma outra campanha depender dela
+366: Não tem como desfazer. Para recuperar, processe a planilha de novo — e é exatamente para isso que este botão existe: voltar ao ponto de partida antes de reanalisar.
+385: Cancelar
+
+CONDIÇÕES
+165: totais.itens > 0
+201: c.temReducao
+202: c.temReducao
+238: c.ultimoProcessamento
+259: aApagar
+293: h.precoOfertadoML != null
+296: h.precoPiso != null
+301: !dados.historico.some((h) => !h.aprovado && h.tags.includes("quase"))
+371: erro
+393: apagando
+394: apagando
+
+# src/app/promocoes/campanhas/loading.tsx (3 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/promocoes/campanhas/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/promocoes/comparar/comparar-cliente.tsx (561 linhas)
+
+ESTADOS
+39: [busca, setBusca] = React.useState("")
+40: [filtro, setFiltro] = React.useState<Filtro>("varias")
+41: [campanha, setCampanha] = React.useState("todas")
+42: [abertos, setAbertos] = React.useState<Set<string>>(new Set())
+43: [baixando, setBaixando] = React.useState(false)
+44: [erro, setErro] = React.useState<string | null>(null)
+
+ESTRUTURA
+133: PageHeader title="Comparar ofertas" breadcrumb="Promoções"
+135: SemFonte titulo="Nenhuma oferta processada" origem="As ofertas saem das planilhas da Central de Promoções. O canal costuma propor mais de uma faixa de desconto para o mesmo anúncio — processe uma planilha e elas aparecem aqui, lado a lado."
+146: PageHeader title="Comparar ofertas" breadcrumb="Promoções" description="Todas as propostas do canal para cada anúncio, lado a lado" filters={ <> <Segmented options={[ { value: "varias", label: "Mais de uma" }, { value: "nenhuma", label: "Nenhuma passa" }, { value: "alguma", label: "Alguma passa" }, { value: "todos", label: "Todos" }, ]} value={filtro} onChange={(v) => setFiltro(v as Filtro)} /> <select value={campanha} onChange={(e) => setCampanha(e.target.value)} className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline-none focus:border-brand shrink-0 max-w-[220px]" > <option value="todas">Todas as campanhas</option> {dados.campanhasDisponiveis.map((c) => ( <option key={c.id} value={c.id}> {c.nome} {c.temReducao ? " · com redução" : ""} </option> ))} </select> <Button disabled={baixando} onCli
+152: Segmented options={[ { value: "varias", label: "Mais de uma" }, { value: "nenhuma", label: "Nenhuma passa" }, { value: "alguma", label: "Alguma passa" }, { value: "todos", label: "Todos" }, ]} value={filtro} onChange={(v) => setFiltro(v as Filtro)}
+163: select value={campanha} onChange={(e) => setCampanha(e.target.value)}
+178: Button disabled={baixando} onClick={exportarRecusadas}
+198: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="MLB, SKU ou título"
+219: PanelHeader title={`${count(linhas.length)} anúncios`} hint="clique para abrir as propostas" action={ <span className="num text-[12px] text-ink-2"> {count(totais.ofertas)} propostas ·{" "} <span className="text-up">{count(totais.participam)} passam</span> {totais.semNenhuma > 0 && ( <span className="text-down"> {" "} · {count(totais.semNenhuma)} sem nenhuma </span> )} </span> }
+281: button onClick={onAlternar}
+348: table 
+
+RÓTULOS
+154: label: "Mais de uma"
+155: label: "Nenhuma passa"
+156: label: "Alguma passa"
+157: label: "Todos"
+
+TEXTOS
+169: Todas as campanhas
+186: Montando
+191: Exportar recusadas
+224: propostas ·
+225: passam
+229: ·
+229: sem nenhuma
+238: Nenhum anúncio com esse recorte.
+308: Tabela
+331: Tabela
+331: é o preço que preserva a margem naquela comissão — muda de faixa para faixa.
+333: Piso
+333: é tabela − 5%, o menor preço ofertável; com desconto extra ele desce de propósito.
+335: Redução
+335: é a fatia da tarifa que o canal abate nesta faixa — é ela que muda a comissão e, com isso, o preço de tabela da linha.
+340: Nas campanhas
+340: sem redução de tarifa
+340: o preço do canal é só um pedido: o sistema reescreve com o da Fórmula base, e é por isso que as duas primeiras colunas divergem.
+352: Campanha
+355: Redução
+358: Canal pediu
+361: Nosso preço
+364: Tabela
+367: Piso
+370: vs tabela
+373: vs piso
+376: Decisão
+380: Origem
+403: Nenhuma proposta passa. A mais próxima está
+407: abaixo do piso — é a que um desconto extra pode alcançar.
+426: de
+453: redução
+455: melhor aceitável
+458: faltou menos
+479: —
+486: %
+513: piso −
+513: %
+543: participa
+
+CONDIÇÕES
+173: c.temReducao
+183: baixando
+211: erro
+226: totais.semNenhuma > 0
+236: !linhas.length
+248: campanha === "todas"
+285: aberto
+296: a.sku
+298: a.campanhas > 1
+310: a.tabelaDe == null
+323: aberto
+338: a.ofertas.some((o) => !o.temReducao)
+378: !semOrigem
+391: a.participam === 0
+401: a.participam === 0 && a.recusadaMaisProxima?.folgaAtePiso != null
+419: total === 1
+422: total === 1
+453: o.temReducao
+454: melhor
+457: maisProxima
+478: o.reducaoPercentual == null
+488: o.reducaoTarifa != null
+498: o.precoCanal != null
+502: o.precoOferta != null
+506: o.precoTabela != null
+510: o.pisoEfetivo != null
+511: o.descontoExtra != null
+519: o.descontoSobreTabela != null
+536: o.folgaAtePiso == null
+542: o.participa
+549: !semOrigem
+551: o.arquivo
+
+# src/app/promocoes/comparar/loading.tsx (3 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/promocoes/comparar/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/promocoes/historico/historico-cliente.tsx (372 linhas)
+
+ESTADOS
+43: [busca, setBusca] = React.useState("")
+44: [decisao, setDecisao] = React.useState("todas")
+45: [curva, setCurva] = React.useState("todas")
+46: [tipo, setTipo] = React.useState("todos")
+47: [campanha, setCampanha] = React.useState("todas")
+48: [de, setDe] = React.useState("")
+49: [ate, setAte] = React.useState("")
+50: [aberto, setAberto] = React.useState<string | null>(null)
+51: [limite, setLimite] = React.useState(30)
+
+ESTRUTURA
+104: PageHeader title="Histórico de promoções" breadcrumb="Promoções"
+106: SemFonte titulo="Nenhuma planilha processada ainda" origem="Cada rodada da Central de Promoções grava aqui a decisão de cada item, com o preço ofertado pelo canal, o de tabela, o piso e o com desconto extra. Processe uma planilha e esta tela se preenche."
+119: PageHeader title="Histórico de promoções" breadcrumb="Promoções" description="Cada decisão tomada, com os preços que a sustentaram" filters={ <> <Segmented options={[ { value: "todas", label: "Todas" }, { value: "sim", label: "Participaram" }, { value: "nao", label: "Fora" }, ]} value={decisao} onChange={setDecisao} /> <Segmented options={[ { value: "todas", label: "ABC" }, { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "C", label: "C" }, ]} value={curva} onChange={setCurva} /> <Segmented options={[ { value: "todos", label: "Tipo" }, { value: "Clássico", label: "Clássico" }, { value: "Premium", label: "Premium" }, ]} value={tipo} onChange={setTipo} /> <select value={campanha} onChange={(e) => setCampanha(e.target.value)} className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline
+125: Segmented options={[ { value: "todas", label: "Todas" }, { value: "sim", label: "Participaram" }, { value: "nao", label: "Fora" }, ]} value={decisao} onChange={setDecisao}
+134: Segmented options={[ { value: "todas", label: "ABC" }, { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "C", label: "C" }, ]} value={curva} onChange={setCurva}
+144: Segmented options={[ { value: "todos", label: "Tipo" }, { value: "Clássico", label: "Clássico" }, { value: "Premium", label: "Premium" }, ]} value={tipo} onChange={setTipo}
+153: select value={campanha} onChange={(e) => setCampanha(e.target.value)}
+167: input type="date" value={de} onChange={(e) => setDe(e.target.value)}
+174: input type="date" value={ate} onChange={(e) => setAte(e.target.value)}
+183: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="SKU, MLB ou produto"
+197: PanelHeader title="SKUs em promoção" hint="clique para abrir os anúncios · Clássico e Premium agrupados" action={ <span className="num text-[12px] text-ink-3"> {grupos.length} SKUs · {filtrados.length} decisões </span> }
+207: table 
+227: tr onClick={() => setAberto(expandido ? null : g.sku)}
+335: button onClick={() => setLimite((l) => l + 50)}
+348: PanelHeader title="Processamentos" hint="cada rodada da Central de Promoções"
+
+RÓTULOS
+84: titulo: h.titulo
+127: label: "Todas"
+128: label: "Participaram"
+129: label: "Fora"
+136: label: "ABC"
+137: label: "A"
+138: label: "B"
+139: label: "C"
+146: label: "Tipo"
+147: label: "Clássico"
+148: label: "Premium"
+
+TEXTOS
+159: Todas as campanhas
+173: até
+202: SKUs ·
+202: decisões
+211: SKU · produto
+213: Ofertado ML
+214: Tabela
+215: Piso (−5%)
+216: Com extra
+217: Praticado
+218: Decisões
+274: /
+297: ·
+297: ·
+342: Mostrar mais
+362: de
+
+CONDIÇÕES
+237: expandido
+247: g.curva !== "—"
+258: u.precoOfertadoML != null
+261: u.precoTabela != null
+264: u.precoPiso != null
+267: u.precoComExtra != null
+270: g.precoPraticado != null
+279: expandido
+289: h.tipoAnuncio === "Premium"
+292: h.aprovado
+293: h.aprovado
+299: h.motivo
+303: h.precoOfertadoML != null
+306: h.precoTabela != null
+309: h.precoPiso != null
+312: h.precoComExtra != null
+315: h.tags.length > 0
+334: grupos.length > limite
+354: p.arquivos.length
+358: p.descontoExtra > 0
+
+# src/app/promocoes/historico/loading.tsx (3 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/promocoes/historico/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/promocoes/processar/page.tsx (1089 linhas)
+
+ESTADOS
+158: [etapa, setEtapa] = React.useState<1 | 2 | 3>(1)
+159: [visao, setVisao] = React.useState<Visao>("todos")
+160: [planilhas, setPlanilhas] = React.useState<File[]>([])
+161: [base, setBase] = React.useState<File[]>([])
+162: [descontoExtra, setDescontoExtra] = React.useState("0")
+163: [processando, setProcessando] = React.useState(false)
+164: [erro, setErro] = React.useState<string | null>(null)
+165: [resultado, setResultado] = React.useState<Resultado | null>(null)
+166: [baixando, setBaixando] = React.useState(false)
+887: [tag, setTag] = React.useState<Tag>(comItens[0]?.tag ?? "quase")
+
+ESTRUTURA
+451: PageHeader title="Processar planilha" breadcrumb="Promoções" description="Decide participação e recalcula o preço final preservando a margem" actions={ etapa > 1 ? ( <Button size="sm" onClick={() => setEtapa((e) => (e === 3 ? 2 : 1))}> <ArrowLeft className="w-3.5 h-3.5" /> Voltar </Button> ) : undefined }
+457: Button size="sm" onClick={() => setEtapa((e) => (e === 3 ? 2 : 1))}
+474: button onClick={() => !bloqueada && setEtapa(e.n as 1 | 2 | 3)} disabled={bloqueada}
+528: PanelHeader title="Planilhas da Central de Promoções" hint="uma por campanha"
+533: SectionTitle title="Exportação do canal" hint="Pode enviar várias de uma vez. Cada arquivo sai processado separadamente."
+549: PanelHeader title="Fórmula base" hint="referência de preço de tabela"
+551: SectionTitle title="Planilha interna" hint="Opcional — sem arquivo, usa a base guardada no banco. Envie só para atualizá-la."
+562: Field label="Desconto extra" hint="Aplicado sobre o preço de tabela nas campanhas sem redução de tarifa e nas criadas por nós. Aceita 5 ou 0,05."
+566: Input inputMode="decimal" value={descontoExtra} onChange={(e) => setDescontoExtra(e.target.value)}
+584: PanelHeader title="As três lógicas" hint="o sistema reconhece cada planilha pelas colunas e aplica a regra dela"
+626: Button variant="primary" onClick={processar} disabled={!podeProcessar}
+653: StatTile label="Itens lidos" value={count(resultado.resumo.lidos)}
+654: StatTile label="Participam" value={count(resultado.resumo.participam)} hint={ resultado.resumo.lidos ? pct((resultado.resumo.participam / resultado.resumo.lidos) * 100) : "—" }
+663: StatTile label="Não participam" value={count(resultado.resumo.fora)}
+664: StatTile label="Pendências" value={count(resultado.resumo.pendencias)} hint="sem base para calcular"
+730: PanelHeader title="Conferência do lote" hint={resultado.arquivos.map((a) => a.nome).join(" · ")} action={ <Segmented<Visao> options={VISOES} value={visao} onChange={setVisao} className="hidden sm:flex" /> }
+734: Segmented options={VISOES} value={visao} onChange={setVisao}
+743: Segmented options={VISOES} value={visao} onChange={setVisao}
+745: DataTable columns={colunas} rows={linhas} rowKey={(l) => l.id} defaultSort={{ key: "campanha", dir: "asc" }} empty={<EmptyState title="Nenhum item nesta visão" />}
+750: EmptyState title="Nenhum item nesta visão"
+757: Button variant="primary" onClick={() => setEtapa(3)}
+768: PanelHeader title="Planilha pronta" hint="edição cirúrgica preservada"
+829: Button variant="primary" disabled={baixando} onClick={() => baixarPacote(resultado.id)}
+1035: PanelHeader title="Itens para revisar" hint="o que as decisões estão dizendo sobre os seus preços"
+1045: button onClick={() => setTag(c.tag)}
+1080: DataTable columns={colunas} rows={linhas} rowKey={(l) => l.id} empty={<EmptyState title="Nenhum item neste cenário" />}
+1084: EmptyState title="Nenhum item neste cenário"
+
+RÓTULOS
+97: rotulo: "Sem espaço para desconto"
+106: rotulo: "Proposta abaixo da tabela"
+115: rotulo: "Recusado por pouco"
+124: rotulo: "Não alteradas"
+133: rotulo: "Dava para descontar mais"
+143: titulo: "Enviar planilhas"
+143: hint: "Central de Promoções — a Fórmula base é opcional"
+144: titulo: "Conferir"
+144: hint: "decisão item a item"
+145: titulo: "Exportar"
+145: hint: "planilha pronta para subir"
+149: label: "Todos"
+150: label: "Participam"
+151: label: "Não participam"
+152: label: "Pendências"
+280: header: "Anúncio"
+296: header: "Campanha"
+319: header: "Preço original"
+332: header: "Preço de tabela"
+345: header: "Piso (−5%)"
+358: header: "Com desconto extra"
+376: header: "Preço da oferta"
+392: header: "Desconto"
+406: header: "Redução de tarifa"
+419: header: "Decisão"
+429: header: "Motivo"
+902: header: "Anúncio"
+921: header: "Campanha"
+998: header: "Quanto falta subir"
+
+TEXTOS
+327: —
+340: —
+353: —
+371: —
+386: recalc.
+401: —
+414: —
+437: OK
+459: Voltar
+518: Não deu para processar.
+590: Com redução de tarifa
+592: O canal propõe o preço e abate parte da comissão. O preço
+593: não é alterado
+593: — só se aceita ou recusa, comparando com a faixa de tabela da comissão que sobrou.
+598: Sem redução de tarifa
+600: Campanha do canal, comissão cheia. O sistema escreve o
+601: preço de tabela
+601: por cima do proposto, e recusa quando a tabela está acima do preço publicado.
+606: Criada por nós
+608: Promoção que nós montamos no painel. Aqui a alavanca é a
+609: porcentagem
+609: , e o sistema a move
+610: nos dois sentidos
+610: — busca o desconto mais agressivo que o preço de tabela ainda aguenta. Comissão cheia: 11,5% clássico, 16,5% premium.
+618: Em todas as três, linha com oferta já fechada é analisada mas
+619: nunca reescrita
+619: : trocar um acordo no ar tira o anúncio da campanha sem ninguém perceber.
+635: Processando…
+639: Processar
+639: planilha
+675: Guardado:
+677: propostas do canal em
+679: campanha
+679: .
+689: Comparar as ofertas
+697: linhas de anúncios fora do catálogo ficaram só no histórico
+708: O arquivo saiu, mas nada foi guardado:
+708: . Campanhas, Histórico e Comparar ofertas não vão mostrar esta rodada.
+718: Fórmula base lida com
+719: anúncios,
+721: preços por SKU e
+723: por código de anúncio.
+724: itens tiveram o preço recalculado.
+758: Ir para exportação
+776: itens processados em
+781: Só as células de decisão e de preço foram alteradas. Fórmulas, formatação e as demais abas do arquivo do canal ficaram intactas.
+815: processado_
+822: itens
+838: Baixando
+843: Baixar planilhas processadas
+852: Ver no histórico
+857: O pacote inclui uma planilha processada por campanha mais o relatório gerencial. Fica disponível por 15 minutos e sai depois de baixado — se precisar de novo, é só processar outra vez.
+866: itens ficaram com pendência.
+868: O motor não chuta preço quando falta base — complete a Fórmula base e processe de novo só esses itens.
+913: ·
+929: tarifa reduzida
+933: criada por nós · % ajustada
+958: —
+972: —
+1010: +
+1071: O que é:
+1075: O que fazer:
+
+CONDIÇÕES
+304: l.tipoCampanha === "Com Redução"
+384: l.precoOferta
+386: l.recalculado
+424: l.aprovado
+455: etapa > 1
+492: feita
+514: erro
+525: etapa === 1
+632: processando
+640: planilhas.length === 1
+650: etapa === 2 && resultado
+657: resultado.resumo.lidos
+671: resultado.gravacao
+679: resultado.gravacao.campanhas === 1
+691: resultado.gravacao.semAnuncio > 0
+704: resultado.erroGravacao
+766: etapa === 3 && resultado
+778: resultado.arquivos.length === 1
+835: baixando
+861: resultado.resumo.pendencias > 0
+928: l.tipoCampanha === "Com Redução"
+932: l.tipoCampanha === "Campanha nossa"
+978: sobra

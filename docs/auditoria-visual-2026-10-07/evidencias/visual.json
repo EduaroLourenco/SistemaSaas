@@ -1,0 +1,578 @@
+{
+ "medidoEm": "2026-10-07T04:04:41.336Z",
+ "contraste": [
+  {
+   "nome": "texto principal sobre cartão",
+   "par": "--ink / --panel",
+   "alvo": 4.5,
+   "claro": 17.75,
+   "claroPassa": true,
+   "escuro": 15.26,
+   "escuroPassa": true
+  },
+  {
+   "nome": "texto principal sobre fundo",
+   "par": "--ink / --ground",
+   "alvo": 4.5,
+   "claro": 16.41,
+   "claroPassa": true,
+   "escuro": 16.55,
+   "escuroPassa": true
+  },
+  {
+   "nome": "texto secundário sobre cartão",
+   "par": "--ink-2 / --panel",
+   "alvo": 4.5,
+   "claro": 7.53,
+   "claroPassa": true,
+   "escuro": 7.92,
+   "escuroPassa": true
+  },
+  {
+   "nome": "rótulo/legenda sobre cartão",
+   "par": "--ink-3 / --panel",
+   "alvo": 4.5,
+   "claro": 3.06,
+   "claroPassa": false,
+   "escuro": 3.92,
+   "escuroPassa": false
+  },
+  {
+   "nome": "rótulo sobre campo",
+   "par": "--ink-3 / --panel-2",
+   "alvo": 4.5,
+   "claro": 2.93,
+   "claroPassa": false,
+   "escuro": 3.6,
+   "escuroPassa": false
+  },
+  {
+   "nome": "texto do botão primário",
+   "par": "--brand-ink / --brand",
+   "alvo": 4.5,
+   "claro": 7.81,
+   "claroPassa": true,
+   "escuro": 5.56,
+   "escuroPassa": true
+  },
+  {
+   "nome": "link/marca sobre cartão",
+   "par": "--brand / --panel",
+   "alvo": 4.5,
+   "claro": 7.81,
+   "claroPassa": true,
+   "escuro": 5.85,
+   "escuroPassa": true
+  },
+  {
+   "nome": "número positivo",
+   "par": "--up / --panel",
+   "alvo": 4.5,
+   "claro": 5.27,
+   "claroPassa": true,
+   "escuro": 6.63,
+   "escuroPassa": true
+  },
+  {
+   "nome": "número negativo",
+   "par": "--down / --panel",
+   "alvo": 4.5,
+   "claro": 5.94,
+   "claroPassa": true,
+   "escuro": 5.67,
+   "escuroPassa": true
+  },
+  {
+   "nome": "número de atenção",
+   "par": "--warn / --panel",
+   "alvo": 4.5,
+   "claro": 4.48,
+   "claroPassa": false,
+   "escuro": 6.75,
+   "escuroPassa": true
+  },
+  {
+   "nome": "número informativo",
+   "par": "--info / --panel",
+   "alvo": 4.5,
+   "claro": 5.28,
+   "claroPassa": true,
+   "escuro": 6.53,
+   "escuroPassa": true
+  },
+  {
+   "nome": "selo positivo",
+   "par": "--up / --up-wash",
+   "alvo": 4.5,
+   "claro": 4.52,
+   "claroPassa": true,
+   "escuro": 5.66,
+   "escuroPassa": true
+  },
+  {
+   "nome": "selo negativo",
+   "par": "--down / --down-wash",
+   "alvo": 4.5,
+   "claro": 4.83,
+   "claroPassa": true,
+   "escuro": 5.19,
+   "escuroPassa": true
+  },
+  {
+   "nome": "selo de atenção",
+   "par": "--warn / --warn-wash",
+   "alvo": 4.5,
+   "claro": 3.89,
+   "claroPassa": false,
+   "escuro": 5.81,
+   "escuroPassa": true
+  },
+  {
+   "nome": "selo da marca",
+   "par": "--brand / --brand-wash",
+   "alvo": 4.5,
+   "claro": 6.69,
+   "claroPassa": true,
+   "escuro": 4.57,
+   "escuroPassa": true
+  },
+  {
+   "nome": "divisória sobre cartão",
+   "par": "--line / --panel",
+   "alvo": 3,
+   "claro": 1.25,
+   "claroPassa": false,
+   "escuro": 1.26,
+   "escuroPassa": false
+  },
+  {
+   "nome": "borda de controle",
+   "par": "--line-2 / --panel",
+   "alvo": 3,
+   "claro": 1.57,
+   "claroPassa": false,
+   "escuro": 1.74,
+   "escuroPassa": false
+  }
+ ],
+ "reprovados": [
+  {
+   "nome": "rótulo/legenda sobre cartão",
+   "par": "--ink-3 / --panel",
+   "alvo": 4.5,
+   "claro": 3.06,
+   "claroPassa": false,
+   "escuro": 3.92,
+   "escuroPassa": false
+  },
+  {
+   "nome": "rótulo sobre campo",
+   "par": "--ink-3 / --panel-2",
+   "alvo": 4.5,
+   "claro": 2.93,
+   "claroPassa": false,
+   "escuro": 3.6,
+   "escuroPassa": false
+  },
+  {
+   "nome": "número de atenção",
+   "par": "--warn / --panel",
+   "alvo": 4.5,
+   "claro": 4.48,
+   "claroPassa": false,
+   "escuro": 6.75,
+   "escuroPassa": true
+  },
+  {
+   "nome": "selo de atenção",
+   "par": "--warn / --warn-wash",
+   "alvo": 4.5,
+   "claro": 3.89,
+   "claroPassa": false,
+   "escuro": 5.81,
+   "escuroPassa": true
+  },
+  {
+   "nome": "divisória sobre cartão",
+   "par": "--line / --panel",
+   "alvo": 3,
+   "claro": 1.25,
+   "claroPassa": false,
+   "escuro": 1.26,
+   "escuroPassa": false
+  },
+  {
+   "nome": "borda de controle",
+   "par": "--line-2 / --panel",
+   "alvo": 3,
+   "claro": 1.57,
+   "claroPassa": false,
+   "escuro": 1.74,
+   "escuroPassa": false
+  }
+ ],
+ "colisoesSemanticas": [
+  {
+   "a": "--brand",
+   "b": "--up",
+   "hexA": "#0f5c57",
+   "hexB": "#0f7b54",
+   "distancia": 31,
+   "razao": 1.48
+  },
+  {
+   "a": "--warn",
+   "b": "--down",
+   "hexA": "#a66a12",
+   "hexB": "#b23a2b",
+   "distancia": 55,
+   "razao": 1.33
+  }
+ ],
+ "seriesProximas": [
+  {
+   "a": "--s1",
+   "b": "--s5",
+   "hexA": "#0f5c57",
+   "hexB": "#2a7d96",
+   "distancia": 76
+  },
+  {
+   "a": "--s1",
+   "b": "--s9",
+   "hexA": "#0f5c57",
+   "hexB": "#4d5a75",
+   "distancia": 69
+  },
+  {
+   "a": "--s2",
+   "b": "--s5",
+   "hexA": "#1f6fb2",
+   "hexB": "#2a7d96",
+   "distancia": 33
+  },
+  {
+   "a": "--s2",
+   "b": "--s9",
+   "hexA": "#1f6fb2",
+   "hexB": "#4d5a75",
+   "distancia": 79
+  },
+  {
+   "a": "--s3",
+   "b": "--s6",
+   "hexA": "#a66a12",
+   "hexB": "#b23a2b",
+   "distancia": 55
+  },
+  {
+   "a": "--s3",
+   "b": "--s7",
+   "hexA": "#a66a12",
+   "hexB": "#5f7a2e",
+   "distancia": 78
+  },
+  {
+   "a": "--s3",
+   "b": "--s8",
+   "hexA": "#a66a12",
+   "hexB": "#9c5a3c",
+   "distancia": 46
+  },
+  {
+   "a": "--s4",
+   "b": "--s9",
+   "hexA": "#8a4a9c",
+   "hexB": "#4d5a75",
+   "distancia": 74
+  },
+  {
+   "a": "--s4",
+   "b": "--s10",
+   "hexA": "#8a4a9c",
+   "hexB": "#7a6ba8",
+   "distancia": 39
+  },
+  {
+   "a": "--s5",
+   "b": "--s9",
+   "hexA": "#2a7d96",
+   "hexB": "#4d5a75",
+   "distancia": 59
+  },
+  {
+   "a": "--s6",
+   "b": "--s8",
+   "hexA": "#b23a2b",
+   "hexB": "#9c5a3c",
+   "distancia": 42
+  },
+  {
+   "a": "--s7",
+   "b": "--s8",
+   "hexA": "#5f7a2e",
+   "hexB": "#9c5a3c",
+   "distancia": 70
+  },
+  {
+   "a": "--s9",
+   "b": "--s10",
+   "hexA": "#4d5a75",
+   "hexB": "#7a6ba8",
+   "distancia": 70
+  }
+ ],
+ "tipografia": {
+  "distintos": 19,
+  "tamanhos": [
+   [
+    "12",
+    276
+   ],
+   [
+    "11",
+    237
+   ],
+   [
+    "13",
+    193
+   ],
+   [
+    "12.5",
+    160
+   ],
+   [
+    "11.5",
+    127
+   ],
+   [
+    "10.5",
+    29
+   ],
+   [
+    "10",
+    25
+   ],
+   [
+    "14",
+    23
+   ],
+   [
+    "19",
+    19
+   ],
+   [
+    "22",
+    12
+   ],
+   [
+    "15",
+    11
+   ],
+   [
+    "20",
+    11
+   ],
+   [
+    "13.5",
+    10
+   ],
+   [
+    "17",
+    8
+   ],
+   [
+    "18",
+    6
+   ],
+   [
+    "16",
+    4
+   ],
+   [
+    "24",
+    3
+   ],
+   [
+    "9",
+    2
+   ],
+   [
+    "26",
+    1
+   ]
+  ],
+  "abaixoDe12": [
+   [
+    "11",
+    237
+   ],
+   [
+    "11.5",
+    127
+   ],
+   [
+    "10.5",
+    29
+   ],
+   [
+    "10",
+    25
+   ],
+   [
+    "9",
+    2
+   ]
+  ]
+ },
+ "breakpoints": {
+  "sm": 117,
+  "md": 93,
+  "lg": 37,
+  "xl": 10,
+  "2xl": 0
+ },
+ "alturas": [
+  {
+   "arq": "mercado-livre/catalogo--mobile.png",
+   "w": 390,
+   "h": 204227,
+   "kb": 17939,
+   "telas": 242
+  },
+  {
+   "arq": "mercado-livre/logica-de-promocao--mobile.png",
+   "w": 390,
+   "h": 147012,
+   "kb": 14555,
+   "telas": 174.2
+  },
+  {
+   "arq": "mercado-livre/analise-de-anuncios--mobile.png",
+   "w": 491,
+   "h": 112374,
+   "kb": 11030,
+   "telas": 133.1
+  },
+  {
+   "arq": "mercado-livre/catalogo--desktop.png",
+   "w": 1440,
+   "h": 46137,
+   "kb": 16645,
+   "telas": 51.3
+  },
+  {
+   "arq": "mercado-livre/logica-de-promocao--desktop.png",
+   "w": 1440,
+   "h": 43983,
+   "kb": 13562,
+   "telas": 48.9
+  },
+  {
+   "arq": "mercado-livre/classico-vs-premium--mobile.png",
+   "w": 390,
+   "h": 38109,
+   "kb": 2306,
+   "telas": 45.2
+  },
+  {
+   "arq": "fora-do-menu/comparar-ofertas--desktop.png",
+   "w": 1440,
+   "h": 37048,
+   "kb": 6965,
+   "telas": 41.2
+  },
+  {
+   "arq": "mercado-livre/analise-de-anuncios--desktop.png",
+   "w": 1440,
+   "h": 36890,
+   "kb": 9565,
+   "telas": 41
+  },
+  {
+   "arq": "fora-do-menu/comparar-ofertas--mobile.png",
+   "w": 393,
+   "h": 28957,
+   "kb": 4226,
+   "telas": 34.3
+  },
+  {
+   "arq": "sem-moldura/relatorio-publico--mobile.png",
+   "w": 390,
+   "h": 28069,
+   "kb": 2330,
+   "telas": 33.3
+  },
+  {
+   "arq": "financeiro/custos--mobile.png",
+   "w": 390,
+   "h": 17452,
+   "kb": 813,
+   "telas": 20.7
+  },
+  {
+   "arq": "financeiro/custos--desktop.png",
+   "w": 1440,
+   "h": 17088,
+   "kb": 1779,
+   "telas": 19
+  },
+  {
+   "arq": "sem-moldura/relatorio-publico--desktop.png",
+   "w": 1440,
+   "h": 13279,
+   "kb": 2536,
+   "telas": 14.8
+  },
+  {
+   "arq": "mercado-livre/classico-vs-premium--desktop.png",
+   "w": 1440,
+   "h": 10482,
+   "kb": 1733,
+   "telas": 11.6
+  },
+  {
+   "arq": "fora-do-menu/preco-alvo--mobile.png",
+   "w": 390,
+   "h": 9065,
+   "kb": 632,
+   "telas": 10.7
+  },
+  {
+   "arq": "fora-do-menu/preco-alvo--desktop.png",
+   "w": 1440,
+   "h": 8069,
+   "kb": 1536,
+   "telas": 9
+  },
+  {
+   "arq": "vendas/semanal--mobile.png",
+   "w": 390,
+   "h": 7187,
+   "kb": 431,
+   "telas": 8.5
+  },
+  {
+   "arq": "geral/glossario--mobile.png",
+   "w": 531,
+   "h": 5697,
+   "kb": 433,
+   "telas": 6.8
+  },
+  {
+   "arq": "geral/visao-geral--mobile.png",
+   "w": 390,
+   "h": 5451,
+   "kb": 418,
+   "telas": 6.5
+  },
+  {
+   "arq": "vendas/cancelamentos--mobile.png",
+   "w": 390,
+   "h": 4256,
+   "kb": 252,
+   "telas": 5
+  }
+ ],
+ "totalCapturas": 96
+}

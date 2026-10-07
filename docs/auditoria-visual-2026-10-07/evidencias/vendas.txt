@@ -1,0 +1,1229 @@
+# src/app/vendas/anual/anual-cliente.tsx (826 linhas)
+
+ESTADOS
+57: [estreito, setEstreito] = React.useState(false)
+94: [escopo, setEscopo] = React.useState<EscopoAnual>("todos")
+95: [detalhe, setDetalhe] = React.useState<MesAnual | null>(null)
+96: [filtrosAbertos, setFiltrosAbertos] = React.useState(false)
+
+ESTRUTURA
+271: PageHeader title="Acompanhamento anual" breadcrumb="Vendas" description={`${ANO} · ${nomeEscopo(escopo)} · valores em R$ salvo indicação`} actions={ <Button size="sm" className="md:hidden h-10" onClick={() => setFiltrosAbertos(true)} > <SlidersHorizontal className="w-3.5 h-3.5" /> Canal </Button> } filters={ <> <div className="hidden md:block"> <Segmented<EscopoAnual> options={ESCOPOS} value={escopo} onChange={setEscopo} /> </div> <span className="num text-[12px] text-ink-3 shrink-0 ml-auto hidden md:block"> {pct(totalD.pctMeta)} da meta do ano </span> </> }
+276: Button size="sm" onClick={() => setFiltrosAbertos(true)}
+288: Segmented options={ESCOPOS} value={escopo} onChange={setEscopo}
+303: StatTile label="Receita do ano" value={moneyShort(resumo.receita)} delta={resumo.deltaReceita} hint="vs. ano anterior" spark={serie.map((m) => m.receita)}
+310: StatTile label="Pedidos" value={count(resumo.pedidos)} delta={resumo.deltaPedidos} hint="vs. ano anterior" spark={serie.map((m) => m.pedidos)}
+317: StatTile label="Ticket médio" value={money(resumo.ticket)} delta={resumo.deltaTicket} hint="vs. ano anterior" spark={serie.map((m) => derivar(m).ticket)}
+324: StatTile label="Atingimento da meta" value={pct(resumo.pctMeta)} hint={`${moneyShort(resumo.receita)} de ${moneyShort(total.meta)}`}
+333: PanelHeader title="Receita realizada vs. meta" hint="barras por mês · linha de acumulado no eixo da direita" action={ <Badge tone={faixaMeta(totalD.pctMeta)}> <span className="num">{pct(totalD.pctMeta)}</span> <span className="ml-1 font-medium hidden sm:inline">do ano</span> </Badge> }
+346: ComposedChart data={dadosGrafico} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+455: PanelHeader title="Mês a mês" hint="clique num mês para abrir o detalhe" action={ <span className="num text-[12px] text-ink-3"> 12 meses </span> }
+467: table style={{ minWidth: `${larguraMinima}px` }}
+490: tr onClick={() => setDetalhe(m)}
+550: button onClick={() => setDetalhe(m)}
+647: FilterSheet title="Canal" onClose={() => setFiltrosAbertos(false)} onClear={() => setEscopo("todos")} applyLabel="Aplicar"
+655: button onClick={() => setEscopo(o.value)}
+701: Sheet title={`${m.rotuloLongo} de ${ANO}`} subtitle={nomeEscopo(escopo)} onClose={onClose} footer={ <Button className="flex-1 max-sm:h-10" onClick={onClose}> Fechar </Button> }
+706: Button onClick={onClose}
+758: KeyValue label="Visitas" value={count(m.visitas)}
+759: KeyValue label="Taxa de conversão" value={pct(d.conversao, 2)}
+760: KeyValue label="Investimento em ADS" value={money(m.ads)}
+761: KeyValue label="TACOS" value={pct(d.tacos, 2)} tone={d.tacos > 7 ? "warn" : undefined}
+766: KeyValue label="Pedidos cancelados" value={count(m.pedidosCancelados)}
+767: KeyValue label="Valor cancelado" value={money(m.valorCancelado)}
+768: KeyValue label="Cancelamento sobre a receita" value={pct(d.pctCancelado)} tone={d.pctCancelado > 6 ? "down" : undefined}
+
+RÓTULOS
+32: label: "Todos os canais"
+33: label: c.nome
+136: header: "Receita"
+145: header: "Pedidos"
+152: header: "Ticket médio"
+159: header: "Visitas"
+166: header: "Conversão"
+173: header: "ADS"
+180: header: "TACOS"
+194: header: "Cancelado"
+201: header: "Cancel. %"
+215: header: "Receita líquida"
+224: header: "Meta"
+231: header: "% da meta"
+252: header: "Var. mês a mês"
+439: label: "Receita realizada"
+440: label: "Meta"
+443: label: "Receita realizada"
+444: label: "Meta"
+445: label: "Receita acumulada"
+446: label: "Meta acumulada"
+
+TEXTOS
+257: —
+262: —
+282: Canal
+295: da meta do ano
+339: do ano
+460: 12 meses
+474: Mês
+526: Total do ano
+601: Total do ano
+707: Fechar
+728: Meta do mês
+731: Realizado
+737: Meta
+747: da meta
+757: Indicadores
+777: Variação de receita vs.
+780: sem base
+788: Receita por canal
+
+CONDIÇÕES
+360: estreito
+383: !estreito
+393: estreito
+406: !estreito
+418: !estreito
+436: estreito
+589: mom !== null
+632: detalhe
+646: filtrosAbertos
+750: d.gapMeta >= 0
+764: d.tacos > 7
+771: d.pctCancelado > 6
+777: anterior
+779: mom === null
+786: escopo === "todos"
+
+# src/app/vendas/anual/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/anual/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/canais/canais-cliente.tsx (593 linhas)
+
+ESTADOS
+39: [periodo, setPeriodo] = React.useState("30 dias")
+141: [canalAberto, setCanalAberto] = React.useState<string | null>(null)
+142: [ocultos, setOcultos] = React.useState<string[]>([])
+143: [filtrosAbertos, setFiltrosAbertos] = React.useState(false)
+
+ESTRUTURA
+268: PageHeader title="Vendas por canal" breadcrumb="Vendas" description="Comparativo de desempenho entre canais" actions={ <> <span className="num hidden sm:inline-flex items-center gap-1.5 text-[12px] text-ink-3"> <CalendarDays className="w-3.5 h-3.5" /> {intervalo} </span> <Button size="sm" className="sm:hidden" onClick={() => setFiltrosAbertos(true)} > <SlidersHorizontal className="w-3.5 h-3.5" /> Filtros {ocultos.length > 0 && ( <span className="num text-[11px]">({ocultos.length})</span> )} </Button> </> } filters={ <BarraFiltros> <Filtro rotulo="Período"> <div className="flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line"> {PERIODOS.map((p) => ( <button key={p} onClick={() => setPeriodo(p)} className={ "h-6 px-2.5 rounded-[4px] text-[12px] font-medium transition-colors whitespace-nowrap " + (periodo === p ? "bg-panel text-ink shadow-[var(--sh-1)]" : "text-ink-3 hover:text-ink") } > {p} </button> ))} </div> </Filtro> {/* As fichas de canal são um FILTRO de visibilidade do gráfico, e sem rótulo liam como legenda — alguém clicava achando que ia abrir o canal, e o canal sumia. */} <Filtro rotulo="Mostrar no gráfico" className="hidden sm:flex"> <div className="flex items-center gap-1.5
+278: Button size="sm" onClick={() => setFiltrosAbertos(true)}
+292: BarraFiltros 
+296: button onClick={() => setPeriodo(p)}
+322: button onClick={() => alternar(c.id)}
+394: PanelHeader title="Evolução por canal" hint="12 semanas · milhares de reais" action={ <span className="num text-[12px] text-ink-2 hidden sm:block"> {money(total)} </span> }
+405: LineChart data={CANAIS_12_SEMANAS} margin={{ top: 4, right: 10, left: 0, bottom: 0 }}
+444: PanelHeader title="Comparativo" hint="clique no cabeçalho para ordenar"
+445: DataTable columns={colunas} rows={visiveis} rowKey={(r) => r.id} defaultSort={{ key: "faturamento", dir: "desc" }} onRowClick={(r) => setCanalAberto(r.id)}
+495: CompararPeriodo titulo={nome} rotuloAtual={`últimos ${n}d`} rotuloAnterior={`${n}d antes`} linhas={[ linha("receita", "Receita", (t) => t.rec, money, { destaque: true }), linha("pedidos", "Pedidos", (t) => t.ped, count, { destaque: true }), linha("ticket", "Ticket médio", (t) => (t.ped ? t.rec / t.ped : null), money), linha("visitas", "Visitas", (t) => (t.vis ? t.vis : null), count), linha( "conversao", "Conversão", (t) => (t.vis ? (t.pedComVis * 100) / t.vis : null), (v) => pct(v, 2), { dica: "só dias com visita registrada" } ), linha("ads", "Investimento em ADS", (t) => (t.ads ? t.ads : null), money, { menorMelhor: true, }), linha("cancelado", "Valor cancelado", (t) => t.canc, money, { menorMelhor: true, }), ]} onClose={() => setCanalAberto(null)}
+526: div style={{ background: "var(--veil)" }} onClick={() => setFiltrosAbertos(false)}
+534: button onClick={() => setFiltrosAbertos(false)}
+546: button onClick={() => alternar(c.id)}
+579: Button variant="primary" onClick={() => setFiltrosAbertos(false)}
+
+RÓTULOS
+88: nome: c.nome
+155: header: "Canal"
+172: header: "Faturamento"
+183: header: "Variação"
+192: header: "Participação"
+213: header: "Pedidos"
+222: header: "Ticket médio"
+230: header: "Conversão"
+243: header: "Margem"
+255: header: "Tendência"
+435: label: c.nome
+
+TEXTOS
+235: —
+284: Filtros
+286: (
+286: )
+370: Pedidos
+376: Ticket
+382: Margem
+533: Canais
+584: Aplicar
+
+CONDIÇÕES
+247: r.margem >= 30
+260: r.delta >= 0
+285: ocultos.length > 0
+455: canalAberto
+524: filtrosAbertos
+
+# src/app/vendas/canais/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/canais/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/cancelamentos/cancelamentos-cliente.tsx (724 linhas)
+
+ESTADOS
+62: [aba, setAba] = React.useState<Aba>("canal")
+457: [medida, setMedida] = React.useState<Medida>("valor")
+
+ESTRUTURA
+67: PageHeader title="Cancelamentos" breadcrumb="Vendas"
+70: EmptyState icon={XCircle} title="Nenhum pedido importado" description="Suba a planilha de pedidos em Importar para esta tela ganhar conteúdo."
+91: PageHeader title="Cancelamentos" breadcrumb="Vendas" description="O faturamento que voltou — por canal, por SKU e ao longo do tempo" filters={ <BarraFiltros> <Filtro rotulo="Ver"> <Segmented options={ABAS} value={aba} onChange={setAba} /> </Filtro> </BarraFiltros> }
+96: BarraFiltros 
+98: Segmented options={ABAS} value={aba} onChange={setAba}
+108: Metrica rotulo="Valor cancelado" valor={money(dados.totalCancelado)} detalhe={`de ${moneyShort(dados.totalBruto)} vendidos`}
+113: Metrica rotulo="Taxa geral" valor={pct(dados.taxaGeral)} detalhe="sobre o valor, não a quantidade"
+118: Metrica rotulo="Canais acompanhados" valor={count(dados.porCanal.length)} detalhe={`${graves.length} acima de ${LIMIAR_GRAVE}%`}
+123: Metrica rotulo="Período" valor={dataBr(dados.periodo.inicio)} detalhe={`até ${dataBr(dados.periodo.fim)}`}
+132: Leitura tom="atencao" titulo="Onde olhar"
+160: TudoCerto titulo="Nenhum canal em patamar preocupante" detalhe={`O pior é ${pior.canal}, com ${pct( pior.taxaQuantidade )} — abaixo dos ${LIMIAR_GRAVE}% que pediriam investigação.`}
+277: Tabela linhas={dados.porCanal} colunas={colunas} chave={(c) => `${c.canalId}-${c.conta}`} nomeExportacao="cancelamentos-por-canal"
+368: Tabela linhas={dados.porSku} colunas={colunas} chave={(s) => s.sku} nomeExportacao="cancelamentos-por-sku" vazio={ <TudoCerto titulo="Nenhum item cancelado no período" /> }
+374: TudoCerto titulo="Nenhum item cancelado no período"
+463: EmptyState icon={XCircle} title="Sem histórico para cruzar" description="A matriz precisa de pedidos em mais de um mês para dizer quem piorou e quando."
+516: Segmented options={MEDIDAS} value={medida} onChange={setMedida}
+523: table 
+556: td title="sem pedido neste mês"
+567: td style={{ background: fx.fundo, color: fx.cor }} title={`${count(cel!.cancelados)} de ${count(cel!.pedidos)} pedidos · ${money(cel!.valorCancelado)}`}
+599: Leitura tom="atencao" titulo="O maior desvio do período"
+617: TudoCerto titulo="Nenhum mês fora da curva" detalhe="Nenhuma conta com volume relevante teve um mês que destoasse da própria média. O que houver de cancelamento aqui é o patamar normal de cada canal — que pode ser alto, mas é estável."
+669: BarChart data={serie} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}
+697: Leitura tom={ultimo.taxaValor > media * 1.2 ? "atencao" : "neutro"} titulo="Leitura"
+
+RÓTULOS
+44: label: "Por canal"
+45: label: "Canal × mês"
+46: label: "Por SKU"
+47: label: "Ao longo do ano"
+54: label: "Valor"
+55: label: "Quantidade"
+420: texto: "text-ink-3"
+421: texto: "text-ink-2"
+425: texto: "text-ink"
+431: texto: "text-ink"
+437: texto: "font-semibold"
+629: rotulo: "< 5%"
+630: rotulo: "5–10%"
+631: rotulo: "10–15%"
+632: rotulo: "15–25%"
+633: rotulo: "25%+"
+653: rotulo: new Date(m.mes + "-15T12:00:00").toLocaleDateString("pt-BR", { month: "short", })
+
+TEXTOS
+136: cancela
+140: dos pedidos —
+141: de
+142: , ou
+143: .
+147: canais
+148: cancelam mais de
+148: % dos pedidos:
+152: .
+155: Taxa nesse patamar raramente é comportamento de comprador — costuma ser ruptura de estoque ou prazo que o canal não consegue cumprir.
+200: ·
+213: /
+266: vs
+276: Canais
+284: O ticket cancelado ao lado do normal responde uma pergunta que a taxa sozinha não responde: se o que cancela é sistematicamente mais caro que o que fica, o problema é de produto ou de prazo, não de volume.
+322: /
+365: SKUs mais cancelados
+366: — os 60 maiores em valor
+378: A taxa compara o cancelado com o total vendido do mesmo SKU. Cinco cancelamentos em seis vendas é um problema; em seiscentas, é ruído — e sem o denominador as duas situações parecem iguais.
+510: Quem piorou, e quando
+512: taxa de cancelamento por conta, mês a mês
+527: Canal
+535: Período
+548: ·
+561: ·
+573: %
+581: %
+594: O ponto (·) é mês sem pedido nenhum — não é zero de cancelamento.
+602: ·
+604: cancelou
+605: em
+606: , contra
+607: de média dele no período —
+610: p.p.
+612: acima do próprio normal. Um canal que sempre cancela muito é um custo conhecido; um que piorou num mês específico tem causa e data, e é esse que vale investigar.
+666: Valor cancelado por mês
+701: A média do período é
+702: do valor vendido. O pior mês foi
+704: , com
+705: —
+706: .
+
+CONDIÇÕES
+131: graves.length > 0
+133: graves.length === 1
+176: aba === "canal"
+177: aba === "quando"
+178: aba === "sku"
+179: aba === "mes"
+199: c.mostrarConta
+547: l.mostrarConta
+591: medida === "valor"
+598: salto
+601: salto.linha.mostrarConta
+696: ultimo
+698: ultimo.taxaValor > media * 1.2
+707: ultimo.taxaValor > media * 1.2
+
+# src/app/vendas/cancelamentos/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/comparativos/comparativos-cliente.tsx (745 linhas)
+
+ESTADOS
+181: [estreito, setEstreito] = React.useState(false)
+227: [mesComparado, setMesComparado] = React.useState<number | null>(null)
+228: [metricaId, setMetricaId] = React.useState<MetricaId>("receita")
+229: [escopo, setEscopo] = React.useState<EscopoComp>("todos")
+230: [modo, setModo] = React.useState<"mes" | "dia">("mes")
+231: [filtrosAbertos, setFiltrosAbertos] = React.useState(false)
+
+ESTRUTURA
+383: PageHeader title="Padrões por dia da semana" breadcrumb="Vendas" description={`${ANO} · ${nomeEscopo(escopo)} · ${M.label} · ${count( CALENDARIO.length )} dias analisados`} actions={ <Button size="sm" className="md:hidden h-11" onClick={() => setFiltrosAbertos(true)} > <SlidersHorizontal className="w-3.5 h-3.5" /> Canal </Button> } filters={ <BarraFiltros> <Filtro rotulo="Medir por" className="w-[190px] max-md:flex-1"> <Select value={metricaId} onChange={(e) => setMetricaId(e.target.value as MetricaId)} className="max-md:h-11" > {METRICAS.map((m) => ( <option key={m.id} value={m.id}> {m.label} </option> ))} </Select> </Filtro> <Filtro rotulo="Canal" className="hidden md:flex"> <Segmented<EscopoComp> options={ESCOPOS_COMP} value={escopo} onChange={setEscopo} /> </Filtro> {melhor && ( <FiltroAcoes> <span className="hidden lg:block text-[12px] text-ink-3 whitespace-nowrap"> melhor dia: <span className="text-ink-2">{melhor.nome}</span>{" "} <span className="num">{M.fmtCurto(melhor.media)}</span> </span> </FiltroAcoes> )} </BarraFi
+390: Button size="sm" onClick={() => setFiltrosAbertos(true)}
+400: BarraFiltros 
+402: Select value={metricaId} onChange={(e) => setMetricaId(e.target.value as MetricaId)}
+416: Segmented options={ESCOPOS_COMP} value={escopo} onChange={setEscopo}
+438: PanelHeader title="Total por dia da semana, mês a mês" hint="soma de todas as segundas de cada mês · a seta compara com o mês à esquerda" action={ <span className="text-[12px] text-ink-3">{nomeEscopo(escopo)}</span> }
+454: SectionTitle title="Desempenho por dia da semana" hint={`${M.rotuloMedia.toLowerCase()} no ano · ranking de 1º a 7º`}
+479: p title={M.fmt(c.media)}
+520: PanelHeader title="Desempenho por dia × mês" hint={ modoEfetivo === "mes" ? "um grupo por mês · uma barra por dia da semana" : "um grupo por dia da semana · uma barra por trimestre" } action={ <div className="hidden md:block"> <Segmented<"mes" | "dia"> options={[ { value: "mes", label: "Por mês" }, { value: "dia", label: "Por dia" }, ]} value={modo} onChange={setModo} /> </div> }
+529: Segmented options={[ { value: "mes", label: "Por mês" }, { value: "dia", label: "Por dia" }, ]} value={modo} onChange={setModo}
+543: BarChart data={dadosGrafico} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap={modoEfetivo === "mes" ? "16%" : "22%"} barGap={1}
+587: PanelHeader title="Mapa de calor — dia × mês" hint="cor mais forte = melhor mês daquele dia" action={ <span className="text-[11px] text-ink-3 hidden sm:block"> {M.rotuloMedia} </span> }
+602: table style={{ minWidth: "760px" }}
+643: HeatCell intensity={intensidade(v, l.min, l.max)} title={`${l.nome} · ${MESES_LONGOS[m]} — ${M.fmt( v )} · ${ordinal(l.rank[m])} de ${MESES.length} meses`}
+694: CompararPeriodo titulo={`${MESES_LONGOS[mesComparado]} · por dia da semana`} rotuloAtual={MESES[mesComparado]} rotuloAnterior={mesComparado > 0 ? MESES[mesComparado - 1] : "sem anterior"} linhas={linhasDow.map((ind) => ({ chave: ind.chave, rotulo: ind.rotulo, dica: ind.dica, menorMelhor: ind.menorMelhor, formato: ind.formato, atual: ind.valor(mesComparado), anterior: mesComparado > 0 ? ind.valor(mesComparado - 1) : null, })) as LinhaComparacao[]} rodape={ <p className="text-[12px] text-ink-3"> Meses têm quantidades diferentes de cada dia da semana — quatro segundas contra cinco muda o total sem nada ter mudado na operação. </p> } onClose={() => setMesComparado(null)}
+719: FilterSheet title="Canal" onClose={() => setFiltrosAbertos(false)} onClear={() => setEscopo("todos")}
+726: button onClick={() => setEscopo(o.value)}
+
+RÓTULOS
+113: label: "Receita"
+126: label: "Pedidos"
+139: label: "Ticket médio"
+152: label: "Visitas"
+165: label: "Taxa de conversão"
+211: label: "Todos os canais"
+212: label: c.nome
+250: rotulo: m
+264: rotulo: nome.charAt(0).toUpperCase() + nome.slice(1)
+324: nome: t.rotulo
+531: label: "Por mês"
+532: label: "Por dia"
+580: label: s.nome
+700: rotulo: ind.rotulo
+
+TEXTOS
+396: Canal
+426: melhor dia:
+486: ·
+487: dias
+507: Participação
+598: Arraste para o lado para ver todos os meses.
+609: Dia
+620: Ano
+666: Todos os dias
+709: Meses têm quantidades diferentes de cada dia da semana — quatro segundas contra cinco muda o total sem nada ter mudado na operação.
+
+CONDIÇÕES
+423: melhor
+473: c.rank === 1
+492: c.rank === 1
+522: modoEfetivo === "mes"
+546: modoEfetivo === "mes"
+693: mesComparado != null
+697: mesComparado > 0
+718: filtrosAbertos
+
+# src/app/vendas/comparativos/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/comparativos/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/dia/dia-cliente.tsx (427 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+94: PageHeader title="Dia" breadcrumb="Vendas" filters={ // Sem o seletor aqui, escolher uma conta sem movimento prendia // a tela nesse estado vazio: não tinha como voltar sem editar // a URL à mão ou recarregar a página. dados.opcoes.length > 0 ? ( <BarraFiltros> <Filtro rotulo="Canal"> <SelectRecorte grupos={dados.opcoes} valor={dados.canalId} onChange={(v) => ir("canal", v)} className="w-[240px]" /> </Filtro> </BarraFiltros> ) : undefined }
+102: BarraFiltros 
+104: SelectRecorte grupos={dados.opcoes} valor={dados.canalId} onChange={(v) => ir("canal", v)}
+117: EmptyState icon={CalendarDays} title="Sem movimento registrado" description={ dados.canalId ? "Este canal não tem venda no período. Escolha outro no seletor acima, ou sincronize-o." : "Importe os lançamentos ou sincronize o canal para a visão do dia aparecer." }
+136: PageHeader title="Dia" breadcrumb="Vendas" description={[ `${nomeDoDia(h.diaSemana)}, ${br(h.data)}`, dados.mesRotulo, textoAtualizacao(dados.atualizacao), ] .filter(Boolean) .join(" · ")} filters={ <BarraFiltros> <Filtro rotulo="Canal"> <SelectRecorte grupos={dados.opcoes} valor={dados.canalId} onChange={(v) => ir("canal", v)} className="w-[240px]" /> </Filtro> </BarraFiltros> }
+147: BarraFiltros 
+149: SelectRecorte grupos={dados.opcoes} valor={dados.canalId} onChange={(v) => ir("canal", v)}
+249: Destaque icone={Trophy} titulo="Melhor dia do mês" dia={dados.melhor} tom="up" aoAbrir={() => ir("data", dados.melhor!.data)}
+256: Destaque icone={TrendingDown} titulo="Pior dia do mês" dia={dados.pior} tom="down" aoAbrir={() => ir("data", dados.pior!.data)}
+336: button onClick={() => aoEscolher(d.data)}
+349: span aria-label={d.bateu ? "bateu a meta" : "não bateu a meta"}
+408: button onClick={aoAbrir}
+
+RÓTULOS
+
+
+TEXTOS
+67: A sincronização de
+67: falhou.
+209: ,
+209: comparada com
+225: A comparação com a mesma
+225: evita a conclusão errada mais comum: segunda sempre parece ruim ao lado de domingo.
+236: de
+236: dias na meta
+240: verde bateu a meta · vermelho não · clique no dia para abrir
+365: meta
+412: ,
+416: pedidos
+418: conversão
+420: ticket
+
+CONDIÇÕES
+69: a.ultimaOk
+72: a.erro
+97: dados.opcoes.length > 0
+120: dados.canalId
+168: h.valorCancelado > 0
+172: h.meta > 0
+173: h.meta > 0
+182: h.bateu === null
+187: h.ticket != null
+192: h.visitas > 0
+193: h.conversao != null
+197: h.ads > 0
+198: h.ads > 0 && h.receitaLiquida > 0
+217: c.receita != null
+219: c.variacao != null
+234: dados.comMeta > 0
+235: dados.bateram >= dados.comMeta / 2
+247: dados.melhor && dados.pior && dados.melhor.data !== dados.pior.data
+294: sub
+348: d.bateu !== null
+354: d.bateu
+360: d.receitaLiquida > 0
+363: d.meta > 0
+417: dia.conversao != null
+420: dia.ticket != null
+
+# src/app/vendas/dia/page.tsx (24 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/diario/diario-cliente.tsx (808 linhas)
+
+ESTADOS
+277: [rascunho, setRascunho] = React.useState<(PeriodoId | "")[]>(COLUNAS_INICIAIS)
+279: [aplicado, setAplicado] = React.useState<(PeriodoId | "")[]>(COLUNAS_INICIAIS)
+281: [base, setBase] = React.useState<Base>("total")
+282: [metricaGrafico, setMetricaGrafico] = React.useState<MetricaGrafico>("receita")
+
+ESTRUTURA
+380: PageHeader title="Comparar período" breadcrumb="Vendas" description="Até 4 períodos lado a lado, métrica por métrica" actions={ <Segmented options={BASES} value={base} onChange={setBase} className="max-md:hidden" /> } filters={ <BarraFiltros> <Filtro rotulo="Canal"> <SelectRecorte grupos={dados.opcoes} valor={canalAtual} onChange={trocarCanal} className="w-[240px]" /> </Filtro> </BarraFiltros> }
+385: Segmented options={BASES} value={base} onChange={setBase}
+393: BarraFiltros 
+395: SelectRecorte grupos={dados.opcoes} valor={canalAtual} onChange={trocarCanal}
+435: Select aria-label={rotulo} value={livre ? "livre" : valor} onChange={(e) => { const v = e.target.value; // Ao escolher "Escolher no calendário", começa no // último dia com dado — um intervalo vazio deixaria a // coluna sem período e a tela sem explicar por quê. const novo = v === "livre" ? (`livre:${dados.ultimaData}:${dados.ultimaData}` as PeriodoId) : (v as PeriodoId | ""); setRascunho((r) => r.map((x, j) => (j === i ? novo : x))); }}
+462: input type="date" aria-label={`${rotulo}: data inicial`} value={livre.de} min={dados.primeiraData ?? undefined} max={dados.ultimaData ?? undefined} onChange={(e) => trocarLivre(i, e.target.value, livre.ate)}
+472: input type="date" aria-label={`${rotulo}: data final`} value={livre.ate} min={livre.de} max={dados.ultimaData ?? undefined} onChange={(e) => trocarLivre(i, livre.de, e.target.value)}
+498: Segmented options={BASES} value={base} onChange={setBase}
+506: Button onClick={() => setRascunho(aplicado)}
+514: Button variant="primary" disabled={!pendente} onClick={() => setAplicado(rascunho)}
+527: PanelHeader title="Comparativo de métricas" hint={ base === "dia" ? "média por dia · variação contra a coluna 1" : "total do período · variação contra a coluna 1" } action={ colunas.length > 1 ? ( <Badge tone="brand"> <span className="hidden sm:inline">melhor da linha</span> <span className="sm:hidden">melhor</span> </Badge> ) : undefined }
+546: table 
+709: PanelHeader title="Evolução dia a dia" hint="dia 1 = primeiro dia de cada período" action={ <Segmented options={METRICAS_GRAFICO} value={metricaGrafico} onChange={setMetricaGrafico} /> }
+713: Segmented options={METRICAS_GRAFICO} value={metricaGrafico} onChange={setMetricaGrafico}
+723: LineChart data={serie} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}
+739: Tooltip cursor={{ stroke: "var(--line-2)", strokeWidth: 1 }} labelFormatter={(l) => typeof l === "number" ? `Dia ${l}` : l } content={<ChartTooltip formatter={fmtGrafico} />}
+780: PanelHeader title="Leitura rápida" hint="contra a coluna 1"
+
+RÓTULOS
+97: nome: "Resultado"
+101: nome: "Receita bruta"
+110: nome: "Receita líquida"
+119: nome: "Pedidos"
+128: nome: "Pedidos válidos"
+140: nome: "Ticket médio"
+146: nome: "Tráfego e eficiência"
+150: nome: "Visitas"
+159: nome: "Conversão"
+168: nome: "Investimento em ADS"
+178: nome: "TACOS"
+185: nome: "Cancelamento"
+189: nome: "Cancelamento (R$)"
+199: nome: "Cancelamento (%)"
+211: label: "Total do período"
+212: label: "Média por dia"
+217: label: "Receita"
+218: label: "Pedidos"
+219: label: "Visitas"
+269: rotulo: de === ate ? brData(de) : `${brData(de)} — ${brData(ate)}`
+770: label: `${c.periodo.rotulo} · ${c.periodo.intervalo}`
+
+TEXTOS
+431: base
+451: Nenhum
+457: Escolher no calendário…
+471: a
+489: Sem dado nesse intervalo.
+511: Desfazer
+521: Aplicar
+537: melhor da linha
+538: melhor
+550: Métrica
+796: vs.
+
+CONDIÇÕES
+429: i === 0
+438: livre
+451: i > 0
+460: livre
+484: periodo
+487: livre && !periodo
+505: pendente
+529: base === "dia"
+534: colunas.length > 1
+569: i === 0
+630: variacao !== null
+693: variacao !== null
+736: metricaGrafico === "receita"
+754: c.periodo.dias.length === 1
+778: colunas.length > 1
+
+# src/app/vendas/diario/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/diario/page.tsx (22 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/lancamentos/lancamentos-cliente.tsx (933 linhas)
+
+ESTADOS
+121: [texto, setTexto] = React.useState(() => formatarEdicao(valor, tipo))
+257: [mes, setMes] = React.useState(MES_ATUAL)
+258: [canal, setCanal] = React.useState<CanalLancamentoId>("ml")
+261: [salvos, setSalvos] = React.useState<Record<string, number>>({})
+263: [rascunho, setRascunho] = React.useState<Record<string, number>>({})
+265: [confirmando, setConfirmando] = React.useState(false)
+266: [aviso, setAviso] = React.useState<string | null>(null)
+268: inputs = React.useRef(new Map<string, HTMLInputElement>())
+396: [gravando, setGravando] = React.useState(false)
+
+ESTRUTURA
+135: input ref={registrar} value={texto} aria-label={rotulo} disabled={bloqueada} title={bloqueada ? "Escolha um canal para lançar" : undefined} inputMode="decimal" autoComplete="off" placeholder="—" onChange={(e) => setTexto(e.target.value)} onFocus={(e) => e.currentTarget.select()} onBlur={confirmar} onKeyDown={(e) => { if (e.key === "Enter" || e.key === "ArrowDown") { e.preventDefault(); confirmar(); aoMover(1); } else if (e.key === "ArrowUp") { e.preventDefault(); confirmar(); aoMover(-1); } else if (e.key === "Escape") { e.preventDefault(); setTexto(formatarEdicao(valor, tipo)); e.currentTarget.blur(); } }}
+191: div style={{ background: "var(--veil)" }} onClick={aoCancelar}
+208: Button onClick={aoCancelar}
+211: Button variant="danger" onClick={aoConfirmar}
+535: PageHeader title="Lançamentos" breadcrumb="Vendas" description="Um dia por linha. Digite o que veio da origem — o resto se recalcula sozinho." actions={ <Button onClick={() => setConfirmando(true)} disabled={alteradoNoMes === 0} className="h-8" > <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Descartar alterações do mês</span> <span className="sm:hidden">Descartar mês</span> </Button> } filters={ <> <div className="w-[148px] shrink-0"> <Select aria-label="Mês" value={mes} onChange={(e) => setMes(Number(e.target.value))} > {MESES_LONGOS.map((m, i) => ( <option key={m} value={i}> {m} de {ANO} </option> ))} </Select> </div> <div className="w-[176px] shrink-0"> <Select aria-label="Canal" value={canal} onChange={(e) => setCanal(e.target.value as CanalLancamentoId) } > {CANAIS_LANCAMENTO.map((c) => ( <option key={c.id} value={c.id}> {c.nome} </option> ))} </Select> </div> <span className="text-[12px] text-ink-3 shrink-0 hidden md:block"> {alteradoNoMes > 0 ? ( <> <span className="num">{count(alteradoNoMes)}</span> célula {alteradoNoMes === 1 ? "" : "s"} fora do valor de origem </> ) : ( 
+540: Button onClick={() => setConfirmando(true)} disabled={alteradoNoMes === 0}
+553: Select aria-label="Mês" value={mes} onChange={(e) => setMes(Number(e.target.value))}
+567: Select aria-label="Canal" value={canal} onChange={(e) => setCanal(e.target.value as CanalLancamentoId) }
+619: StatTile label="Receita bruta do mês" value={total.receita > 0 ? money(total.receita) : "—"} hint={`meta ${moneyShort(meta)}`} spark={sparkReceita.length > 1 ? sparkReceita : undefined}
+625: StatTile label="Receita líquida" value={total.receitaLiquida > 0 ? money(total.receitaLiquida) : "—"} delta={meta > 0 ? total.atingimento - 100 : undefined} hint="da meta do mês"
+631: StatTile label="Pedidos líquidos" value={count(total.pedidosLiquidos)} hint={`${count(total.pedidosCancelados)} cancelados · ticket ${ total.ticket > 0 ? money(total.ticket) : "—" }`}
+638: StatTile label="TACOS" value={total.receita > 0 ? pct(total.tacos, 2) : "—"} inverse=true hint={`ADS ${moneyShort(total.ads)} sobre a receita`}
+647: PanelHeader title={`${MESES_LONGOS[mes]} · ${nomeCanal}`} hint={`${dias.length} dias · ${total.diasComMovimento} com movimento`} action={ aviso ? ( <Badge tone="up">{aviso}</Badge> ) : ( <span className="num text-[12px] text-ink-3"> {mes === MES_ATUAL ? `lançado até ${DIA_ATUAL}` : ""} </span> ) }
+688: table style={{ minWidth: LARGURA_MINIMA }}
+899: Button onClick={descartarRascunho} disabled={gravando}
+906: Button variant="primary" onClick={salvar} disabled={gravando}
+920: Confirmacao titulo="Descartar alterações do mês?" descricao={`${alteradoNoMes} ${ alteradoNoMes === 1 ? "célula volta" : "células voltam" } ao valor de origem em ${MESES_LONGOS[mes]} de ${ANO}, no canal ${nomeCanal}. Não dá para desfazer.`} rotuloAcao="Descartar" aoCancelar={() => setConfirmando(false)} aoConfirmar={descartarMes}
+
+RÓTULOS
+57: titulo: "Visitas"
+58: titulo: "Receita"
+59: titulo: "Pedidos"
+60: titulo: "ADS"
+61: titulo: "Ped. cancel."
+62: titulo: "Valor cancel."
+238: nome: "Todos os canais"
+241: nome: c.nome
+
+TEXTOS
+92: —
+209: Manter
+546: Descartar alterações do mês
+547: Descartar mês
+560: de
+585: célula
+586: fora do valor de origem
+605: Escolha um canal para lançar
+608: No consolidado os campos ficam travados. Cada linha gravada pertence a uma conta de vendedor, e um número lançado em &ldquo;Todos os canais&rdquo; não teria a qual delas pertencer — o Mercado Livre sozinho tem duas.
+666: não salvo
+672: salvo, diferente da origem
+678: fim de semana
+682: Enter ou seta desce para o dia seguinte
+699: Data
+720: Receita líq.
+727: Ticket
+743: /
+817: Total
+850: Conversão do mês
+856: TACOS
+862: Cancelamento
+870: Atingimento
+894: ·
+894: em outro mês ou canal
+904: Descartar
+
+CONDIÇÕES
+140: bloqueada
+583: alteradoNoMes > 0
+586: alteradoNoMes === 1
+599: semConta
+621: total.receita > 0
+623: sparkReceita.length > 1
+627: total.receitaLiquida > 0
+628: meta > 0
+640: total.receita > 0
+650: aviso
+655: mes === MES_ATUAL
+782: l.receitaLiquida !== 0
+799: l.ticket > 0
+827: c.tipo === "moeda"
+840: total.ticket > 0
+852: total.visitas > 0
+858: total.receita > 0
+864: total.receita > 0
+872: meta > 0
+879: pendentesTotal > 0
+888: pendentesTotal === 1
+891: pendentesFora > 0
+912: gravando
+919: confirmando
+
+# src/app/vendas/lancamentos/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/lancamentos/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/metas/loading.tsx (3 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/metas/metas-cliente.tsx (627 linhas)
+
+ESTADOS
+60: [total, setTotal] = React.useState( dados.metaTotal > 0 ? String(dados.metaTotal).replace(".", ",") : "" )
+63: [selecionados, setSelecionados] = React.useState<string[]>( canais.filter((c) => c.selecionado).map((c) => c.id) )
+66: [salvando, setSalvando] = React.useState(false)
+67: [erro, setErro] = React.useState<string | null>(null)
+68: [aviso, setAviso] = React.useState<string | null>(null)
+69: [salvo, setSalvo] = React.useState(false)
+79: [fixos, setFixos] = React.useState<Record<string, string>>({})
+152: [editandoDia, setEditandoDia] = React.useState<string | null>(null)
+153: [valorDia, setValorDia] = React.useState("")
+
+ESTRUTURA
+203: PageHeader title="Metas" breadcrumb="Vendas" description="Defina o mês; o sistema divide por canal e por dia"
+226: Field label="Mês"
+227: Select value={String(mes)} onChange={(e) => router.push(`/vendas/metas?ano=${ano}&mes=${e.target.value}`) }
+240: Field label="Ano"
+241: Select value={String(ano)} onChange={(e) => router.push(`/vendas/metas?ano=${e.target.value}&mes=${mes}`) }
+254: Field label="Meta do mês" hint="receita líquida"
+255: Input inputMode="decimal" placeholder="0,00" value={total} onChange={(e) => { setTotal(e.target.value); setSalvo(false); }}
+266: Button variant="primary" disabled={salvando || valorTotal <= 0 || !selecionados.length} onClick={salvar}
+360: table 
+384: Checkbox checked={marcado} onChange={() => { setSelecionados((s) => s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id] ); setSalvo(false); }} aria-label={c.nome}
+418: Input inputMode="decimal" autoFocus=true value={fixos[c.id] ?? ""} onChange={(e) => { setFixos((x) => ({ ...x, [c.id]: e.target.value })); setSalvo(false); }} aria-label={`Meta de ${c.nome}`}
+429: button onClick={() => soltar(c.id)} title="Voltar ao rateio automático"
+448: button onClick={() => cravar(c.id, f.valor)} title="Cravar esta meta e ratear o resto"
+533: button onClick={() => { if (d.manual) { void gravarDia(d.data, false); } else { setEditandoDia(d.data); setValorDia(String(d.meta).replace(".", ",")); } }} aria-label={d.manual ? "Soltar o dia" : "Fixar o dia"} title={ d.manual ? "Fixado à mão — clique para devolver ao rateio" : "Fixar este dia" }
+562: Input inputMode="decimal" value={valorDia} autoFocus=true onChange={(e) => setValorDia(e.target.value)}
+570: Button variant="primary" disabled={salvando} onClick={() => gravarDia(d.data, true)}
+578: Button onClick={() => setEditandoDia(null)}
+
+RÓTULOS
+
+
+TEXTOS
+274: Distribuindo
+279: Distribuída
+284: Distribuir meta
+291: O peso de cada canal vem da receita líquida entre
+292: e
+293: — cancelamento já descontado. O alvo de cada dia sai do padrão de dia da semana do mesmo período.
+303: Canais na meta
+306: de
+309: O cadeado crava a meta de um canal; o resto se redivide sozinho.
+329: Os canais cravados já passam da meta do mês.
+331: Somam
+333: contra uma meta de
+334: . Os demais ficaram em zero — aumente a meta ou solte algum cadeado.
+340: Cravado à mão
+346: Rateado pelos outros
+352: a sazonalidade dos 90 dias continua valendo para quem não está cravado
+364: Canal
+365: Receita 90 dias
+366: Peso
+367: Meta do canal
+368: Pedidos-alvo
+414: —
+445: do total
+470: Soma das fatias
+485: de
+485: , dia a dia
+488: meta
+492: até aqui
+500: de
+503: (
+503: )
+513: Nenhuma meta distribuída para este mês.
+516: Informe o valor acima e clique em Distribuir meta.
+576: Fixar
+582: ✕
+613: O que acontece com essa meta
+616: Ela alimenta o anual e a tela de Lançamentos, onde o alvo do dia aparece ao lado do realizado. Ajustar um dia aqui — fixando com o cadeado — redistribui o restante do mês entre os dias livres, então o total continua fechando com o que você definiu.
+
+CONDIÇÕES
+210: erro
+216: aviso
+271: salvando
+319: rateio.fixado > 0
+326: rateio.estourou
+382: marcado
+413: !marcado || !f
+459: pedidosAlvo != null
+467: valorTotal > 0
+490: decorridos.length > 0
+501: metaAteAgora > 0
+510: metaDoMes === 0
+545: d.manual
+546: d.manual
+552: d.manual
+560: editando
+591: d.realizado != null
+
+# src/app/vendas/metas/page.tsx (43 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+30: PageHeader title="Metas" breadcrumb="Vendas"
+32: SemFonte titulo="Sem histórico para distribuir a meta" origem="A meta é rateada pelo peso recente de cada canal, e não há venda registrada. Importe a listagem de pedidos primeiro."
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/mtd/mtd-cliente.tsx (595 linhas)
+
+ESTADOS
+103: [salvando, setSalvando] = React.useState(false)
+104: [erro, setErro] = React.useState<string | null>(null)
+105: [feito, setFeito] = React.useState(false)
+107: [sel, setSel] = React.useState<string[]>(d.selecionados)
+132: [modo, setModo] = React.useState<"cada" | "bolo">("cada")
+133: [destinos, setDestinos] = React.useState<string[]>([])
+
+ESTRUTURA
+184: PageHeader title="Mês até aqui" breadcrumb="Vendas" description={ d.ate ? `Fechado até ${brData(d.ate)} · ${d.diasDecorridos} de ${d.diasDecorridos + d.diasRestantes} dias` : "Sem dado no mês" } filters={ <BarraFiltros> <Filtro rotulo="Mês"> <Select className="w-[130px]" value={String(d.mes)} onChange={(e) => irPara(d.ano, Number(e.target.value))} > {MESES.map((m, i) => ( <option key={m} value={i + 1}> {m} </option> ))} </Select> </Filtro> <Filtro rotulo="Ano"> <Select className="w-[100px]" value={String(d.ano)} onChange={(e) => irPara(Number(e.target.value), d.mes)} > {[d.ano - 1, d.ano, d.ano + 1].map((a) => ( <option key={a} value={a}> {a} </option> ))} </Select> </Filtro> <FiltroAcoes> <Button onClick={() => aplicar(todosMarcados ? [] : d.canais.map((c) => c.id)) } > {todosMarcados ? "Limpar canais" : "Todos os canais"} </Button> </FiltroAcoes> </BarraFiltros> }
+193: BarraFiltros 
+195: Select value={String(d.mes)} onChange={(e) => irPara(d.ano, Number(e.target.value))}
+208: Select value={String(d.ano)} onChange={(e) => irPara(Number(e.target.value), d.mes)}
+221: Button onClick={() => aplicar(todosMarcados ? [] : d.canais.map((c) => c.id)) }
+252: button onClick={() => aplicar(on ? sel.filter((x) => x !== c.id) : [...sel, c.id]) }
+357: Segmented options={[ { value: "cada" as const, label: "Cada canal recupera o seu" }, { value: "bolo" as const, label: "Jogar tudo em canais escolhidos" }, ]} value={modo} onChange={(v) => { setModo(v); setFeito(false); }}
+376: button onClick={() => { setDestinos((x) => on ? x.filter((y) => y !== c.id) : [...x, c.id] ); setFeito(false); }}
+428: Button variant="primary" disabled={ salvando || d.diasRestantes === 0 || (modo === "bolo" && destinos.length === 0) } onClick={redistribuir}
+491: table 
+
+RÓTULOS
+359: label: "Cada canal recupera o seu"
+360: label: "Jogar tudo em canais escolhidos"
+
+TEXTOS
+94: —
+244: Canais na conta
+274: A meta de
+274: é do canal inteiro e ficou de fora: marque todas as contas dele para comparar com a meta.
+287: Nenhuma meta definida para
+287: .
+293: Definir a meta do mês
+303: Deveria ter vendido
+309: até
+313: Vendi
+335: dias restantes
+340: Precisa por dia
+346: para fechar
+354: Quem recupera o atraso
+402: Escolha ao menos um canal para receber o atraso.
+406: O que falta de
+406: todos
+406: os canais vai para
+414: , dividido pelo peso recente de cada um. Os demais ficam com os dias futuros zerados.
+417: A meta do mês não muda
+419: — ela só troca de dono.
+440: Redistribuindo
+445: Redistribuído
+457: Divide
+457: entre os
+457: dias que faltam, pelo peso de cada dia da semana. Dias fixados à mão são preservados.
+462: No ritmo de agora, o mês fecha em
+470: .
+484: O que precisaria mudar
+487: Cada linha resolve a meta do mês mexendo só naquela alavanca e mantendo as outras duas como estão hoje.
+495: Alavanca
+498: Cenário atual
+501: Cenário ideal
+504: Diferença
+582: Sem visitas lançadas no mês, a conversão e a alavanca de visitas ficam vazias. As visitas entram na tela de
+585: Lançamentos
+587: ou pelo relatório de desempenho de anúncios.
+
+CONDIÇÕES
+78: a.atual != null
+81: a.necessario != null
+84: a.variacao != null
+90: a.variacao > 0
+187: d.ate
+226: todosMarcados
+234: erro
+272: d.metaIncompleta.length > 0
+282: semMeta
+318: d.metaAteAqui > 0
+325: devendo
+343: d.porDiaRestante != null
+370: modo === "bolo"
+400: destinos.length === 0
+437: salvando
+450: modo === "bolo"
+460: d.projecao != null
+480: !semMeta
+569: k.nota
+578: !d.visitas
+
+# src/app/vendas/mtd/page.tsx (27 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/semanal/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/semanal/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/vendas/semanal/semanal-cliente.tsx (757 linhas)
+
+ESTADOS
+155: [canal, setCanal] = React.useState("")
+157: [comparando, setComparando] = React.useState<number | null>(null)
+187: [metricaId, setMetricaId] = React.useState<MetricaId>("receita")
+188: [escopo, setEscopo] = React.useState<Escopo>("todas")
+189: [filtrosAbertos, setFiltrosAbertos] = React.useState(false)
+
+ESTRUTURA
+502: PageHeader title="Semanal" breadcrumb="Vendas" description={`${TOTAL_SEMANAS} semanas de ${ANO} · segunda a domingo · dados até S${SEMANA_ATUAL}`} actions={ <Button size="sm" className="md:hidden" onClick={() => setFiltrosAbertos(true)} > <SlidersHorizontal className="w-3.5 h-3.5" /> Filtros </Button> } filters={ <BarraFiltros> <Filtro rotulo="Canal"> <SeletorCanal canais={dados.canais} valor={canal} onChange={setCanal} /> </Filtro> <Filtro rotulo="Medir por"> <Segmented<MetricaId> options={OPCOES_METRICA} value={metricaId} onChange={setMetricaId} /> </Filtro> {/* Sem rótulo, "As 53 semanas / Só com dados" ficava colado no seletor de métrica e os dois liam como um controle só de seis botões. */} <Filtro rotulo="Mostrar" className="hidden md:flex"> <Segmented<Escopo> options={OPCOES_ESCOPO} value={escopo} onChange={setEscopo} /> </Filtro> <FiltroAcoes> <span className="num text-[12px] text-ink-3 hidden md:block"> {comDados} de {TOTAL_SEMANAS} semanas com movimento </span> </FiltroAcoes> </BarraFiltr
+507: Button size="sm" onClick={() => setFiltrosAbertos(true)}
+517: BarraFiltros 
+519: SeletorCanal canais={dados.canais} valor={canal} onChange={setCanal}
+526: Segmented options={OPCOES_METRICA} value={metricaId} onChange={setMetricaId}
+538: Segmented options={OPCOES_ESCOPO} value={escopo} onChange={setEscopo}
+555: StatTile label={`Melhor semana · ${metrica.label}`} value={metrica.fmt(resumo.melhor[metrica.id])} hint={`${resumo.melhor.rotulo} · ${resumo.melhor.intervalo}`}
+560: StatTile label={`Pior semana · ${metrica.label}`} value={metrica.fmt(resumo.pior[metrica.id])} hint={`${resumo.pior.rotulo} · ${resumo.pior.intervalo}`}
+565: StatTile label="Média semanal" value={metrica.fmt(resumo.media)} hint={`${resumo.fechadas.length} semanas fechadas`} spark={resumo.spark}
+571: StatTile label="Semana atual" value={metrica.fmt(resumo.atual[metrica.id])} delta={resumo.atual.wow ?? undefined} hint={`${resumo.atual.rotulo} · em curso`}
+580: PanelHeader title={metrica.titulo} hint="barras da semana · linha da média móvel de 4 semanas"
+587: ComposedChart data={serie} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+645: PanelHeader title="Semana a semana" hint="Semanas nas colunas · indicadores nas linhas · a seta compara com a semana à esquerda" action={ <span className="num text-[12px] text-ink-3"> {exibidas.length} semanas </span> }
+664: PanelHeader title="Lista ordenável" hint="Mesmo dado, uma linha por semana — para ordenar por qualquer indicador"
+668: DataTable columns={colunas} rows={exibidas} rowKey={(l) => l.rotulo} defaultSort={{ key: "semana", dir: "asc" }}
+678: CompararPeriodo titulo={`Semana ${exibidas[comparando].rotulo}`} rotuloAtual={exibidas[comparando].rotulo} rotuloAnterior={ comparando > 0 ? exibidas[comparando - 1].rotulo : "sem anterior" } linhas={INDICADORES.map((ind) => ({ chave: ind.chave, rotulo: ind.rotulo, dica: ind.dica, destaque: ind.destaque, menorMelhor: ind.menorMelhor, formato: ind.formato, atual: ind.valor(exibidas[comparando]), anterior: comparando > 0 ? ind.valor(exibidas[comparando - 1]) : null, })) as LinhaComparacao[]} rodape={ exibidas[comparando].parcial ? ( <p className="text-[12px] text-warn"> Esta semana está em curso — a comparação usa dias parciais contra uma semana inteira. </p> ) : null } onClose={() => setComparando(null)}
+717: button onClick={() => setEscopo(o.value)}
+737: button onClick={() => setMetricaId(m.id)}
+
+RÓTULOS
+59: label: "Receita"
+60: titulo: "Receita por semana"
+67: label: "Pedidos"
+68: titulo: "Pedidos por semana"
+75: label: "Ticket"
+76: titulo: "Ticket médio por semana"
+83: label: "Visitas"
+84: titulo: "Visitas por semana"
+91: label: "Conversão"
+92: titulo: "Conversão por semana"
+101: label: m.label
+107: label: "As 53 semanas"
+108: label: "Só com dados"
+228: rotulo: s.rotulo
+246: rotulo: "Receita"
+253: rotulo: "Receita líquida"
+260: rotulo: "Pedidos"
+267: rotulo: "Ticket médio"
+273: rotulo: "Visitas"
+289: rotulo: "Conversão"
+299: rotulo: "Investimento em ADS"
+306: rotulo: "TACOS"
+314: rotulo: "Valor cancelado"
+321: rotulo: "Pedidos cancelados"
+338: titulo: s.titulo
+381: header: "Semana"
+406: header: "Período"
+418: header: "Receita"
+432: header: "Pedidos"
+442: header: "Ticket"
+451: header: "Visitas"
+460: header: "Conversão"
+479: header: "WoW"
+488: header: "Part. no ano"
+636: label: metrica.label
+637: label: "Média móvel de 4 semanas"
+638: label: "Semana em curso"
+686: rotulo: ind.rotulo
+
+TEXTOS
+114: —
+400: atual
+513: Filtros
+546: de
+546: semanas com movimento
+650: semanas
+698: Esta semana está em curso — a comparação usa dias parciais contra uma semana inteira.
+714: Semanas exibidas
+734: Métrica do gráfico
+
+CONDIÇÕES
+400: l.parcial
+616: d.parcial
+677: comparando != null && exibidas[comparando]
+681: comparando > 0
+695: exibidas[comparando].parcial
+707: filtrosAbertos
+
+# src/app/vendas/skus/analise-sku-cliente.tsx (590 linhas)
+
+ESTADOS
+117: [aba, setAba] = React.useState<Aba>("mes")
+118: [metrica, setMetrica] = React.useState<Metrica>("receita")
+119: [busca, setBusca] = React.useState("")
+120: [curva, setCurva] = React.useState<"" | "A" | "B" | "C">("")
+121: [filtro, setFiltro] = React.useState({ de: periodo.inicio, ate: periodo.fim, canal: dados.canalId ?? "", })
+141: [baixando, setBaixando] = React.useState(false)
+142: [erro, setErro] = React.useState<string | null>(null)
+
+ESTRUTURA
+274: PageHeader title="Análise de SKU" breadcrumb="Vendas" description="Desempenho por produto, período e canal" filters={ <BarraFiltros> <Filtro rotulo="De"> <Input type="date" className="w-[148px]" value={filtro.de} min={limites.inicio} max={limites.fim} onChange={(e) => setFiltro({ ...filtro, de: e.target.value })} /> </Filtro> <Filtro rotulo="Até"> <Input type="date" className="w-[148px]" value={filtro.ate} min={filtro.de} max={limites.fim} onChange={(e) => setFiltro({ ...filtro, ate: e.target.value })} /> </Filtro> <Filtro rotulo="Canal"> <SelectRecorte grupos={dados.opcoes} valor={filtro.canal} onChange={(v) => setFiltro({ ...filtro, canal: v })} className="w-[220px]" /> </Filtro> <Button variant="primary" disabled={!sujo} onClick={aplicar}> Aplicar </Button> <FiltroDivisor /> {/* Os atalhos montam as du
+279: BarraFiltros 
+281: Input type="date" value={filtro.de} min={limites.inicio} max={limites.fim} onChange={(e) => setFiltro({ ...filtro, de: e.target.value })}
+291: Input type="date" value={filtro.ate} min={filtro.de} max={limites.fim} onChange={(e) => setFiltro({ ...filtro, ate: e.target.value })}
+301: SelectRecorte grupos={dados.opcoes} valor={filtro.canal} onChange={(v) => setFiltro({ ...filtro, canal: v })}
+308: Button variant="primary" disabled={!sujo} onClick={aplicar}
+323: button onClick={() => atalho(a.dias)}
+332: button onClick={limparComparacao} title="Voltar a um período só"
+351: Segmented options={[ { value: "receita" as const, label: "Receita" }, { value: "unidades" as const, label: "Unidades" }, ]} value={metrica} onChange={setMetrica}
+362: Button disabled={baixando} onClick={exportar}
+413: Tabs tabs={[ { value: "mes" as const, label: "Por mês", count: meses.length }, { value: "canal" as const, label: "Por canal", count: canais.length }, { value: "periodo" as const, label: "Comparar períodos", count: dados.periodos.length, }, { value: "curva" as const, label: "Curva ABC" }, ]} value={aba} onChange={setAba}
+429: Input placeholder="Buscar SKU ou título" value={busca} onChange={(e) => setBusca(e.target.value)}
+435: Segmented options={[ { value: "" as const, label: "Todas" }, { value: "A" as const, label: "A" }, { value: "B" as const, label: "B" }, { value: "C" as const, label: "C" }, ]} value={curva} onChange={setCurva}
+451: table 
+
+RÓTULOS
+63: rotulo: "7 × 7"
+64: rotulo: "30 × 30"
+65: rotulo: "90 × 90"
+267: rotulo: c.nome
+269: rotulo: p.rotulo
+270: rotulo: rotuloMes(m)
+353: label: "Receita"
+354: label: "Unidades"
+415: label: "Por mês"
+416: label: "Por canal"
+419: label: "Comparar períodos"
+422: label: "Curva ABC"
+437: label: "Todas"
+438: label: "A"
+439: label: "B"
+440: label: "C"
+
+TEXTOS
+94: —
+97: novo
+101: parou
+108: %
+309: Aplicar
+337: ✕
+366: Montando
+371: Exportar Excel
+446: SKUs
+455: SKU
+457: Total
+466: Variação
+471: Unidades
+472: Preço médio
+473: Canais
+474: Participação
+475: Acumulado
+525: —
+566: Mostrando os 200 de maior receita. Use a busca ou o filtro de curva para chegar aos demais.
+574: Como ler a curva
+577: A
+577: são os SKUs que somam até 80% da receita do recorte,
+579: B
+579: vão até 95%, e
+580: C
+580: é a cauda. Ela é recalculada dentro do filtro: um produto pode ser A no Mercado Livre e C na loja própria, e é essa diferença que diz o papel dele em cada canal.
+
+CONDIÇÕES
+107: d > 0
+331: comparacoes.length > 0
+363: baixando
+381: erro
+405: k.nota
+458: aba !== "curva"
+464: aba === "periodo" && comparacoes.length > 0
+469: aba === "curva"
+498: aba !== "curva"
+514: v > 0
+520: v > 0
+531: aba === "periodo" && comparacoes.length > 0
+539: aba === "curva"
+545: l.precoMedio != null
+564: visiveis.length > 200
+
+# src/app/vendas/skus/page.tsx (70 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+57: PageHeader title="Análise de SKU" breadcrumb="Vendas"
+59: SemFonte titulo="Nenhuma venda no recorte" origem="Os dados vêm da listagem de pedidos. Importe-a na tela de Importar, ou amplie o período escolhido."
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES

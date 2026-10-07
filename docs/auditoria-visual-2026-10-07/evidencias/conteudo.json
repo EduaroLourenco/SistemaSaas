@@ -1,0 +1,195 @@
+{
+ "medidoEm": "2026-10-07T03:35:24.699Z",
+ "arquivos": 306,
+ "frases": 2581,
+ "comprimento": {
+  "acima80": 133,
+  "acima100": 59,
+  "acima140": 19,
+  "mediana": 25
+ },
+ "maisLongas": [
+  {
+   "n": 194,
+   "onde": "src/app/anuncios/catalogo/catalogo-cliente.tsx",
+   "texto": "o que o canal REALMENTE cobrou, apurado pedido a pedido e rateado entre os itens. Só entra pedido em que o canal informou a comissão — onde não informou, a coluna fica em traço em vez de chutar."
+  },
+  {
+   "n": 194,
+   "onde": "src/app/promocoes/historico/historico-cliente.tsx",
+   "texto": "Cada rodada da Central de Promoções grava aqui a decisão de cada item, com o preço ofertado pelo canal, o de tabela, o piso e o com desconto extra. Processe uma planilha e esta tela se preenche."
+  },
+  {
+   "n": 192,
+   "onde": "src/app/monitoramento/fretes/page.tsx",
+   "texto": "Frete por anúncio e CEP é consulta ao vivo — nenhuma planilha traz esse número. A rota /api/monitoramento/frete já existe e passa a responder quando as credenciais do canal forem configuradas."
+  },
+  {
+   "n": 191,
+   "onde": "src/app/promocoes/campanhas/campanhas-cliente.tsx",
+   "texto": "As campanhas saem das planilhas da Central de Promoções: o nome de cada uma vem na própria planilha. Processe uma e ela aparece aqui, com quantos itens participaram e quantos ficaram de fora."
+  },
+  {
+   "n": 187,
+   "onde": "src/app/promocoes/comparar/comparar-cliente.tsx",
+   "texto": "As ofertas saem das planilhas da Central de Promoções. O canal costuma propor mais de uma faixa de desconto para o mesmo anúncio — processe uma planilha e elas aparecem aqui, lado a lado."
+  },
+  {
+   "n": 181,
+   "onde": "src/app/vendas/cancelamentos/cancelamentos-cliente.tsx",
+   "texto": "Nenhuma conta com volume relevante teve um mês que destoasse da própria média. O que houver de cancelamento aqui é o patamar normal de cada canal — que pode ser alto, mas é estável."
+  },
+  {
+   "n": 173,
+   "onde": "src/app/relatorio/[chave]/relatorio-cliente.tsx",
+   "texto": "O Mercado Livre lista o que pesa na disputa além do preço. 'Em aberto' quer dizer que este anúncio não tem aquela alavanca ativada — dá para ganhar posição sem baixar preço."
+  },
+  {
+   "n": 168,
+   "onde": "src/app/anuncios/catalogo/catalogo-cliente.tsx",
+   "texto": "o retrato semanal do preço de vitrine, guardado toda vez que o catálogo sincroniza. A API só devolve o preço de agora; o histórico existe porque a plataforma o acumula."
+  },
+  {
+   "n": 168,
+   "onde": "src/app/anuncios/trafego-pago/page.tsx",
+   "texto": "Exporte o relatório de anúncios patrocinados no Mercado Livre e suba na tela de Importar. Ele traz investimento, cliques e receita atribuída por anúncio e por campanha."
+  },
+  {
+   "n": 166,
+   "onde": "src/app/anuncios/tipo/tipo-cliente.tsx",
+   "texto": "A comparação justa exige o mesmo produto anunciado como Clássico e como Premium, com visita nos dois. Sem isso, só há a comparação de médias — que mistura tipo e mix."
+  },
+  {
+   "n": 163,
+   "onde": "src/app/promocoes/processar/page.tsx",
+   "texto": "Confira se alguma delas ficou abaixo da margem: o preço em vigor foi aprovado num custo que pode ter mudado. Para mexer, é pela Central de Promoções, não por aqui."
+  },
+  {
+   "n": 162,
+   "onde": "src/app/anuncios/catalogo/catalogo-cliente.tsx",
+   "texto": "a primeira palavra do título. O canal não exporta categoria e os produtos ainda não estão cadastrados — é um agrupamento grosseiro, mas que erra de forma visível."
+  },
+  {
+   "n": 161,
+   "onde": "src/app/promocoes/processar/page.tsx",
+   "texto": "A oferta já estava fechada com o canal (aceita, negociada, participando), ou a célula de ação não oferecia entrar na campanha. O sistema analisou e não escreveu."
+  },
+  {
+   "n": 150,
+   "onde": "src/app/relatorio/[chave]/relatorio-cliente.tsx",
+   "texto": "Quanto da receita da janela vem dos anúncios que a rodada decidiu. Decisão em mil anúncios que não vendem vale menos que em vinte que sustentam o mês."
+  },
+  {
+   "n": 148,
+   "onde": "src/app/api/diagnostico/historico/route.ts",
+   "texto": "Cada sonda olha UM dia. Total zero pode ser dia sem venda, não falta de histórico. Valor acima de zero é prova de que aquele período está acessível."
+  },
+  {
+   "n": 147,
+   "onde": "src/app/relatorio/[chave]/relatorio-cliente.tsx",
+   "texto": "Pedidos cancelados sobre o total criado. Na Loja própria, pedido que nunca foi pago fica fora da conta: só entra cancelamento de venda que existiu."
+  },
+  {
+   "n": 145,
+   "onde": "src/components/analise/elasticidade.tsx",
+   "texto": "A nuvem está espalhada: o preço explica pouco do que aconteceu com as vendas. Outra coisa está mandando aqui — tráfego, campanha ou concorrência."
+  },
+  {
+   "n": 143,
+   "onde": "src/app/relatorio/[chave]/relatorio-cliente.tsx",
+   "texto": "Unidades vendidas dividido por visitas, no Mercado Livre. Comparar com a média do mercado engana; comparar com a sua melhor semana do ano, não."
+  },
+  {
+   "n": 141,
+   "onde": "src/app/importar/importar-cliente.tsx",
+   "texto": "Desempenho de anúncios do Mercado Livre, listagem de pedidos do hub e catálogo de anúncios. Cada uma alimenta uma parte diferente do sistema."
+  },
+  {
+   "n": 138,
+   "onde": "src/app/vendas/cancelamentos/cancelamentos-cliente.tsx",
+   "texto": "Taxa sobre o VALOR: quanto do faturamento daquele mês voltou. Um canal que cancela poucos pedidos grandes aparece aqui e some na contagem."
+  },
+  {
+   "n": 137,
+   "onde": "src/app/vendas/cancelamentos/cancelamentos-cliente.tsx",
+   "texto": "Taxa sobre a QUANTIDADE: quantos pedidos de cada cem voltaram. Um canal que cancela muitos pedidos pequenos aparece aqui e some no valor."
+  },
+  {
+   "n": 133,
+   "onde": "src/lib/dados/alertas.ts",
+   "texto": "Taxa nesse patamar raramente é comportamento de comprador — costuma ser ruptura de estoque ou prazo que o canal não consegue cumprir."
+  },
+  {
+   "n": 130,
+   "onde": "src/app/relatorio/[chave]/relatorio-cliente.tsx",
+   "texto": "Visitas informadas pelo Mercado Livre nas duas contas. Os outros canais não medem visita, então este número é só do Mercado Livre."
+  },
+  {
+   "n": 129,
+   "onde": "src/app/api/diagnostico/historico/route.ts",
+   "texto": "Preço da vitrine não tem histórico na API: só o valor de agora. O histórico é construído pelo retrato semanal, daqui para frente."
+  },
+  {
+   "n": 128,
+   "onde": "src/app/financeiro/folha/folha-cliente.tsx",
+   "texto": "Cadastre a equipe para a folha entrar no resultado. Sem ela, a DRE mostra margem de contribuição mas não o que sobra de verdade."
+  }
+ ],
+ "vocabulario": {
+  "receita / faturamento / GMV": {
+   "receita": 1235,
+   "faturamento": 82,
+   "gmv": 1
+  },
+  "pedido / venda / order": {
+   "pedido": 1069,
+   "venda": 685,
+   "order": 148
+  },
+  "anúncio / listing / item": {
+   "anuncio": 632,
+   "listing": 3,
+   "item": 1164
+  },
+  "operação / empresa / organização": {
+   "operacao": 208,
+   "empresa": 190,
+   "organizacao": 4
+  },
+  "canal / marketplace": {
+   "canal": 1814,
+   "marketplace": 44
+  },
+  "visitas / sessões / cliques": {
+   "visitas": 665,
+   "sessoes": 38,
+   "cliques": 86
+  }
+ },
+ "jargao": {
+  "MTD": 16,
+  "SKU": 727,
+  "MLB": 489,
+  "ABC": 12,
+  "ROAS": 34,
+  "TACoS": 87,
+  "CPC": 14,
+  "CTR": 4,
+  "GMV": 2,
+  "Full": 161,
+  "rebate": 7,
+  "curva A": 29,
+  "ticket": 232,
+  "elasticidade": 20,
+  "sparkline": 6,
+  "MoM": 9,
+  "YoY": 2
+ },
+ "vazio": {
+  "EmptyState": 14,
+  "SemFonte": 9,
+  "TudoCerto": 5,
+  "ComingSoon": 0,
+  "ErroComSaida": 2
+ }
+}

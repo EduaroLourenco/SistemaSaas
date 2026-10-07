@@ -1,0 +1,895 @@
+# src/app/planejamento/calendario.tsx (396 linhas)
+
+ESTADOS
+79: [alvo, setAlvo] = useState<string | null>(null)
+
+ESTRUTURA
+156: button type="button" draggable={ !!e.item && e.item.natureza === "acao" && visao !== "Por canal" && !ocupado } onDragStart={(ev) => { if (e.item) { ev.dataTransfer.setData("application/x-planejamento", e.item.id); ev.dataTransfer.effectAllowed = "move"; } }} onDragEnd={() => setAlvo(null)} style={{ borderColor: e.cor, ...(e.categoria === "item" ? { background: `color-mix(in srgb, ${e.cor} 14%, var(--panel))` } : {}), }} title={`${e.titulo} · ${e.legenda}`} onClick={e.clicar}
+346: button type="button" title={`Criar ação em ${d}`} onClick={() => criar(d)}
+354: button type="button" aria-label={`Adicionar ação em ${d}`} onClick={() => criar(d)}
+
+RÓTULOS
+102: titulo: i.titulo
+114: titulo: o.nome
+145: titulo: p.nome
+206: nome: "Institucional / sem canal"
+
+TEXTOS
+213: Canal de venda
+247: planejamentos / registros
+271: Espaço para a próxima ideia
+279: Uma ação com vários canais aparece em cada linha. As datas sazonais ficam disponíveis na biblioteca.
+388: Clique em um dia para criar uma ação. Clique nos cartões para editar. Arraste uma ação para outro dia; sua duração é mantida.
+
+CONDIÇÕES
+158: !!e.item && e.item.natureza === "acao" && visao !== "Por canal"
+181: e.categoria === "data"
+191: visao !== "Mês"
+217: d === hoje
+269: !fs.length
+349: d === hoje
+
+# src/app/planejamento/componentes.tsx (323 linhas)
+
+ESTADOS
+24: ref = useRef<HTMLDialogElement>(null)
+87: [busca, setBusca] = useState("")
+88: [limite, setLimite] = useState(40)
+
+ESTRUTURA
+36: dialog ref={ref} aria-label={titulo} onCancel={(e) => { e.preventDefault(); fechar(); }}
+48: h2 
+51: button type="button" onClick={fechar} aria-label="Fechar painel"
+105: input aria-label="Buscar produto por nome ou SKU" placeholder="Buscar por nome ou SKU…" value={busca} onChange={(e) => { setBusca(e.target.value); setLimite(40); }}
+118: button type="button" onClick={() => mudar([])}
+126: button type="button" onClick={() => toggle(s)} aria-label={`Remover ${s}`}
+142: input type="checkbox" checked={selecionados.includes(p.sku)} onChange={() => toggle(p.sku)}
+165: button type="button" onClick={() => setLimite((l) => l + 40)}
+223: h3 
+
+RÓTULOS
+
+
+TEXTOS
+47: PLANEJAMENTO
+116: produtos selecionados
+119: Limpar seleção
+170: Mostrar mais produtos (
+170: )
+223: O que já está registrado
+225: Promoções relacionadas aos produtos e ao período. Consulta apenas; salvar o planejamento não altera ofertas.
+230: Selecione produtos para consultar suas promoções.
+234: Nenhuma promoção com período conhecido encontrada para esta seleção. Isso não confirma ausência de ofertas no canal.
+254: Abrir Central de Promoções
+280: ·
+281: →
+286: ·
+287: ·
+297: ·
+302: Mais
+302: ofertas na Central de Promoções.
+306: Registro atualizado em
+307: . A aprovação interna não confirma publicação no canal.
+319: /
+319: preparativos
+
+CONDIÇÕES
+49: subtitulo
+117: selecionados.length > 0
+123: selecionados.length > 0
+152: p.origem === "anuncio"
+157: !encontrados.length
+159: catalogo.length
+164: encontrados.length > limite
+228: !item.skus.length
+244: item.canais.includes(p.canal_id)
+281: p.inicio
+282: p.fim
+290: o.preco == null
+300: ofertas.length > 12
+
+# src/app/planejamento/editor.tsx (846 linhas)
+
+ESTADOS
+45: [item, setItem] = useState<Item>(() => structuredClone(inicial))
+46: [aba, setAba] = useState("Essencial")
+47: [erroLocal, setErroLocal] = useState("")
+48: [tarefa, setTarefa] = useState("")
+49: [skuIndividual, setSkuIndividual] = useState("")
+50: [confirmarExclusao, setConfirmarExclusao] = useState(false)
+
+ESTRUTURA
+136: Painel titulo={ item.id ? campanha ? "Editar campanha" : "Editar ação" : campanha ? "Nova campanha" : "Nova ação" } subtitulo={ campanha ? "Um objetivo, várias ações conectadas." : "Defina o que fazer. Os detalhes podem vir depois." } fechar={fecharSeguro}
+153: form onSubmit={submit}
+154: nav aria-label="Detalhes do planejamento"
+163: button type="button" onClick={(ev) => { setAba(a); ev.currentTarget.scrollIntoView({ block: "nearest", inline: "center", }); }}
+182: Campo nome={ campanha ? "Nome da campanha *" : "O que você quer fazer? *" }
+187: input required=true maxLength={160} value={item.titulo} onChange={(e) => atualizar({ titulo: e.target.value })} placeholder={ campanha ? "Ex.: Black Friday · Casa renovada" : "Ex.: Banner de lançamento na loja" }
+200: Campo nome="Começa em *"
+201: input type="date" required=true value={item.inicio} onChange={(e) => atualizar({ inicio: e.target.value, fim: e.target.value > item.fim ? e.target.value : item.fim, }) }
+214: Campo nome="Termina em *"
+215: input type="date" required=true min={item.inicio} value={item.fim} onChange={(e) => atualizar({ fim: e.target.value })}
+226: Campo nome="Tipo de ação"
+227: select value={item.tipo} onChange={(e) => { const t = dados.tipos.find( (t) => t.nome === e.target.value, ); atualizar({ tipo: e.target.value, ...(t ? { cor: t.cor } : {}), }); }}
+245: Campo nome="Situação"
+246: select value={item.status} onChange={(e) => atualizar({ status: e.target.value as Item["status"] }) }
+260: Campo nome="Dentro de qual campanha?"
+261: select value={item.campanha_id ?? ""} onChange={(e) => atualizar({ campanha_id: e.target.value || null }) }
+277: Campo nome="Etapa"
+278: input list="pl-etapas" value={item.etapa} maxLength={80} onChange={(e) => atualizar({ etapa: e.target.value })}
+292: Campo nome="Objetivo"
+293: input value={item.detalhes.objetivo} onChange={(e) => detalhe({ objetivo: e.target.value })} placeholder="Ex.: Reativar clientes e aumentar as vendas da seleção"
+300: h3 
+308: button type="button" onClick={() => atualizar({ canais: item.canais.includes(c.id) ? item.canais.filter((x) => x !== c.id) : [...item.canais, c.id], }) }
+325: details 
+326: summary 
+329: button type="button" onClick={() => atualizar({ contas: item.contas.includes(c.id) ? item.contas.filter((x) => x !== c.id) : [...item.contas, c.id], }) }
+348: Campo nome="Responsável"
+349: input value={item.detalhes.responsavel} onChange={(e) => detalhe({ responsavel: e.target.value })} placeholder="Quem vai cuidar?"
+355: Campo nome="Cor no calendário"
+358: button type="button" aria-label={`Cor ${c}`} aria-pressed={item.cor === c} style={{ background: c }} onClick={() => atualizar({ cor: c })}
+372: details 
+373: summary 
+375: Campo nome="Meta da campanha"
+376: input value={item.detalhes.meta} onChange={(e) => detalhe({ meta: e.target.value })} placeholder="Ex.: 50 pedidos ou 100 clientes reativados"
+382: Campo nome="Orçamento planejado (R$)"
+383: input type="number" min="0" step="0.01" value={item.detalhes.orcamento ?? ""} onChange={(e) => detalhe({ orcamento: e.target.value === "" ? null : Number(e.target.value), }) }
+402: h3 
+404: button type="button" onClick={() => { if ( !sujo || window.confirm( "Descartar alterações antes de abrir a ação?", ) ) abrir(f); }}
+435: button type="button" onClick={() => novaAcao(t)}
+473: h3 
+482: button type="button" onClick={() => { atualizar({ skus: [...new Set([...item.skus, ...g.skus])], detalhes: { ...item.detalhes, grupos: [ ...new Set([...item.detalhes.grupos, g.nome]), ], }, }); }}
+512: h3 
+513: Campo nome="Escolha o SKU"
+514: select value={skuIndividual} onChange={(e) => setSkuIndividual(e.target.value)}
+525: Campo nome={`Ação específica · ${skuIndividual}`}
+526: textarea value={item.detalhes.porProduto[skuIndividual] ?? ""} maxLength={2000} onChange={(e) => detalhe({ porProduto: { ...item.detalhes.porProduto, [skuIndividual]: e.target.value, }, }) } placeholder="Ex.: Destacar no banner principal; trabalhar cupom exclusivo."
+548: Campo nome="Meio de divulgação"
+549: input list="pl-divulgacao" value={item.detalhes.divulgacao} onChange={(e) => detalhe({ divulgacao: e.target.value })} placeholder="Onde vamos comunicar?"
+571: Campo nome={ item.tipo === "CRM" ? "Público / segmento de clientes" : "Público" }
+578: input value={item.detalhes.publico} onChange={(e) => detalhe({ publico: e.target.value })} placeholder="Ex.: Clientes sem compra há 90 dias"
+585: Campo nome={ item.tipo === "Banner" ? "Briefing do banner: mensagem, formato e posição" : item.tipo === "CRM" ? "Mensagem e chamada para ação" : "Como vamos fazer?" }
+594: textarea rows={5} value={item.detalhes.briefing} onChange={(e) => detalhe({ briefing: e.target.value })} placeholder="Descreva a ação, oferta, texto e orientações para executar."
+601: Campo nome="Link da arte, documento ou referência"
+602: input type="url" value={item.detalhes.link} onChange={(e) => detalhe({ link: e.target.value })} placeholder="https://…"
+620: h3 
+621: button type="button" onClick={() => detalhe({ checklist: [ ...item.detalhes.checklist, ...preparativosSugeridos(item.tipo) .filter( (texto) => !item.detalhes.checklist.some( (c) => c.texto === texto, ), ) .map((texto) => ({ texto, feito: false })), ].slice(0, 100), }) }
+646: input type="checkbox" checked={c.feito} onChange={(e) => detalhe({ checklist: item.detalhes.checklist.map((t, n) => n === idx ? { ...t, feito: e.target.checked } : t, ), }) }
+659: button type="button" aria-label={`Remover tarefa ${c.texto}`} onClick={() => detalhe({ checklist: item.detalhes.checklist.filter( (_, n) => n !== idx, ), }) }
+676: input aria-label="Nova tarefa" value={tarefa} maxLength={500} onChange={(e) => setTarefa(e.target.value)} placeholder="O que precisa ficar pronto?" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (tarefa.trim()) { detalhe({ checklist: [ ...item.detalhes.checklist, { texto: tarefa.trim(), feito: false }, ], }); setTarefa(""); } } }}
+697: button type="button" disabled={!tarefa.trim()} onClick={() => { detalhe({ checklist: [ ...item.detalhes.checklist, { texto: tarefa.trim(), feito: false }, ], }); setTarefa(""); }}
+723: h3 
+747: button type="button" aria-label={ campanha ? "Duplicar campanha sem suas ações vinculadas" : "Duplicar ação" } title={ campanha ? "Copia os dados da campanha; as ações vinculadas não são copiadas." : "Criar uma cópia desta ação" } disabled={ocupado} onClick={() => abrir({ ...structuredClone(item), id: "", revisao: 0, titulo: item.titulo + " (cópia)", status: "Rascunho", detalhes: { ...structuredClone(item.detalhes), visual: undefined, ordem: undefined, checklist: item.detalhes.checklist.map((c) => ({ ...c, feito: false, })), estrategia: { ...estrategiaDe(item), execucoes: [], fechamento: estrategiaVazia().fechamento, medicao: estrategiaVazia().medicao, }, }, }) }
+788: button type="button" aria-label="Excluir planejamento" disabled={ocupado} onClick={() => setConfirmarExclusao(true)}
+799: button type="button" disabled={ocupado} onClick={fecharSeguro}
+808: button type="submit" disabled={ocupado || !dados.pronto}
+825: button type="button" disabled={ocupado} onClick={() => excluir(item)}
+833: button type="button" onClick={() => setConfirmarExclusao(false)}
+
+RÓTULOS
+191: titulo: e.target.value
+689: texto: tarefa.trim()
+705: texto: tarefa.trim()
+766: titulo: item.titulo + " (cópia)"
+
+TEXTOS
+267: Ação avulsa
+300: Onde acontece?
+302: Selecione canais inteiros ou contas específicas. Deixe vazio para ações institucionais. Um canal inteiro inclui todas as suas contas; selecione só as contas para um recorte menor.
+326: Escolher contas específicas
+373: Meta e orçamento opcionais
+402: Ações desta campanha ·
+421: ·
+450: Salve a campanha para adicionar ações e organizar suas etapas.
+473: Produtos opcionais
+475: A ação também pode ser institucional. Um grupo copia a seleção atual; alterações futuras no grupo não mudam esta ação.
+499: ·
+512: Uma orientação diferente por produto?
+518: Selecionar produto
+616: Abrir referência
+620: Preparativos
+640: Adicionar roteiro para
+712: Adicionar
+723: Produtos em outras ações neste período
+725: Sobreposição pode ser intencional. Confira se as mensagens e ofertas combinam.
+730: ·
+730: ·
+805: Cancelar
+820: Excluir “
+820: ”?
+831: Sim, excluir
+838: Manter
+
+CONDIÇÕES
+137: item.id
+146: campanha
+166: aba === a
+180: aba === "Essencial"
+183: campanha
+192: campanha
+225: !campanha
+258: !campanha
+320: item.canais.includes(c.id)
+366: item.cor === c
+400: campanha && item.id
+448: campanha && !item.id
+455: aba === "Estratégia"
+462: aba === "Execução e aprendizado"
+470: aba === "Produtos"
+479: dados.grupos.length > 0
+510: item.skus.length > 0
+524: item.skus.includes(skuIndividual)
+545: aba === "Conteúdo e tarefas"
+572: item.tipo === "CRM"
+586: item.tipo === "Banner"
+609: /^https?:\/\//i.test(item.detalhes.link)
+657: c.feito
+718: aba === "Contexto"
+721: conflitos.length > 0
+737: (erro || erroLocal)
+745: item.id
+750: campanha
+755: campanha
+814: ocupado
+817: confirmarExclusao
+821: filhos.length > 0
+
+# src/app/planejamento/error.tsx (21 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+5: h1 
+12: button onClick={reset}
+
+RÓTULOS
+
+
+TEXTOS
+6: Não foi possível abrir o planejamento
+9: Confira sua conexão e tente novamente. Nenhuma alteração foi feita nas campanhas.
+16: Tentar novamente
+
+CONDIÇÕES
+
+
+# src/app/planejamento/estrategia-editor.tsx (716 linhas)
+
+ESTADOS
+148: [busca, setBusca] = useState("")
+149: [limite, setLimite] = useState(30)
+537: [resultado, setResultado] = useState<ResultadoPlanejamento | null>( null, )
+540: [erro, setErro] = useState("")
+541: [carregando, setCarregando] = useState(false)
+542: controlador = useRef<AbortController | null>(null)
+
+ESTRUTURA
+35: h3 
+41: Campo nome="Foco principal"
+42: select value={e.foco} onChange={(ev) => atualizar({ foco: ev.target.value })}
+52: Campo nome="Por que esta ação faz sentido?"
+53: textarea rows={3} maxLength={10000} value={e.hipotese} onChange={(ev) => atualizar({ hipotese: ev.target.value })} placeholder="Ex.: A procura por este produto aumentou. Vamos melhorar o anúncio e testar Product Ads nesta conta."
+62: Campo nome="Como vamos medir?"
+63: select value={e.indicador} onChange={(ev) => atualizar({ indicador: ev.target.value as Estrategia["indicador"], alvo: null, medicao: { valor: null, fonte: "", data: "" }, }) }
+81: Campo nome="Meta numérica"
+82: input type="number" step="any" min={e.indicador === "margem" ? undefined : 0} value={e.alvo ?? ""} disabled={!e.indicador} onChange={(ev) => atualizar({ alvo: ev.target.value === "" ? null : Number(ev.target.value), }) } placeholder="Ex.: 50"
+98: Campo nome="Nome do indicador"
+99: input maxLength={120} value={e.indicadorPersonalizado} onChange={(ev) => atualizar({ indicadorPersonalizado: ev.target.value }) } placeholder="Ex.: Cliques no banner"
+116: h3 
+188: h3 
+197: button type="button" onClick={() => selecionar(id)} aria-label={`Remover anúncio ${anuncios.find((a) => a.id === id)?.codigo ?? id}`}
+211: input aria-label="Buscar anúncio" value={busca} onChange={(ev) => { setBusca(ev.target.value); setLimite(30); }} placeholder="Código MLB, título ou SKU"
+222: button type="button" onClick={() => selecionar(a.id)} aria-pressed={e.anuncios.includes(a.id)}
+255: button type="button" onClick={() => setLimite((l) => l + 30)}
+305: h3 
+317: h3 
+318: Campo nome={`Execução · ${d.nome}`}
+319: select value={x.situacao} onChange={(ev) => execucao(d.id, { situacao: ev.target.value as Execucao["situacao"], }) }
+333: Campo nome="Início real"
+334: input type="date" max={hoje} value={x.inicio} onChange={(ev) => execucao(d.id, { inicio: ev.target.value })}
+341: Campo nome="Fim real"
+342: input type="date" min={x.inicio || undefined} max={hoje} value={x.fim} onChange={(ev) => execucao(d.id, { fim: ev.target.value })}
+351: Campo nome="O que mudou ou impediu a execução?"
+352: textarea rows={2} maxLength={10000} value={x.mudancas} onChange={(ev) => execucao(d.id, { mudancas: ev.target.value })} placeholder="Ex.: Promoção não ficou elegível; usamos outra seleção de anúncios."
+360: Campo nome="Link de comprovação ou referência"
+361: input type="url" maxLength={2000} value={x.evidencia} onChange={(ev) => execucao(d.id, { evidencia: ev.target.value }) } placeholder="https://…"
+372: button type="button" onClick={() => { if ( window.confirm( "Remover este registro de execução do planejamento?", ) ) mudar({ ...e, execucoes: e.execucoes.filter( (ex) => ex.destino !== d.id, ), }); }}
+397: h3 
+407: Campo nome={`Resultado · ${e.indicador === "personalizado" ? e.indicadorPersonalizado : INDICADORES[e.indicador]}`}
+410: input type="number" step="any" min={e.indicador === "margem" ? undefined : 0} value={e.medicao.valor ?? ""} onChange={(ev) => mudar({ ...e, medicao: { ...e.medicao, valor: ev.target.value === "" ? null : Number(ev.target.value), }, }) }
+428: Campo nome="Fonte do resultado"
+429: input maxLength={2000} value={e.medicao.fonte} onChange={(ev) => mudar({ ...e, medicao: { ...e.medicao, fonte: ev.target.value }, }) } placeholder="Ex.: Product Ads · conta principal · período"
+441: Campo nome="Data da consulta"
+442: input type="date" max={hoje} value={e.medicao.data} onChange={(ev) => mudar({ ...e, medicao: { ...e.medicao, data: ev.target.value }, }) }
+466: h3 
+467: Campo nome="O que funcionou?"
+468: textarea rows={2} maxLength={10000} value={e.fechamento.funcionou} onChange={(ev) => mudar({ ...e, fechamento: { ...e.fechamento, funcionou: ev.target.value }, }) }
+480: Campo nome="O que atrapalhou?"
+481: textarea rows={2} maxLength={10000} value={e.fechamento.problemas} onChange={(ev) => mudar({ ...e, fechamento: { ...e.fechamento, problemas: ev.target.value }, }) }
+493: Campo nome="O que faria na próxima vez?"
+494: textarea rows={2} maxLength={10000} value={e.fechamento.proximoPasso} onChange={(ev) => mudar({ ...e, fechamento: { ...e.fechamento, proximoPasso: ev.target.value }, }) } placeholder="Ex.: Preparar as imagens uma semana antes e separar os anúncios por conta."
+507: Campo nome="Decisão para a próxima campanha"
+508: select value={e.fechamento.decisao} onChange={(ev) => mudar({ ...e, fechamento: { ...e.fechamento, decisao: ev.target.value }, }) }
+573: h3 
+592: button type="button" onClick={consultar} disabled={!item.id || alterado || !temRecorte(item) || carregando}
+
+RÓTULOS
+283: nome: `${tipo === "conta" ? (dados.contas.find((c) => c.id === id)?.nome ?? "Conta anterior") : tipo === "canal" ? (dados.canais.find((c) => c.id === id)?.nome ?? "Canal anterior") : "Ação geral"} · fora do recorte atual`
+
+TEXTOS
+35: Qual resultado queremos buscar?
+37: Um objetivo claro ajuda a escolher a ação e avaliar o que aconteceu.
+46: Escolher depois
+73: Sem indicador definido
+110: Vendas, pedidos e unidades podem ser consultados no banco. ROAS, conversão, margem e demais indicadores são informados por você, com fonte e data. A meta não altera preços, ofertas ou anúncios.
+117: O que já aprendemos com estes produtos
+123: ·
+130: Registros anteriores com produtos em comum e destinos compatíveis. Use como referência; o contexto pode ter mudado.
+188: Anúncios específicos · opcional
+190: Útil para diferenciar anúncios do mesmo SKU e contas do Mercado Livre. Com anúncios selecionados, a consulta de vendas considera somente esses anúncios, dentro dos canais escolhidos. Sem seleção, considera os SKUs.
+206: ×
+231: ·
+235: ·
+250: Nenhum anúncio encontrado neste recorte. Confira os produtos e canais selecionados.
+260: Mostrar mais anúncios (
+260: )
+305: O que aconteceu de verdade?
+307: Registro manual. Planejado:
+307: a
+308: . Nenhuma ação é publicada por esta tela.
+389: Remover registro deste destino antigo
+397: Resultado informado por você
+399: Use o painel do canal ou outra fonte para ROAS, conversão, margem, CRM e indicadores próprios. Este valor fica separado da consulta de vendas.
+404: Escolha primeiro um indicador na aba Estratégia.
+457: Meta:
+457: · Informado:
+458: . Compare usando a mesma fonte e o mesmo período.
+466: Um minuto para aprender
+517: Ainda não decidimos
+574: Vendas no período planejado
+577: Consulta dos produtos nos canais selecionados. Não comprova vendas causadas pela campanha, nem calcula retorno de publicidade. Campanhas usam o próprio recorte; as seleções das ações filhas não são somadas automaticamente.
+584: Salve e reabra este planejamento para consultar o recorte salvo.
+589: Escolha ao menos um canal, conta, SKU ou anúncio.
+609: a
+632: Anterior:
+639: Meta do período completo:
+647: Anterior:
+647: a
+648: , com a mesma quantidade de dias e o mesmo recorte. Diferenças de calendário e outras ações podem influenciar a comparação.
+653: Cancelados fora dos totais:
+653: no período e
+654: no anterior. Pedidos retirados pelas exclusões de análise:
+655: e
+656: , respectivamente. Vendas de produtos não descontam custos, taxas ou frete.
+660: Consultado em
+661: .
+665: A consulta não confirma que todas as vendas foram importadas. Ausência de registros não significa ausência de vendas.
+
+CONDIÇÕES
+85: e.indicador === "margem"
+97: e.indicador === "personalizado"
+114: anteriores.length > 0
+194: e.anuncios.length > 0
+240: e.anuncios.includes(a.id)
+248: !lista.length
+254: lista.length > limite
+371: extras.some((ex) => ex.destino === d.id)
+403: !e.indicador
+413: e.indicador === "margem"
+455: e.medicao.valor !== null && e.alvo !== null
+582: (!item.id || alterado)
+587: !temRecorte(item)
+598: carregando
+600: erro
+605: resultado && !alterado
+612: resultado.parcial
+627: resultado.atual.encontrados
+633: resultado.anterior.encontrados
+637: e.indicador === chave && e.alvo !== null
+662: resultado.atual.ultimoRegistro
+
+# src/app/planejamento/estudio-shell.tsx (346 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+97: h1 
+101: button onClick={datas}
+105: button onClick={criarCampanha} disabled={ocupado}
+119: button onClick={criarCampanha} aria-label="Criar campanha" disabled={ocupado}
+128: button onClick={() => selecionar("")}
+136: button onClick={() => selecionar("soltas")}
+146: button onClick={() => selecionar(c.id)}
+169: button onClick={criarCampanha} disabled={ocupado}
+178: button onClick={grupos}
+185: button onClick={tipos}
+198: button onClick={() => planejar(proximas[0])}
+204: section aria-label="Área de planejamento"
+227: h2 
+243: button onClick={() => editar(campanha)}
+283: nav aria-label="Visualizações do planejamento"
+285: button onClick={() => mudarAba(nome)}
+298: input aria-label="Buscar planejamento" placeholder="Buscar no plano…" value={busca} onChange={(e) => buscar(e.target.value)}
+305: button onClick={filtrar}
+312: button onClick={criarAcao} disabled={ocupado}
+333: button onClick={desfazer} disabled={ocupado}
+338: button aria-label="Fechar aviso" onClick={dispensar}
+
+RÓTULOS
+84: nome: "Quadro"
+85: nome: "Mapa"
+86: nome: "Calendário"
+87: nome: "Onde focar agora"
+87: titulo: "Prioridades"
+
+TEXTOS
+96: MARKETING & OPERAÇÃO
+97: Estúdio de campanhas
+103: Explorar datas
+111: Nova campanha
+118: SEU ESPAÇO
+133: Todas as campanhas
+141: Ideias avulsas
+143: CAMPANHAS
+164: Sua próxima campanha
+166: começa por aqui.
+175: Adicionar campanha
+177: BIBLIOTECA
+183: Mixes de produtos
+187: Seus tipos de ação
+193: NO HORIZONTE
+197: Uma oportunidade para a sua próxima campanha.
+199: Desenvolver ideia
+247: Briefing da campanha
+252: ações
+253: concluídas
+269: —
+271: ·
+272: ações conectadas
+275: ·
+310: Filtros
+318: Ação
+335: Desfazer
+
+CONDIÇÕES
+162: !campanhas.length
+189: proximas[0]
+220: campanha
+221: campanha
+228: aba === "Grupos de produtos"
+242: campanha
+265: campanha
+273: campanha.detalhes.responsavel
+286: aba === nome
+310: filtros > 0
+325: (aviso || erro)
+328: erro
+330: !erro
+332: desfazer && !erro
+
+# src/app/planejamento/ficha.tsx (421 linhas)
+
+ESTADOS
+33: [item, setItem] = useState(() => structuredClone(inicial))
+34: [tarefa, setTarefa] = useState("")
+35: [erroLocal, setErroLocal] = useState("")
+322: [nome, setNome] = useState("")
+323: [inicio, setInicio] = useState(hoje)
+324: [modelo, setModelo] = useState(MODELOS[0])
+
+ESTRUTURA
+60: Painel titulo={ item.natureza === "campanha" ? "Sua campanha" : item.id ? "Sua ação" : "Uma nova ideia" } fechar={sair}
+70: form onSubmit={async (ev) => { ev.preventDefault(); const e = validarItem(item); setErroLocal(e ?? ""); if (!e) await salvar(item); }}
+80: input aria-label="Título do planejamento" required=true autoFocus=true maxLength={160} value={item.titulo} onChange={(e) => atualizar({ titulo: e.target.value })} placeholder="Dê um nome à sua ideia…"
+91: Campo nome="Andamento"
+92: select value={item.status} onChange={(e) => atualizar({ status: e.target.value as Item["status"] }) }
+103: Campo nome="Tipo"
+104: select value={item.tipo} onChange={(e) => atualizar({ tipo: e.target.value })}
+121: Campo nome="Começa"
+122: input type="date" required=true value={item.inicio} onChange={(e) => atualizar({ inicio: e.target.value, fim: item.fim < e.target.value ? e.target.value : item.fim, }) }
+134: Campo nome="Termina"
+135: input type="date" required=true min={item.inicio} value={item.fim} onChange={(e) => atualizar({ fim: e.target.value })}
+144: Campo nome="A ideia, em poucas palavras"
+145: textarea rows={3} maxLength={10000} value={item.detalhes.briefing} onChange={(e) => atualizar({ detalhes: { ...item.detalhes, briefing: e.target.value }, }) } placeholder="Mensagem, oferta, referência… o que você não quer esquecer?"
+158: Campo nome="Responsável"
+159: input value={item.detalhes.responsavel} maxLength={1000} onChange={(e) => atualizar({ detalhes: { ...item.detalhes, responsavel: e.target.value }, }) } placeholder="Quem cuida?"
+170: Campo nome="Etapa"
+171: input list="st-ficha-etapas" maxLength={80} value={item.etapa} onChange={(e) => atualizar({ etapa: e.target.value })}
+193: h3 
+197: input type="checkbox" checked={t.feito} onChange={(e) => atualizar({ detalhes: { ...item.detalhes, checklist: item.detalhes.checklist.map((x, n) => n === idx ? { ...x, feito: e.target.checked } : x, ), }, }) }
+213: button type="button" aria-label={`Remover tarefa ${t.texto}`} onClick={() => atualizar({ detalhes: { ...item.detalhes, checklist: item.detalhes.checklist.filter( (_, n) => n !== idx, ), }, }) }
+233: input value={tarefa} maxLength={500} onChange={(e) => setTarefa(e.target.value)} placeholder="Adicionar um preparativo…" aria-label="Novo preparativo" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); adicionar(); } }}
+246: button type="button" onClick={adicionar} disabled={!tarefa.trim()} aria-label="Adicionar preparativo"
+257: button type="button" onClick={() => detalhar(item)}
+266: button type="button" style={{ background: c }} aria-label={`Cor ${c}`} aria-pressed={item.cor === c} onClick={() => atualizar({ cor: c })}
+285: button type="button" onClick={sair} disabled={ocupado}
+293: button disabled={ocupado || !dados.pronto}
+326: Painel titulo="O que vamos colocar em movimento?" subtitulo="Comece do zero ou use um roteiro. Tudo continua editável." fechar={() => { if (!ocupado) fechar(); }}
+333: form onSubmit={async (ev) => { ev.preventDefault(); await salvar(nome, inicio, modelo); }}
+340: Campo nome="Nome da campanha"
+341: input required=true maxLength={160} autoFocus=true value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Black Friday · Casa renovada"
+350: Campo nome="Começar a preparar em"
+351: input required=true type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} min="2000-01-01" max="2100-12-01"
+362: button type="button" aria-pressed={modelo.id === m.id} onClick={() => setModelo(m)}
+400: button type="button" disabled={ocupado} onClick={fechar}
+408: button disabled={ocupado || !pronto}
+
+RÓTULOS
+52: texto: tarefa.trim()
+87: titulo: e.target.value
+
+TEXTOS
+193: Pequenos passos
+262: Produtos, canais, estratégia e resultados
+291: Fechar
+406: Voltar
+
+CONDIÇÕES
+61: item.natureza === "campanha"
+187: item.skus.length
+211: t.feito
+274: item.cor === c
+278: (erro || erroLocal)
+295: ocupado
+374: m.acoes.length
+379: modelo.id === m.id
+383: modelo.acoes.length > 0
+393: erro
+409: ocupado
+
+# src/app/planejamento/foco.tsx (196 linhas)
+
+ESTADOS
+33: [grupo, setGrupo] = useState("Tudo")
+34: [limite, setLimite] = useState(12)
+
+ESTRUTURA
+62: h2 
+76: button type="button" aria-pressed={g === grupo} onClick={() => { setGrupo(g); setLimite(12); }}
+109: h3 
+112: button onClick={() => abrir(p.item)}
+123: h3 
+132: button onClick={() => setLimite((l) => l + 12)}
+139: h3 
+152: button onClick={() => planejar(o)}
+164: h3 
+168: button onClick={() => abrir(i)}
+
+RÓTULOS
+
+
+TEXTOS
+60: ONDE FOCAR AGORA
+62: O próximo passo, com um motivo.
+64: Preparação, execução e aprendizados a partir dos registros da operação. Referência:
+65: . Os filtros acima se aplicam aos planejamentos; oportunidades sazonais são gerais.
+69: ponto(s) para revisar
+106: —
+113: Abrir
+123: Nenhuma pendência identificada neste recorte
+133: Mostrar mais (
+133: )
+140: No horizonte
+143: Datas comerciais nos próximos 60 dias. A participação em campanhas do marketplace depende das condições do canal.
+149: · em
+149: dia(s)
+153: Preparar campanha
+159: Explore a biblioteca para encontrar datas de nicho.
+165: Para a próxima vez
+182: Os aprendizados registrados no fechamento aparecerão aqui e nas próximas ações dos mesmos produtos.
+188: Sugestões baseadas em datas, tarefas e registros. Não estimam estoque, elegibilidade, lucro ou desempenho de anúncios.
+
+CONDIÇÕES
+88: g === "Tudo"
+113: p.item.natureza === "acao"
+120: !lista.length
+125: dados.itens.length
+131: lista.length > limite
+157: !datas.length
+180: !aprendizados.length
+
+# src/app/planejamento/loading.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+5: Preparando seu calendário…
+
+CONDIÇÕES
+
+
+# src/app/planejamento/mapa.tsx (332 linhas)
+
+ESTADOS
+37: [zoom, setZoom] = useState(0.85)
+38: [movendo, setMovendo] = useState<{ id: string; ponto: Ponto } | null>(null)
+39: [pan, setPan] = useState(false)
+40: viewport = useRef<HTMLDivElement>(null)
+41: gesto = useRef<{ id: string; x: number; y: number; inicio: Ponto; ultimo: Ponto; pointerId: number; } | null>(null)
+49: panGesto = useRef<{ x: number; y: number; left: number; top: number; } | null>(null)
+
+ESTRUTURA
+118: button onClick={novo}
+196: h2 
+204: button onClick={() => (campanha ? abrir(campanha) : novo())}
+222: button aria-label={`Mover ${i.titulo} no mapa. Use as setas do teclado.`} disabled={ocupado} onPointerDown={(ev) => iniciar(ev, i, idx)} onPointerMove={mover} onPointerUp={(ev) => void terminar(ev, i)} onPointerCancel={() => { gesto.current = null; setMovendo(null); }} onKeyDown={(ev) => { const delta: Record<string, Ponto> = { ArrowLeft: { x: -24, y: 0 }, ArrowRight: { x: 24, y: 0 }, ArrowUp: { x: 0, y: -24 }, ArrowDown: { x: 0, y: 24 }, }; if (delta[ev.key] && !ev.repeat && !ocupado) { ev.preventDefault(); void atualizar({ ...i, detalhes: { ...i.detalhes, visual: { contexto, x: Math.max( 20, Math.min(5700, p.x + delta[ev.key].x), ), y: Math.max( 20, Math.min(3600, p.y + delta[ev.key].y), ), }, }, }); } }}
+276: button onClick={() => selecionar(i.id)}
+292: button onClick={novo}
+311: button aria-label="Diminuir zoom" onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}
+317: output aria-label="Zoom do mapa"
+318: button aria-label="Aumentar zoom" onClick={() => setZoom((z) => Math.min(1.5, +(z + 0.1).toFixed(2)))}
+324: button aria-label="Voltar à visão inicial" onClick={vistaInicial}
+
+RÓTULOS
+
+
+TEXTOS
+115: Conecte as peças da campanha. Arraste pela alça dos cartões para organizar suas ideias.
+281: Explorar
+285: ações
+299: Clique para começar
+308: Arraste o fundo para navegar
+317: %
+
+CONDIÇÕES
+120: campanha || avulsas
+194: campanha
+205: campanha
+267: i.natureza === "campanha" && !campanha
+275: i.natureza === "campanha"
+291: !lista.length
+295: campanha
+
+# src/app/planejamento/page.tsx (12 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+4: title: "Planejamento · Plataforma"
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/planejamento/planejamento-cliente.tsx (1040 linhas)
+
+ESTADOS
+55: [dados, setDados] = useState(iniciais)
+56: [referencia, setReferencia] = useState(hoje)
+57: [visao, setVisao] = useState("Mês")
+58: [aba, setAba] = useState("Quadro")
+59: [selecionada, setSelecionada] = useState("")
+60: [mostrarFiltros, setMostrarFiltros] = useState(false)
+61: [ficha, setFicha] = useState<Item | null>(null)
+62: [projetoNovo, setProjetoNovo] = useState(false)
+63: [emLote, setEmLote] = useState(false)
+64: gravando = useRef(false)
+65: [desfazer, setDesfazer] = useState<{ anterior: Item; atual: Item; } | null>(null)
+73: [canal, setCanal] = useState("")
+74: [status, setStatus] = useState("")
+75: [tipo, setTipo] = useState("")
+76: [busca, setBusca] = useState("")
+77: [sku, setSku] = useState("")
+78: [sazonais, setSazonais] = useState(true)
+79: [promos, setPromos] = useState(false)
+80: [editor, setEditor] = useState<Item | null>(null)
+81: [editorKey, setEditorKey] = useState(0)
+82: [painel, setPainel] = useState< "datas" | "grupo" | "tipos" | "promo" | null >(null)
+85: [grupo, setGrupo] = useState<Grupo>({ id: "", operacao_id: dados.operacao, nome: "", skus: [], revisao: 0, })
+92: [ocupado, setOcupado] = useState(false)
+93: [erro, setErro] = useState("")
+94: [aviso, setAviso] = useState("")
+95: [categoria, setCategoria] = useState("Relevantes")
+96: [anoTodo, setAnoTodo] = useState(false)
+97: [buscaDatas, setBuscaDatas] = useState("")
+98: [tipoNome, setTipoNome] = useState("")
+99: [tipoCor, setTipoCor] = useState(CORES[2])
+100: [promoId, setPromoId] = useState("")
+
+ESTRUTURA
+404: input aria-label="Buscar nos filtros" placeholder="Buscar ação, campanha, responsável…" value={busca} onChange={(e) => setBusca(e.target.value)}
+411: select aria-label="Filtrar canal ou conta" value={canal} onChange={(e) => setCanal(e.target.value)}
+417: optgroup label="Canais"
+424: optgroup label="Contas"
+432: select aria-label="Filtrar situação" value={status} onChange={(e) => setStatus(e.target.value)}
+442: select aria-label="Filtrar tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}
+455: input aria-label="Filtrar por SKU" list="pl-skus" placeholder="Filtrar SKU…" value={sku} onChange={(e) => setSku(e.target.value)}
+471: button onClick={limpar}
+522: button aria-label="Período anterior" onClick={() => mudarPeriodo(-1)}
+529: h3 
+536: button aria-label="Próximo período" onClick={() => mudarPeriodo(1)}
+543: button onClick={() => setReferencia(hoje)}
+549: input type="date" aria-label="Ir para uma data" min="2000-01-01" max="2100-12-31" value={referencia} onChange={(e) => { if (e.target.value) setReferencia(e.target.value); }}
+560: div aria-label="Visão do calendário"
+562: button onClick={() => setVisao(v)}
+575: input type="checkbox" checked={sazonais} onChange={(e) => setSazonais(e.target.checked)}
+583: input type="checkbox" checked={promos} onChange={(e) => setPromos(e.target.checked)}
+643: h3 
+646: button onClick={novoGrupo}
+653: button onClick={() => { setGrupo(structuredClone(g)); setErro(""); setPainel("grupo"); }}
+663: h3 
+679: h3 
+684: button onClick={novoGrupo}
+738: Painel titulo="Biblioteca de oportunidades" subtitulo="Datas como ponto de partida. O planejamento é seu." fechar={() => setPainel(null)}
+745: Campo nome="Ano"
+746: input type="number" min={2000} max={2100} value={ano} onChange={(e) => { const a = Number(e.target.value); if (a >= 2000 && a <= 2100) setReferencia(`${a}-01-01`); }}
+757: Campo nome="Temas"
+758: select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+775: input aria-label="Buscar data comemorativa" placeholder="Buscar uma data…" value={buscaDatas} onChange={(e) => setBuscaDatas(e.target.value)}
+782: input type="checkbox" checked={anoTodo} onChange={(e) => setAnoTodo(e.target.checked)}
+806: h3 
+818: button onClick={() => planejar(o)}
+833: Painel titulo={grupo.id ? "Editar grupo" : "Novo grupo de produtos"} subtitulo="Uma seleção reutilizável, com produtos do seu catálogo." fechar={() => { if ( !ocupado && window.confirm( "Fechar o grupo? Alterações não salvas serão descartadas.", ) ) setPainel(null); }}
+846: form onSubmit={async (e) => { e.preventDefault(); if (await persistir("grupo", grupo)) setPainel(null); }}
+853: Campo nome="Nome do grupo *"
+854: input required=true maxLength={100} value={grupo.nome} onChange={(e) => setGrupo((g) => ({ ...g, nome: e.target.value })) } placeholder="Ex.: Colchões de casal · destaque"
+880: button type="button" disabled={ocupado} onClick={async () => { if ( window.confirm( "Excluir este grupo? As campanhas já salvas serão preservadas.", ) && (await persistir("grupo", grupo, true)) ) setPainel(null); }}
+900: button disabled={ocupado || !dados.pronto}
+911: Painel titulo="Seu jeito de fazer marketing" subtitulo="Além dos tipos prontos, crie ações com o nome que você usa." fechar={() => setPainel(null)}
+924: h3 
+931: button disabled={ocupado} aria-label={`Excluir tipo ${t.nome}`} onClick={async () => { if ( window.confirm( "Remover este tipo da lista? As ações existentes serão preservadas.", ) ) await persistir("tipo", t, true); }}
+948: form onSubmit={async (e) => { e.preventDefault(); if ( await persistir("tipo", { id: "", operacao_id: dados.operacao, nome: tipoNome, cor: tipoCor, revisao: 0, }) ) setTipoNome(""); }}
+964: Campo nome="Nome do novo tipo"
+965: input required=true maxLength={60} value={tipoNome} onChange={(e) => setTipoNome(e.target.value)} placeholder="Ex.: Parceria com influenciador"
+975: button type="button" aria-label={`Cor ${c}`} aria-pressed={c === tipoCor} style={{ background: c }} onClick={() => setTipoCor(c)}
+987: button disabled={ocupado || !dados.pronto}
+1004: Painel titulo="Promoção registrada" subtitulo="Informação de contexto. O planejamento não modifica esta oferta." fechar={() => setPainel(null)}
+1027: button onClick={() => { window.location.reload(); }}
+
+RÓTULOS
+88: nome: ""
+298: titulo: acao.titulo
+330: titulo: o.nome
+352: nome: ""
+859: nome: e.target.value
+956: nome: tipoNome
+
+TEXTOS
+416: Todos os canais
+437: Todas as situações
+447: Todos os tipos
+448: Campanha
+472: Limpar (
+472: )
+547: Hoje
+580: Datas sazonais
+588: Promoções registradas
+595: planejamentos no período
+624: Há promoções sem início ou fim informado. Consulte a Central de Promoções; elas não são posicionadas no calendário.
+643: Seleções que você pode reutilizar
+644: Monte o mix uma vez e leve para quantas campanhas quiser.
+648: Novo grupo
+664: produtos
+671: +
+679: Qual é o seu próximo mix?
+681: “Favoritos da loja”, “Seleção para o Dia das Mães” ou o nome que fizer sentido para você.
+685: Criar primeiro grupo
+787: Mostrar o ano inteiro
+790: Base: Sebrae, com conferência das datas móveis na Nuvemshop. Datas anuais são recorrentes; eventos de marketplaces só devem ser adicionados após confirmação do canal.
+808: · Referência consultada em 05/10/2026
+816: Consultar fonte
+819: Planejar esta data
+825: Esquenta e pós-campanha são períodos editáveis da sua estratégia. Você também pode criar datas e campanhas próprias pelo botão “Nova campanha”.
+870: Editar este grupo não altera produtos de campanhas já salvas.
+895: Excluir grupo
+904: Salvar grupo
+924: Tipos personalizados
+992: Criar tipo de ação
+1016: Abrir Central de Promoções
+1024: Você pode explorar o calendário. Para salvar, conclua a configuração do planejamento no banco.
+1033: Verificar novamente
+
+CONDIÇÕES
+389: !ficha && !editor && !painel && !projetoNovo
+394: desfazer
+400: mostrarFiltros && aba !== "Grupos de produtos"
+470: quantidadeFiltros > 0
+477: aba === "Quadro"
+491: aba === "Mapa"
+494: !selecionada
+518: aba === "Calendário"
+564: visao === v
+592: visao !== "Mês"
+603: sazonais
+621: promos && dados.promocoes.some((p) => p.ativa && (!p.inicio || !p.fim))
+630: aba === "Onde focar agora"
+639: aba === "Grupos de produtos"
+671: g.skus.length > 5
+676: !dados.grupos.length
+692: projetoNovo
+702: ficha
+720: editor
+737: painel === "datas"
+832: painel === "grupo"
+834: grupo.id
+872: erro
+879: grupo.id
+910: painel === "tipos"
+983: c === tipoCor
+995: erro
+1003: painel === "promo"
+1021: !dados.pronto
+
+# src/app/planejamento/quadro.tsx (412 linhas)
+
+ESTADOS
+147: [agrupar, setAgrupar] = useState("andamento")
+148: [formulario, setFormulario] = useState<string | null>(null)
+149: [titulo, setTitulo] = useState("")
+150: [sobre, setSobre] = useState<string | null>(null)
+151: [dragId, setDragId] = useState<string | null>(null)
+
+ESTRUTURA
+60: button onClick={() => abrir(item)}
+61: h3 
+84: span title="Preparativos concluídos"
+90: span title={item.detalhes.responsavel}
+105: select aria-label={`Mover ${item.titulo} para`} value="" disabled={ocupado} onChange={(ev) => { if (ev.target.value) mover(ev.target.value); }}
+233: select value={agrupar} onChange={(e) => setAgrupar(e.target.value)} aria-label="Organizar quadro"
+259: h2 
+268: button onClick={novaCampanha}
+311: h3 
+316: button aria-label={`Adicionar ação em ${c.nome}`} onClick={() => { setFormulario(c.id); setTitulo(""); }} disabled={ocupado}
+347: form onSubmit={(ev) => { ev.preventDefault(); void adicionar(c.id); }}
+354: textarea autoFocus=true rows={2} maxLength={160} placeholder="O que vamos fazer?" aria-label={`Nova ação em ${c.nome}`} value={titulo} onChange={(e) => setTitulo(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void adicionar(c.id); } if (e.key === "Escape") setFormulario(null); }}
+371: button disabled={ocupado || !titulo.trim()}
+377: button type="button" aria-label="Cancelar nova ação" onClick={() => setFormulario(null)}
+388: button disabled={ocupado} onClick={() => { setFormulario(c.id); setTitulo(""); }}
+
+RÓTULOS
+161: nome: "Canceladas"
+177: nome: e
+210: titulo: titulo.trim()
+
+TEXTOS
+70: +
+86: /
+104: Mover para
+113: Escolher coluna…
+232: Organizar por
+238: Andamento
+239: Etapa da campanha
+247: Uma boa ideia
+252: Um próximo passo
+254: Pronta para crescer ↗
+258: SEU ESPAÇO DE CRIAÇÃO
+260: Campanhas que começam
+262: com uma ideia.
+265: Escolha um roteiro para sua primeira campanha ou solte uma ideia no quadro abaixo.
+269: Criar minha primeira campanha
+375: Adicionar
+396: Adicionar ideia
+
+CONDIÇÕES
+45: arrastavel
+54: item.natureza === "campanha"
+56: arrastavel
+62: pai
+63: item.detalhes.objetivo
+65: item.skus.length > 0
+70: item.skus.length > 2
+73: (item.canais.length > 0 || item.contas.length > 0)
+80: item.fim !== item.inicio
+83: item.detalhes.checklist.length > 0
+89: item.detalhes.responsavel
+102: mover && opcoes
+227: acoes.length
+243: !dados.itens.length
+334: dragId === i.id
+346: formulario === c.id
+399: !acoes.some((i) => colunaDe(i) === c.id) && formulario !== c.id

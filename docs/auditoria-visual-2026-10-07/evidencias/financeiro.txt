@@ -1,0 +1,683 @@
+# src/app/financeiro/categorias/categorias-cliente.tsx (151 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+112: Cadastro recurso="categorias" titulo="Categorias" singular="Categoria" linhas={linhas} colunas={COLUNAS} campos={CAMPOS} busca={(c) => `${c.nome} ${c.grupo ?? ""} ${c.descricao ?? ""}`} paraForm={(c) => ({ nome: c.nome, tipo: c.tipo, variavel: c.variavel ? "sim" : "nao", grupo: c.grupo, ordem: c.ordem, descricao: c.descricao, ativa: c.ativa, })} aoGravar={(v) => ({ ...v, variavel: v.variavel === "sim" })} vazio={{ titulo: "Nenhuma categoria", descricao: "Cadastre as categorias antes das contas — é por elas que a DRE agrupa o custo.", }} resumo={ <div className="flex items-center gap-4 px-3.5 py-2.5 rounded-r2 border border-line bg-panel"> <span className="text-[12px] text-ink-2"> <b className="num text-ink">{variaveis}</b> variáveis </span> <span className="text-[12px] text-ink-2"> <b className="num text-ink">{fixas}</b> fixas </span> <span className="text-[11.5px] text-ink-3 ml-auto"> Variável desce na margem de contribuição. Fixa entra só no resultado. </span> </div> }
+
+RÓTULOS
+24: rotulo: "Nome"
+27: rotulo: "Tipo"
+32: rotulo: "Saída — dinheiro que sai"
+33: rotulo: "Entrada — dinheiro que entra"
+38: rotulo: "Comportamento"
+43: rotulo: "Variável — só existe se houver venda"
+44: rotulo: "Fixa — sai de qualquer jeito"
+47: rotulo: "Grupo"
+48: rotulo: "Ordem na DRE"
+49: rotulo: "Descrição"
+50: rotulo: "Ativa"
+56: titulo: "Categoria"
+68: titulo: "Tipo"
+77: titulo: "Comportamento"
+86: titulo: "Grupo"
+94: titulo: "Ordem"
+97: titulo: "Situação"
+121: nome: c.nome
+126: descricao: c.descricao
+131: titulo: "Nenhuma categoria"
+132: descricao: "Cadastre as categorias antes das contas — é por elas que a DRE agrupa o custo."
+
+TEXTOS
+91: —
+100: Ativa
+102: Inativa
+138: variáveis
+141: fixas
+144: Variável desce na margem de contribuição. Fixa entra só no resultado.
+
+CONDIÇÕES
+60: c.descricao
+70: c.tipo === "entrada"
+71: c.tipo === "entrada"
+79: c.variavel
+80: c.variavel
+
+# src/app/financeiro/categorias/page.tsx (31 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+20: PageHeader title="Categorias" breadcrumb="Financeiro" description="Como o custo é agrupado na DRE"
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/financeiro/contas/contas-cliente.tsx (307 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+146: Repeat aria-label="ocorrência de recorrência"
+223: Cadastro recurso="contas" titulo="Contas a pagar" singular="Conta" linhas={linhas} colunas={colunas} campos={campos} faltaMigracao={faltaMigracao} busca={(c) => `${c.descricao} ${c.documento ?? ""} ${ c.fornecedorId ? nomeForn.get(c.fornecedorId) ?? "" : "" } ${c.categoriaId ? nomeCat.get(c.categoriaId) ?? "" : ""}` } paraForm={(c) => ({ descricao: c.descricao, tipo: c.tipo, valor: c.valor, categoriaId: c.categoriaId, fornecedorId: c.fornecedorId, funcionarioId: c.funcionarioId, canalId: c.canalId, competencia: c.competencia, vencimento: c.vencimento, documento: c.documento, status: c.status, pagamento: c.pagamento, formaPagamento: c.formaPagamento, periodicidade: c.periodicidade, recorrenciaFim: c.recorrenciaFim, observacao: c.observacao, })} extraFooter={(v: Registro, set) => v.periodicidade && v.periodicidade !== "unica" ? ( <div className="ml-auto flex items-center"> <Checkbox checked={v.__replicar === true} onChange={(marcado) => set("__replicar", marcado)} label="Já criar as próximas" /> </div> ) : null } vazio={{ titulo: "Nenhuma conta lançada", descricao: "Lance o primeiro boleto. Contas fixas podem repetir sozinhas: escolha a periodicidade e marque “já criar as próximas”.", }} resumo={ linhas.length > 0 ? ( <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden"> <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5"> <span className="label">Em aberto</span> <span className="num text-[19px] font-semibold text-ink">{money(aberto)}</span> </div> <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5"> <span className="label">Vencidas</span> <span className={`num text-[19px] font-semibold ${ vencidas.length ? "text-down" : "text-ink" }`} > {vencidas.length} </span> {vencidas.length > 0 && ( <span className="text-[11px] text-down"> {money(vencidas.reduce((s, c) => s + c.valor, 0))} </span>
+257: Checkbox checked={v.__replicar === true} onChange={(marcado) => set("__replicar", marcado)} label="Já criar as próximas"
+
+RÓTULOS
+18: rotulo: "Não se repete"
+19: rotulo: "Mensal"
+20: rotulo: "Bimestral"
+21: rotulo: "Trimestral"
+22: rotulo: "Semestral"
+23: rotulo: "Anual"
+27: rotulo: "Previsto — ainda não é dívida"
+28: rotulo: "Em aberto — a pagar"
+29: rotulo: "Pago"
+30: rotulo: "Atrasado"
+31: rotulo: "Cancelado"
+64: rotulo: "Descrição"
+67: rotulo: "Tipo"
+72: rotulo: "Saída — a pagar"
+73: rotulo: "Entrada — a receber"
+76: rotulo: "Valor"
+79: rotulo: "Categoria"
+81: rotulo: c.nome
+85: rotulo: "Fornecedor"
+87: rotulo: f.nome
+91: rotulo: "Funcionário"
+93: rotulo: f.nome
+97: rotulo: "Canal"
+100: rotulo: c.nome
+104: rotulo: "Competência"
+109: rotulo: "Vencimento"
+110: rotulo: "Boleto / NF"
+111: rotulo: "Situação"
+114: rotulo: "Pago em"
+119: rotulo: "Forma"
+122: rotulo: "Repete"
+129: rotulo: "Repetir até"
+134: rotulo: "Observação"
+140: titulo: "Conta"
+162: titulo: "Categoria"
+172: titulo: "Competência"
+178: titulo: "Vence"
+193: titulo: "Valor"
+202: titulo: "Situação"
+237: descricao: c.descricao
+266: titulo: "Nenhuma conta lançada"
+267: descricao: "Lance o primeiro boleto. Contas fixas podem repetir sozinhas: escolha a periodicidade e marque “já criar as próximas”."
+
+TEXTOS
+167: —
+181: —
+274: Em aberto
+278: Vencidas
+293: Já pago
+297: Previsto
+299: gerado por recorrência
+
+CONDIÇÕES
+145: c.origemRecorrenciaId
+185: atrasada
+196: c.tipo === "entrada"
+197: c.tipo === "entrada"
+270: linhas.length > 0
+286: vencidas.length > 0
+
+# src/app/financeiro/contas/page.tsx (42 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+24: PageHeader title="Contas a pagar" breadcrumb="Financeiro" description="O que vence, o que já foi pago e o que ainda vai vir"
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/financeiro/custos/custos-cliente.tsx (1031 linhas)
+
+ESTADOS
+77: [rascunho, setRascunho] = React.useState<string | null>(null)
+197: [selecionados, setSelecionados] = React.useState<Set<string>>(new Set())
+198: [campoLote, setCampoLote] = React.useState<CampoEditavel>("custoMercadoria")
+200: [valorLote, setValorLote] = React.useState("")
+210: [aba, setAba] = React.useState<Aba>("sku")
+211: [erro, setErro] = React.useState<string | null>(null)
+212: [salvando, setSalvando] = React.useState(false)
+213: [salvo, setSalvo] = React.useState(false)
+217: [edicoes, setEdicoes] = React.useState< Map<string, Partial<Record<"custoMercadoria" | "embalagem" | "aliquotaImpostos" | "pesoKg", number | null>>> >(new Map())
+220: [busca, setBusca] = React.useState("")
+221: [soIncompletos, setSoIncompletos] = React.useState(false)
+287: [faixasEdit, setFaixasEdit] = React.useState<FaixaEdit[]>(faixas)
+288: [apagarFaixas, setApagarFaixas] = React.useState<string[]>([])
+324: [nova, setNova] = React.useState({ canalId: "", natureza: "fixa_recorrente" as NaturezaCusto, descricao: "", valor: "", competencia: new Date().toISOString().slice(0, 8) + "01", })
+
+ESTRUTURA
+82: input value={mostrado} inputMode="decimal" placeholder="—" onChange={(e) => setRascunho(e.target.value)} onBlur={() => { if (rascunho !== null) onChange(ler(rascunho)); setRascunho(null); }}
+374: PageHeader title="Custos" breadcrumb="Financeiro" description="O que falta para fechar margem"
+419: Input type="date" value={inicio} onChange={(e) => aplicarRecorte("inicio", e.target.value)}
+426: Input type="date" value={fim} onChange={(e) => aplicarRecorte("fim", e.target.value)}
+432: SelectRecorte grupos={opcoes} valor={canalId} onChange={(v) => aplicarRecorte("canal", v)}
+444: Tabs tabs={[ { value: "sku" as const, label: "Por SKU", count: linhas.length }, { value: "frete" as const, label: "Frete por peso", count: faixas.length }, { value: "canal" as const, label: "Custos do canal", count: despesas.length }, ]} value={aba} onChange={setAba}
+458: Input placeholder="Buscar SKU ou título" value={busca} onChange={(e) => setBusca(e.target.value)}
+464: Button variant={soIncompletos ? "primary" : "default"} onClick={() => setSoIncompletos((v) => !v)}
+470: Button onClick={() => setSelecionados((s) => s.size === visiveis.length ? new Set() : new Set(visiveis.map((l) => l.produtoId)) ) }
+492: Button variant="primary" disabled={!edicoes.size || salvando} onClick={salvarSku}
+529: Select value={campoLote} onChange={(e) => setCampoLote(e.target.value as CampoEditavel)}
+541: Input inputMode="decimal" placeholder="valor" value={valorLote} onChange={(e) => setValorLote(e.target.value)}
+548: Button variant="primary" disabled={valorLote.trim() === ""} onClick={() => { const v = Number(valorLote.replace(",", ".")); if (!Number.isFinite(v) || v < 0) return; for (const id of selecionados) editar(id, campoLote, v); setValorLote(""); }}
+560: Button variant="ghost" onClick={() => { // Apagar é uma ação legítima: devolve a margem ao // estado "não calculável", que é a verdade enquanto o // custo não se sabe. for (const id of selecionados) editar(id, campoLote, null); }}
+571: Button variant="ghost" onClick={() => setSelecionados(new Set())}
+578: table 
+582: input type="checkbox" aria-label="Selecionar todos" checked={selecionados.size === visiveis.length && visiveis.length > 0} onChange={() => setSelecionados((s) => s.size === visiveis.length ? new Set() : new Set(visiveis.map((l) => l.produtoId)) ) }
+621: input type="checkbox" aria-label={`Selecionar ${l.sku}`} checked={selecionados.has(l.produtoId)} onChange={() => alternar(l.produtoId)}
+681: Celula valor={valorDe(l, "custoMercadoria")} onChange={(v) => editar(l.produtoId, "custoMercadoria", v)}
+687: Celula valor={valorDe(l, "embalagem")} onChange={(v) => editar(l.produtoId, "embalagem", v)}
+693: Celula valor={valorDe(l, "aliquotaImpostos")} onChange={(v) => editar(l.produtoId, "aliquotaImpostos", v)} sufixo="%"
+700: Celula valor={valorDe(l, "pesoKg")} onChange={(v) => editar(l.produtoId, "pesoKg", v)} sufixo="kg"
+748: table 
+763: Select value={f.canalId ?? ""} onChange={(e) => { const v = e.target.value || null; setFaixasEdit((a) => a.map((x, j) => (j === i ? { ...x, canalId: v } : x)) ); }}
+782: Celula valor={f[campo]} onChange={(v) => setFaixasEdit((a) => a.map((x, j) => j === i ? { ...x, [campo]: v ?? 0 } : x ) ) }
+795: Input type="date" value={f.vigenciaInicio} onChange={(e) => setFaixasEdit((a) => a.map((x, j) => j === i ? { ...x, vigenciaInicio: e.target.value } : x ) ) }
+808: button onClick={() => { if (!f.novo) setApagarFaixas((a) => [...a, f.id]); setFaixasEdit((a) => a.filter((_, j) => j !== i)); }} aria-label="Remover faixa"
+826: Button onClick={() => setFaixasEdit((a) => [ ...a, { id: `novo-${a.length}-${a.reduce((s, x) => s + x.pesoMax, 0)}`, canalId: null, canalNome: null, pesoMin: a.length ? a[a.length - 1].pesoMax : 0, pesoMax: 0, valor: 0, vigenciaInicio: new Date().toISOString().slice(0, 10), novo: true, }, ]) }
+847: Button variant="primary" disabled={salvando} onClick={salvarFaixas}
+875: Field label="Canal"
+876: Select value={nova.canalId} onChange={(e) => setNova({ ...nova, canalId: e.target.value })}
+888: Field label="Natureza"
+889: Select value={nova.natureza} onChange={(e) => setNova({ ...nova, natureza: e.target.value as NaturezaCusto }) }
+902: Field label="Descrição"
+903: Input value={nova.descricao} placeholder="Mensalidade da plataforma" onChange={(e) => setNova({ ...nova, descricao: e.target.value })}
+909: Field label="Valor"
+910: Input inputMode="decimal" value={nova.valor} placeholder="0,00" onChange={(e) => setNova({ ...nova, valor: e.target.value })}
+917: Field label="Competência"
+918: Input type="date" value={nova.competencia} onChange={(e) => setNova({ ...nova, competencia: e.target.value })}
+926: Button variant="primary" disabled={salvando || !nova.descricao.trim() || !ler(nova.valor)} onClick={() => salvarDespesa()}
+947: table 
+978: button onClick={() => salvarDespesa(d.id)} aria-label="Remover despesa"
+
+RÓTULOS
+43: rotulo: "Fixa recorrente"
+44: rotulo: "Variável recorrente"
+45: rotulo: "Variável avulsa"
+327: descricao: ""
+343: descricao: nova.descricao
+446: label: "Por SKU"
+447: label: "Frete por peso"
+448: label: "Custos do canal"
+906: descricao: e.target.value
+
+TEXTOS
+113: —
+387: de
+391: SKUs com margem calculável
+395: Cada custo aparece em duas linhas na mesma célula: em cima o
+396: praticado
+396: , que a venda revelou; embaixo o
+398: de tabela
+398: , que vale antes de existir venda. Enquanto faltar qualquer componente, a margem não é calculada — a coluna diz o que falta em vez de chutar zero.
+418: Recorte
+425: até
+439: O recorte muda o praticado. O cadastro é do produto e não muda.
+468: Só os incompletos
+484: linhas
+489: alterado
+500: Gravando
+505: Gravado
+510: Gravar custos
+526: selecionado
+527: · preencher
+540: com
+558: Aplicar aos
+569: Apagar
+572: Cancelar
+596: SKU
+598: Vendido
+599: Preço médio
+600: Comissão do canal
+601: Comissão % (anúncio)
+602: Frete R$
+603: Juros R$
+604: Mercadoria
+605: Embalagem
+606: Impostos
+607: Peso
+608: Margem
+725: falta
+741: O frete de partida, antes de existir venda. Faixa sem canal vale para todos; onde o canal tem tabela própria, a linha específica ganha da geral. Assim que houver pedido com frete informado, a coluna do SKU passa a mostrar o praticado por cima deste valor.
+751: Canal
+752: De (kg)
+753: Até (kg)
+754: Valor
+755: Vigência
+772: Todos os canais
+844: Adicionar faixa
+851: Gravando
+856: Gravar faixas
+868: Despesa de canal separada por como se comporta no tempo. A distinção decide o que dá para projetar: a fixa entra inteira na previsão do mês que vem, a variável recorrente entra pela média, e a avulsa não entra — por definição.
+880: Todos
+935: Gravando
+940: Lançar despesa
+950: Competência
+951: Canal
+952: Natureza
+953: Descrição
+954: Valor
+999: Mídia (Ads)
+1002: Vem da tela de Lançamentos, onde o gasto do dia anterior é preenchido. Não se digita aqui para não existirem duas versões do mesmo número.
+1013: ·
+
+CONDIÇÕES
+93: sufixo
+132: praticado != null
+135: tabela != null
+405: erro
+455: aba === "sku"
+465: soIncompletos
+479: selecionados.size === visiveis.length && visiveis.length > 0
+487: edicoes.size > 0
+489: edicoes.size > 1
+497: salvando
+516: selecionados.size > 0
+527: selecionados.size > 1
+585: selecionados.size === visiveis.length
+638: l.unidades
+640: l.receita > 0
+648: l.precoMedio != null
+658: l.comissaoCanal != null
+677: l.jurosUnidade != null
+707: l.margemUnidade != null
+738: aba === "frete"
+848: salvando
+865: aba === "canal"
+932: salvando
+945: despesas.length > 0
+968: d.natureza === "variavel_avulsa"
+996: adsPorMes.length > 0
+
+# src/app/financeiro/custos/page.tsx (71 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/financeiro/financeiro-cliente.tsx (477 linhas)
+
+ESTADOS
+140: [dim, setDim] = React.useState<Dimensao>("mes")
+141: [filtro, setFiltro] = React.useState({ inicio, fim, canal: canalId })
+
+ESTRUTURA
+164: PageHeader title="Financeiro" breadcrumb="Financeiro" description="Do bruto ao que sobra" filters={ <BarraFiltros> <Filtro rotulo="De"> <Input type="date" className="w-[148px]" value={filtro.inicio} onChange={(e) => setFiltro({ ...filtro, inicio: e.target.value })} /> </Filtro> <Filtro rotulo="Até"> <Input type="date" className="w-[148px]" value={filtro.fim} onChange={(e) => setFiltro({ ...filtro, fim: e.target.value })} /> </Filtro> <Filtro rotulo="Canal"> <SelectRecorte grupos={opcoes} valor={filtro.canal} onChange={(v) => setFiltro({ ...filtro, canal: v })} className="w-[220px]" /> </Filtro> {/* O botão só acende quando há o que aplicar. Antes ele ficava sempre ativo, e clicar sem ter mexido em nada recarregava a tela inteira para chegar no mesmo lugar — o que dá a impressão de que o 
+169: BarraFiltros 
+171: Input type="date" value={filtro.inicio} onChange={(e) => setFiltro({ ...filtro, inicio: e.target.value })}
+179: Input type="date" value={filtro.fim} onChange={(e) => setFiltro({ ...filtro, fim: e.target.value })}
+187: SelectRecorte grupos={opcoes} valor={filtro.canal} onChange={(v) => setFiltro({ ...filtro, canal: v })}
+200: Button variant="primary" disabled={!sujo} onClick={aplicar}
+261: GrupoDre titulo="Custos da venda" explicacao="só existem porque houve venda"
+292: GrupoDre titulo="Custos da operação" explicacao="saem exista venda ou não"
+368: Tabs tabs={DIMENSOES.map((d) => ({ value: d.valor, label: d.rotulo }))} value={dim} onChange={setDim}
+375: table 
+
+RÓTULOS
+43: rotulo: "Mês"
+44: rotulo: "Semana"
+45: rotulo: "Canal"
+46: rotulo: "Conta"
+47: rotulo: "SKU"
+48: rotulo: "Anúncio"
+369: label: d.rotulo
+
+TEXTOS
+201: Aplicar
+222: Tudo abaixo é a margem de
+222: da receita
+224: — não da operação inteira.
+227: Faltam custos de
+229: em vendas. Enquanto um SKU não tiver mercadoria, embalagem e imposto cadastrados, as vendas dele ficam de fora — não entram como zero, ficam fora mesmo.
+237: Preencher custos por SKU
+250: Resultado do período
+315: da receita apurada
+322: Resultado
+323: —
+326: Os custos de operação acima são do período inteiro, mas a margem de contribuição só cobre
+327: da receita. Subtrair um do outro daria um prejuízo que não existe. O resultado aparece quando os custos por SKU estiverem completos.
+337: Dos
+337: pedidos do período,
+341: trouxeram a comissão cobrada e
+345: o frete do vendedor. Nos demais, a comissão veio da alíquota de tabela e o frete da faixa de peso.
+361: A mesma conta, aberta por
+364: cada linha soma a margem da esquerda dentro de um recorte — a coluna de cobertura diz o quanto daquela linha foi apurado
+381: Un.
+382: Receita
+383: Comissão
+384: Frete
+385: Mercadoria
+386: Margem
+387: Cobertura
+428: sem custo
+454: Nenhuma venda no período.
+
+CONDIÇÕES
+79: nota
+94: tipo === "custo" && valor > 0
+216: semCusto
+271: r.cadaCoberturaDe.jurosInformado === 0
+285: r.margemPct != null
+310: r.resultado != null
+313: r.resultadoPct != null
+405: l.comissao
+408: l.frete
+411: l.mercadoria
+414: l.margem != null
+435: l.cobertura >= 99.5
+448: !linhas.length
+
+# src/app/financeiro/folha/folha-cliente.tsx (230 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+164: Cadastro recurso="funcionarios" titulo="Folha de pagamento" singular="Funcionário" linhas={linhas} colunas={colunas} campos={campos} faltaMigracao={faltaMigracao} busca={(f) => `${f.nome} ${f.cargo ?? ""} ${f.setor ?? ""}`} paraForm={(f) => ({ nome: f.nome, cargo: f.cargo, setor: f.setor, salarioBase: f.salarioBase || null, salarioLiquido: f.salarioLiquido, beneficios: f.beneficios || null, encargos: f.encargos || null, diaPagamento: f.diaPagamento, periodicidade: f.periodicidade, categoriaId: f.categoriaId, admissao: f.admissao, demissao: f.demissao, observacao: f.observacao, ativo: f.ativo, })} vazio={{ titulo: "Nenhum funcionário", descricao: "Cadastre a equipe para a folha entrar no resultado. Sem ela, a DRE mostra margem de contribuição mas não o que sobra de verdade.", }} resumo={ naEquipe.length > 0 ? ( <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden"> <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5"> <span className="label">Na equipe</span> <span className="num text-[19px] font-semibold text-ink">{naEquipe.length}</span> </div> <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5"> <span className="label">Custo mensal</span> <span className="num text-[19px] font-semibold text-ink">{money(custoTotal)}</span> <span className="text-[11px] text-ink-3">bruto + benefícios + encargos</span> </div> <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5"> <span class
+
+RÓTULOS
+10: rotulo: "Mensal"
+11: rotulo: "Bimestral"
+12: rotulo: "Trimestral"
+13: rotulo: "Semestral"
+14: rotulo: "Anual"
+15: rotulo: "Pagamento único"
+30: rotulo: "Nome"
+31: rotulo: "Cargo"
+32: rotulo: "Setor"
+35: rotulo: "Salário bruto"
+41: rotulo: "Salário líquido"
+47: rotulo: "Benefícios"
+53: rotulo: "Encargos"
+59: rotulo: "Dia do pagamento"
+65: rotulo: "Periodicidade"
+72: rotulo: "Categoria na DRE"
+76: rotulo: c.nome
+78: rotulo: "Admissão"
+81: rotulo: "Demissão"
+85: rotulo: "Observação"
+86: rotulo: "Ativo"
+92: titulo: "Funcionário"
+106: titulo: "Bruto"
+113: titulo: "Líquido"
+124: titulo: "Benef. + enc."
+133: titulo: "Custo mensal"
+139: titulo: "Paga dia"
+146: titulo: "Situação"
+174: nome: f.nome
+190: titulo: "Nenhum funcionário"
+191: descricao: "Cadastre a equipe para a folha entrar no resultado. Sem ela, a DRE mostra margem de contribuição mas não o que sobra de verdade."
+
+TEXTOS
+109: —
+119: —
+128: —
+142: —
+149: Desligado
+151: Ativo
+153: Inativo
+198: Na equipe
+202: Custo mensal
+204: bruto + benefícios + encargos
+207: Líquido somado
+213: sem líquido preenchido
+218: Competências fechadas
+
+CONDIÇÕES
+96: (f.cargo || f.setor)
+194: naEquipe.length > 0
+209: liquidoTotal > 0
+211: semLiquido > 0
+221: folha.length === 0
+
+# src/app/financeiro/folha/page.tsx (42 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+26: PageHeader title="Folha de pagamento" breadcrumb="Financeiro" description="Quem está na equipe e quanto custa por mês"
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/financeiro/fornecedores/fornecedores-cliente.tsx (189 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+141: Cadastro recurso="fornecedores" titulo="Fornecedores" singular="Fornecedor" linhas={linhas} colunas={colunas} campos={campos} faltaMigracao={faltaMigracao} busca={(f) => `${f.razaoSocial} ${f.nomeFantasia ?? ""} ${f.cnpj ?? ""} ${f.contatoNome ?? ""}` } paraForm={(f) => ({ razaoSocial: f.razaoSocial, nomeFantasia: f.nomeFantasia, cnpj: f.cnpj, categoriaId: f.categoriaId, condicaoPagamento: f.condicaoPagamento, diaVencimento: f.diaVencimento, contatoNome: f.contatoNome, contatoTelefone: f.contatoTelefone, contatoEmail: f.contatoEmail, observacao: f.observacao, ativo: f.ativo, })} aoGravar={(v) => ({ ...v, // O CNPJ é gravado só com dígitos: o banco reserva 14 caracteres, e // a máscara faria "12.345.678/0001-99" estourar a coluna. cnpj: typeof v.cnpj === "string" ? v.cnpj.replace(/\D/g, "") || null : v.cnpj, })} vazio={{ titulo: "Nenhum fornecedor", descricao: "Cadastre o fornecedor uma vez; depois cada boleto vira uma conta apontando para ele.", }} resumo={ totalAberto > 0 ? ( <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-r2 border border-line bg-panel"> <span className="text-[12px] text-ink-2"> <b className="num text-ink">{totalAberto}</b> contas em aberto entre todos os fornecedores </span> </div> ) : undefined }
+
+RÓTULOS
+32: rotulo: "Razão social"
+33: rotulo: "Nome fantasia"
+36: rotulo: "CNPJ"
+42: rotulo: "Categoria"
+47: rotulo: c.nome
+49: rotulo: "Condição"
+52: rotulo: "Dia de vencimento"
+56: rotulo: "Contato"
+57: rotulo: "Telefone"
+58: rotulo: "E-mail"
+59: rotulo: "Observação"
+60: rotulo: "Ativo"
+66: titulo: "Fornecedor"
+78: titulo: "CNPJ"
+88: titulo: "Categoria"
+98: titulo: "Condição"
+110: titulo: "Total lançado"
+117: titulo: "Em aberto"
+128: titulo: "Situação"
+172: titulo: "Nenhum fornecedor"
+173: descricao: "Cadastre o fornecedor uma vez; depois cada boleto vira uma conta apontando para ele."
+
+TEXTOS
+83: —
+93: —
+103: · dia
+113: —
+123: —
+131: Ativo
+133: Inativo
+180: contas em aberto entre todos os fornecedores
+
+CONDIÇÕES
+70: f.nomeFantasia
+102: f.diaVencimento
+176: totalAberto > 0
+
+# src/app/financeiro/fornecedores/page.tsx (38 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+23: PageHeader title="Fornecedores" breadcrumb="Financeiro" description="Quem cobra, e como cobra"
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/financeiro/page.tsx (80 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/components/financeiro/cadastro.tsx (433 linhas)
+
+ESTADOS
+95: [aberto, setAberto] = React.useState<null | { id?: string }>(null)
+96: [valores, setValores] = React.useState<Registro>({})
+97: [salvando, setSalvando] = React.useState(false)
+98: [erro, setErro] = React.useState<string | null>(null)
+99: [aviso, setAviso] = React.useState<string | null>(null)
+100: [confirmar, setConfirmar] = React.useState<T | null>(null)
+101: [filtro, setFiltro] = React.useState("")
+
+ESTRUTURA
+194: Input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder={`Buscar ${singular.toLowerCase()}`}
+205: Button onClick={novo}
+214: EmptyState title={vazio.titulo} description={vazio.descricao}
+218: table 
+255: button onClick={() => editar(l)} title="Editar"
+262: button onClick={() => setConfirmar(l)} title="Apagar"
+280: Sheet title={aberto.id ? `Editar ${singular.toLowerCase()}` : `Nova ${singular.toLowerCase()}`} subtitle={titulo} onClose={() => setAberto(null)} width="560px" footer={ <> <Button variant="primary" onClick={gravar} disabled={salvando}> {salvando ? "Gravando…" : "Gravar"} </Button> <Button onClick={() => setAberto(null)}>Cancelar</Button> {extraFooter?.(valores, set)} </> }
+287: Button variant="primary" onClick={gravar} disabled={salvando}
+290: Button onClick={() => setAberto(null)}
+299: Field label={c.obrigatorio ? `${c.rotulo} *` : c.rotulo} hint={c.dica}
+305: CampoEntrada campo={c} valor={valores[c.chave]} onChange={(v) => set(c.chave, v)}
+324: Sheet title={`Apagar ${singular.toLowerCase()}?`} onClose={() => setConfirmar(null)} width="420px" footer={ <> <Button variant="danger" onClick={() => apagar(confirmar, true)} disabled={salvando}> {salvando ? "Apagando…" : "Apagar"} </Button> <Button onClick={() => setConfirmar(null)}>Cancelar</Button> </> }
+330: Button variant="danger" onClick={() => apagar(confirmar, true)} disabled={salvando}
+333: Button onClick={() => setConfirmar(null)}
+365: Select value={(valor as string) ?? ""} onChange={(e) => onChange(e.target.value || null)}
+381: Select value={valor === false ? "nao" : "sim"} onChange={(e) => onChange(e.target.value === "sim")}
+393: textarea value={(valor as string) ?? ""} onChange={(e) => onChange(e.target.value)} rows={2}
+403: Input type={campo.tipo === "data" ? "date" : campo.tipo === "texto" ? "text" : "number"} inputMode={campo.tipo === "dinheiro" ? "decimal" : undefined} step={campo.tipo === "dinheiro" ? "0.01" : campo.tipo === "numero" ? "1" : undefined} value={(valor as string | number) ?? ""} onChange={(e) => onChange( campo.tipo === "texto" || campo.tipo === "data" ? e.target.value : e.target.value === "" ? null : Number(e.target.value) ) }
+
+RÓTULOS
+424: rotulo: "Previsto"
+425: rotulo: "Em aberto"
+426: rotulo: "Pago"
+427: rotulo: "Atrasado"
+428: rotulo: "Cancelado"
+430: rotulo: status
+
+TEXTOS
+207: Novo
+290: Cancelar
+333: Cancelar
+342: Isso não pode ser desfeito. Se houver ocorrências futuras geradas por recorrência, as que ainda não foram pagas somem junto; as pagas ficam, porque já aconteceram.
+369: —
+385: Sim
+386: Não
+
+CONDIÇÕES
+181: faltaMigracao
+202: visiveis.length === 1
+212: visiveis.length === 0
+228: c.largura
+279: aberto
+281: aberto.id
+288: salvando
+301: c.obrigatorio
+303: c.largo
+313: erro
+316: aviso
+323: confirmar
+331: salvando
+346: erro
+382: valor === false
+404: campo.tipo === "data"
+405: campo.tipo === "dinheiro"
+406: campo.tipo === "dinheiro"
+
+# src/components/financeiro/dre-mensal.tsx (437 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+109: table 
+283: svg viewBox={`0 0 ${largura} ${T + alturaPlot + B}`} style={{ width: "100%", minWidth: largura, height: "auto" }} role="img" aria-label="Evolução da margem de contribuição e do resultado, em porcentagem da receita líquida."
+
+RÓTULOS
+44: rotulo: "Receita"
+46: rotulo: "Receita bruta"
+47: rotulo: "(−) Cancelamentos"
+48: rotulo: "= Receita líquida"
+52: rotulo: "Custos variáveis — só existem porque houve venda"
+54: rotulo: "(−) Comissão do canal"
+55: rotulo: "(−) Frete"
+56: rotulo: "(−) Juros de parcelamento"
+57: rotulo: "(−) Impostos"
+58: rotulo: "(−) Embalagem"
+59: rotulo: "(−) Mercadoria"
+60: rotulo: "= Margem de contribuição"
+64: rotulo: "Despesas — saem exista venda ou não"
+66: rotulo: "(−) Mídia (Ads)"
+67: rotulo: "(−) Fixas recorrentes"
+68: rotulo: "(−) Variáveis recorrentes"
+69: rotulo: "(−) Variáveis avulsas"
+70: rotulo: "= RESULTADO"
+228: rotulo: rotuloMes(r)
+
+TEXTOS
+102: Demonstrativo mês a mês
+104: cada linha em reais e como % da receita líquida
+113: Conta
+170: —
+198: %
+271: Margem de contribuição
+276: Resultado
+279: % da receita líquida
+302: %
+305: %
+372: %
+
+CONDIÇÕES
+123: ehTotal(i)
+193: l.custo && v > 0
+196: p != null
+273: temResultado
+291: min < 0
+309: temResultado
+316: p.resultado != null
+368: nota
+370: p != null
+383: tipo === "custo" && valor > 0

@@ -1,0 +1,1123 @@
+# src/app/cadastro/page.tsx (208 linhas)
+
+ESTADOS
+34: [nome, setNome] = React.useState("")
+35: [empresa, setEmpresa] = React.useState("")
+36: [email, setEmail] = React.useState(convidado)
+37: [senha, setSenha] = React.useState("")
+38: [erro, setErro] = React.useState<string | null>(null)
+39: [enviando, setEnviando] = React.useState(false)
+40: [confirme, setConfirme] = React.useState(false)
+
+ESTRUTURA
+91: h1 
+120: h1 
+127: form onSubmit={criar}
+130: input required=true autoFocus=true autoComplete="name" value={nome} onChange={(e) => setNome(e.target.value)}
+142: input required=true autoComplete="organization" value={empresa} onChange={(e) => setEmpresa(e.target.value)}
+153: input type="email" required=true autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
+165: input type="password" required=true minLength={8} autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)}
+186: Button type="submit" variant="primary" disabled={enviando}
+
+RÓTULOS
+
+
+TEXTOS
+92: Confirme seu e-mail
+95: Mandamos um link para
+95: . Abra o link e a empresa
+96: é criada no primeiro acesso.
+103: Ir para o login
+115: ▟
+117: Plataforma
+121: Criar conta da empresa
+124: Você entra como proprietário e convida o time depois.
+129: Seu nome
+141: Nome da empresa
+152: E-mail
+164: Senha
+174: Pelo menos 8 caracteres.
+190: Criando
+199: Já tem conta?
+201: Entrar
+
+CONDIÇÕES
+177: erro
+187: enviando
+
+# src/app/comecar/criar-empresa.tsx (78 linhas)
+
+ESTADOS
+14: [nome, setNome] = React.useState(sugestao)
+15: [erro, setErro] = React.useState<string | null>(null)
+16: [enviando, setEnviando] = React.useState(false)
+
+ESTRUTURA
+43: form onSubmit={criar}
+46: input required=true autoFocus=true autoComplete="organization" value={nome} onChange={(e) => setNome(e.target.value)}
+65: Button type="submit" variant="primary" disabled={enviando}
+
+RÓTULOS
+
+
+TEXTOS
+45: Nome da empresa
+69: Criando
+
+CONDIÇÕES
+56: erro
+66: enviando
+
+# src/app/comecar/page.tsx (53 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+35: h1 
+
+RÓTULOS
+
+
+TEXTOS
+30: ▟
+32: Plataforma
+36: Vamos criar sua empresa
+39: Você entra como proprietário. A primeira operação é criada junto, e depois você conecta os canais de venda.
+46: Recebeu um convite para uma empresa que já existe? Abra o link do convite em vez de criar outra.
+
+CONDIÇÕES
+
+
+# src/app/configuracoes/page.tsx (253 linhas)
+
+ESTADOS
+80: [tema, setTema] = React.useState<Tema>("sistema")
+81: [densidade, setDensidade] = React.useState<Densidade>("compacta")
+
+ESTRUTURA
+37: PageHeader title="Configurações" description="Preferências deste navegador"
+131: SectionTitle title="Tema" hint="A mudança vale para este navegador, não para os outros usuários."
+139: button onClick={() => aplicarTema(a.id)}
+203: SectionTitle title="Densidade das tabelas" hint="Compacta mostra mais linhas por tela; confortável facilita o toque no celular."
+216: button onClick={() => aplicarDensidade(d.id)}
+
+RÓTULOS
+19: label: "Geral"
+20: label: "Aparência"
+21: label: "Contas e operações"
+22: label: "Notificações"
+23: label: "Dados"
+52: rotulo: "Claro"
+53: descricao: "Padrão. Melhor para tabela densa sob luz forte."
+61: rotulo: "Escuro"
+62: descricao: "Menos brilho em sala fechada e à noite."
+70: rotulo: "Sistema"
+71: descricao: "Acompanha a preferência do aparelho."
+210: rotulo: "Compacta"
+211: rotulo: "Confortável"
+
+TEXTOS
+
+
+CONDIÇÕES
+187: ativo
+239: ativo
+
+# src/app/convite/[token]/aceitar.tsx (80 linhas)
+
+ESTADOS
+29: [erro, setErro] = React.useState<string | null>(null)
+30: [ocupado, setOcupado] = React.useState(false)
+
+ESTRUTURA
+58: h1 
+73: Button variant="primary" onClick={aceitar} disabled={ocupado}
+
+RÓTULOS
+
+
+TEXTOS
+58: Entrar em
+60: Você entra como
+60: .
+66: O convite é para
+66: e você está logado como
+66: . Se o sistema recusar, saia e entre com o e-mail do convite.
+
+CONDIÇÕES
+64: outroEmail
+71: erro
+74: ocupado
+
+# src/app/convite/[token]/page.tsx (155 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+47: h1 
+74: Aviso titulo="Não consegui ler o convite" texto={ error.code === "42883" ? "Falta rodar a migração db/20_cadastro_e_convites.sql no Supabase." : "Tente de novo em instantes." }
+88: Aviso titulo="Convite não encontrado" texto="O link pode ter sido cancelado ou digitado errado. Peça um novo a quem administra a empresa."
+96: Aviso titulo="Este convite já foi usado" texto={`O acesso a ${convite.empresa} já está valendo.`} acoes={[{ href: "/", rotulo: "Ir para o sistema" }]}
+105: Aviso titulo="Convite vencido" texto={`O prazo de sete dias terminou. Peça a quem administra ${convite.empresa} para reconvidar você.`}
+122: Aviso titulo={`Você foi convidado para ${convite.empresa}`} texto={`O convite é para ${convite.email}, como ${ PAPEL[convite.papel] ?? convite.papel }. Entre ou crie sua conta com esse e-mail para aceitar.`} acoes={[ { href: "/cadastro?email=" + encodeURIComponent(convite.email) + "&destino=" + encodeURIComponent(volta), rotulo: "Criar conta", }, // Quem já tem conta não passa pelo cadastro só para achar o link // de entrar — e o destino volta para cá depois do login. { href: "/entrar?destino=" + encodeURIComponent(volta), rotulo: "Já tenho conta" }, ]}
+
+RÓTULOS
+99: rotulo: "Ir para o sistema"
+134: rotulo: "Criar conta"
+138: rotulo: "Já tenho conta"
+
+TEXTOS
+
+
+CONDIÇÕES
+49: acoes.length > 0
+76: error.code === "42883"
+
+# src/app/empresas/empresas-cliente.tsx (432 linhas)
+
+ESTADOS
+35: [nome, setNome] = React.useState("")
+36: [email, setEmail] = React.useState("")
+37: [ocupado, setOcupado] = React.useState(false)
+38: [erro, setErro] = React.useState<string | null>(null)
+39: [criada, setCriada] = React.useState<{ nome: string; token: string } | null>(null)
+40: [copiado, setCopiado] = React.useState(false)
+172: [aberta, setAberta] = React.useState(false)
+173: [operacoes, setOperacoes] = React.useState<Operacao[] | null>(null)
+174: [editando, setEditando] = React.useState(false)
+175: [nome, setNome] = React.useState(empresa.nome)
+176: [novaOp, setNovaOp] = React.useState("")
+177: [confirmar, setConfirmar] = React.useState("")
+178: [ocupado, setOcupado] = React.useState(false)
+179: [erro, setErro] = React.useState<string | null>(null)
+365: [editando, setEditando] = React.useState(false)
+366: [nome, setNome] = React.useState(operacao.nome)
+
+ESTRUTURA
+114: Button variant="ghost" onClick={() => copiar(criada.token)}
+126: form onSubmit={criar}
+129: h2 
+132: input id="empresa-nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome da empresa"
+139: input id="empresa-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail do dono"
+147: Button type="submit" disabled={ocupado || !nome.trim() || !email.trim()}
+221: button type="button" onClick={() => setAberta((v) => !v)} aria-expanded={aberta}
+232: form onSubmit={async (ev) => { ev.preventDefault(); if (await acao({ acao: "renomear", nome })) setEditando(false); }}
+239: input value={nome} onChange={(ev) => setNome(ev.target.value)} autoFocus=true
+245: Button type="submit" size="sm" disabled={ocupado || !nome.trim()}
+246: Button type="button" size="sm" variant="ghost" onClick={() => { setNome(empresa.nome); setEditando(false); setErro(null); }}
+279: Button size="sm" variant="ghost" onClick={() => setEditando(true)} title="Renomear"
+307: form onSubmit={async (ev) => { ev.preventDefault(); if (await acao({ acao: "criar-operacao", nome: novaOp })) setNovaOp(""); }}
+314: input value={novaOp} onChange={(ev) => setNovaOp(ev.target.value)} placeholder="Nome da nova operação"
+320: Button type="submit" size="sm" variant="ghost" disabled={ocupado || !novaOp.trim()}
+333: input value={confirmar} onChange={(ev) => setConfirmar(ev.target.value)} placeholder="Nome da empresa"
+339: Button size="sm" variant="danger" disabled={ocupado || confirmar.trim() !== empresa.nome} onClick={() => acao({ acao: "excluir" })}
+382: form onSubmit={async (ev) => { ev.preventDefault(); if (await onRenomear(nome)) setEditando(false); }}
+389: input value={nome} onChange={(ev) => setNome(ev.target.value)} autoFocus=true
+395: Button type="submit" size="sm" disabled={ocupado || !nome.trim()}
+396: Button type="button" size="sm" variant="ghost" onClick={() => { setNome(operacao.nome); setEditando(false); }}
+412: Button size="sm" variant="ghost" onClick={() => setEditando(true)} title="Renomear"
+416: span title={`Não pode apagar: ${bloqueio}`}
+420: Button size="sm" variant="danger" disabled={ocupado} onClick={onExcluir} title="Apagar operação"
+
+RÓTULOS
+60: nome: nome.trim()
+301: nome: n
+311: nome: novaOp
+
+TEXTOS
+88: Rode
+88: no Supabase para esta tela funcionar.
+104: criada, com canais e categorias de partida.
+107: Mande este link para o dono. Ele define a senha e entra como proprietário. O link vale 7 dias e só funciona para o e-mail convidado.
+129: Nova empresa
+162: Nenhuma empresa ainda.
+245: Salvar
+263: op ·
+263: pessoas ·
+263: contas
+277: não conectada
+290: Operações
+293: carregando…
+321: Adicionar
+328: Apagar leva junto operações, canais, anúncios e financeiro.
+329: Empresa com pedido não é apagada.
+329: Para confirmar, digite
+330: .
+345: Apagar empresa
+395: Salvar
+407: contas
+
+CONDIÇÕES
+98: criada
+115: copiado
+116: copiado
+124: dados.souAdmin
+148: ocupado
+151: erro
+161: dados.empresas.length === 0
+227: aberta
+231: editando
+256: empresa.convites > 0
+258: empresa.convites === 1
+265: empresa.conectadas > 0
+286: erro
+288: aberta
+292: operacoes === null
+325: podeApagar
+381: editando
+408: operacao.pedidos > 0
+409: operacao.conectadas > 0
+415: bloqueio
+
+# src/app/empresas/page.tsx (37 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+23: PageHeader title="Empresas" description={ dados.souAdmin ? "Crie a empresa do cliente e mande o link de acesso" : "As empresas a que você tem acesso" }
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+25: dados.souAdmin
+
+# src/app/entrar/page.tsx (134 linhas)
+
+ESTADOS
+19: [email, setEmail] = React.useState("")
+20: [senha, setSenha] = React.useState("")
+21: [erro, setErro] = React.useState<string | null>(null)
+22: [enviando, setEnviando] = React.useState(false)
+
+ESTRUTURA
+65: h1 
+72: form onSubmit={entrar}
+75: input type="email" required=true autoComplete="email" autoFocus=true value={email} onChange={(e) => setEmail(e.target.value)}
+89: input type="password" required=true autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)}
+109: Button type="submit" variant="primary" disabled={enviando}
+
+RÓTULOS
+
+
+TEXTOS
+60: ▟
+62: Plataforma
+66: Entrar
+69: Acesso à operação de e-commerce.
+74: E-mail
+88: Senha
+118: Entrando
+127: Sem acesso? Peça a quem administra a operação — contas são criadas por dentro do sistema.
+
+CONDIÇÕES
+100: erro
+115: enviando
+
+# src/app/equipe/equipe-cliente.tsx (303 linhas)
+
+ESTADOS
+23: [email, setEmail] = React.useState("")
+24: [papel, setPapel] = React.useState<Papel>("leitor")
+25: [erro, setErro] = React.useState<string | null>(null)
+26: [ocupado, setOcupado] = React.useState(false)
+27: [copiado, setCopiado] = React.useState<string | null>(null)
+
+ESTRUTURA
+84: EmptyState icon={Users} title="Você ainda não está em uma empresa" description="Crie a sua em “Começar”, ou peça a quem administra que lhe mande um convite."
+103: SectionTitle title="Convidar alguém" hint="O convite vale 7 dias e vira um link para você mandar"
+108: form onSubmit={async (e) => { e.preventDefault(); const r = await chamar({ acao: "convidar", organizacaoId: equipe.organizacaoId, email, papel, }); if (r?.token) { setEmail(""); await copiar(r.token); } }}
+124: Field label="E-mail"
+125: Input type="email" required=true value={email} placeholder="pessoa@empresa.com.br" onChange={(e) => setEmail(e.target.value)}
+133: Field label="Permissão"
+134: Select value={papel} onChange={(e) => setPapel(e.target.value as Papel)}
+146: Button type="submit" variant="primary" disabled={ocupado}
+161: SectionTitle title={`Convites em aberto (${equipe.convites.length})`} hint="Ainda não aceitos"
+182: Button size="sm" disabled={ocupado} onClick={async () => { const r = await chamar({ acao: "convidar", organizacaoId: equipe.organizacaoId, email: c.email, papel: c.papel, }); if (r?.token) await copiar(r.token); }}
+198: Button size="sm" onClick={() => copiar(c.token)}
+213: Button size="sm" variant="danger" disabled={ocupado} title="Cancelar convite" onClick={() => chamar({ acao: "cancelar", conviteId: c.id })}
+233: SectionTitle title={`Com acesso (${equipe.membros.length})`}
+249: Select value={m.papel} disabled={ocupado} onChange={(e) => chamar({ acao: "papel", membroId: m.id, papel: e.target.value }) }
+269: Button size="sm" variant="danger" disabled={ocupado} title="Remover da empresa" onClick={() => { if ( confirm( `Remover ${m.nome ?? m.email}? ` + "Ela perde o acesso agora. O que já lançou fica." ) ) { chamar({ acao: "remover", membroId: m.id }); } }}
+
+RÓTULOS
+
+
+TEXTOS
+74: Rode
+74: no Supabase para esta tela funcionar.
+148: Convidar
+172: ·
+174: venceu em
+176: vale até
+195: Reconvidar
+202: Copiado
+207: Copiar link
+241: · você
+244: desde
+295: Seu papel é
+295: — convidar e remover é de proprietário ou administrador.
+
+CONDIÇÕES
+94: erro
+101: administra
+159: equipe.convites.length > 0
+173: c.vencido
+181: c.vencido
+199: copiado === c.token
+212: administra
+241: m.euMesmo
+244: m.nome
+248: administra && !m.euMesmo
+268: administra && !m.euMesmo
+293: !administra
+
+# src/app/equipe/page.tsx (37 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+23: PageHeader title="Equipe" description={ equipe.organizacaoNome ? `Quem entra em ${equipe.organizacaoNome}, e com qual permissão` : "Quem entra, e com qual permissão" }
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+25: equipe.organizacaoNome
+
+# src/app/glossario/glossario-cliente.tsx (157 linhas)
+
+ESTADOS
+14: [busca, setBusca] = React.useState("")
+15: [secao, setSecao] = React.useState("Todas")
+
+ESTRUTURA
+43: PageHeader title="Glossário" description="O que cada indicador significa, como é calculado e onde encontrar" filters={ <> <div className="relative shrink-0 w-full sm:w-80"> <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" /> <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar métrica, sigla ou fórmula" className="w-full h-7 pl-8 pr-7 rounded-r1 border border-line bg-panel text-[12px] text-ink placeholder:text-ink-3 focus:border-brand transition-colors" /> {busca && ( <button onClick={() => setBusca("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-ink-3 hover:text-ink" > <X className="w-3.5 h-3.5" /> </button> )} </div> <Segmented options={["Todas", ...SECOES_GLOS
+50: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar métrica, sigla ou fórmula"
+57: button onClick={() => setBusca("")}
+66: Segmented options={["Todas", ...SECOES_GLOSSARIO]} value={secao} onChange={setSecao}
+82: EmptyState icon={SearchX} title="Nenhum termo encontrado" description={`Nada corresponde a "${busca}". Tente a sigla ou parte da definição.`} action={ <Button size="sm" onClick={() => { setBusca(""); setSecao("Todas"); }} > Limpar busca </Button> }
+87: Button size="sm" onClick={() => { setBusca(""); setSecao("Todas"); }}
+103: h2 
+128: h3 
+
+RÓTULOS
+
+
+TEXTOS
+73: de
+94: Limpar busca
+144: Como ler:
+
+CONDIÇÕES
+56: busca
+80: porSecao.length === 0
+129: t.sigla
+136: t.calculo
+142: t.leitura
+
+# src/app/glossario/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/glossario/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/integracoes/canais/canais-cliente.tsx (346 linhas)
+
+ESTADOS
+28: [aba, setAba] = React.useState<"contas" | "canais">("contas")
+
+ESTRUTURA
+269: button type="button" onClick={() => setAba(chave)}
+288: Cadastro recurso="canais" titulo="Canais" singular="Canal" linhas={canais} colunas={colunasCanal} campos={camposCanal} faltaMigracao={faltaMigracao} busca={(c) => `${c.nome} ${c.codigo} ${c.apelidos.join(" ")}`} paraForm={(c) => ({ nome: c.nome, codigo: c.codigo, tipo: c.tipo, apelidos: c.apelidos.join(", "), ordem: c.ordem, corSerie: c.corSerie, ativo: c.ativo, })} vazio={{ titulo: "Nenhum canal", descricao: "Cadastre onde a empresa vende; depois as contas de cada canal.", }} resumo={abas}
+316: Cadastro recurso="contas-canal" titulo="Contas de venda" singular="Conta" linhas={contas} colunas={colunasConta} campos={camposConta} faltaMigracao={faltaMigracao} busca={(c) => `${c.nome} ${c.canalNome} ${c.identificador ?? ""} ${c.apelidos.join(" ")}` } paraForm={(c) => ({ canalId: c.canalId, nome: c.nome, identificador: c.identificador, apelidos: c.apelidos.join(", "), reputacao: c.reputacao, fulfillment: c.fulfillment, padrao: c.padrao, ativa: c.ativa, })} vazio={{ titulo: "Nenhuma conta de venda", descricao: "Um canal pode ter mais de uma conta. Separá-las é o que permite ver margem por conta.", }} resumo={abas}
+
+RÓTULOS
+13: rotulo: "Marketplace"
+14: rotulo: "Loja própria"
+15: rotulo: "Atacado"
+16: rotulo: "Outro"
+46: rotulo: "Canal"
+52: rotulo: c.nome
+57: rotulo: "Nome da conta"
+65: rotulo: "Id do vendedor no canal"
+73: rotulo: "Apelidos nas planilhas"
+78: rotulo: "Reputação"
+79: rotulo: "Opera no Full"
+82: rotulo: "Conta padrão do canal"
+86: rotulo: "Ativa"
+92: titulo: "Conta"
+102: titulo: "Id no canal"
+112: titulo: "Apelidos"
+122: titulo: "API"
+151: titulo: "Situação"
+167: rotulo: "Nome"
+175: rotulo: "Código"
+182: rotulo: "Tipo"
+185: rotulo: "Apelidos nas planilhas"
+190: rotulo: "Ordem"
+193: rotulo: "Cor"
+197: rotulo: "Ativo"
+209: titulo: "Canal"
+219: titulo: "Tipo"
+228: titulo: "API"
+238: titulo: "Contas"
+251: titulo: "Situação"
+298: nome: c.nome
+307: titulo: "Nenhum canal"
+308: descricao: "Cadastre onde a empresa vende; depois as contas de cada canal."
+329: nome: c.nome
+338: titulo: "Nenhuma conta de venda"
+339: descricao: "Um canal pode ter mais de uma conta. Separá-las é o que permite ver margem por conta."
+
+TEXTOS
+107: —
+117: —
+125: por planilha
+142: sync
+154: Padrão
+155: Full
+156: Inativa
+231: Lê por API
+233: por planilha
+245: —
+254: Ativo
+256: Inativo
+
+CONDIÇÕES
+129: c.ultimoErro
+130: c.ultimoErro
+132: c.canalCodigo === "mercado_livre"
+137: c.conectada
+140: quando(c.sincronizadaEm)
+154: c.padrao
+155: c.fulfillment
+156: !c.ativa
+
+# src/app/integracoes/canais/page.tsx (35 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+24: PageHeader title="Canais e contas" breadcrumb="Integrações" description="Onde a empresa vende, e com quais contas"
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/integracoes/page.tsx (179 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+66: PageHeader title="Integrações" description="De onde vem cada número do sistema"
+74: SectionTitle title="Mercado Livre · API" hint="Sincroniza sozinho às 13h e à 01h (horário de Brasília)"
+130: SectionTitle title="Loja própria · VTEX" hint="Sincroniza sozinha à 01h30 (horário de Brasília)"
+161: SectionTitle title="Planilhas" hint="Fontes que entram pela tela de Importar"
+
+RÓTULOS
+
+
+TEXTOS
+82: Cadastrar canais e contas
+98: Pedidos, visitas, catálogo, estoque, comissão e frete
+136: Nenhuma loja VTEX cadastrada.
+144: Pedidos, itens e frete
+151: Pedido criado e nunca pago não entra: a VTEX abre o pedido antes de o cartão responder, e contá-lo punha a loja com quase metade de cancelamento que nunca foi venda.
+166: Canais sem API entram por arquivo na tela
+168: Importar
+170: . A sincronização da API não apaga o que já foi importado: ela preenche os dias seguintes da conta conectada.
+
+CONDIÇÕES
+101: !conectada
+102: !conectada
+107: reg?.ultima_sincronizacao
+117: conectada
+120: comErro && reg?.ultimo_erro
+134: lojas.length === 0
+146: l.conectada
+147: l.conectada
+
+# src/app/layout.tsx (59 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+19: title: "Plataforma"
+20: description: "Operação de e-commerce unificada"
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/relatorio/[chave]/page.tsx (81 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+13: title: "Raio-X da operação"
+46: nome: linha.nome as string
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/relatorio/[chave]/relatorio-cliente.tsx (1594 linhas)
+
+ESTADOS
+48: [aberto, setAberto] = React.useState(false)
+88: [texto, setTexto] = React.useState(salvo ?? "")
+89: [editando, setEditando] = React.useState(false)
+90: [rascunho, setRascunho] = React.useState(salvo ?? padrao)
+91: [salvando, setSalvando] = React.useState(false)
+265: [aberto, setAberto] = React.useState(false)
+358: [tema, setTema] = React.useState<"claro" | "escuro">("claro")
+369: [abaPrioridade, setAbaPrioridade] = React.useState<"semana" | "longo">("semana")
+370: [filtro, setFiltro] = React.useState<string>("ab")
+371: [busca, setBusca] = React.useState("")
+372: [ordem, setOrdem] = React.useState<"receita90" | "janela" | "cobertura" | "distancia">("receita90")
+375: [quantos, setQuantos] = React.useState(40)
+376: [abertoProduto, setAbertoProduto] = React.useState<string | null>(null)
+377: [canalAberto, setCanalAberto] = React.useState<string | null>(null)
+378: [verPendencias, setVerPendencias] = React.useState(false)
+1497: [aberto, setAberto] = React.useState(false)
+
+ESTRUTURA
+52: button type="button" onClick={() => setAberto((v) => !v)} onMouseEnter={() => setAberto(true)} onMouseLeave={() => setAberto(false)} aria-label="O que é isto"
+112: textarea autoFocus=true value={rascunho} onChange={(e) => setRascunho(e.target.value)} rows={grande ? 10 : 4}
+120: button onClick={() => salvar(rascunho)} disabled={salvando}
+127: button onClick={() => { setRascunho(texto || padrao); setEditando(false); }}
+131: button onClick={() => { setRascunho(padrao); salvar(""); }}
+145: button onClick={() => { setRascunho(texto || padrao); setEditando(true); }} aria-label="Editar este texto"
+154: span title="texto editado por você"
+176: h2 
+199: span title={i.rotulo}
+226: span style={{ height: `${Math.max(2, (s.receita / max) * 100)}%` }} title={`${dm(s.dia)}: ${reais(s.receita)} · ${s.pedidos} pedidos${parcial ? " (dia em andamento)" : ""}`}
+281: button onClick={() => setAberto((x) => !x)} aria-expanded={aberto}
+418: h1 
+449: button onClick={() => setTema(tema === "claro" ? "escuro" : "claro")}
+455: button onClick={() => window.print()}
+525: span title={f.detalhe}
+537: Secao id="prioridades" titulo="O que atacar" chamada="Cada item traz o número que o justifica. Nada aqui é sugestão de causa — é o que os dados mostram." acao={ <div className="flex gap-1 p-0.5 rounded-r1 bg-ground border border-line"> {([["semana", "Resolve nesta semana"], ["longo", "Prioridade que leva tempo"]] as const).map(([v, r]) => ( <button key={v} onClick={() => setAbaPrioridade(v)} className={`px-2.5 h-7 rounded-[5px] text-[12px] font-medium whitespace-nowrap ${abaPrioridade === v ? "bg-panel text-ink shadow-sm" : "text-ink-3 hover:text-ink"}`} > {r} <span className="ml-1.5 text-ink-3">{dados.prioridades.filter((x) => x.prazo === v).length}</span> </button> ))} </div> }
+544: button onClick={() => setAbaPrioridade(v)}
+586: Secao id="operacao" titulo="A operação toda" chamada={`Todos os canais somados. Comparações: janela anterior, média das 4 anteriores e ${dados.janelas.melhor}.`}
+623: Secao id="lojas" titulo="Loja por loja" chamada="Clique na linha para abrir a série do canal."
+625: table 
+641: tr onClick={() => setCanalAberto(canalAberto === c.id ? null : c.id)}
+683: Secao id="produtos" titulo="Produtos" chamada={`${dados.produtos.length} anúncios com venda no ano. Curva por receita de 90 dias: A até 80% do faturamento, B até 95%.`}
+690: button onClick={() => { setFiltro(v); setQuantos(40); }}
+698: select value={ordem} onChange={(e) => setOrdem(e.target.value as typeof ordem)}
+708: input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar SKU, MLB ou nome"
+717: table 
+740: tr onClick={() => setAbertoProduto(abertoProduto === l.mlb ? null : l.mlb)}
+748: td title={l.titulo}
+777: button onClick={() => setQuantos((q) => q + 60)}
+797: Secao id="catalogo" titulo="Catálogo do Mercado Livre" chamada="Quem ganha a página de produto recebe quase toda a visita. Consultado anúncio por anúncio na API."
+830: table 
+865: Secao id="estoque" titulo="Estoque" chamada="Cobertura é estoque dividido pela venda por dia da janela. Abaixo de 14 dias, é reposição urgente."
+867: ListaProdutos titulo="Ruptura na curva A" nota="sem estoque ou pausado" linhas={dados.estoque.rupturaCurvaA} destaque="down" extra={(l) => `${reais(l.receita90)} em 90 dias`}
+874: ListaProdutos titulo="Encerrados que faturavam" nota="curva A, anúncio não existe mais no canal" linhas={dados.estoque.encerradosCurvaA} destaque="warn" extra={(l) => `${reais(l.receita90)} em 90 dias`}
+881: ListaProdutos titulo="Cobertura crítica" nota="14 dias ou menos" linhas={dados.estoque.criticos} destaque="warn" extra={(l) => `${l.coberturaDias} dias · ${numero(l.estoque)} em estoque`}
+888: ListaProdutos titulo="Parados com estoque" nota="curva A e B, 14 dias sem vender" linhas={dados.estoque.parados} destaque="info" extra={(l) => `${l.diasSemVenda} dias sem venda · ${numero(l.estoque)} peças`}
+913: Secao id="multicanal" titulo="Multicanal — o mesmo produto, loja a loja" chamada="A única seção que ignora o filtro de canal: comparar as lojas entre si é o assunto dela. Clique no SKU para abrir os canais."
+951: Secao id="trafego" titulo="Tráfego pago" chamada={ dados.trafegoPago.mesmaJanela ? "Product Ads do Mercado Livre, na mesma janela do relatório. Vem por API, anúncio por anúncio." : "Product Ads do Mercado Livre. O dado disponível é de outro período — a janela aparece no último cartão." }
+989: table 
+1022: Secao id="financeiro" titulo="Financeiro" chamada="Margem só entra onde existe custo cadastrado. O que não tem custo fica fora, e a cobertura diz o tamanho do que ficou fora."
+1053: Secao id="promocoes" titulo="Promoções — o que já foi decidido" chamada="Registro do que a tela de Processar enviou ao canal. Não é proposta: é a decisão que está valendo."
+1153: table 
+1217: Secao id="estrategia" titulo="Planejamento estratégico" chamada="Onde está a receita que falta, e de que alavanca ela pode vir. Esta seção é proposta, não medição."
+1279: Secao id="dados" titulo="Estado dos dados e pendências" chamada="O que sustenta cada número, e o que falta para a leitura ficar completa."
+1281: table 
+1299: button onClick={() => setVerPendencias((v) => !v)}
+1402: p title={l.titulo}
+1501: button onClick={() => setAberto((v) => !v)}
+1534: table 
+
+RÓTULOS
+100: texto: valor
+335: nome: "Prioridades"
+336: nome: "Operação"
+337: nome: "Por loja"
+338: nome: "Produtos"
+339: nome: "Catálogo"
+340: nome: "Estoque"
+341: nome: "Multicanal"
+342: nome: "Tráfego pago"
+343: nome: "Financeiro"
+344: nome: "Promoções"
+345: nome: "Estratégia"
+346: nome: "Dados e pendências"
+606: rotulo: c.nome
+824: rotulo: a.rotulo
+
+TEXTOS
+35: sem base
+60: ?
+128: Cancelar
+132: Voltar ao texto original
+270: sem medição
+271: Este canal não informa
+271: .
+292: contra as
+292: –
+292: /
+296: Janela anterior
+300: Média das 4 anteriores
+306: ·
+417: Probel · e-commerce
+422: a
+422: de
+422: ·
+422: dias completos
+425: Hoje,
+425: , até agora:
+425: em
+426: pedidos — fora das comparações, porque o dia não acabou.
+430: Gerado em
+431: Estoque e catálogo de
+445: d
+459: Imprimir
+470: Canal
+480: Operação inteira
+567: ver em
+575: Nenhum item nesta aba na janela atual.
+594: Receita por dia
+603: Participação na receita
+628: Canal
+629: Receita
+630: vs anterior
+631: Pedidos
+632: Ticket
+633: Cancel.
+634: Conversão
+635: Parte
+652: sem medição
+661: Receita por dia ·
+703: Ordenar: receita de 90 dias
+704: Ordenar: receita da janela
+705: Ordenar: cobertura de estoque
+706: Ordenar: distância do preço mínimo
+720: Curva
+721: SKU
+722: Produto
+723: Estoque
+724: Cobertura
+725: Cliente vê
+726: Melhor preço
+727: Mínimo
+728: Un. janela
+729: Conversão
+730: 90 dias
+753: d
+781: Mostrar mais 60
+784: mostrando
+784: de
+821: Alavancas em aberto, sem mexer em preço
+833: SKU
+834: Conta
+835: Preço atual
+836: Preço para ganhar
+837: Diferença
+897: Anúncios pausados:
+900: :
+939: Nenhum SKU aparece em mais de um canal com venda na janela.
+964: Investimento
+968: Receita atribuída
+972: ACOS
+976: Cliques
+980: Período do dado
+982: a
+988: Anúncios em que a mídia pesa mais que o retorno
+994: de mídia
+995: atribuídos
+1004: Sem dado de mídia importado. O bloco aparece quando o relatório de Product Ads for importado.
+1007: O Google Ads do site não entra no sistema: não existe tabela nem tela para ele. Enquanto isso, o tráfego pago aqui é só do Mercado Livre.
+1025: Cobertura de custo
+1027: de
+1030: Margem apurada
+1034: só da parte com custo, sem despesa fixa
+1037: Produtos com custo
+1039: de
+1041: embalagem ainda não cadastrada
+1059: Nenhum processamento de promoção registrado.
+1064: Última rodada
+1067: anúncios
+1074: Taxa de aceite
+1081: aceitos ·
+1082: recusados
+1088: Receita alcançada
+1101: Desconto extra usado
+1107: aplicado sobre o piso da tabela
+1113: Por tipo de campanha
+1122: ·
+1122: de
+1133: Por que o restante foi recusado
+1149: Onde a proposta não cabe na margem
+1156: Anúncio
+1157: Campanha
+1158: Tabela
+1159: Proposta
+1160: Falta
+1168: ·
+1184: Taxa de aceite nas últimas rodadas
+1190: ·
+1221: Meta de
+1223: Meta
+1225: Realizado
+1227: Falta
+1229: Ritmo de hoje
+1230: /dia
+1231: Ritmo necessário
+1232: /dia
+1233: Dias restantes no mês
+1238: De onde a receita pode vir
+1245: /mês
+1251: Cada linha é uma conta aritmética sobre o que já aconteceu, não previsão.
+1255: Sem alavanca calculável nesta janela.
+1260: Não há meta cadastrada para o mês corrente.
+1265: Bloco de notas · seu espaço
+1266: fica salvo e aparece na próxima leitura
+1304: O que falta para a análise ficar 100%
+1305: itens
+1322: Reputação das contas
+1328: ·
+1328: · reclamação
+1328: · cancelamento
+1338: Relatório gerado pela plataforma em
+1338: . Método em docs/agents/inteligencia-de-mercado.md. Onde falta dado, o campo diz que falta — nenhum número aqui é estimado sem aviso.
+1408: Nenhum item.
+1410: e outros
+1432: ·
+1432: ·
+1432: · curva
+1433: ·
+1439: em campanha
+1444: pausado
+1460: O melhor preço vigorou de
+1460: , com
+1460: peças por dia.
+1467: Catálogo
+1469: Situação:
+1476: · preço para ganhar
+1477: · fatia de visita
+1481: Alavancas em aberto:
+1488: Este anúncio é elegível ao catálogo e não está inscrito.
+1511: canais · vende mais em
+1512: a
+1514: ·
+1514: de diferença entre o menor e o maior preço
+1527: pç na janela ·
+1527: antes
+1537: Canal
+1538: Situação
+1539: Preço
+1540: Mínimo
+1541: Estoque
+1542: Campanha
+1543: Peças
+1544: Antes
+1545: Visitas
+1546: Conversão
+1547: O que está diferente
+1558: vende mais
+1572: sem controle
+1578: sem medição
+
+CONDIÇÕES
+41: neutro
+62: aberto
+116: grande
+125: salvando
+130: texto
+154: texto
+177: chamada
+208: i.nota
+286: aberto
+294: aberto
+305: invertido
+306: v.melhorQuando
+419: dados.canalAtivo
+453: tema === "claro"
+529: f.ate
+556: prioridades.length
+652: c.temVisita
+656: canalAberto === c.id
+750: l.situacao === "paused"
+753: l.coberturaDias == null
+759: l.conversao == null
+762: abertoProduto === l.mlb
+775: produtosFiltrados.length > quantos
+817: dados.catalogo.alavancas.length > 0
+828: dados.catalogo.perdendoLista.length > 0
+848: x.precoAtual != null && x.precoParaGanhar != null
+932: dados.multicanal.skus.length
+954: dados.trafegoPago.mesmaJanela
+960: dados.trafegoPago.temDado
+982: dados.trafegoPago.de
+982: dados.trafegoPago.ate
+986: dados.trafegoPago.anunciosNoVermelho.length > 0
+1013: dados.trafegoPago.temDado
+1032: dados.financeiro.margemApurada == null
+1058: dados.promocoes.ultimo == null
+1092: dados.promocoes.cobertura == null
+1095: dados.promocoes.cobertura == null
+1103: dados.promocoes.ultimo.descontoExtra
+1111: dados.promocoes.porTipo.length > 0
+1131: dados.promocoes.motivos.length > 0
+1145: dados.promocoes.semEspaco.length > 0
+1168: x.sku
+1182: dados.promocoes.historico.length > 1
+1218: dados.metas
+1239: dados.metas.decomposicao.length
+1286: f.ate
+1290: f.situacao === "ok"
+1307: verPendencias
+1309: verPendencias
+1329: r.perguntas != null
+1394: linhas.length
+1410: linhas.length > 20
+1433: l.situacao && l.situacao !== "active"
+1439: l.emCampanha
+1439: l.emCampanha
+1441: distanciaMinimo < 0
+1443: distanciaMelhor > 0.1
+1454: l.margemUnitaria > 0
+1458: l.melhorPeriodo
+1461: l.melhorAmostraFraca
+1465: l.catalogo
+1469: l.catalogo.situacao === "winning"
+1469: l.catalogo.situacao === "winning"
+1476: l.catalogo.precoParaGanhar != null
+1477: l.catalogo.fatiaVisita
+1479: l.catalogo.alavancasAbertas.length > 0
+1486: l.elegivelForaCatalogo
+1512: x.precoLider != null
+1513: x.dispersao != null && x.dispersao > 0.05
+1517: comProblema.length > 0
+1524: x.receitaEmRisco > 0
+1528: aberto
+1532: aberto
+1558: lider
+1561: c.situacao === "vendendo"
+1572: c.semControleEstoque
+1574: c.emCampanha
+1578: c.temVisita
+1581: c.conversao == null
+
+# src/app/relatorios/apresentacao/apresentacao-cliente.tsx (406 linhas)
+
+ESTADOS
+49: [formato, setFormato] = React.useState<FormatoDeck>("semanal")
+50: [canal, setCanal] = React.useState("")
+51: [emTelaCheia, setEmTelaCheia] = React.useState(false)
+57: [de, setDe] = React.useState(() => dados.ultimaData ? recuar(dados.ultimaData, 6) : "" )
+60: [ate, setAte] = React.useState(dados.ultimaData)
+85: [selecionados, setSelecionados] = React.useState<string[]>([])
+247: [i, setI] = React.useState(0)
+
+ESTRUTURA
+116: PageHeader title="Apresentação" breadcrumb="Relatórios" description="Roteiro de reunião em tela cheia, recalculado a cada abertura" actions={ <Button size="sm" variant="primary" disabled={roteiro.length === 0} onClick={() => setEmTelaCheia(true)} > <Play className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Iniciar apresentação</span> <span className="sm:hidden">Iniciar</span> </Button> } filters={ <Segmented<FormatoDeck> options={FORMATOS.map((f) => ({ value: f.value, label: f.label }))} value={formato} onChange={trocarFormato} /> }
+121: Button size="sm" variant="primary" disabled={roteiro.length === 0} onClick={() => setEmTelaCheia(true)}
+133: Segmented options={FORMATOS.map((f) => ({ value: f.value, label: f.label }))} value={formato} onChange={trocarFormato}
+151: PanelHeader title="Indicadores" hint="marque o que entra" action={ <span className="num text-[12px] text-ink-2"> {roteiro.length}/{SLIDES.length} </span> }
+163: Checkbox checked={selecionados.includes(s.id)} onChange={() => alternar(s.id)} label={s.titulo}
+172: Button size="sm" onClick={() => setSelecionados(SLIDES.map((s) => s.id))}
+178: Button size="sm" variant="ghost" onClick={() => setSelecionados([])}
+185: SectionTitle title="Prévia do roteiro" hint={ roteiro.length === 0 ? "Marque ao menos um indicador para montar a apresentação." : `${roteiro.length} slides, na ordem em que vão aparecer.` }
+279: button onClick={onSair} aria-label="Sair da apresentação"
+308: LineChart data={s.serie} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+325: BarChart data={s.serie} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+369: Button size="sm" onClick={voltar} disabled={i === 0}
+378: Button size="sm" variant="primary" onClick={avancar} disabled={i === slides.length - 1}
+393: button onClick={voltar} aria-label="Slide anterior"
+398: button onClick={avancar} aria-label="Próximo slide"
+
+RÓTULOS
+29: label: "Diária"
+29: descricao: "O último dia com movimento, contra o dia anterior."
+30: label: "Semanal"
+30: descricao: "Os últimos 7 dias, contra os 7 anteriores."
+31: label: "Personalizada"
+31: descricao: "Escolha o intervalo — a comparação é com o período de mesmo tamanho logo antes."
+134: label: f.label
+
+TEXTOS
+128: Iniciar apresentação
+129: Iniciar
+144: Formato:
+156: /
+176: Todos
+179: Nenhum
+276: Reunião · 25 de agosto de 2026
+301: vs. período anterior
+366: /
+376: Anterior
+385: Próximo
+
+CONDIÇÕES
+187: roteiro.length === 0
+194: roteiro.length > 0
+229: emTelaCheia && roteiro.length > 0
+307: s.tipo === "linha"
+
+# src/app/relatorios/apresentacao/loading.tsx (6 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/relatorios/apresentacao/page.tsx (10 linhas)
+
+ESTADOS
+
+
+ESTRUTURA
+
+
+RÓTULOS
+
+
+TEXTOS
+
+
+CONDIÇÕES
+
+
+# src/app/relatorios/exportacoes/page.tsx (275 linhas)
+
+ESTADOS
+61: [baixando, setBaixando] = React.useState<string | null>(null)
+62: [erro, setErro] = React.useState<string | null>(null)
+
+ESTRUTURA
+110: PageHeader title="Exportações" breadcrumb="Relatórios" description="Gere um arquivo com o que está no banco"
+147: Button variant="primary" disabled={baixando !== null} onClick={() => baixarDe("/api/exportar/pacote", "pacote", "operacao.zip")}
+191: Button variant="default" disabled={baixando !== null} onClick={() => baixarDe("/api/exportar/evolucao", "evolucao", "evolucao-anuncios.xlsx") }
+222: PanelHeader title="Formatos disponíveis" hint="o arquivo é montado na hora, com tudo que existe no banco"
+240: Button variant="primary" onClick={() => exportar(f)} disabled={baixando !== null}
+
+RÓTULOS
+32: titulo: "Lançamentos diários"
+33: descricao: "Uma linha por canal por dia, com visitas, receita, pedidos, mídia, cancelamentos, ticket, ACOS e ROAS."
+39: titulo: "Consolidado mensal"
+40: descricao: "Uma linha por canal por mês, com ticket, conversão e TACOS já calculados."
+46: titulo: "Desempenho de anúncios"
+47: descricao: "Histórico semanal por anúncio: visitas, unidades, receita, preço pago, comissão real e conversão."
+53: titulo: "Histórico de promoções"
+54: descricao: "Cada decisão com os quatro preços — ofertado pelo canal, tabela, piso e com desconto extra."
+
+TEXTOS
+125: Pacote completo da operação
+129: para IA
+133: Um zip com seis CSVs — pedidos, itens, anúncios, desempenho semanal, KPIs diários e o de/para dos canais. Já com as exclusões de análise aplicadas, então bate com o que as telas mostram.
+139: Vem em formato de máquina — vírgula, decimal com ponto, data aaaa-mm-dd. E um
+140: LEIA-ME.md
+140: que diz o que os dados
+141: não
+142: permitem concluir: margem não é calculável sem custo, e visita fora do Mercado Livre é desconhecida, não zero. Sem isso, quem analisar inventa os dois.
+156: Montando
+161: Baixar pacote
+174: Evolução semanal por anúncio
+177: Um anúncio por linha, e as semanas andam para o lado. Cada semana traz visitas, vendas, unidades, conversão, receita, preço praticado e o retido pelo canal — a queda aparece lendo da esquerda para a direita.
+183: A comissão vem em duas colunas —
+184: tarifa de tabela
+185: e
+185: retido
+185: . Elas discordam quando houve redução por campanha, e a diferença entre as duas é o que a campanha economizou. Célula vazia significa sem informação, nunca zero.
+202: Montando
+207: Baixar Excel
+249: Gerando
+254: Exportar
+265: Exportação agendada:
+266: ainda não existe. Precisa de um processo rodando fora da requisição e de envio de e-mail configurado — hoje o SMTP do projeto é o compartilhado do Supabase, que não entrega de forma confiável.
+
+CONDIÇÕES
+153: baixando === "pacote"
+199: baixando === "evolucao"
+214: erro
+246: baixando === f.id
