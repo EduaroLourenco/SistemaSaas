@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { Panel, Button, Badge, EmptyState } from "@/components/ui/primitives";
+import { Panel, PanelHeader, Button, Badge } from "@/components/ui/primitives";
 import { FileDrop } from "@/components/ui/controls";
 import { Leitura, TudoCerto, ErroComSaida } from "@/components/ui/leitura";
 import { Metrica } from "@/components/ui/metrica";
@@ -11,6 +13,11 @@ import { clienteNavegador } from "@/lib/supabase/navegador";
 import {
   FileSpreadsheet,
   Loader2,
+  Plug,
+  Database,
+  PenLine,
+  ArrowRight,
+  BookOpen,
   ShieldAlert,
   CalendarDays,
   Upload,
@@ -132,7 +139,35 @@ function safeJson(t: string): { erro?: string } | null {
   }
 }
 
-export default function ImportarCliente() {
+/** De onde o dado já entra — contado no servidor, sob RLS. */
+export type Origens = { contasApi: number; erpConectado: boolean };
+export type Importacao = {
+  id: string;
+  tipo: string;
+  nome_arquivo: string;
+  linhas_lidas: number;
+  linhas_validas: number;
+  status: "na_fila" | "executando" | "concluida" | "falhou";
+  erro: string | null;
+  criado_em: string;
+};
+
+const TIPO_IMPORTACAO: Record<string, string> = {
+  desempenho_anuncios: "Desempenho",
+  pedidos: "Pedidos",
+  catalogo: "Catálogo",
+  preco_ideal: "Tabela de preços",
+  promocoes: "Promoções",
+  consolidado: "Consolidado",
+};
+const SITUACAO: Record<Importacao["status"], { rotulo: string; tom: "up" | "down" | "info" | "neutral" }> = {
+  concluida: { rotulo: "Concluída", tom: "up" },
+  falhou: { rotulo: "Falhou", tom: "down" },
+  executando: { rotulo: "Processando", tom: "info" },
+  na_fila: { rotulo: "Na fila", tom: "neutral" },
+};
+
+export default function ImportarCliente({ origens, recentes }: { origens: Origens; recentes: Importacao[] }) {
   const [arquivo, setArquivo] = React.useState<File | null>(null);
   const [previa, setPrevia] = React.useState<Previa | null>(null);
   const [carregando, setCarregando] = React.useState(false);
@@ -252,16 +287,102 @@ export default function ImportarCliente() {
       previa.naoReconhecidos.length > 0 ||
       (previa.tipo === "desempenho" && !previa.periodo.inicio));
 
+  /*
+   * Layout da referência aprovada de Importar: as origens do dado em
+   * cartões, o fluxo de planilha com o guia ao lado e o histórico real
+   * embaixo. O fluxo em si (prévia antes de gravar, erro com saída,
+   * resultado) é o mesmo de antes, só mudou de lugar.
+   */
+  const cartoes = [
+    {
+      icone: Plug,
+      titulo: "Conexões por API",
+      texto: "Mercado Livre, loja e Google Analytics, atualizados sozinhos.",
+      estado: origens.contasApi
+        ? `${origens.contasApi} conectada${origens.contasApi > 1 ? "s" : ""}`
+        : "Nenhuma conectada",
+      ok: origens.contasApi > 0,
+      acao: "Gerenciar conexões",
+      href: "/integracoes/canais",
+      tom: "bg-brand-wash text-brand",
+    },
+    {
+      icone: Database,
+      titulo: "ERP",
+      texto: "Pedidos de todos os canais vindos do sistema de gestão.",
+      estado: origens.erpConectado ? "Bling conectado" : "Não conectado",
+      ok: origens.erpConectado,
+      acao: origens.erpConectado ? "Ver lojas" : "Conectar ERP",
+      href: "/integracoes/canais?aba=erp",
+      tom: "bg-info-wash text-info",
+    },
+    {
+      icone: FileSpreadsheet,
+      titulo: "Planilha",
+      texto: "Desempenho, pedidos, catálogo e tabela de preços.",
+      estado: "Pronto para importar",
+      ok: true,
+      acao: "Importar planilha",
+      href: "#importar-planilha",
+      tom: "bg-up-wash text-up",
+    },
+    {
+      icone: PenLine,
+      titulo: "Lançamentos manuais",
+      texto: "Visitas e investimento em ADS que nenhuma planilha traz.",
+      estado: "Disponível",
+      ok: true,
+      acao: "Novo lançamento",
+      href: "/vendas/lancamentos",
+      tom: "bg-warn-wash text-warn",
+    },
+  ];
+
+  const passos: [string, string][] = [
+    ["Use a exportação original", "Sem abas removidas nem linhas apagadas no topo: é pela estrutura que o arquivo é reconhecido."],
+    ["Não precisa dizer qual é", "Desempenho de anúncios, listagem de pedidos, catálogo e tabela de preços: o formato sai do próprio arquivo."],
+    ["Confira a prévia", "Nada é gravado antes de você ver o que entra, o período e o que não foi reconhecido."],
+    ["Arquivo grande também vai", "Acima de 4,5 MB o envio vai direto para o armazenamento, sem passar pelo servidor."],
+  ];
+
   return (
     <>
       <PageHeader
-        title="Importar planilhas"
+        title="Importar dados"
         breadcrumb="Dados"
-        description="Desempenho de anúncios, pedidos e catálogo — numa tela só"
+        description="De onde vem cada número do sistema, e a porta para planilhas"
       />
 
       <PageBody>
-        <div className="flex flex-col gap-3 max-w-[840px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {cartoes.map((c) => (
+            <Panel key={c.titulo} className="flex flex-col gap-3 p-4">
+              <div className="flex items-start gap-3">
+                <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-r2", c.tom)}>
+                  <c.icone className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-semibold text-ink">{c.titulo}</span>
+                  <span className="block text-[12.5px] text-ink-2 leading-snug">{c.texto}</span>
+                </span>
+              </div>
+              <span className="flex items-center gap-2 text-[12.5px] text-ink-2">
+                <span className={cn("h-2 w-2 rounded-full", c.ok ? "bg-up" : "bg-line-2")} />
+                {c.estado}
+              </span>
+              <Link
+                href={c.href}
+                className="mt-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] font-medium text-ink hover:bg-panel-3"
+              >
+                {c.acao}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Panel>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
+          <div id="importar-planilha" className="lg:col-span-2 flex flex-col gap-3 min-w-0 scroll-mt-20">
           <Panel className="p-4">
             <FileDrop
               hint="Arraste a planilha ou clique para escolher"
@@ -322,16 +443,94 @@ export default function ImportarCliente() {
             />
           )}
 
-          {!arquivo && !carregando && (
-            <Panel>
-              <EmptyState
-                icon={FileSpreadsheet}
-                title="Três planilhas, uma porta"
-                description="Desempenho de anúncios do Mercado Livre, listagem de pedidos do hub e catálogo de anúncios. Cada uma alimenta uma parte diferente do sistema."
-              />
-            </Panel>
-          )}
+          </div>
+
+          <Panel className="p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-r2 bg-up-wash text-up">
+                <BookOpen className="h-4 w-4" />
+              </span>
+              <span>
+                <span className="block text-[15px] font-semibold text-ink">Guia rápido</span>
+                <span className="block text-[12px] text-ink-3">Para a importação sair certa na primeira vez</span>
+              </span>
+            </div>
+            <ol className="flex flex-col gap-3">
+              {passos.map(([t, d], i) => (
+                <li key={t} className="flex gap-3">
+                  <span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-up-wash text-[12px] font-semibold text-up">
+                    {i + 1}
+                  </span>
+                  <span>
+                    <span className="block text-[13px] font-semibold text-ink">{t}</span>
+                    <span className="block text-[12.5px] text-ink-2 leading-snug">{d}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </Panel>
         </div>
+
+        <Panel className="overflow-hidden">
+          <PanelHeader title="Últimas importações" hint="as oito mais recentes desta empresa" />
+          {recentes.length === 0 ? (
+            <p className="px-5 py-4 text-[13px] text-ink-3">Nenhuma planilha importada ainda.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="text-left text-[12px] font-semibold text-ink-2">
+                    <th className="px-5 py-2">Arquivo</th>
+                    <th className="px-3 py-2">Tipo</th>
+                    <th className="px-3 py-2 text-right">Linhas</th>
+                    <th className="px-3 py-2">Situação</th>
+                    <th className="px-5 py-2 text-right">Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentes.map((i) => (
+                    <tr key={i.id} className="border-t border-line">
+                      <td className="px-5 py-2.5">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <FileSpreadsheet className="h-4 w-4 shrink-0 text-up" />
+                          <span className="truncate max-w-[340px]" title={i.nome_arquivo}>
+                            {i.nome_arquivo}
+                          </span>
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <Badge tone="neutral">{TIPO_IMPORTACAO[i.tipo] ?? i.tipo}</Badge>
+                      </td>
+                      <td className="num px-3 py-2.5 text-right text-ink-2">
+                        {count(i.linhas_validas)}
+                        {i.linhas_lidas > i.linhas_validas && (
+                          <span className="text-ink-3"> de {count(i.linhas_lidas)}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span title={i.erro ?? undefined}>
+                          <Badge tone={SITUACAO[i.status]?.tom ?? "neutral"}>
+                            {SITUACAO[i.status]?.rotulo ?? i.status}
+                          </Badge>
+                        </span>
+                      </td>
+                      <td className="num px-5 py-2.5 text-right text-ink-3 whitespace-nowrap">
+                        {new Date(i.criado_em).toLocaleString("pt-BR", {
+                          timeZone: "America/Sao_Paulo",
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
       </PageBody>
     </>
   );
