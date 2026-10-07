@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { Brand } from "@/components/ui/brand";
 import { useRouter } from "next/navigation";
 import { clienteNavegador } from "@/lib/supabase/navegador";
 import { Button } from "@/components/ui/primitives";
 import { Loader2 } from "lucide-react";
+import { iniciarCarregando } from "@/components/layout/carregando-gerizo";
 
 /**
  * Entrada do sistema.
@@ -47,6 +49,9 @@ export default function Entrar() {
       return;
     }
 
+    // A Visão geral demora a montar na primeira entrada: a marca segura a
+    // espera e some sozinha quando a tela nova chega.
+    iniciarCarregando("navegacao");
     // refresh() antes de push() para o middleware enxergar o cookie novo.
     router.refresh();
     router.push(destino);
@@ -55,11 +60,9 @@ export default function Entrar() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-10 bg-ground">
       <div className="w-full max-w-[340px]">
-        <div className="flex items-center gap-2 mb-7">
-          <span className="w-7 h-7 rounded-r1 bg-ink text-ground flex items-center justify-center shrink-0">
-            <span className="text-[13px] font-bold leading-none">▟</span>
-          </span>
-          <span className="text-[15px] font-semibold text-ink">Plataforma</span>
+        {/* Marca oficial: estas telas são as primeiras que o cliente vê. */}
+        <div className="mb-7">
+          <Brand descriptor />
         </div>
 
         <h1 className="text-[19px] font-semibold text-ink tracking-tight">

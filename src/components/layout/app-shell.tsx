@@ -15,6 +15,10 @@ import {
   UserRound,
   CircleHelp,
   SlidersHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  LogOut,
+  Settings,
 } from "lucide-react";
 import { Badge, Button } from "@/components/ui/primitives";
 import { BuscaGlobal } from "./busca-global";
@@ -281,9 +285,45 @@ const SEM_MOLDURA = [
   "/manual/",
 ];
 
+/*
+ * Menu lateral recolhível. A preferência fica no navegador; o Planejamento
+ * abre sempre recolhido, porque tem menu próprio e precisa da largura para
+ * as colunas do quadro. Sair do Planejamento devolve a preferência.
+ */
+const CHAVE_MENU = "menu-lateral";
+const RECOLHE_SOZINHO = ["/planejamento"];
+
+function useMenuLateral(pathname: string) {
+  const recolheAqui = RECOLHE_SOZINHO.some((p) => pathname.startsWith(p));
+  const [preferencia, setPreferencia] = React.useState(true);
+  const [aqui, setAqui] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    try {
+      setPreferencia(localStorage.getItem(CHAVE_MENU) !== "fechado");
+    } catch {}
+  }, []);
+  // Mudou de tela: vale de novo o padrão daquela tela.
+  React.useEffect(() => setAqui(null), [pathname]);
+
+  const aberto = aqui ?? (recolheAqui ? false : preferencia);
+  const alternar = () => {
+    const novo = !aberto;
+    setAqui(novo);
+    if (!recolheAqui) {
+      setPreferencia(novo);
+      try {
+        localStorage.setItem(CHAVE_MENU, novo ? "aberto" : "fechado");
+      } catch {}
+    }
+  };
+  return { aberto, alternar };
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = React.useState(false);
+  const menu = useMenuLateral(pathname);
 
   React.useEffect(() => {
     setMoreOpen(false);
@@ -302,7 +342,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           className="flex items-center gap-2 px-3 md:gap-3 md:px-5"
           style={{ height: "var(--topbar)" }}
         >
-          <div className="md:w-[calc(var(--rail)-32px)] shrink-0 flex items-center">
+          <button
+            type="button"
+            onClick={menu.alternar}
+            aria-label={menu.aberto ? "Recolher menu" : "Abrir menu"}
+            title={menu.aberto ? "Recolher menu" : "Abrir menu"}
+            className="hidden md:flex h-9 w-9 -ml-1 shrink-0 items-center justify-center rounded-r1 text-ink-2 hover:bg-panel-3 hover:text-ink"
+          >
+            {menu.aberto ? <PanelLeftClose className="h-[18px] w-[18px]" /> : <PanelLeftOpen className="h-[18px] w-[18px]" />}
+          </button>
+          <div className={cn("shrink-0 flex items-center", menu.aberto && "md:w-[calc(var(--rail)-72px)]")}>
             <Wordmark />
           </div>
 
@@ -326,14 +375,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ThemeToggle />
 
           <Link href="/glossario" aria-label="Ajuda e glossário" title="Ajuda e glossário" className="hidden sm:flex h-9 w-9 items-center justify-center rounded-r1 text-ink-2 hover:bg-panel-3"><CircleHelp size={18} /></Link>
-          <Link href="/configuracoes" aria-label="Configurações da conta" title="Configurações" className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel-3 text-ink-2"><UserRound size={17} /></Link>
+          <MenuConta />
         </div>
       </header>
 
       {/* rail lateral */}
       <aside
-        className="hidden md:flex flex-col fixed left-0 bottom-0 z-30 bg-panel border-r border-line"
+        className={cn(
+          "hidden md:flex flex-col fixed left-0 bottom-0 z-30 bg-panel border-r border-line transition-transform duration-200",
+          !menu.aberto && "-translate-x-full"
+        )}
         style={{ top: "var(--topbar)", width: "var(--rail)" }}
+        aria-hidden={!menu.aberto}
+        inert={!menu.aberto}
       >
         <div className="flex-1 overflow-y-auto">
           <NavTree pathname={pathname} />
@@ -345,7 +399,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         id="conteudo"
         tabIndex={-1}
-        className="min-w-0 md:pl-[var(--rail)] pb-20 md:pb-0"
+        className={cn("min-w-0 pb-20 md:pb-0 transition-[padding] duration-200", menu.aberto && "md:pl-[var(--rail)]")}
         style={{ paddingTop: "var(--topbar)" }}
       >
         {children}
@@ -359,6 +413,80 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 /*
+ * Menu da conta no avatar: Configurações e Sair. Até aqui o avatar só
+ * levava a Configurações, e não existia jeito nenhum de sair da conta.
+ */
+function MenuConta() {
+  const [aberto, setAberto] = React.useState(false);
+  const [saindo, setSaindo] = React.useState(false);
+  const caixa = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!aberto) return;
+    const fora = (e: MouseEvent) => {
+      if (!caixa.current?.contains(e.target as Node)) setAberto(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setAberto(false);
+    document.addEventListener("mousedown", fora);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", fora);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [aberto]);
+
+  async function sair() {
+    setSaindo(true);
+    try {
+      await fetch("/api/sair", { method: "POST" });
+    } finally {
+      // Recarga inteira, não navegação: limpa o cache do navegador junto
+      // com a sessão — nada da conta anterior fica na memória da página.
+      window.location.assign("/entrar");
+    }
+  }
+
+  return (
+    <div ref={caixa} className="relative">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={aberto}
+        aria-label="Conta"
+        title="Conta"
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel-3 text-ink-2 hover:text-ink"
+      >
+        <UserRound size={17} />
+      </button>
+      {aberto && (
+        <div role="menu" className="absolute right-0 top-11 z-50 w-52 rounded-r2 border border-line bg-panel p-1 shadow-[var(--sh-3)]">
+          <Link
+            href="/configuracoes"
+            role="menuitem"
+            onClick={() => setAberto(false)}
+            className="flex h-10 items-center gap-2.5 rounded-r1 px-3 text-[13px] text-ink hover:bg-panel-3"
+          >
+            <Settings className="h-4 w-4 text-ink-3" />
+            Configurações
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={sair}
+            disabled={saindo}
+            className="flex h-10 w-full items-center gap-2.5 rounded-r1 px-3 text-left text-[13px] text-down hover:bg-down-wash disabled:opacity-60"
+          >
+            <LogOut className="h-4 w-4" />
+            {saindo ? "Saindo…" : "Sair da conta"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/*
  * Rodapé do menu: de QUEM é o número na tela. Com várias empresas no
  * sistema, saber em qual se está não pode depender do seletor do topo, que
  * some quando a pessoa só tem uma operação. Lê a mesma rota do seletor.
@@ -367,17 +495,22 @@ function RodapeEmpresa() {
   const [empresa, setEmpresa] = React.useState<{ empresa: string; operacao: string; varias: boolean } | null>(null);
   React.useEffect(() => {
     let vivo = true;
-    fetch("/api/operacao")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!vivo || !d?.id) return;
-        const ops = (d.operacoes ?? []) as { id: string; nome: string; empresa: string }[];
-        const atual = ops.find((o) => o.id === d.id);
-        if (atual) setEmpresa({ empresa: atual.empresa || atual.nome, operacao: atual.nome, varias: ops.length > 1 });
-      })
-      .catch(() => {});
+    const ler = () =>
+      fetch("/api/operacao")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!vivo || !d?.id) return;
+          const ops = (d.operacoes ?? []) as { id: string; nome: string; empresa: string }[];
+          const atual = ops.find((o) => o.id === d.id);
+          if (atual) setEmpresa({ empresa: atual.empresa || atual.nome, operacao: atual.nome, varias: ops.length > 1 });
+        })
+        .catch(() => {});
+    ler();
+    // Trocar de empresa não remonta o menu: relê quando o seletor avisa.
+    window.addEventListener("gerizo:operacao-trocada", ler);
     return () => {
       vivo = false;
+      window.removeEventListener("gerizo:operacao-trocada", ler);
     };
   }, []);
   if (!empresa) return null;

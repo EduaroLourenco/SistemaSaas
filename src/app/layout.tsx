@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
+import { CarregandoGerizo } from "@/components/layout/carregando-gerizo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -53,6 +54,8 @@ export default function RootLayout({
       </head>
       <body>
         <AppShell>{children}</AppShell>
+        {/* Fora da moldura: precisa valer no /entrar, que não tem menu. */}
+        <CarregandoGerizo />
       </body>
     </html>
   );

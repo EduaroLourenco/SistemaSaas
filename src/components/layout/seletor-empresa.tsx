@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Check, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { iniciarCarregando, encerrarCarregando } from "./carregando-gerizo";
 
 /**
  * Em qual empresa e operação a sessão está.
@@ -39,6 +40,19 @@ export function SeletorEmpresa() {
   const [trocando, setTrocando] = React.useState<string | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const caixa = React.useRef<HTMLDivElement>(null);
+  /*
+   * A troca recarrega os dados da tela inteira no mesmo endereço. A marca
+   * de carregamento cobre essa espera e sai quando o refresh termina — a
+   * transição sabe quando, o router.refresh() sozinho não avisa.
+   */
+  const [recarregando, iniciarTransicao] = React.useTransition();
+  const aguardando = React.useRef(false);
+  React.useEffect(() => {
+    if (aguardando.current && !recarregando) {
+      aguardando.current = false;
+      encerrarCarregando();
+    }
+  }, [recarregando]);
 
   React.useEffect(() => {
     let vivo = true;
@@ -91,6 +105,7 @@ export function SeletorEmpresa() {
     }
     setTrocando(id);
     setErro(null);
+    iniciarCarregando("manual");
     try {
       const r = await fetch("/api/operacao", {
         method: "POST",
@@ -100,13 +115,18 @@ export function SeletorEmpresa() {
       if (!r.ok) {
         const d = await r.json().catch(() => null);
         setErro(d?.erro ?? "Não consegui trocar.");
+        encerrarCarregando();
         return;
       }
       setAtual(id);
       setAberto(false);
-      router.refresh();
+      // Quem mostra a empresa fora daqui (o rodapé do menu) relê ao ouvir isto.
+      window.dispatchEvent(new Event("gerizo:operacao-trocada"));
+      aguardando.current = true;
+      iniciarTransicao(() => router.refresh());
     } catch {
       setErro("Não consegui trocar.");
+      encerrarCarregando();
     } finally {
       setTrocando(null);
     }
