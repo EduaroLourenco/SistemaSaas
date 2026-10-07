@@ -58,7 +58,7 @@ function Variacao({
   return (
     <span
       className={cn(
-        "num text-[10px] flex items-center justify-end gap-px leading-none",
+        "num text-[12px] flex items-center justify-end gap-px leading-none",
         bom ? "text-up" : "text-down"
       )}
     >
@@ -110,7 +110,7 @@ export function Matriz<T>({
                   </span>
                   {c.parcial && (
                     <span
-                      className="text-[9px] px-1 rounded-[3px] bg-warn-wash text-warn font-medium"
+                      className="text-[12px] px-1 rounded-[3px] bg-warn-wash text-warn font-medium"
                       title="Período incompleto — não comparável"
                     >
                       parcial
@@ -121,7 +121,7 @@ export function Matriz<T>({
                   )}
                 </span>
                 {c.sub && (
-                  <span className="num block text-[10px] text-ink-3 mt-0.5">
+                  <span className="num block text-[12px] text-ink-3 mt-0.5">
                     {c.sub}
                   </span>
                 )}
@@ -156,7 +156,7 @@ export function Matriz<T>({
                   {ind.rotulo}
                 </span>
                 {ind.dica && (
-                  <span className="block text-[10.5px] text-ink-3 leading-tight">
+                  <span className="block text-[12px] text-ink-3 leading-tight">
                     {ind.dica}
                   </span>
                 )}

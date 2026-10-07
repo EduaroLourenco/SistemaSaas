@@ -662,23 +662,23 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
           <div className="flex items-center gap-4 px-4 h-8 border-b border-line overflow-x-auto">
             <span className="flex items-center gap-1.5 shrink-0">
               <span className="w-2.5 h-2.5 rounded-[2px] bg-brand" />
-              <span className="text-[11px] text-ink-2 whitespace-nowrap">
+              <span className="text-[12px] text-ink-2 whitespace-nowrap">
                 não salvo
               </span>
             </span>
             <span className="flex items-center gap-1.5 shrink-0">
               <span className="w-2.5 h-2.5 rounded-[2px] bg-info" />
-              <span className="text-[11px] text-ink-2 whitespace-nowrap">
+              <span className="text-[12px] text-ink-2 whitespace-nowrap">
                 salvo, diferente da origem
               </span>
             </span>
             <span className="flex items-center gap-1.5 shrink-0">
               <span className="w-2.5 h-2.5 rounded-[2px] bg-panel-2 border border-line-2" />
-              <span className="text-[11px] text-ink-2 whitespace-nowrap">
+              <span className="text-[12px] text-ink-2 whitespace-nowrap">
                 fim de semana
               </span>
             </span>
-            <span className="text-[11px] text-ink-3 whitespace-nowrap shrink-0 ml-auto hidden lg:block">
+            <span className="text-[12px] text-ink-3 whitespace-nowrap shrink-0 ml-auto hidden lg:block">
               Enter ou seta desce para o dia seguinte
             </span>
           </div>
@@ -694,7 +694,7 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                   <th
                     scope="col"
                     style={{ width: LARGURA_DATA, minWidth: LARGURA_DATA }}
-                    className="sticky top-0 left-0 z-30 bg-panel-3 h-9 px-3 text-left font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap border-b border-r border-line"
+                    className="sticky top-0 left-0 z-30 bg-panel-3 h-9 px-3 text-left font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap border-b border-r border-line"
                   >
                     Data
                   </th>
@@ -707,7 +707,7 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                         minWidth: c.largura,
                         borderLeftColor: "transparent",
                       }}
-                      className="sticky top-0 z-20 bg-panel-3 h-9 px-3 text-right font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap border-b border-l-2 border-line"
+                      className="sticky top-0 z-20 bg-panel-3 h-9 px-3 text-right font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap border-b border-l-2 border-line"
                     >
                       {c.titulo}
                     </th>
@@ -715,14 +715,14 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                   <th
                     scope="col"
                     style={{ width: 140, minWidth: 140 }}
-                    className="sticky top-0 z-20 bg-panel-3 h-9 px-3 text-right font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap border-b border-l border-line"
+                    className="sticky top-0 z-20 bg-panel-3 h-9 px-3 text-right font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap border-b border-l border-line"
                   >
                     Receita líq.
                   </th>
                   <th
                     scope="col"
                     style={{ width: 112, minWidth: 112 }}
-                    className="sticky top-0 z-20 bg-panel-3 h-9 px-3 text-right font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap border-b border-line"
+                    className="sticky top-0 z-20 bg-panel-3 h-9 px-3 text-right font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap border-b border-line"
                   >
                     Ticket
                   </th>
@@ -745,7 +745,7 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                           </span>
                           <span
                             className={
-                              "text-[11px] " +
+                              "text-[12px] " +
                               (l.base.fimDeSemana ? "text-warn" : "text-ink-3")
                             }
                           >
@@ -813,7 +813,7 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                     scope="row"
                     className="sticky bottom-0 left-0 z-30 bg-panel-3 px-3 h-11 md:h-9 text-left border-t border-r border-line"
                   >
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-ink">
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.04em] text-ink">
                       Total
                     </span>
                   </th>
@@ -846,19 +846,19 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
           </div>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 h-auto py-2.5 border-t border-line">
-            <span className="text-[11px] text-ink-3">
+            <span className="text-[12px] text-ink-3">
               Conversão do mês{" "}
               <span className="num text-ink-2">
                 {total.visitas > 0 ? pct(total.conversao, 2) : "—"}
               </span>
             </span>
-            <span className="text-[11px] text-ink-3">
+            <span className="text-[12px] text-ink-3">
               TACOS{" "}
               <span className="num text-ink-2">
                 {total.receita > 0 ? pct(total.tacos, 2) : "—"}
               </span>
             </span>
-            <span className="text-[11px] text-ink-3">
+            <span className="text-[12px] text-ink-3">
               Cancelamento{" "}
               <span className="num text-ink-2">
                 {total.receita > 0
@@ -866,7 +866,7 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                   : "—"}
               </span>
             </span>
-            <span className="text-[11px] text-ink-3">
+            <span className="text-[12px] text-ink-3">
               Atingimento{" "}
               <span className="num text-ink-2">
                 {meta > 0 ? pct(total.atingimento, 1) : "—"}

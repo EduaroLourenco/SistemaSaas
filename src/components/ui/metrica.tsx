@@ -46,7 +46,7 @@ export function Metrica({
         <span className="label truncate">{rotulo}</span>
       </div>
 
-      <p className="num text-[22px] leading-none font-semibold text-ink tabular-nums truncate">
+      <p className="num text-[26px] leading-none font-semibold text-ink tabular-nums truncate">
         {valor}
       </p>
 
@@ -55,18 +55,18 @@ export function Metrica({
           {comparacao.bases.map((b) => (
             <span key={b.rotulo} className="inline-flex items-center gap-1">
               {b.variacao === null ? (
-                <span className="text-[11px] text-ink-3">estreia</span>
+                <span className="text-[12px] text-ink-3">estreia</span>
               ) : (
                 <Delta value={b.variacao} inverse={inverso} />
               )}
-              <span className="text-[11px] text-ink-3">{b.rotulo}</span>
+              <span className="text-[12px] text-ink-3">{b.rotulo}</span>
             </span>
           ))}
         </div>
       )}
 
       {detalhe && (
-        <p className="text-[11px] text-ink-3 mt-1 truncate">{detalhe}</p>
+        <p className="text-[12px] text-ink-3 mt-1 truncate">{detalhe}</p>
       )}
     </div>
   );

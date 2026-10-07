@@ -58,7 +58,7 @@ const COLUNAS: Coluna<Categoria>[] = [
       <div className="flex flex-col gap-0.5 min-w-0">
         <span className="text-ink font-medium">{c.nome}</span>
         {c.descricao && (
-          <span className="text-[11.5px] text-ink-3 truncate max-w-md">{c.descricao}</span>
+          <span className="text-[12px] text-ink-3 truncate max-w-md">{c.descricao}</span>
         )}
       </div>
     ),
@@ -140,7 +140,7 @@ export default function CategoriasCliente({ linhas }: { linhas: Categoria[] }) {
           <span className="text-[12px] text-ink-2">
             <b className="num text-ink">{fixas}</b> fixas
           </span>
-          <span className="text-[11.5px] text-ink-3 ml-auto">
+          <span className="text-[12px] text-ink-3 ml-auto">
             Variável desce na margem de contribuição. Fixa entra só no resultado.
           </span>
         </div>

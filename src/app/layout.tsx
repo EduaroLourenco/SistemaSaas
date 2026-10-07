@@ -16,8 +16,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Plataforma",
-  description: "Operação de e-commerce unificada",
+  title: { default: "Gerizo · Inteligência de mercado", template: "%s · Gerizo" },
+  icons: { icon: "/brand/gerizo-favicon.png" },
+  description: "Gerizo — Inteligência de mercado para e-commerce e marketplaces",
 };
 
 export const viewport: Viewport = {

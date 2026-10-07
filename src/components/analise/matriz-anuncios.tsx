@@ -231,7 +231,7 @@ export function MatrizAnuncios({
                         <p className="text-[12px] font-medium text-ink leading-snug">
                           {d.titulo}
                         </p>
-                        <p className="num text-[11px] text-ink-3 mt-0.5">{d.sku}</p>
+                        <p className="num text-[12px] text-ink-3 mt-0.5">{d.sku}</p>
                         <p className="num text-[12px] mt-1.5">
                           <span
                             className={d.variacao >= 0 ? "text-up" : "text-down"}
@@ -332,11 +332,11 @@ export function MatrizAnuncios({
                             <span className="num text-[12px] font-semibold text-ink block">
                               {g.sku}
                             </span>
-                            <span className="text-[11.5px] text-ink-2 block truncate">
+                            <span className="text-[12px] text-ink-2 block truncate">
                               {g.titulo}
                             </span>
                             {g.mlbs.length > 1 && (
-                              <span className="text-[10.5px] text-ink-3">
+                              <span className="text-[12px] text-ink-3">
                                 {g.mlbs.length} anúncios
                               </span>
                             )}
@@ -384,20 +384,20 @@ export function MatrizAnuncios({
                                        border-r border-line font-normal"
                           >
                             <span className="flex items-center gap-1.5 pl-5">
-                              <span className="num text-[11.5px] text-ink-2">
+                              <span className="num text-[12px] text-ink-2">
                                 {m.mlb}
                               </span>
                               <Badge tone={m.tipo === "Premium" ? "brand" : "neutral"}>
                                 {m.tipo}
                               </Badge>
                             </span>
-                            <span className="block pl-5 text-[10.5px] text-ink-3">
+                            <span className="block pl-5 text-[12px] text-ink-3">
                               {m.conta}
                             </span>
                           </th>
                           <td
                             colSpan={semanas.length + 1}
-                            className="px-3 py-1.5 text-[11.5px] text-ink-3"
+                            className="px-3 py-1.5 text-[12px] text-ink-3"
                           >
                             Anúncio deste SKU — os números da linha acima somam todos.
                           </td>

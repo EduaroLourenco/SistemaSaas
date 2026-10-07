@@ -132,11 +132,11 @@ function IndicadorPreco({
         />
       </div>
       <div className="flex items-center justify-between mt-2">
-        <span className="text-[11px] text-ink-3">abaixo do ideal</span>
+        <span className="text-[12px] text-ink-3">abaixo do ideal</span>
         <Badge tone={tom}>
           <span className="num">{fmtDelta(desvio)}</span>
         </Badge>
-        <span className="text-[11px] text-ink-3">acima do ideal</span>
+        <span className="text-[12px] text-ink-3">acima do ideal</span>
       </div>
     </div>
   );
@@ -326,7 +326,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
               {a.metricas.curvaAReceita && <Badge tone="brand">A</Badge>}
               {a.status === "pausado" && <Badge tone="neutral">pausado</Badge>}
             </span>
-            <span className="num block text-[11px] text-ink-3 mt-0.5">
+            <span className="num block text-[12px] text-ink-3 mt-0.5">
               {a.mlb} · {a.sku}
             </span>
           </span>
@@ -462,6 +462,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
   return (
     <>
       <PageHeader
+        mobileFilters={false}
         title="Análise de anúncios"
         breadcrumb="Anúncios"
         description="Desempenho semanal, aderência de preço e diagnóstico por anúncio"
@@ -475,7 +476,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Filtros
               {filtrosAtivos > 0 && (
-                <span className="num text-[11px]">({filtrosAtivos})</span>
+                <span className="num text-[12px]">({filtrosAtivos})</span>
               )}
             </Button>
             <Button
@@ -887,7 +888,7 @@ function RaioX({
                   <span className="block text-[12px] text-ink-2 mt-0.5">
                     {item.motivos[l.id]}
                   </span>
-                  <span className="block text-[11px] text-ink-3 mt-1">
+                  <span className="block text-[12px] text-ink-3 mt-1">
                     Sugestão: {l.acao}
                   </span>
                 </span>
@@ -976,7 +977,7 @@ function RaioX({
                       className="panel px-2.5 py-2 min-w-[170px]"
                       style={{ boxShadow: "var(--sh-3)" }}
                     >
-                      <p className="text-[11px] font-semibold text-ink-2 mb-1.5">
+                      <p className="text-[12px] font-semibold text-ink-2 mb-1.5">
                         {s ? `${s.semana} · ${s.intervalo}` : String(label ?? "")}
                       </p>
                       <div className="flex flex-col gap-1">
@@ -990,7 +991,7 @@ function RaioX({
                                 className="w-2 h-2 rounded-[2px] shrink-0"
                                 style={{ background: p.color }}
                               />
-                              <span className="text-[11px] text-ink-2 truncate">
+                              <span className="text-[12px] text-ink-2 truncate">
                                 {p.name}
                               </span>
                             </span>
@@ -1068,7 +1069,7 @@ function RaioX({
                     key={w.semana}
                     className="flex items-center justify-between gap-3 h-8 px-2.5 rounded-r1 border border-line bg-panel-2"
                   >
-                    <span className="num text-[11px] text-ink-3 shrink-0">
+                    <span className="num text-[12px] text-ink-3 shrink-0">
                       {w.semana}
                     </span>
                     <span className="text-[12px] text-ink truncate flex-1">

@@ -500,6 +500,7 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
   return (
     <>
       <PageHeader
+        mobileFilters={false}
         title="Semanal"
         breadcrumb="Vendas"
         description={`${TOTAL_SEMANAS} semanas de ${ANO} · segunda a domingo · dados até S${SEMANA_ATUAL}`}

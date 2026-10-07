@@ -171,7 +171,7 @@ export default function Cadastro() {
               onChange={(e) => setSenha(e.target.value)}
               className="h-10 px-3 rounded-r1 bg-panel border border-line text-[14px] text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand-wash"
             />
-            <span className="text-[11.5px] text-ink-3">Pelo menos 8 caracteres.</span>
+            <span className="text-[12px] text-ink-3">Pelo menos 8 caracteres.</span>
           </label>
 
           {erro && (

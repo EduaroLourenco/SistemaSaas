@@ -261,7 +261,7 @@ function PorCanal({ dados }: { dados: DadosCancelamento }) {
       celula: (c) => (
         <span className="num text-ink-2">
           {money(c.ticketCancelado)}
-          <span className="text-ink-3 text-[11px]">
+          <span className="text-ink-3 text-[12px]">
             {" "}
             vs {money(c.ticketNormal)}
           </span>
@@ -280,7 +280,7 @@ function PorCanal({ dados }: { dados: DadosCancelamento }) {
         chave={(c) => `${c.canalId}-${c.conta}`}
         nomeExportacao="cancelamentos-por-canal"
       />
-      <p className="text-[11.5px] text-ink-3 mt-3 leading-relaxed">
+      <p className="text-[12px] text-ink-3 mt-3 leading-relaxed">
         O ticket cancelado ao lado do normal responde uma pergunta que a taxa
         sozinha não responde: se o que cancela é sistematicamente mais caro que
         o que fica, o problema é de produto ou de prazo, não de volume.
@@ -298,7 +298,7 @@ function PorSku({ dados }: { dados: DadosCancelamento }) {
       celula: (s) => (
         <span className="min-w-0">
           <span className="num text-ink font-medium">{s.sku}</span>
-          <span className="block text-[11.5px] text-ink-3 truncate max-w-[280px]">
+          <span className="block text-[12px] text-ink-3 truncate max-w-[280px]">
             {s.titulo}
           </span>
         </span>
@@ -353,7 +353,7 @@ function PorSku({ dados }: { dados: DadosCancelamento }) {
       id: "canais",
       cabecalho: "Canais",
       celula: (s) => (
-        <span className="text-[11.5px] text-ink-3">{s.canais.join(", ")}</span>
+        <span className="text-[12px] text-ink-3">{s.canais.join(", ")}</span>
       ),
       bruto: (s) => s.canais.join(" | "),
     },
@@ -374,7 +374,7 @@ function PorSku({ dados }: { dados: DadosCancelamento }) {
           <TudoCerto titulo="Nenhum item cancelado no período" />
         }
       />
-      <p className="text-[11.5px] text-ink-3 mt-3 leading-relaxed">
+      <p className="text-[12px] text-ink-3 mt-3 leading-relaxed">
         A taxa compara o cancelado com o total vendido do mesmo SKU. Cinco
         cancelamentos em seis vendas é um problema; em seiscentas, é ruído — e
         sem o denominador as duas situações parecem iguais.
@@ -500,7 +500,7 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
   }
 
   const th =
-    "px-2.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-ink-3 whitespace-nowrap";
+    "px-2.5 py-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3 whitespace-nowrap";
 
   return (
     <>
@@ -508,7 +508,7 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
         <div className="flex items-center gap-3 px-4 py-3 border-b border-line flex-wrap">
           <div className="min-w-0">
             <p className="text-[13px] font-semibold text-ink">Quem piorou, e quando</p>
-            <p className="text-[11.5px] text-ink-3">
+            <p className="text-[12px] text-ink-3">
               taxa de cancelamento por conta, mês a mês
             </p>
           </div>
@@ -545,7 +545,7 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
                     <td className="px-2.5 py-1.5 sticky left-0 bg-panel z-10 whitespace-nowrap">
                       <span className="text-ink font-medium">{l.canal}</span>
                       {l.mostrarConta && (
-                        <span className="text-ink-3 text-[11.5px]"> · {l.conta}</span>
+                        <span className="text-ink-3 text-[12px]"> · {l.conta}</span>
                       )}
                     </td>
                     {meses.map((m) => {
@@ -587,7 +587,7 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
           </table>
         </div>
 
-        <p className="px-4 py-2.5 text-[11.5px] text-ink-3 border-t border-line">
+        <p className="px-4 py-2.5 text-[12px] text-ink-3 border-t border-line">
           {medida === "valor"
             ? "Taxa sobre o VALOR: quanto do faturamento daquele mês voltou. Um canal que cancela poucos pedidos grandes aparece aqui e some na contagem."
             : "Taxa sobre a QUANTIDADE: quantos pedidos de cada cem voltaram. Um canal que cancela muitos pedidos pequenos aparece aqui e some no valor."}{" "}
@@ -640,7 +640,7 @@ function Legenda() {
             className="w-3.5 h-3.5 rounded-[3px] border border-line"
             style={{ background: p.faixa.fundo }}
           />
-          <span className="num text-[10.5px] text-ink-3">{p.rotulo}</span>
+          <span className="num text-[12px] text-ink-3">{p.rotulo}</span>
         </span>
       ))}
     </div>
@@ -677,7 +677,7 @@ function PorMes({ dados }: { dados: DadosCancelamento }) {
                   const d = payload[0].payload as (typeof serie)[number];
                   return (
                     <div className="panel px-2.5 py-2 min-w-[180px]" style={{ boxShadow: "var(--sh-3)" }}>
-                      <p className="text-[11px] font-semibold text-ink-2 mb-1.5">
+                      <p className="text-[12px] font-semibold text-ink-2 mb-1.5">
                         {d.rotulo}
                       </p>
                       <Linha rotulo="Cancelado" valor={money(d.valorCancelado)} />
@@ -716,7 +716,7 @@ function PorMes({ dados }: { dados: DadosCancelamento }) {
 function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-[11px] text-ink-2">{rotulo}</span>
+      <span className="text-[12px] text-ink-2">{rotulo}</span>
       <span className="num text-[12px] font-semibold text-ink">{valor}</span>
     </div>
   );

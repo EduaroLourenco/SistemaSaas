@@ -140,10 +140,10 @@ function CartaoRelatorio({
           >
             {rel.fileName}
           </span>
-          <span className="num block text-[11px] text-ink-3 mt-0.5">
+          <span className="num block text-[12px] text-ink-3 mt-0.5">
             base {dataBR(rel.dataBase)} · {rel.linhas.length} itens
           </span>
-          <span className="num block text-[11px] text-ink-3">
+          <span className="num block text-[12px] text-ink-3">
             enviado {rel.uploadedAt}
           </span>
         </span>
@@ -258,7 +258,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
           <span className="block font-medium text-ink truncate max-w-[260px]">
             {l.titulo}
           </span>
-          <span className="block text-[11px] text-ink-3 truncate">
+          <span className="block text-[12px] text-ink-3 truncate">
             {l.categoria} · {l.tipo}
           </span>
         </span>
@@ -323,7 +323,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
       cell: (l) => (
         <span className="flex items-center justify-end gap-1.5">
           {l.comissaoNegociada < l.comissaoAtual && (
-            <span className="num text-[11px] text-ink-3 line-through hidden lg:inline">
+            <span className="num text-[12px] text-ink-3 line-through hidden lg:inline">
               {pct(l.comissaoAtual)}
             </span>
           )}
@@ -345,6 +345,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
   return (
     <>
       <PageHeader
+        mobileFilters={false}
         title="Lógica de promoção"
         breadcrumb="Anúncios"
         description="Onde a Fórmula base entra: o preço mínimo de campanha, por MLB, e o desvio do que está no ar"
@@ -358,7 +359,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Filtros
               {filtrosAtivos > 0 && (
-                <span className="num text-[11px]">({filtrosAtivos})</span>
+                <span className="num text-[12px]">({filtrosAtivos})</span>
               )}
             </Button>
           </>
@@ -772,12 +773,12 @@ function ComparativoLinha({
           />
         </div>
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[11px] text-ink-3">abaixo do ideal</span>
-          <span className="num text-[11px] text-ink-2">
+          <span className="text-[12px] text-ink-3">abaixo do ideal</span>
+          <span className="num text-[12px] text-ink-2">
             {diferenca >= 0 ? "+" : "−"}
             {money(Math.abs(diferenca))}
           </span>
-          <span className="text-[11px] text-ink-3">acima do ideal</span>
+          <span className="text-[12px] text-ink-3">acima do ideal</span>
         </div>
       </div>
 
@@ -810,7 +811,7 @@ function ComparativoLinha({
                   <th
                     key={h}
                     className={
-                      "h-8 px-2 border-b border-line font-semibold text-[10px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap " +
+                      "h-8 px-2 border-b border-line font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap " +
                       (i === 0 ? "text-left" : "text-right")
                     }
                   >
@@ -847,7 +848,7 @@ function ComparativoLinha({
             </tbody>
           </table>
         </div>
-        <p className="text-[11px] text-ink-3 mt-2">
+        <p className="text-[12px] text-ink-3 mt-2">
           O desvio de cada linha usa o preço praticado de hoje contra o alvo
           daquele recorte.
         </p>

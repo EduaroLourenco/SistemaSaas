@@ -232,7 +232,7 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
       <div className="flex items-center justify-between gap-3 mb-2.5">
         <div className="min-w-0">
           <p className="label">Linha do tempo</p>
-          <p className="text-[11px] text-ink-3 mt-0.5">
+          <p className="text-[12px] text-ink-3 mt-0.5">
             o que o sistema detectou e o que você fez, na mesma régua
           </p>
         </div>
@@ -289,7 +289,7 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
               Cancelar
             </Button>
           </div>
-          <p className="text-[11px] text-ink-3">
+          <p className="text-[12px] text-ink-3">
             Fica gravado neste navegador até o banco entrar no ar.
           </p>
         </div>
@@ -327,11 +327,11 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
 
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2 flex-wrap">
-                    <span className="num text-[11px] text-ink-3">
+                    <span className="num text-[12px] text-ink-3">
                       {dataCurta(e.data)}
                     </span>
                     {e.semana && (
-                      <span className="num text-[11px] text-ink-3">{e.semana}</span>
+                      <span className="num text-[12px] text-ink-3">{e.semana}</span>
                     )}
                     {!e.automatico && <Badge tone="brand">sua nota</Badge>}
                   </span>

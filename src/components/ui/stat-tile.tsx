@@ -57,7 +57,7 @@ export function StatTile({
   return (
     <div
       className={cn(
-        "panel panel-1 px-4 py-3 flex flex-col justify-between min-w-0",
+        "panel panel-1 px-5 py-4 flex flex-col justify-between min-w-0",
         className
       )}
     >
@@ -65,13 +65,13 @@ export function StatTile({
 
       <div className="mt-1.5 flex items-end justify-between gap-3 min-w-0">
         <div className="min-w-0">
-          <p className="num text-[22px] leading-none font-semibold text-ink truncate">
+          <p className="num text-[26px] leading-none font-semibold text-ink truncate">
             {value}
           </p>
           <div className="flex items-center gap-1.5 mt-1.5 min-w-0">
             {delta !== undefined && <Delta value={delta} inverse={inverse} />}
             {hint && (
-              <span className="text-[11px] text-ink-3 truncate">{hint}</span>
+              <span className="text-[12px] text-ink-3">{hint}</span>
             )}
           </div>
         </div>

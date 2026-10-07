@@ -160,7 +160,7 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
                 <Badge tone={TOM[r.severidade]}>{ROTULO[r.severidade]}</Badge>
                 <button
                   onClick={() => resolver(r.id)}
-                  className="text-[11.5px] text-ink-3 hover:text-ink flex items-center gap-1"
+                  className="text-[12px] text-ink-3 hover:text-ink flex items-center gap-1"
                 >
                   <Check className="w-3.5 h-3.5" />
                   resolver

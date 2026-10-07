@@ -77,7 +77,7 @@ function Linha({
           {rotulo}
         </span>
         {nota && (
-          <span className="block text-[11px] text-ink-3 leading-tight">{nota}</span>
+          <span className="block text-[12px] text-ink-3 leading-tight">{nota}</span>
         )}
       </div>
       <span
@@ -111,10 +111,10 @@ function Linha({
 function GrupoDre({ titulo, explicacao }: { titulo: string; explicacao: string }) {
   return (
     <div className="mt-3.5 mb-1 pt-2 border-t border-line-2 flex items-baseline gap-2 flex-wrap">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-2">
+      <span className="text-[12px] font-semibold uppercase tracking-[0.07em] text-ink-2">
         {titulo}
       </span>
-      <span className="text-[11px] text-ink-3">{explicacao}</span>
+      <span className="text-[12px] text-ink-3">{explicacao}</span>
     </div>
   );
 }
@@ -156,7 +156,7 @@ export default function FinanceiroCliente({
   const linhas = visoes[dim] ?? [];
   const semCusto = r.cobertura < 99.5;
 
-  const th = "px-3 py-2 text-[11px] font-semibold text-ink-3 whitespace-nowrap";
+  const th = "px-3 py-2 text-[12px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-3 py-2 border-b border-line";
 
   return (
@@ -311,7 +311,7 @@ export default function FinanceiroCliente({
               <>
                 <Linha rotulo="Resultado" valor={r.resultado} tipo="final" />
                 {r.resultadoPct != null && (
-                  <p className="text-[11.5px] text-ink-3 text-right num">
+                  <p className="text-[12px] text-ink-3 text-right num">
                     {pct(r.resultadoPct, 1)} da receita apurada
                   </p>
                 )}
@@ -322,7 +322,7 @@ export default function FinanceiroCliente({
                   <span className="text-[13px] font-semibold text-ink">Resultado</span>
                   <span className="num text-[13px] text-ink-3">—</span>
                 </div>
-                <p className="text-[11px] text-ink-3 leading-relaxed mt-1">
+                <p className="text-[12px] text-ink-3 leading-relaxed mt-1">
                   Os custos de operação acima são do período inteiro, mas a margem
                   de contribuição só cobre {pct(r.cobertura, 1)} da receita.
                   Subtrair um do outro daria um prejuízo que não existe. O
@@ -333,7 +333,7 @@ export default function FinanceiroCliente({
 
             {/* Quanto do custo foi medido, e quanto foi estimado por tabela. */}
             <div className="mt-4 pt-3 border-t border-line">
-              <p className="text-[11px] text-ink-3 leading-relaxed">
+              <p className="text-[12px] text-ink-3 leading-relaxed">
                 Dos {count(r.cadaCoberturaDe.pedidos)} pedidos do período,{" "}
                 <span className="num">
                   {count(r.cadaCoberturaDe.comissaoPraticada)}
@@ -360,7 +360,7 @@ export default function FinanceiroCliente({
               <p className="text-[13px] font-semibold text-ink">
                 A mesma conta, aberta por
               </p>
-              <p className="text-[11.5px] text-ink-3 mt-0.5">
+              <p className="text-[12px] text-ink-3 mt-0.5">
                 cada linha soma a margem da esquerda dentro de um recorte — a
                 coluna de cobertura diz o quanto daquela linha foi apurado
               </p>
@@ -420,12 +420,12 @@ export default function FinanceiroCliente({
                             >
                               {moneyShort(l.margem)}
                             </span>
-                            <span className="num text-[10.5px] text-ink-3">
+                            <span className="num text-[12px] text-ink-3">
                               {pct(l.margemPct ?? 0, 1)}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-ink-3">sem custo</span>
+                          <span className="text-[12px] text-ink-3">sem custo</span>
                         )}
                       </td>
                       <td className={`${td} text-right`}>

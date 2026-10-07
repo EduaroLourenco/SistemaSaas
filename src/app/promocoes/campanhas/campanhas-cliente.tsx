@@ -284,7 +284,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                 <li key={h.id} className="px-4 py-2.5 flex items-baseline justify-between gap-3">
                   <span className="min-w-0">
                     <p className="text-[12.5px] text-ink truncate">{h.titulo}</p>
-                    <p className="num text-[11px] text-ink-3">
+                    <p className="num text-[12px] text-ink-3">
                       {h.sku} · {h.mlb} · {h.campanha}
                     </p>
                   </span>
@@ -362,7 +362,7 @@ function ConfirmarApagar({
             </li>
           </ul>
 
-          <p className="text-[11.5px] text-ink-3 leading-relaxed">
+          <p className="text-[12px] text-ink-3 leading-relaxed">
             Não tem como desfazer. Para recuperar, processe a planilha de novo — e
             é exatamente para isso que este botão existe: voltar ao ponto de
             partida antes de reanalisar.

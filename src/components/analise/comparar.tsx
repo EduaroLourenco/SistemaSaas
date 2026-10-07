@@ -187,8 +187,8 @@ export function CompararAnuncios({
             <p className="text-[13px] font-medium text-ink leading-snug line-clamp-2">
               {i.titulo}
             </p>
-            <p className="num text-[11px] text-ink-3 mt-1">{i.mlb}</p>
-            <p className="text-[11px] text-ink-3">{i.conta}</p>
+            <p className="num text-[12px] text-ink-3 mt-1">{i.mlb}</p>
+            <p className="text-[12px] text-ink-3">{i.conta}</p>
           </div>
         ))}
       </div>
@@ -202,7 +202,7 @@ export function CompararAnuncios({
               <div className="flex items-baseline justify-between gap-2 mb-1.5">
                 <span className="label">{m.rotulo}</span>
                 {m.dica && (
-                  <span className="text-[11px] text-ink-3 truncate hidden sm:block">
+                  <span className="text-[12px] text-ink-3 truncate hidden sm:block">
                     {m.dica}
                   </span>
                 )}
@@ -254,7 +254,7 @@ export function CompararAnuncios({
                       className="panel px-2.5 py-2 min-w-[190px]"
                       style={{ boxShadow: "var(--sh-3)" }}
                     >
-                      <p className="num text-[11px] font-semibold text-ink-2 mb-1.5">
+                      <p className="num text-[12px] font-semibold text-ink-2 mb-1.5">
                         {String(label ?? "")}
                       </p>
                       {payload.map((p, k) => (
@@ -267,7 +267,7 @@ export function CompararAnuncios({
                               className="w-2 h-2 rounded-[2px] shrink-0"
                               style={{ background: p.color }}
                             />
-                            <span className="text-[11px] text-ink-2 truncate">
+                            <span className="text-[12px] text-ink-2 truncate">
                               {p.name}
                             </span>
                           </span>

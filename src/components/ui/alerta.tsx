@@ -110,7 +110,7 @@ export function CartaoAlerta({ alerta }: { alerta: Alerta }) {
                       className="panel px-2.5 py-1.5"
                       style={{ boxShadow: "var(--sh-3)" }}
                     >
-                      <p className="num text-[11px] text-ink-3">{String(label)}</p>
+                      <p className="num text-[12px] text-ink-3">{String(label)}</p>
                       <p className="num text-[12px] font-semibold text-ink">
                         {formatar(Number(payload[0].value))}
                       </p>

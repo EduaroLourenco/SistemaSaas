@@ -248,7 +248,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
                                   <Badge tone={CORES_CURVA[g.curva]}>{g.curva}</Badge>
                                 )}
                               </span>
-                              <span className="text-[11.5px] text-ink-2 block truncate max-w-[280px]">
+                              <span className="text-[12px] text-ink-2 block truncate max-w-[280px]">
                                 {g.titulo}
                               </span>
                             </span>
@@ -285,7 +285,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
                                          border-r border-line font-normal"
                             >
                               <span className="flex items-center gap-1.5 pl-5">
-                                <span className="num text-[11.5px] text-ink-2">{h.mlb}</span>
+                                <span className="num text-[12px] text-ink-2">{h.mlb}</span>
                                 <Badge tone={h.tipoAnuncio === "Premium" ? "brand" : "neutral"}>
                                   {h.tipoAnuncio}
                                 </Badge>
@@ -293,7 +293,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
                                   {h.aprovado ? "participa" : "fora"}
                                 </Badge>
                               </span>
-                              <span className="block pl-5 text-[10.5px] text-ink-3">
+                              <span className="block pl-5 text-[12px] text-ink-3">
                                 {h.campanha} · {h.data.split("-").reverse().join("/")} ·{" "}
                                 {h.tipoCampanha}
                                 {h.motivo ? ` · ${h.motivo}` : ""}
@@ -353,7 +353,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
                   <p className="text-[12.5px] text-ink truncate">
                     {p.arquivos.length ? p.arquivos.join(", ") : "—"}
                   </p>
-                  <p className="num text-[11px] text-ink-3">
+                  <p className="num text-[12px] text-ink-3">
                     {p.quando.split("-").reverse().join("/")}
                     {p.descontoExtra > 0 && ` · desconto extra ${pct(p.descontoExtra * 100)}`}
                   </p>

@@ -135,12 +135,12 @@ export function SeletorEmpresa() {
           className="absolute left-0 top-full mt-1 z-50 w-[272px] max-h-[60vh] overflow-y-auto rounded-r2 bg-panel border border-line shadow-lg py-1"
         >
           {erro && (
-            <p className="px-3 py-2 text-[11px] text-down">{erro}</p>
+            <p className="px-3 py-2 text-[12px] text-down">{erro}</p>
           )}
           {[...porEmpresa.entries()].map(([empresa, ops]) => (
             <div key={empresa}>
               {!umaEmpresaSo && (
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                <p className="px-3 pt-2 pb-1 text-[12px] font-semibold uppercase tracking-wide text-ink-3">
                   {empresa}
                 </p>
               )}
@@ -172,13 +172,13 @@ export function SeletorEmpresa() {
                       "nenhum canal" numa loja que tem canais seria mentira.
                     */}
                     {o.canais > 0 && (
-                      <span className="block text-[10px] text-ink-3">
+                      <span className="block text-[12px] text-ink-3">
                         {o.canais === 1 ? "1 canal" : `${o.canais} canais`}
                       </span>
                     )}
                   </span>
                   {trocando === o.id && (
-                    <span className="text-[10px] text-ink-3">trocando…</span>
+                    <span className="text-[12px] text-ink-3">trocando…</span>
                   )}
                 </button>
               ))}

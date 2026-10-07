@@ -427,7 +427,7 @@ export default function ComparativoDiario({
                   />
                   <span className="label truncate">{rotulo}</span>
                   {i === 0 && (
-                    <span className="text-[10px] text-ink-3 ml-auto shrink-0">
+                    <span className="text-[12px] text-ink-3 ml-auto shrink-0">
                       base
                     </span>
                   )}
@@ -466,9 +466,9 @@ export default function ComparativoDiario({
                       min={dados.primeiraData ?? undefined}
                       max={dados.ultimaData ?? undefined}
                       onChange={(e) => trocarLivre(i, e.target.value, livre.ate)}
-                      className="num h-8 px-1.5 rounded-r1 border border-line bg-panel text-[11.5px] text-ink w-full min-w-0"
+                      className="num h-8 px-1.5 rounded-r1 border border-line bg-panel text-[12px] text-ink w-full min-w-0"
                     />
-                    <span className="text-[11px] text-ink-3 shrink-0">a</span>
+                    <span className="text-[12px] text-ink-3 shrink-0">a</span>
                     <input
                       type="date"
                       aria-label={`${rotulo}: data final`}
@@ -476,16 +476,16 @@ export default function ComparativoDiario({
                       min={livre.de}
                       max={dados.ultimaData ?? undefined}
                       onChange={(e) => trocarLivre(i, livre.de, e.target.value)}
-                      className="num h-8 px-1.5 rounded-r1 border border-line bg-panel text-[11.5px] text-ink w-full min-w-0"
+                      className="num h-8 px-1.5 rounded-r1 border border-line bg-panel text-[12px] text-ink w-full min-w-0"
                     />
                   </div>
                 ) : (
-                  <p className="num text-[11px] text-ink-3 mt-1.5 truncate">
+                  <p className="num text-[12px] text-ink-3 mt-1.5 truncate">
                     {periodo ? periodo.intervalo : "—"}
                   </p>
                 )}
                 {livre && !periodo && (
-                  <p className="text-[10.5px] text-down mt-1">
+                  <p className="text-[12px] text-down mt-1">
                     Sem dado nesse intervalo.
                   </p>
                 )}
@@ -546,7 +546,7 @@ export default function ComparativoDiario({
             <table className="w-full border-collapse text-[13px]">
               <thead>
                 <tr className="bg-panel-2">
-                  <th className="sticky left-0 z-10 bg-panel-2 border-b border-r border-line h-12 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap">
+                  <th className="sticky left-0 z-10 bg-panel-2 border-b border-r border-line h-12 px-3 text-left text-[12px] font-semibold uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap">
                     Métrica
                   </th>
                   {colunas.map((c, i) => (
@@ -564,7 +564,7 @@ export default function ComparativoDiario({
                           <span className="text-[12px] font-semibold text-ink truncate">
                             {c.periodo.rotulo}
                           </span>
-                          <span className="num text-[11px] font-normal text-ink-3 truncate">
+                          <span className="num text-[12px] font-normal text-ink-3 truncate">
                             {c.periodo.intervalo}
                             {i === 0 ? " · base" : ""}
                           </span>
@@ -792,7 +792,7 @@ export default function ComparativoDiario({
                       </span>
                       <Delta value={variacao} inverse={m.inverso} />
                     </div>
-                    <p className="text-[11px] text-ink-3 mt-1.5 truncate">
+                    <p className="text-[12px] text-ink-3 mt-1.5 truncate">
                       {colunas[1].periodo.rotulo} vs. {colunas[0].periodo.rotulo}
                     </p>
                   </div>

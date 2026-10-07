@@ -100,7 +100,7 @@ export function DreMensal({
     <Panel className="overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-line flex-wrap">
         <p className="text-[13px] font-semibold text-ink">Demonstrativo mês a mês</p>
-        <span className="text-[11.5px] text-ink-3">
+        <span className="text-[12px] text-ink-3">
           cada linha em reais e como % da receita líquida
         </span>
       </div>
@@ -131,7 +131,7 @@ export function DreMensal({
                 <tr>
                   <td
                     colSpan={colunas.length + 1}
-                    className="px-3 pt-3 pb-1 text-[11px] text-ink-3 sticky left-0 bg-panel"
+                    className="px-3 pt-3 pb-1 text-[12px] text-ink-3 sticky left-0 bg-panel"
                   >
                     {g.rotulo}
                   </td>
@@ -194,7 +194,7 @@ export function DreMensal({
                             {moneyShort(Math.abs(v))}
                           </span>
                           {p != null && (
-                            <span className="num block text-[10.5px] text-ink-3 leading-tight">
+                            <span className="num block text-[12px] text-ink-3 leading-tight">
                               {p.toFixed(1)}%
                             </span>
                           )}
@@ -266,17 +266,17 @@ function EvolucaoMargem({ mensal }: { mensal: Resultado[] }) {
   return (
     <div className="px-4 py-3 border-t border-line">
       <div className="flex items-center gap-4 mb-2 flex-wrap">
-        <span className="flex items-center gap-1.5 text-[11.5px] text-ink-2">
+        <span className="flex items-center gap-1.5 text-[12px] text-ink-2">
           <i className="w-3 h-0.5 bg-brand inline-block" />
           Margem de contribuição
         </span>
         {temResultado && (
-          <span className="flex items-center gap-1.5 text-[11.5px] text-ink-2">
+          <span className="flex items-center gap-1.5 text-[12px] text-ink-2">
             <i className="w-3 h-0.5 bg-up inline-block" />
             Resultado
           </span>
         )}
-        <span className="text-[11px] text-ink-3 ml-auto">% da receita líquida</span>
+        <span className="text-[12px] text-ink-3 ml-auto">% da receita líquida</span>
       </div>
 
       <div className="overflow-x-auto">
@@ -365,10 +365,10 @@ export function LinhaVertical({
         )}
       >
         {rotulo}
-        {nota && <span className="block text-[11px] text-ink-3">{nota}</span>}
+        {nota && <span className="block text-[12px] text-ink-3">{nota}</span>}
       </span>
       {p != null && (
-        <span className="num text-[11px] text-ink-3 shrink-0 w-12 text-right">
+        <span className="num text-[12px] text-ink-3 shrink-0 w-12 text-right">
           {p.toFixed(1)}%
         </span>
       )}
@@ -428,7 +428,7 @@ export function ResumoDre({ r }: { r: Resultado }) {
           >
             {c.v}
           </span>
-          <span className="text-[11px] text-ink-3 num">{c.sub}</span>
+          <span className="text-[12px] text-ink-3 num">{c.sub}</span>
         </div>
       ))}
     </div>

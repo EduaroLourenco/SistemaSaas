@@ -91,14 +91,14 @@ const TOM_CURVA: Record<LinhaSku["curva"], "up" | "warn" | "neutral"> = {
  *   — e fica em traço para não competir com as linhas que têm o que dizer.
  */
 function Variacao({ agora, antes }: { agora: number; antes: number }) {
-  if (!agora && !antes) return <span className="text-[11px] text-ink-3">—</span>;
+  if (!agora && !antes) return <span className="text-[12px] text-ink-3">—</span>;
   if (!antes) {
     return (
-      <span className="text-[11px] font-medium text-up">novo</span>
+      <span className="text-[12px] font-medium text-up">novo</span>
     );
   }
   if (!agora) {
-    return <span className="text-[11px] font-medium text-down">parou</span>;
+    return <span className="text-[12px] font-medium text-down">parou</span>;
   }
   const d = ((agora - antes) / antes) * 100;
   const tom = d > 2 ? "text-up" : d < -2 ? "text-down" : "text-ink-3";
@@ -259,7 +259,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
     return m;
   }, [visiveis, aba, meses, canais, metrica]);
 
-  const th = "px-2.5 py-2 text-[11px] font-semibold text-ink-3 whitespace-nowrap";
+  const th = "px-2.5 py-2 text-[12px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-2.5 py-1.5 border-b border-line";
 
   const colunas =
@@ -398,12 +398,12 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
             },
           ].map((k) => (
             <Panel key={k.r} className="p-3">
-              <p className="text-[11px] text-ink-3 mb-1">{k.r}</p>
+              <p className="text-[12px] text-ink-3 mb-1">{k.r}</p>
               <p className="num text-[18px] font-semibold text-ink leading-none">
                 {k.v}
               </p>
               {k.nota && (
-                <p className="num text-[11px] text-ink-3 mt-1.5">{k.nota}</p>
+                <p className="num text-[12px] text-ink-3 mt-1.5">{k.nota}</p>
               )}
             </Panel>
           ))}
@@ -487,7 +487,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                           {l.sku}
                         </span>
                       </div>
-                      <p className="text-[11px] text-ink-3 truncate max-w-[230px]">
+                      <p className="text-[12px] text-ink-3 truncate max-w-[230px]">
                         {l.titulo}
                       </p>
                     </td>
@@ -522,7 +522,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                                 {formatar(v)}
                               </span>
                             ) : (
-                              <span className="text-[11px] text-ink-3">—</span>
+                              <span className="text-[12px] text-ink-3">—</span>
                             )}
                           </td>
                         );
@@ -562,7 +562,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
           </div>
 
           {visiveis.length > 200 && (
-            <p className="px-3 py-2 text-[11.5px] text-ink-3 border-t border-line">
+            <p className="px-3 py-2 text-[12px] text-ink-3 border-t border-line">
               Mostrando os 200 de maior receita. Use a busca ou o filtro de
               curva para chegar aos demais.
             </p>
@@ -573,7 +573,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
           <p className="text-[12px] font-semibold text-ink mb-1.5">
             Como ler a curva
           </p>
-          <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-2xl">
+          <p className="text-[12px] text-ink-3 leading-relaxed max-w-2xl">
             <span className="text-ink-2 font-medium">A</span> são os SKUs que
             somam até 80% da receita do recorte,{" "}
             <span className="text-ink-2 font-medium">B</span> vão até 95%, e{" "}

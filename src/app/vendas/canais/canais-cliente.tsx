@@ -266,6 +266,7 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
   return (
     <>
       <PageHeader
+        mobileFilters={false}
         title="Vendas por canal"
         breadcrumb="Vendas"
         description="Comparativo de desempenho entre canais"
@@ -283,7 +284,7 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Filtros
               {ocultos.length > 0 && (
-                <span className="num text-[11px]">({ocultos.length})</span>
+                <span className="num text-[12px]">({ocultos.length})</span>
               )}
             </Button>
           </>
@@ -366,19 +367,19 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
                 <Delta value={c.delta} />
               </div>
               <div className="mt-3 pt-2.5 border-t border-line grid grid-cols-2 gap-y-1.5">
-                <span className="text-[10px] uppercase tracking-[0.04em] font-semibold text-ink-3">
+                <span className="text-[12px] uppercase tracking-[0.04em] font-semibold text-ink-3">
                   Pedidos
                 </span>
                 <span className="num text-[12px] text-ink text-right">
                   {count(c.pedidos)}
                 </span>
-                <span className="text-[10px] uppercase tracking-[0.04em] font-semibold text-ink-3">
+                <span className="text-[12px] uppercase tracking-[0.04em] font-semibold text-ink-3">
                   Ticket
                 </span>
                 <span className="num text-[12px] text-ink text-right">
                   {money(c.ticket)}
                 </span>
-                <span className="text-[10px] uppercase tracking-[0.04em] font-semibold text-ink-3">
+                <span className="text-[12px] uppercase tracking-[0.04em] font-semibold text-ink-3">
                   Margem
                 </span>
                 <span className="num text-[12px] text-ink text-right">

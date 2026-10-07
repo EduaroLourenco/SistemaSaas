@@ -89,7 +89,7 @@ export function FontesDados({ dados }: { dados: DadosFontes }) {
                     </span>
                   </span>
                   {f.registros > 0 && (
-                    <span className="num text-[11px] text-ink-3 ml-4.5">
+                    <span className="num text-[12px] text-ink-3 ml-4.5">
                       {count(f.registros)} registros
                     </span>
                   )}
@@ -123,7 +123,7 @@ export function FontesDados({ dados }: { dados: DadosFontes }) {
         ))}
       </div>
 
-      <p className="text-[11.5px] text-ink-3 leading-relaxed mt-3">
+      <p className="text-[12px] text-ink-3 leading-relaxed mt-3">
         A data é até onde o <span className="font-medium text-ink-2">dado</span>{" "}
         vai, não quando entrou. Subir hoje uma planilha que termina na semana
         passada não deixa o painel atualizado, e uma fonte por API em dia não
@@ -160,7 +160,7 @@ function Cobertura({ fonte }: { fonte: Fonte }) {
       >
         {dataBr(fonte.cobertura)}
       </span>
-      <span className="text-[11px] text-ink-3">
+      <span className="text-[12px] text-ink-3">
         {frase(fonte.atrasoDias ?? 0)}
       </span>
     </span>

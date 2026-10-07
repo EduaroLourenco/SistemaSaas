@@ -32,12 +32,12 @@ const hora = (iso: string) =>
    ══════════════════════════════════════════════════════════════ */
 
 function Delta({ valor, invertido = false, miudo = false }: { valor: number | null; invertido?: boolean; miudo?: boolean }) {
-  if (valor == null) return <span className="text-ink-3 text-[11px]">sem base</span>;
+  if (valor == null) return <span className="text-ink-3 text-[12px]">sem base</span>;
   const bom = invertido ? valor < 0 : valor > 0;
   const neutro = Math.abs(valor) < 0.005;
   const cor = neutro ? "text-ink-3" : bom ? "text-up" : "text-down";
   return (
-    <span className={`num ${miudo ? "text-[11px]" : "text-[12px]"} font-semibold ${cor}`}>
+    <span className={`num ${miudo ? "text-[12px]" : "text-[12px]"} font-semibold ${cor}`}>
       {neutro ? "estável" : sinal(valor, Math.abs(valor) < 0.1 ? 1 : 0)}
     </span>
   );
@@ -55,14 +55,14 @@ function Dica({ texto, children }: { texto: string; children: React.ReactNode })
         onMouseEnter={() => setAberto(true)}
         onMouseLeave={() => setAberto(false)}
         aria-label="O que é isto"
-        className="w-3.5 h-3.5 rounded-full border border-line text-[9px] leading-none text-ink-3 hover:border-brand hover:text-brand shrink-0"
+        className="w-3.5 h-3.5 rounded-full border border-line text-[12px] leading-none text-ink-3 hover:border-brand hover:text-brand shrink-0"
       >
         ?
       </button>
       {aberto && (
         <span
           role="tooltip"
-          className="absolute left-0 top-full mt-1.5 z-30 w-[260px] panel panel-2 px-3 py-2 text-[11.5px] leading-relaxed text-ink-2 normal-case font-normal tracking-normal"
+          className="absolute left-0 top-full mt-1.5 z-30 w-[260px] panel panel-2 px-3 py-2 text-[12px] leading-relaxed text-ink-2 normal-case font-normal tracking-normal"
         >
           {texto}
         </span>
@@ -205,7 +205,7 @@ function Barras({
           </span>
           <span className="num text-[12.5px] text-ink text-right tabular-nums">
             {formato(i.valor)}
-            {i.nota && <span className="text-ink-3 ml-1.5 text-[11px]">{i.nota}</span>}
+            {i.nota && <span className="text-ink-3 ml-1.5 text-[12px]">{i.nota}</span>}
           </span>
         </div>
       ))}
@@ -229,7 +229,7 @@ function Colunas({ serie, hoje }: { serie: { dia: string; receita: number; pedid
                 title={`${dm(s.dia)}: ${reais(s.receita)} · ${s.pedidos} pedidos${parcial ? " (dia em andamento)" : ""}`}
               />
             </span>
-            <span className="text-[10px] text-ink-3 num">{dm(s.dia).slice(0, 2)}</span>
+            <span className="text-[12px] text-ink-3 num">{dm(s.dia).slice(0, 2)}</span>
           </div>
         );
       })}
@@ -268,7 +268,7 @@ function Kpi({
       <div className="panel px-3.5 py-3">
         <span className="label">{nome}</span>
         <p className="text-[19px] font-semibold text-ink-3 mt-1">sem medição</p>
-        <p className="text-[11.5px] text-ink-3 mt-1">Este canal não informa {nome.toLowerCase()}.</p>
+        <p className="text-[12px] text-ink-3 mt-1">Este canal não informa {nome.toLowerCase()}.</p>
       </div>
     );
   }
@@ -280,7 +280,7 @@ function Kpi({
         </span>
         <button
           onClick={() => setAberto((x) => !x)}
-          className="text-[11px] text-ink-3 hover:text-brand shrink-0"
+          className="text-[12px] text-ink-3 hover:text-brand shrink-0"
           aria-expanded={aberto}
         >
           {aberto ? "fechar" : "comparar"}
@@ -289,7 +289,7 @@ function Kpi({
       <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">{formato(v.atual)}</p>
       <div className="flex items-center gap-2 mt-2">
         <Delta valor={v.contraAnterior} invertido={invertido} />
-        <span className="text-[11px] text-ink-3">contra as {janelas.anterior.de.slice(8)}–{janelas.anterior.ate.slice(8)}/{janelas.anterior.ate.slice(5, 7)}</span>
+        <span className="text-[12px] text-ink-3">contra as {janelas.anterior.de.slice(8)}–{janelas.anterior.ate.slice(8)}/{janelas.anterior.ate.slice(5, 7)}</span>
       </div>
       {aberto && (
         <dl className="mt-3 pt-3 border-t border-line grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-1.5 text-[12px]">
@@ -428,7 +428,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
             </div>
             <div className="text-right">
               <p className="num text-[12px] text-ink-2">Gerado em {hora(dados.geradoEm)}</p>
-              <p className="num text-[11.5px] text-ink-3">Estoque e catálogo de {hora(dados.instantaneoEm)}</p>
+              <p className="num text-[12px] text-ink-3">Estoque e catálogo de {hora(dados.instantaneoEm)}</p>
               <div className="flex items-center gap-1.5 justify-end mt-2">
                 {/* A janela vai na URL: o link que o Eduardo manda já abre
                     no período que ele escolheu. */}
@@ -491,7 +491,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
               }
             >
               {c.nome}
-              <span className="num text-[11px] text-ink-3 ml-1.5">{reais(c.receita)}</span>
+              <span className="num text-[12px] text-ink-3 ml-1.5">{reais(c.receita)}</span>
             </a>
           ))}
         </div>
@@ -522,7 +522,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
               : f.situacao === "parado" ? "border-down/40 bg-down-wash text-down"
               : "border-line bg-ground text-ink-3";
             return (
-              <span key={f.fonte} className={`inline-flex items-center gap-1.5 border rounded-full px-2.5 py-1 text-[11.5px] ${cor}`} title={f.detalhe}>
+              <span key={f.fonte} className={`inline-flex items-center gap-1.5 border rounded-full px-2.5 py-1 text-[12px] ${cor}`} title={f.detalhe}>
                 <span className="w-1.5 h-1.5 rounded-full bg-current" />
                 {f.fonte}
                 <span className="num opacity-80">
@@ -563,7 +563,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                       <p className="text-[13.5px] font-semibold text-ink">{x.titulo}</p>
                       <p className="num text-[12.5px] text-ink-2 mt-0.5">{x.numero}</p>
                       <p className="text-[12px] text-ink-3 mt-1.5 leading-relaxed">{x.detalhe}</p>
-                      <a href={`#${x.onde === "Estoque" ? "estoque" : x.onde === "Catálogo" ? "catalogo" : x.onde === "Financeiro" ? "financeiro" : "produtos"}`} className="text-[11.5px] text-brand hover:underline mt-1.5 inline-block">
+                      <a href={`#${x.onde === "Estoque" ? "estoque" : x.onde === "Catálogo" ? "catalogo" : x.onde === "Financeiro" ? "financeiro" : "produtos"}`} className="text-[12px] text-brand hover:underline mt-1.5 inline-block">
                         ver em {x.onde}
                       </a>
                     </div>
@@ -649,7 +649,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                       <td className="px-3 py-2 text-right num text-ink-2">{reais(c.metricas.ticket.atual)}</td>
                       <td className="px-3 py-2 text-right num text-ink-2">{pct(c.metricas.cancelamento.atual)}</td>
                       <td className="px-3 py-2 text-right num text-ink-2">
-                        {c.temVisita ? pct(c.metricas.conversao?.atual, 2) : <span className="text-ink-3 text-[11px]">sem medição</span>}
+                        {c.temVisita ? pct(c.metricas.conversao?.atual, 2) : <span className="text-ink-3 text-[12px]">sem medição</span>}
                       </td>
                       <td className="px-3 py-2 text-right num text-ink-2">{pct(c.participacao, 0)}</td>
                     </tr>
@@ -742,7 +742,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                         className="border-b border-line last:border-0 hover:bg-brand-wash/40 cursor-pointer"
                       >
                         <td className="px-3 py-1.5">
-                          <span className={`inline-block w-5 text-center rounded-[4px] text-[11px] font-semibold ${l.curva === "A" ? "bg-brand-wash text-brand" : l.curva === "B" ? "bg-ground text-ink-2" : "text-ink-3"}`}>{l.curva}</span>
+                          <span className={`inline-block w-5 text-center rounded-[4px] text-[12px] font-semibold ${l.curva === "A" ? "bg-brand-wash text-brand" : l.curva === "B" ? "bg-ground text-ink-2" : "text-ink-3"}`}>{l.curva}</span>
                         </td>
                         <td className="px-3 py-1.5 num text-ink">{l.sku ?? "—"}</td>
                         <td className="px-3 py-1.5 text-ink-2 max-w-[260px] truncate" title={l.titulo}>{l.titulo}</td>
@@ -780,7 +780,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
               >
                 Mostrar mais 60
               </button>
-              <span className="text-[11.5px] text-ink-3">
+              <span className="text-[12px] text-ink-3">
                 mostrando {Math.min(quantos, produtosFiltrados.length)} de {produtosFiltrados.length}
               </span>
             </div>
@@ -1024,21 +1024,21 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
             <div className="panel px-3.5 py-3">
               <p className="label"><Dica texto="Quanto da receita da janela vem de produto com custo cadastrado. Enquanto estiver baixa, qualquer número de margem fala de uma parte pequena da operação.">Cobertura de custo</Dica></p>
               <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">{pct(dados.financeiro.coberturaCusto, 0)}</p>
-              <p className="text-[11.5px] text-ink-3 mt-1">{reais(dados.financeiro.receitaComCusto)} de {reais(dados.financeiro.receitaTotal)}</p>
+              <p className="text-[12px] text-ink-3 mt-1">{reais(dados.financeiro.receitaComCusto)} de {reais(dados.financeiro.receitaTotal)}</p>
             </div>
             <div className="panel px-3.5 py-3">
               <p className="label">Margem apurada</p>
               <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">
                 {dados.financeiro.margemApurada == null ? "—" : pct(dados.financeiro.margemApurada, 1)}
               </p>
-              <p className="text-[11.5px] text-ink-3 mt-1">só da parte com custo, sem despesa fixa</p>
+              <p className="text-[12px] text-ink-3 mt-1">só da parte com custo, sem despesa fixa</p>
             </div>
             <div className="panel px-3.5 py-3">
               <p className="label">Produtos com custo</p>
               <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">
                 {dados.financeiro.produtosComCusto}<span className="text-ink-3 text-[15px]"> de {dados.financeiro.produtosTotal}</span>
               </p>
-              <p className="text-[11.5px] text-ink-3 mt-1">embalagem ainda não cadastrada</p>
+              <p className="text-[12px] text-ink-3 mt-1">embalagem ainda não cadastrada</p>
             </div>
           </div>
           <Interpretacao
@@ -1066,7 +1066,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                     {numero(dados.promocoes.ultimo.lidos)}
                     <span className="text-ink-3 text-[15px]"> anúncios</span>
                   </p>
-                  <p className="text-[11.5px] text-ink-3 mt-1">{hora(dados.promocoes.ultimo.quando)}</p>
+                  <p className="text-[12px] text-ink-3 mt-1">{hora(dados.promocoes.ultimo.quando)}</p>
                 </div>
                 <div className="panel px-3.5 py-3">
                   <p className="label">
@@ -1077,7 +1077,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                   <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">
                     {pct(dados.promocoes.ultimo.taxa, 0)}
                   </p>
-                  <p className="text-[11.5px] text-ink-3 mt-1">
+                  <p className="text-[12px] text-ink-3 mt-1">
                     {numero(dados.promocoes.ultimo.aprovados)} aceitos ·{" "}
                     {numero(dados.promocoes.ultimo.reprovados)} recusados
                   </p>
@@ -1091,7 +1091,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                   <p className="num text-[22px] font-semibold text-ink mt-1 leading-none">
                     {dados.promocoes.cobertura == null ? "—" : pct(dados.promocoes.cobertura.fatiaDaReceita, 0)}
                   </p>
-                  <p className="text-[11.5px] text-ink-3 mt-1">
+                  <p className="text-[12px] text-ink-3 mt-1">
                     {dados.promocoes.cobertura == null
                       ? "sem cruzamento"
                       : `${reais(dados.promocoes.cobertura.receitaCoberta)} em ${numero(dados.promocoes.cobertura.anunciosDecididos)} anúncios`}
@@ -1104,7 +1104,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                       ? pct(dados.promocoes.ultimo.descontoExtra, 0)
                       : "nenhum"}
                   </p>
-                  <p className="text-[11.5px] text-ink-3 mt-1">aplicado sobre o piso da tabela</p>
+                  <p className="text-[12px] text-ink-3 mt-1">aplicado sobre o piso da tabela</p>
                 </div>
               </div>
 
@@ -1165,7 +1165,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                           <tr key={x.mlb}>
                             <td className="px-3.5 py-2">
                               <span className="num text-ink">{x.sku ?? x.mlb}</span>
-                              {x.sku && <span className="num text-ink-3 text-[11.5px]"> · {x.mlb}</span>}
+                              {x.sku && <span className="num text-ink-3 text-[12px]"> · {x.mlb}</span>}
                             </td>
                             <td className="px-3.5 py-2 text-ink-3 truncate max-w-[160px]">{x.campanha}</td>
                             <td className="px-3.5 py-2 text-right num text-ink-2">{reais(x.tabela, 2)}</td>
@@ -1186,7 +1186,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                     {dados.promocoes.historico.map((h, i) => (
                       <div key={`${h.quando}-${i}`} className="min-w-[72px]">
                         <p className="num text-[15px] text-ink leading-none">{pct(h.taxa, 0)}</p>
-                        <p className="text-[11px] text-ink-3 mt-0.5">
+                        <p className="text-[12px] text-ink-3 mt-0.5">
                           {dm(h.quando)} · {numero(h.lidos)}
                         </p>
                       </div>
@@ -1230,8 +1230,8 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                   <span className="num text-ink-2 text-right">{reais(dados.metas.ritmoAtual)}/dia</span>
                   <span className="text-ink-2">Ritmo necessário</span>
                   <span className="num text-ink text-right">{reais(dados.metas.ritmoNecessario)}/dia</span>
-                  <span className="text-ink-3 text-[11.5px]">Dias restantes no mês</span>
-                  <span className="num text-ink-3 text-right text-[11.5px]">{dados.metas.diasRestantes}</span>
+                  <span className="text-ink-3 text-[12px]">Dias restantes no mês</span>
+                  <span className="num text-ink-3 text-right text-[12px]">{dados.metas.diasRestantes}</span>
                 </div>
               </div>
               <div className="panel px-4 py-3.5">
@@ -1244,10 +1244,10 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                           <span className="text-[12.5px] text-ink font-medium">{d.alavanca}</span>
                           <span className="num text-[12.5px] text-up font-semibold">{reais(d.ganho)}/mês</span>
                         </div>
-                        <p className="text-[11.5px] text-ink-3 mt-0.5">{d.detalhe}</p>
+                        <p className="text-[12px] text-ink-3 mt-0.5">{d.detalhe}</p>
                       </div>
                     ))}
-                    <p className="text-[11px] text-ink-3 border-t border-line pt-2">
+                    <p className="text-[12px] text-ink-3 border-t border-line pt-2">
                       Cada linha é uma conta aritmética sobre o que já aconteceu, não previsão.
                     </p>
                   </div>
@@ -1263,7 +1263,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
           <div className="panel px-4 py-4 mt-4">
             <div className="flex items-baseline justify-between">
               <p className="label">Bloco de notas · seu espaço</p>
-              <span className="text-[11px] text-ink-3">fica salvo e aparece na próxima leitura</span>
+              <span className="text-[12px] text-ink-3">fica salvo e aparece na próxima leitura</span>
             </div>
             <Interpretacao
               id="notas-estrategia"
@@ -1284,9 +1284,9 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                   <tr key={f.fonte} className="border-b border-line last:border-0">
                     <td className="px-3.5 py-2 text-ink">{f.fonte}</td>
                     <td className="px-3 py-2 num text-ink-2">{f.ate ? dm(f.ate) : "sem dado"}</td>
-                    <td className="px-3 py-2 text-ink-3 text-[11.5px]">{f.detalhe}</td>
+                    <td className="px-3 py-2 text-ink-3 text-[12px]">{f.detalhe}</td>
                     <td className="px-3 py-2 text-right">
-                      <span className={`text-[11.5px] font-medium ${f.situacao === "ok" ? "text-up" : f.situacao === "atencao" ? "text-warn" : "text-down"}`}>
+                      <span className={`text-[12px] font-medium ${f.situacao === "ok" ? "text-up" : f.situacao === "atencao" ? "text-warn" : "text-down"}`}>
                         {f.situacao === "ok" ? "em dia" : f.situacao === "atencao" ? "atrasado" : f.situacao === "parado" ? "parado" : "ausente"}
                       </span>
                     </td>
@@ -1334,7 +1334,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
           </div>
         </Secao>
 
-        <footer className="border-t border-line pt-4 pb-10 text-[11.5px] text-ink-3">
+        <footer className="border-t border-line pt-4 pb-10 text-[12px] text-ink-3">
           Relatório gerado pela plataforma em {hora(dados.geradoEm)}. Método em docs/agents/inteligencia-de-mercado.md.
           Onde falta dado, o campo diz que falta — nenhum número aqui é estimado sem aviso.
         </footer>
@@ -1390,24 +1390,24 @@ function ListaProdutos({
         <p className="text-[13px] font-semibold text-ink">{titulo}</p>
         <span className={`num text-[15px] font-semibold ${cor}`}>{linhas.length}</span>
       </div>
-      <p className="text-[11.5px] text-ink-3 mt-0.5 mb-2">{nota}</p>
+      <p className="text-[12px] text-ink-3 mt-0.5 mb-2">{nota}</p>
       {linhas.length ? (
         <ul className="flex flex-col gap-1.5 max-h-[280px] overflow-y-auto">
           {linhas.slice(0, 20).map((l) => (
             <li key={l.mlb} className="border-b border-line last:border-0 pb-1.5 last:pb-0">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="num text-[12px] text-ink">{l.sku ?? l.mlb}</span>
-                <span className="text-[11px] text-ink-3">{l.tipo}</span>
+                <span className="text-[12px] text-ink-3">{l.tipo}</span>
               </div>
-              <p className="text-[11.5px] text-ink-2 truncate" title={l.titulo}>{l.titulo}</p>
-              <p className="num text-[11px] text-ink-3">{extra(l)}</p>
+              <p className="text-[12px] text-ink-2 truncate" title={l.titulo}>{l.titulo}</p>
+              <p className="num text-[12px] text-ink-3">{extra(l)}</p>
             </li>
           ))}
         </ul>
       ) : (
         <p className="text-[12px] text-ink-3">Nenhum item.</p>
       )}
-      {linhas.length > 20 && <p className="text-[11px] text-ink-3 mt-1.5">e outros {linhas.length - 20}</p>}
+      {linhas.length > 20 && <p className="text-[12px] text-ink-3 mt-1.5">e outros {linhas.length - 20}</p>}
     </div>
   );
 }
@@ -1428,7 +1428,7 @@ function DetalheProduto({ l }: { l: LinhaProduto }) {
     <div className="flex flex-col gap-4">
       <div>
         <p className="text-[13.5px] font-semibold text-ink">{l.titulo}</p>
-        <p className="num text-[11.5px] text-ink-3 mt-0.5">
+        <p className="num text-[12px] text-ink-3 mt-0.5">
           {l.mlb} · {l.conta} · {l.tipo} · curva {l.curva}
           {l.situacao && l.situacao !== "active" && <span className="text-down"> · {l.situacao}</span>}
         </p>
@@ -1436,7 +1436,7 @@ function DetalheProduto({ l }: { l: LinhaProduto }) {
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {item("Vitrine", reais(l.precoVitrine, 2))}
-        {item("Cliente vê", <span className={l.emCampanha ? "text-warn" : ""}>{reais(l.precoVisivel, 2)}{l.emCampanha && <span className="text-[11px] text-warn ml-1">em campanha</span>}</span>)}
+        {item("Cliente vê", <span className={l.emCampanha ? "text-warn" : ""}>{reais(l.precoVisivel, 2)}{l.emCampanha && <span className="text-[12px] text-warn ml-1">em campanha</span>}</span>)}
         {item("Mínimo (4,5%)", reais(l.precoMinimo, 2))}
         {item("Distância do mínimo", distanciaMinimo == null ? "—" : <span className={distanciaMinimo < 0 ? "text-down" : "text-up"}>{sinal(distanciaMinimo, 1)}</span>)}
         {item("Melhor preço", reais(l.melhorPreco, 2))}
@@ -1456,7 +1456,7 @@ function DetalheProduto({ l }: { l: LinhaProduto }) {
       </div>
 
       {l.melhorPeriodo && (
-        <p className="text-[11.5px] text-ink-3">
+        <p className="text-[12px] text-ink-3">
           O melhor preço vigorou de {l.melhorPeriodo}, com {numero(l.melhorPorDia, 2)} peças por dia.
           {l.melhorAmostraFraca && " Só uma venda naquele preço, então a velocidade não é medida — é indício."}
         </p>
@@ -1507,7 +1507,7 @@ function SkuEntreCanais({ x }: { x: SkuMulticanal }) {
             <span className="num text-[13px] font-semibold text-ink">{x.sku}</span>
             <span className="text-[12px] text-ink-3 truncate max-w-[420px]">{x.titulo}</span>
           </div>
-          <p className="text-[11.5px] text-ink-2 mt-1">
+          <p className="text-[12px] text-ink-2 mt-1">
             {x.canais.length} canais · vende mais em <strong className="font-medium text-ink">{x.lider}</strong>
             {x.precoLider != null && <> a {reais(x.precoLider, 2)}</>}
             {x.dispersao != null && x.dispersao > 0.05 && (
@@ -1515,7 +1515,7 @@ function SkuEntreCanais({ x }: { x: SkuMulticanal }) {
             )}
           </p>
           {comProblema.length > 0 && (
-            <p className="text-[11.5px] text-down mt-1">
+            <p className="text-[12px] text-down mt-1">
               {comProblema.map((c) => `${c.canal}: ${c.diagnostico}`).join(" · ")}
             </p>
           )}
@@ -1524,8 +1524,8 @@ function SkuEntreCanais({ x }: { x: SkuMulticanal }) {
           {x.receitaEmRisco > 0 && (
             <p className="num text-[13px] font-semibold text-down">{reais(x.receitaEmRisco)}</p>
           )}
-          <p className="num text-[11.5px] text-ink-3">{x.unidades} pç na janela · {x.unidadesAnterior} antes</p>
-          <span className="text-[11px] text-brand">{aberto ? "fechar" : "abrir"}</span>
+          <p className="num text-[12px] text-ink-3">{x.unidades} pç na janela · {x.unidadesAnterior} antes</p>
+          <span className="text-[12px] text-brand">{aberto ? "fechar" : "abrir"}</span>
         </div>
       </button>
 
@@ -1555,7 +1555,7 @@ function SkuEntreCanais({ x }: { x: SkuMulticanal }) {
                   <tr key={c.canal} className={`border-b border-line last:border-0 ${lider ? "bg-brand-wash/30" : ""}`}>
                     <td className="px-4 py-1.5 text-ink font-medium">
                       {c.canal}
-                      {lider && <span className="text-[10px] text-brand ml-1.5">vende mais</span>}
+                      {lider && <span className="text-[12px] text-brand ml-1.5">vende mais</span>}
                     </td>
                     <td className="px-2 py-1.5 text-center">
                       <span className={
@@ -1569,18 +1569,18 @@ function SkuEntreCanais({ x }: { x: SkuMulticanal }) {
                     <td className={`px-2 py-1.5 text-right num ${caro ? "text-warn font-semibold" : "text-ink"}`}>{reais(c.preco, 2)}</td>
                     <td className="px-2 py-1.5 text-right num text-ink-3">{reais(c.precoMinimo, 2)}</td>
                     <td className="px-2 py-1.5 text-right num text-ink-2">
-                      {c.semControleEstoque ? <span className="text-[11px] text-ink-3">sem controle</span> : numero(c.estoque)}
+                      {c.semControleEstoque ? <span className="text-[12px] text-ink-3">sem controle</span> : numero(c.estoque)}
                     </td>
                     <td className="px-2 py-1.5 text-center text-ink-2">{c.emCampanha ? "sim" : "não"}</td>
                     <td className="px-2 py-1.5 text-right num text-ink">{numero(c.unidades)}</td>
                     <td className="px-2 py-1.5 text-right num text-ink-3">{numero(c.unidadesAnterior)}</td>
                     <td className="px-2 py-1.5 text-right num text-ink-2">
-                      {c.temVisita ? numero(c.visitas) : <span className="text-[11px] text-ink-3">sem medição</span>}
+                      {c.temVisita ? numero(c.visitas) : <span className="text-[12px] text-ink-3">sem medição</span>}
                     </td>
                     <td className="px-2 py-1.5 text-right num text-ink-2">
                       {c.conversao == null ? "—" : pct(c.conversao, 2)}
                     </td>
-                    <td className="px-3 py-1.5 text-ink-2 text-[11.5px]">{c.diagnostico ?? (lider ? "—" : "")}</td>
+                    <td className="px-3 py-1.5 text-ink-2 text-[12px]">{c.diagnostico ?? (lider ? "—" : "")}</td>
                   </tr>
                 );
               })}

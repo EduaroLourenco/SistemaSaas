@@ -91,7 +91,7 @@ function Celula({
         className="num w-full h-8 px-2 pr-6 text-right text-[13px] text-ink bg-transparent border border-line rounded-r1 placeholder:text-ink-3 focus:border-brand focus:bg-panel transition-colors"
       />
       {sufixo && (
-        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10.5px] text-ink-3 pointer-events-none">
+        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[12px] text-ink-3 pointer-events-none">
           {sufixo}
         </span>
       )}
@@ -131,7 +131,7 @@ function Par({
       >
         {praticado != null ? formato(praticado) : "—"}
       </span>
-      <span className="num text-[10.5px] text-ink-3">
+      <span className="num text-[12px] text-ink-3">
         {tabela != null ? formato(tabela) : "sem tabela"}
       </span>
     </div>
@@ -366,7 +366,7 @@ export default function CustosCliente({
 
   /* ══ Render ══ */
 
-  const th = "px-2 py-2 text-[11px] font-semibold text-ink-3 whitespace-nowrap";
+  const th = "px-2 py-2 text-[12px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-2 py-1.5 border-b border-line align-middle";
 
   return (
@@ -387,7 +387,7 @@ export default function CustosCliente({
                   {" "}de {count(linhas.length)}
                 </span>
               </p>
-              <p className="text-[11.5px] text-ink-3 mt-1">
+              <p className="text-[12px] text-ink-3 mt-1">
                 SKUs com margem calculável
               </p>
             </div>
@@ -435,7 +435,7 @@ export default function CustosCliente({
             onChange={(v) => aplicarRecorte("canal", v)}
             className="w-[240px]"
           />
-          <span className="text-[11.5px] text-ink-3 ml-auto">
+          <span className="text-[12px] text-ink-3 ml-auto">
             O recorte muda o praticado. O cadastro é do produto e não muda.
           </span>
         </Panel>
@@ -629,7 +629,7 @@ export default function CustosCliente({
                           <p className="num text-[12.5px] text-ink font-medium">
                             {l.sku}
                           </p>
-                          <p className="text-[11px] text-ink-3 truncate max-w-[240px]">
+                          <p className="text-[12px] text-ink-3 truncate max-w-[240px]">
                             {l.titulo}
                           </p>
                         </td>
@@ -638,7 +638,7 @@ export default function CustosCliente({
                             {l.unidades ? count(l.unidades) : "—"}
                           </p>
                           {l.receita > 0 && (
-                            <p className="num text-[10.5px] text-ink-3">
+                            <p className="num text-[12px] text-ink-3">
                               {money(l.receita)}
                             </p>
                           )}
@@ -713,7 +713,7 @@ export default function CustosCliente({
                               >
                                 {money(l.margemUnidade)}
                               </span>
-                              <span className="num text-[10.5px] text-ink-3">
+                              <span className="num text-[12px] text-ink-3">
                                 {pct(l.margemPct ?? 0, 1)}
                               </span>
                             </div>
@@ -721,7 +721,7 @@ export default function CustosCliente({
                             /* O que falta, nomeado. Um "—" aqui faria a
                                pessoa procurar defeito na tela em vez de
                                preencher o campo que resolve. */
-                            <span className="text-[10.5px] text-ink-3 leading-tight block max-w-[150px]">
+                            <span className="text-[12px] text-ink-3 leading-tight block max-w-[150px]">
                               falta {l.faltando.join(", ")}
                             </span>
                           )}
@@ -998,7 +998,7 @@ export default function CustosCliente({
                   <p className="text-[12px] font-semibold text-ink mb-1">
                     Mídia (Ads)
                   </p>
-                  <p className="text-[11.5px] text-ink-3 mb-2 max-w-2xl">
+                  <p className="text-[12px] text-ink-3 mb-2 max-w-2xl">
                     Vem da tela de Lançamentos, onde o gasto do dia anterior é
                     preenchido. Não se digita aqui para não existirem duas
                     versões do mesmo número.
@@ -1009,7 +1009,7 @@ export default function CustosCliente({
                         key={`${a.competencia}-${a.canalNome}-${i}`}
                         className="px-2.5 py-1.5 rounded-r1 border border-line"
                       >
-                        <p className="text-[10.5px] text-ink-3">
+                        <p className="text-[12px] text-ink-3">
                           {a.competencia.slice(0, 7).split("-").reverse().join("/")} ·{" "}
                           {a.canalNome}
                         </p>

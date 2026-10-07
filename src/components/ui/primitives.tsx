@@ -23,7 +23,7 @@ export function Button({
       className={cn(
         "inline-flex items-center justify-center gap-1.5 rounded-r1 border font-medium whitespace-nowrap",
         "transition-colors duration-100 disabled:opacity-45 disabled:pointer-events-none",
-        size === "sm" ? "h-7 px-2.5 text-[12px]" : "h-8 px-3 text-[13px]",
+        size === "sm" ? "h-9 px-3 text-[12px]" : "h-10 px-4 text-[13px]",
         variant === "primary" &&
           "bg-brand text-brand-ink border-brand hover:bg-brand-2 hover:border-brand-2",
         variant === "default" &&
@@ -63,11 +63,11 @@ export function PanelHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 h-11 border-b border-line">
-      <div className="flex items-baseline gap-2 min-w-0">
-        <h3 className="text-[13px] font-semibold text-ink truncate">{title}</h3>
+    <div className="flex items-center justify-between gap-3 px-5 py-4 min-h-14 border-b border-line">
+      <div className="flex flex-col gap-1 min-w-0">
+        <h3 className="text-[16px] font-semibold text-ink">{title}</h3>
         {hint && (
-          <span className="text-[11px] text-ink-3 truncate hidden sm:inline">
+          <span className="text-[12px] text-ink-3 leading-relaxed">
             {hint}
           </span>
         )}
@@ -102,7 +102,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center h-5 px-1.5 rounded-r1 border text-[11px] font-semibold whitespace-nowrap",
+        "inline-flex items-center min-h-6 px-2 rounded-full border text-[12px] font-semibold whitespace-nowrap",
         BADGE_TONE[t],
         className
       )}
@@ -158,13 +158,13 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center text-center py-14 px-6">
       {Icon && (
-        <div className="w-10 h-10 rounded-r2 bg-panel-3 border border-line flex items-center justify-center mb-3">
+        <div className="w-12 h-12 rounded-r2 bg-brand-wash border border-line flex items-center justify-center mb-3">
           <Icon className="w-5 h-5 text-ink-3" strokeWidth={1.75} />
         </div>
       )}
-      <p className="text-[13px] font-semibold text-ink">{title}</p>
+      <p className="text-[17px] font-semibold text-ink">{title}</p>
       {description && (
-        <p className="text-[12px] text-ink-3 mt-1 max-w-xs">{description}</p>
+        <p className="text-[14px] text-ink-2 mt-2 max-w-sm leading-relaxed">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>

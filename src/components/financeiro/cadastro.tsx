@@ -198,7 +198,7 @@ export function Cadastro<T extends { id: string }>({
               className="pl-8"
             />
           </div>
-          <span className="text-[11px] text-ink-3 num">
+          <span className="text-[12px] text-ink-3 num">
             {visiveis.length} {visiveis.length === 1 ? "linha" : "linhas"}
           </span>
           <div className="ml-auto">

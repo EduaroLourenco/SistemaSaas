@@ -305,7 +305,7 @@ function Bolha({
           {mensagem.consultas!.map((c, i) => (
             <span
               key={i}
-              className="inline-flex items-center gap-1.5 text-[11.5px] text-ink-3"
+              className="inline-flex items-center gap-1.5 text-[12px] text-ink-3"
             >
               <Database className="w-3 h-3 shrink-0" strokeWidth={2} />
               {NOME_CONSULTA[c.nome] ?? c.nome}

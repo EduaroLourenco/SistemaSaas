@@ -148,7 +148,7 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
                             </span>
                             <Badge tone={CORES_CURVA[s.curva]}>{s.curva}</Badge>
                           </span>
-                          <span className="text-[11.5px] text-ink-2 block truncate max-w-[280px]">
+                          <span className="text-[12px] text-ink-2 block truncate max-w-[280px]">
                             {s.titulo}
                           </span>
                         </span>
@@ -213,7 +213,7 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
                                       className="panel px-2.5 py-2"
                                       style={{ boxShadow: "var(--sh-3)" }}
                                     >
-                                      <p className="num text-[11px] text-ink-3 mb-0.5">
+                                      <p className="num text-[12px] text-ink-3 mb-0.5">
                                         {String(label ?? "")}
                                       </p>
                                       <p className="num text-[13px] font-semibold text-ink">

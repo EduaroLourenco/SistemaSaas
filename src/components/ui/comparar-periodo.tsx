@@ -123,7 +123,7 @@ export function CompararPeriodo({
                   {l.rotulo}
                 </span>
                 {l.dica && (
-                  <span className="text-[10.5px] text-ink-3 block leading-tight">
+                  <span className="text-[12px] text-ink-3 block leading-tight">
                     {l.dica}
                   </span>
                 )}

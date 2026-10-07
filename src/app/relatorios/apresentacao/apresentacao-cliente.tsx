@@ -198,14 +198,14 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
                     <div className="flex items-start justify-between gap-3">
                       <span className="min-w-0">
                         <span className="flex items-center gap-2">
-                          <span className="num text-[11px] font-semibold text-ink-3">
+                          <span className="num text-[12px] font-semibold text-ink-3">
                             {String(i + 1).padStart(2, "0")}
                           </span>
                           <span className="text-[13px] font-semibold text-ink truncate">
                             {s.titulo}
                           </span>
                         </span>
-                        <span className="block text-[11px] text-ink-3 mt-0.5">
+                        <span className="block text-[12px] text-ink-3 mt-0.5">
                           {s.subtitulo}
                         </span>
                       </span>

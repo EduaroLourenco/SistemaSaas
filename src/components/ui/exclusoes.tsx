@@ -155,7 +155,7 @@ export function PainelExclusoes({
                       {e.canal ?? "todos os canais"}
                       {e.conta ? ` · ${e.conta}` : ""}
                     </span>
-                    <span className="block text-[11.5px] text-ink-3 mt-0.5">
+                    <span className="block text-[12px] text-ink-3 mt-0.5">
                       {e.motivo}
                     </span>
                   </span>
@@ -227,7 +227,7 @@ export function PainelExclusoes({
             )}
 
             <div className="flex items-center justify-between gap-3 flex-wrap mt-3">
-              <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-md">
+              <p className="text-[12px] text-ink-3 leading-relaxed max-w-md">
                 Nada é apagado. A linha continua no banco e volta a contar
                 assim que você reverter — por isso excluir aqui é barato.
               </p>

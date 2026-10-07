@@ -109,7 +109,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
     }
   }
 
-  const th = "px-2.5 py-2 text-[11px] font-semibold text-ink-3 whitespace-nowrap";
+  const th = "px-2.5 py-2 text-[12px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-2.5 py-2 border-b border-line";
 
   return (
@@ -187,7 +187,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
             <p className="text-[13px] font-semibold text-ink mb-1">
               Comissões de {canais.find((c) => c.id === canalId)?.nome}
             </p>
-            <p className="text-[11.5px] text-ink-3 mb-3 max-w-2xl leading-relaxed">
+            <p className="text-[12px] text-ink-3 mb-3 max-w-2xl leading-relaxed">
               Deixe o tipo em branco quando o canal cobra uma taxa só. Para
               registrar um reajuste, adicione uma linha nova com a data em que
               ele passou a valer — assim o preço de antes continua sendo
@@ -364,7 +364,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                   <tr key={l.produtoId} className="hover:bg-panel-2/50">
                     <td className={td}>
                       <p className="num text-[12.5px] text-ink font-medium">{l.sku}</p>
-                      <p className="text-[11px] text-ink-3 truncate max-w-[220px]">
+                      <p className="text-[12px] text-ink-3 truncate max-w-[220px]">
                         {l.titulo}
                       </p>
                     </td>
@@ -381,7 +381,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                           <span className="num text-[12.5px] text-ink-2">
                             {money(l.frete)}
                           </span>
-                          <span className="text-[10px] text-ink-3">
+                          <span className="text-[12px] text-ink-3">
                             {l.freteOrigem === "praticado" ? "medido" : "tabela"}
                           </span>
                         </div>
@@ -430,7 +430,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                                 {pct(c.atual.margemPct, 1)}
                               </span>
                             ) : (
-                              <span className="text-[11px] text-ink-3">—</span>
+                              <span className="text-[12px] text-ink-3">—</span>
                             )}
                           </td>
                           <td className={`${td} text-right`}>
@@ -441,7 +441,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                                 </span>
                                 {c.precoAtual != null && (
                                   <span
-                                    className={`num text-[10.5px] ${
+                                    className={`num text-[12px] ${
                                       alvo.preco > c.precoAtual
                                         ? "text-down"
                                         : "text-up"
@@ -454,14 +454,14 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                               </div>
                             ) : alvo ? (
                               <span
-                                className="text-[10.5px] text-down leading-tight block max-w-[130px]"
+                                className="text-[12px] text-down leading-tight block max-w-[130px]"
                                 title={alvo.motivo}
                               >
                                 margem impossível
                               </span>
                             ) : (
                               <span
-                                className="text-[10.5px] text-ink-3 leading-tight block max-w-[130px]"
+                                className="text-[12px] text-ink-3 leading-tight block max-w-[130px]"
                                 title={l.faltando.join(", ")}
                               >
                                 falta {l.faltando[0]}
@@ -489,7 +489,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
           </div>
 
           {visiveis.length > 200 && (
-            <p className="px-3 py-2 text-[11.5px] text-ink-3 border-t border-line">
+            <p className="px-3 py-2 text-[12px] text-ink-3 border-t border-line">
               Mostrando os 200 de maior faturamento. Use a busca para chegar aos
               demais.
             </p>
@@ -504,14 +504,14 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
             preço = (mercadoria + embalagem + frete) ÷ (1 − comissão − imposto −
             margem)
           </p>
-          <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-2xl">
+          <p className="text-[12px] text-ink-3 leading-relaxed max-w-2xl">
             Comissão, imposto e margem são percentuais do próprio preço, então a
             conta se resolve — não se marca em cima do custo. Marcar por cima
             (custo ÷ 0,80 para 20%) entrega{" "}
             <span className="num text-ink-2">3,7%</span> de margem real neste
             exemplo, não 20%.
           </p>
-          <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-2xl mt-1.5">
+          <p className="text-[12px] text-ink-3 leading-relaxed max-w-2xl mt-1.5">
             O juro de parcelamento fica de fora do alvo: só se sabe depois da
             venda, quando o comprador escolhe parcelar. Ele entra na margem
             medida, em Financeiro — e é lá que a diferença entre o alvo e o

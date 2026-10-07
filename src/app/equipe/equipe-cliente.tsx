@@ -148,7 +148,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
                 Convidar
               </Button>
             </form>
-            <p className="text-[11.5px] text-ink-3 mt-3 pt-3 border-t border-line">
+            <p className="text-[12px] text-ink-3 mt-3 pt-3 border-t border-line">
               {PAPEIS.find((p) => p.valor === papel)?.descricao}
             </p>
           </Panel>
@@ -168,7 +168,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="min-w-0">
                     <p className="text-[13px] text-ink font-medium truncate">{c.email}</p>
-                    <p className="text-[11.5px] text-ink-3 mt-0.5">
+                    <p className="text-[12px] text-ink-3 mt-0.5">
                       {rotulo(c.papel)} ·{" "}
                       {c.vencido ? (
                         <span className="text-down">venceu em {quando(c.expiraEm)}</span>
@@ -240,7 +240,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
                     {m.nome ?? m.email}
                     {m.euMesmo && <span className="text-ink-3 font-normal"> · você</span>}
                   </p>
-                  <p className="text-[11.5px] text-ink-3 mt-0.5 truncate">
+                  <p className="text-[12px] text-ink-3 mt-0.5 truncate">
                     {m.nome ? `${m.email} · ` : ""}desde {quando(m.desde)}
                   </p>
                 </div>
@@ -291,7 +291,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
           ))}
         </div>
         {!administra && (
-          <p className="text-[11.5px] text-ink-3">
+          <p className="text-[12px] text-ink-3">
             Seu papel é {rotulo(equipe.meuPapel ?? "leitor")} — convidar e remover é de
             proprietário ou administrador.
           </p>

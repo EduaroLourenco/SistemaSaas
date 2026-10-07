@@ -124,7 +124,7 @@ export default function Exportacoes() {
                 <p className="text-[14px] font-semibold text-ink">
                   Pacote completo da operação
                 </p>
-                <span className="inline-flex items-center gap-1 text-[11px] text-ink-3">
+                <span className="inline-flex items-center gap-1 text-[12px] text-ink-3">
                   <Sparkles className="w-3 h-3" strokeWidth={2} />
                   para IA
                 </span>
@@ -135,7 +135,7 @@ export default function Exportacoes() {
                 exclusões de análise aplicadas, então bate com o que as telas
                 mostram.
               </p>
-              <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-xl mt-1.5">
+              <p className="text-[12px] text-ink-3 leading-relaxed max-w-xl mt-1.5">
                 Vem em formato de máquina — vírgula, decimal com ponto, data
                 aaaa-mm-dd. E um <span className="num">LEIA-ME.md</span> que diz
                 o que os dados <span className="font-medium text-ink-2">não</span>{" "}
@@ -179,7 +179,7 @@ export default function Exportacoes() {
                 preço praticado e o retido pelo canal — a queda aparece lendo
                 da esquerda para a direita.
               </p>
-              <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-xl mt-1.5">
+              <p className="text-[12px] text-ink-3 leading-relaxed max-w-xl mt-1.5">
                 A comissão vem em duas colunas —{" "}
                 <span className="font-medium text-ink-2">tarifa de tabela</span>{" "}
                 e <span className="font-medium text-ink-2">retido</span>. Elas

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Pagination, usePagination } from "./pagination";
 import { cn } from "@/lib/utils";
 import { Button } from "./primitives";
 import { baixarCsv, type Coluna as ColunaCsv } from "@/lib/exportar";
@@ -52,6 +53,7 @@ export function Tabela<T>({
   onLinhaClick?: (linha: T) => void;
   className?: string;
 }) {
+  const { visible, pagination } = usePagination(linhas);
   const exportaveis = React.useMemo(
     () =>
       colunas
@@ -73,7 +75,7 @@ export function Tabela<T>({
             size="sm"
             variant="ghost"
             onClick={() => baixarCsv(nomeExportacao, linhas, exportaveis)}
-            title={`Exporta as ${linhas.length} linhas visíveis, com os filtros atuais`}
+            title={`Exporta as ${linhas.length} resultados dos filtros atuais`}
           >
             <Download className="w-3 h-3" strokeWidth={2.25} />
             Exportar {linhas.length}
@@ -82,7 +84,7 @@ export function Tabela<T>({
       )}
 
       {/* ── tela larga: tabela ── */}
-      <div className="hidden sm:block overflow-x-auto">
+      <div className="gerizo-table-scroll hidden sm:block" tabIndex={0} role="region" aria-label="Tabela de resultados">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-line">
@@ -101,10 +103,15 @@ export function Tabela<T>({
             </tr>
           </thead>
           <tbody>
-            {linhas.map((l) => (
+            {visible.map((l) => (
               <tr
                 key={chave(l)}
-                onClick={onLinhaClick ? () => onLinhaClick(l) : undefined}
+                onClick={onLinhaClick ? (event) => {
+                  if ((event.target as HTMLElement).closest("a,button,input,select,textarea")) return;
+                  onLinhaClick(l);
+                } : undefined}
+                tabIndex={onLinhaClick ? 0 : undefined}
+                onKeyDown={onLinhaClick ? (event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onLinhaClick(l); } } : undefined}
                 className={cn(
                   "border-b border-line last:border-0",
                   onLinhaClick && "cursor-pointer hover:bg-panel-2"
@@ -129,7 +136,7 @@ export function Tabela<T>({
 
       {/* ── celular: um cartão por linha ── */}
       <div className="sm:hidden flex flex-col gap-2">
-        {linhas.map((l) => (
+        {visible.map((l) => (
           <Cartao
             key={chave(l)}
             linha={l}
@@ -138,6 +145,7 @@ export function Tabela<T>({
           />
         ))}
       </div>
+      <Pagination {...pagination} />
     </div>
   );
 }

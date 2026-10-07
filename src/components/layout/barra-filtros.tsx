@@ -54,7 +54,7 @@ export function BarraFiltros({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-end gap-2.5 flex-wrap w-full", className)}>
+    <div className={cn("gerizo-filter-bar flex items-end gap-3 flex-wrap w-full", className)}>
       {children}
     </div>
   );
@@ -78,7 +78,7 @@ export function Filtro({
 }) {
   return (
     <label className={cn("flex flex-col gap-1 min-w-0 shrink-0", className)}>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.07em] text-ink-3 leading-none">
+      <span className="text-[12px] font-semibold tracking-normal text-ink-3 leading-none">
         {rotulo}
       </span>
       {children}

@@ -77,7 +77,7 @@ export default async function Integracoes() {
             />
             <Link
               href="/integracoes/canais"
-              className="text-[11.5px] font-medium text-brand hover:underline shrink-0 pb-0.5"
+              className="text-[12px] font-medium text-brand hover:underline shrink-0 pb-0.5"
             >
               Cadastrar canais e contas
             </Link>
@@ -103,7 +103,7 @@ export default async function Integracoes() {
                     </Badge>
                   </div>
                   <div className="mt-3 pt-3 border-t border-line flex items-center justify-between gap-3">
-                    <p className="num text-[11.5px] text-ink-2">
+                    <p className="num text-[12px] text-ink-2">
                       {reg?.ultima_sincronizacao
                         ? `Última sincronização: ${quando(reg.ultima_sincronizacao)}`
                         : conectada
@@ -112,13 +112,13 @@ export default async function Integracoes() {
                     </p>
                     <Link
                       href={`/api/meli/conectar?conta=${c.id}`}
-                      className="text-[11.5px] font-medium text-brand hover:underline shrink-0"
+                      className="text-[12px] font-medium text-brand hover:underline shrink-0"
                     >
                       {conectada ? "Reconectar" : "Conectar"}
                     </Link>
                   </div>
                   {comErro && reg?.ultimo_erro && (
-                    <p className="text-[11.5px] text-down mt-1.5">{reg.ultimo_erro}</p>
+                    <p className="text-[12px] text-down mt-1.5">{reg.ultimo_erro}</p>
                   )}
                 </Panel>
               );
@@ -147,7 +147,7 @@ export default async function Integracoes() {
                     {l.conectada ? "Conectada" : "Não conectada"}
                   </Badge>
                 </div>
-                <p className="text-[11.5px] text-ink-2 mt-3 pt-3 border-t border-line">
+                <p className="text-[12px] text-ink-2 mt-3 pt-3 border-t border-line">
                   Pedido criado e nunca pago não entra: a VTEX abre o pedido antes de o
                   cartão responder, e contá-lo punha a loja com quase metade de
                   cancelamento que nunca foi venda.

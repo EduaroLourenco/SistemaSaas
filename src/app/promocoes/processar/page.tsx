@@ -285,7 +285,7 @@ export default function ProcessarPromocoes() {
       cell: (l) => (
         <span className="min-w-0 block">
           <span className="num font-medium text-ink block">{l.mlb}</span>
-          <span className="num block text-[11px] text-ink-3 mt-0.5 truncate">
+          <span className="num block text-[12px] text-ink-3 mt-0.5 truncate">
             {l.sku || "sem SKU"}
           </span>
         </span>
@@ -500,7 +500,7 @@ export default function ProcessarPromocoes() {
                       >
                         {e.titulo}
                       </span>
-                      <span className="text-[11px] text-ink-3 truncate hidden sm:block">
+                      <span className="text-[12px] text-ink-3 truncate hidden sm:block">
                         {e.hint}
                       </span>
                     </span>
@@ -614,7 +614,7 @@ export default function ProcessarPromocoes() {
                 </div>
               </div>
               <div className="px-4 pb-4">
-                <p className="text-[11.5px] text-ink-3 leading-relaxed">
+                <p className="text-[12px] text-ink-3 leading-relaxed">
                   Em todas as três, linha com oferta já fechada é analisada mas{" "}
                   <b className="text-ink-2">nunca reescrita</b>: trocar um acordo no ar
                   tira o anúncio da campanha sem ninguém perceber.
@@ -814,7 +814,7 @@ export default function ProcessarPromocoes() {
                       <span className="num text-[13px] text-ink truncate block">
                         processado_{a.nome}
                       </span>
-                      <span className="text-[11px] text-ink-3 truncate block">
+                      <span className="text-[12px] text-ink-3 truncate block">
                         {a.campanha}
                       </span>
                     </span>
@@ -853,7 +853,7 @@ export default function ProcessarPromocoes() {
                 </Link>
               </div>
 
-              <p className="text-[11px] text-ink-3 mt-3">
+              <p className="text-[12px] text-ink-3 mt-3">
                 O pacote inclui uma planilha processada por campanha mais o relatório
                 gerencial. Fica disponível por 15 minutos e sai depois de baixado — se precisar de novo, é só processar outra vez.
               </p>
@@ -909,7 +909,7 @@ function PainelRevisao({ revisao }: { revisao: Record<Tag, Linha[]> }) {
         <span className="font-medium text-ink truncate block max-w-[270px]">
           {l.titulo || l.mlb}
         </span>
-        <span className="num block text-[11px] text-ink-3 mt-0.5">
+        <span className="num block text-[12px] text-ink-3 mt-0.5">
           {l.mlb} · {l.sku || "sem SKU"}
         </span>
       </span>
@@ -978,7 +978,7 @@ function PainelRevisao({ revisao }: { revisao: Record<Tag, Linha[]> }) {
             {sobra ? "+" : "−"}
             {money(Math.abs(l.folga))}
           </span>
-          <span className="num text-[11px] text-ink-3 hidden lg:inline">
+          <span className="num text-[12px] text-ink-3 hidden lg:inline">
             {pct((Math.abs(l.folga) / base) * 100)}
           </span>
         </span>
@@ -1055,7 +1055,7 @@ function PainelRevisao({ revisao }: { revisao: Record<Tag, Linha[]> }) {
               {c.rotulo}
               <span
                 className={
-                  "num text-[11px] px-1.5 h-4 flex items-center rounded-[4px] " +
+                  "num text-[12px] px-1.5 h-4 flex items-center rounded-[4px] " +
                   (ativa ? "bg-brand text-brand-ink" : "bg-panel-3 text-ink-3")
                 }
               >

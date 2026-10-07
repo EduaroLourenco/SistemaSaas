@@ -1,46 +1,44 @@
 @import "tailwindcss";
 
-/* ══════════════════════════════════════════════════════════════
-   DESIGN SYSTEM
-   Grafite + Verde-petróleo. Claro por padrão, escuro completo.
-   Sem gradiente de fundo, sem blur, sem sombra colorida.
-   Todo número é monoespaçado tabular — é a assinatura.
-   ══════════════════════════════════════════════════════════════ */
+/* Gerizo — identidade compartilhada; nomes históricos dos tokens preservados. */
 
 :root {
   /* superfícies */
-  --ground: #f5f6f8;
+  --ground: #f7f9fc;
   --panel: #ffffff;
-  --panel-2: #fafafc;
-  --panel-3: #eff1f4;
-  --line: #e3e6eb;
-  --line-2: #c9cfd8;
+  --panel-2: #fafbfd;
+  --panel-3: #f0f3f8;
+  --line: #e6eaf1;
+  --line-2: #d7dde8;
 
   /* tinta */
-  --ink: #101828;
-  --ink-2: #4a5568;
-  --ink-3: #8a94a6;
+  --ink: #0a1638;
+  --ink-2: #55627c;
+  --ink-3: #63718b;
 
   /* identidade */
-  --brand: #0f5c57;
-  --brand-2: #0a4340;
+  --brand: #7a4dd8;
+  --brand-2: #673bc4;
   --brand-ink: #ffffff;
-  --brand-wash: #e4f0ee;
-  --brand-edge: #b6d6d1;
+  --brand-wash: #f1eaff;
+  --brand-edge: #dfd2f6;
+  --nav-active: #dff7f8;
+  --nav-ink: #09677a;
+  --teal: #10bfa0;
 
   /* semântica */
-  --up: #0f7b54;
-  --up-wash: #e2f1ea;
-  --warn: #a66a12;
-  --warn-wash: #f8eedb;
-  --down: #b23a2b;
-  --down-wash: #f9e3df;
-  --info: #1f6fb2;
-  --info-wash: #e2eef8;
+  --up: #087d6b;
+  --up-wash: #e4f9f1;
+  --warn: #94600a;
+  --warn-wash: #fff4d9;
+  --down: #c12e4b;
+  --down-wash: #ffe8ed;
+  --info: #2563c4;
+  --info-wash: #eaf2ff;
 
   /* séries de gráfico */
-  --s1: #0f5c57; --s2: #1f6fb2; --s3: #a66a12; --s4: #8a4a9c; --s5: #2a7d96;
-  --s6: #b23a2b; --s7: #5f7a2e; --s8: #9c5a3c; --s9: #4d5a75; --s10: #7a6ba8;
+  --s1: #10bfa0; --s2: #3b82f6; --s3: #e8a21a; --s4: #7a4dd8; --s5: #7e93b5;
+  --s6: #c12e4b; --s7: #5f7a2e; --s8: #9c5a3c; --s9: #4d5a75; --s10: #7a6ba8;
 
   /* elevação — 3 níveis, nunca colorida */
   --sh-1: 0 1px 2px rgba(16, 24, 40, 0.05);
@@ -50,10 +48,10 @@
   --grid: rgba(16, 24, 40, 0.08);
 
   /* métrica */
-  --r1: 6px; --r2: 10px; --r3: 14px;
-  --row: 32px;
-  --rail: 236px;
-  --topbar: 52px;
+  --r1: 9px; --r2: 14px; --r3: 18px;
+  --row: 44px;
+  --rail: 204px;
+  --topbar: 54px;
 
   --f-ui: var(--font-inter), ui-sans-serif, "Segoe UI Variable Text", "Segoe UI", Roboto,
     -apple-system, BlinkMacSystemFont, sans-serif;
@@ -63,7 +61,7 @@
 
 /* densidade confortável (toggle) */
 :root[data-density="comfortable"] {
-  --row: 42px;
+  --row: 54px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -76,18 +74,21 @@
     --line-2: #384150;
     --ink: #e9edf4;
     --ink-2: #a3adbe;
-    --ink-3: #6c7689;
-    --brand: #3aa396;
-    --brand-2: #4bb8aa;
-    --brand-ink: #06201e;
-    --brand-wash: #10312f;
-    --brand-edge: #1d4a46;
-    --up: #35b183; --up-wash: #0e2a21;
-    --warn: #d09338; --warn-wash: #2d2314;
-    --down: #e0705c; --down-wash: #2f1a16;
-    --info: #5aa2de; --info-wash: #12242f;
-    --s1: #3aa396; --s2: #5aa2de; --s3: #d09338; --s4: #b287c4; --s5: #5cb2ca;
-    --s6: #e0705c; --s7: #93b45f; --s8: #c78d6d; --s9: #8d9bb4; --s10: #a99ad4;
+    --ink-3: #9aa7bd;
+    --brand: #ae8aef;
+    --brand-2: #bfa1f6;
+    --brand-ink: #170c31;
+    --brand-wash: #2c2341;
+    --brand-edge: #574174;
+    --nav-active: #14373e;
+    --nav-ink: #8cdae0;
+    --teal: #50d1b3;
+    --up: #50d1b3; --up-wash: #11332e;
+    --warn: #f4bd59; --warn-wash: #382c17;
+    --down: #ff8ca1; --down-wash: #3b202a;
+    --info: #8bb6ff; --info-wash: #1c2c49;
+    --s1: #50d1b3; --s2: #8bb6ff; --s3: #f4bd59; --s4: #b287c4; --s5: #5cb2ca;
+    --s6: #ff8ca1; --s7: #93b45f; --s8: #c78d6d; --s9: #8d9bb4; --s10: #a99ad4;
     --sh-1: 0 1px 2px rgba(0, 0, 0, 0.4);
     --sh-2: 0 1px 3px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
     --sh-3: 0 16px 48px -16px rgba(0, 0, 0, 0.8);
@@ -105,18 +106,21 @@
   --line-2: #384150;
   --ink: #e9edf4;
   --ink-2: #a3adbe;
-  --ink-3: #6c7689;
-  --brand: #3aa396;
-  --brand-2: #4bb8aa;
-  --brand-ink: #06201e;
-  --brand-wash: #10312f;
-  --brand-edge: #1d4a46;
-  --up: #35b183; --up-wash: #0e2a21;
-  --warn: #d09338; --warn-wash: #2d2314;
-  --down: #e0705c; --down-wash: #2f1a16;
-  --info: #5aa2de; --info-wash: #12242f;
-  --s1: #3aa396; --s2: #5aa2de; --s3: #d09338; --s4: #b287c4; --s5: #5cb2ca;
-  --s6: #e0705c; --s7: #93b45f; --s8: #c78d6d; --s9: #8d9bb4; --s10: #a99ad4;
+  --ink-3: #9aa7bd;
+  --brand: #ae8aef;
+  --brand-2: #bfa1f6;
+  --brand-ink: #170c31;
+  --brand-wash: #2c2341;
+  --brand-edge: #574174;
+    --nav-active: #14373e;
+    --nav-ink: #8cdae0;
+    --teal: #50d1b3;
+  --up: #50d1b3; --up-wash: #11332e;
+  --warn: #f4bd59; --warn-wash: #382c17;
+  --down: #ff8ca1; --down-wash: #3b202a;
+  --info: #8bb6ff; --info-wash: #1c2c49;
+  --s1: #50d1b3; --s2: #8bb6ff; --s3: #f4bd59; --s4: #b287c4; --s5: #5cb2ca;
+  --s6: #ff8ca1; --s7: #93b45f; --s8: #c78d6d; --s9: #8d9bb4; --s10: #a99ad4;
   --sh-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --sh-2: 0 1px 3px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
   --sh-3: 0 16px 48px -16px rgba(0, 0, 0, 0.8);
@@ -167,7 +171,7 @@ body {
   background: var(--ground);
   color: var(--ink);
   font-family: var(--f-ui);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -175,7 +179,7 @@ body {
 
 /* ── numerais: a assinatura ───────────────────────────────── */
 .num {
-  font-family: var(--f-num);
+  font-family: var(--f-ui);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "zero" 1;
   letter-spacing: -0.01em;
@@ -219,15 +223,55 @@ body {
 }
 
 .label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--ink-3);
 }
 
 .hairline {
   border-bottom: 1px solid var(--line);
+}
+
+/* Marca oficial sobre as duas superfícies. */
+.gerizo-logo { mix-blend-mode: multiply; }
+:root[data-theme="dark"] .gerizo-logo { filter: invert(1); mix-blend-mode: screen; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .gerizo-logo { filter: invert(1); mix-blend-mode: screen; }
+}
+
+.gerizo-nav-active { background: var(--nav-active); color: var(--nav-ink); }
+.gerizo-page-header, .gerizo-page-body { width: 100%; max-width: 1520px; margin-inline: auto; }
+.gerizo-disclosure summary::-webkit-details-marker { display: none; }
+.gerizo-disclosure summary::marker { content: ""; }
+.gerizo-table-scroll { max-width: 100%; max-height: 650px; overflow: auto; overscroll-behavior-x: contain; }
+.gerizo-table-scroll thead { position: sticky; top: 0; z-index: 12; background: var(--panel-2); }
+.gerizo-table-scroll th { color: var(--ink-2); font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.gerizo-table-scroll td { min-height: var(--row); }
+.gerizo-table-scroll tbody tr:hover { background: var(--panel-2); }
+.gerizo-table-scroll :is(th, td):first-child { position: sticky; left: 0; background: var(--panel); z-index: 1; }
+.gerizo-table-scroll th:first-child { background: var(--panel-2); z-index: 13; }
+.gerizo-sheet {
+  position: fixed; inset: 0 0 0 auto; margin: 0; padding: 0;
+  width: min(var(--sheet-width, 520px), 100vw); height: 100dvh;
+  max-width: 100vw; max-height: 100dvh; border: 0; border-left: 1px solid var(--line);
+  border-radius: 18px 0 0 18px; background: var(--panel); color: var(--ink);
+  box-shadow: var(--sh-3); overflow: hidden;
+}
+.gerizo-sheet::backdrop { background: var(--veil); }
+.gerizo-sheet:not([open]) { display: none; }
+.gerizo-sheet-footer { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+html:has(.gerizo-sheet[open]) { overflow: hidden; }
+.gerizo-filter-sheet .gerizo-filter-bar { align-items: stretch; flex-direction: column; }
+.gerizo-filter-sheet .gerizo-filter-bar > label { width: 100%; }
+.gerizo-filter-sheet .gerizo-filter-bar select { width: 100%; }
+button:not(:disabled), summary { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+@media (max-width: 767px) {
+  .gerizo-sheet { width: 100vw; border-radius: 0; border-left: 0; }
+  button, select, input:not([type="checkbox"]):not([type="radio"]), a[role="button"] { min-height: 42px; }
+  input, textarea, select { font-size: max(16px, 1em); }
+  .gerizo-filter-sheet .gerizo-segmented { flex-wrap: wrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -138,11 +138,11 @@ export function BuscaGlobal() {
       {/* gatilho no topo */}
       <button
         onClick={() => setAberta(true)}
-        className="hidden lg:flex items-center gap-2 h-7 w-64 px-2.5 rounded-r1 border border-line text-ink-3 hover:bg-panel-3 transition-colors"
+        className="hidden lg:flex items-center gap-2 h-9 w-72 px-2.5 rounded-r1 border border-line text-ink-3 hover:bg-panel-3 transition-colors"
       >
         <Search className="w-3.5 h-3.5 shrink-0" />
-        <span className="text-[12px] flex-1 text-left">Buscar anúncio, tela, termo</span>
-        <span className="num text-[10px] px-1 rounded-[3px] bg-panel-3 border border-line">
+        <span className="text-[12px] flex-1 text-left">Buscar uma tela…</span>
+        <span className="num text-[12px] px-1 rounded-[3px] bg-panel-3 border border-line">
           /
         </span>
       </button>
@@ -220,12 +220,12 @@ export function BuscaGlobal() {
                           {a.rotulo}
                         </span>
                         {a.detalhe && (
-                          <span className="num block text-[11px] text-ink-3 truncate">
+                          <span className="num block text-[12px] text-ink-3 truncate">
                             {a.detalhe}
                           </span>
                         )}
                       </span>
-                      <span className="text-[10px] uppercase tracking-[0.04em] font-semibold text-ink-3 shrink-0">
+                      <span className="text-[12px] uppercase tracking-[0.04em] font-semibold text-ink-3 shrink-0">
                         {ROTULO_TIPO[a.tipo]}
                       </span>
                       {i === ativo && (
@@ -241,9 +241,9 @@ export function BuscaGlobal() {
             )}
 
             <div className="flex items-center gap-4 px-3.5 h-9 border-t border-line bg-panel-2">
-              <span className="num text-[11px] text-ink-3">↑ ↓ navegar</span>
-              <span className="num text-[11px] text-ink-3">↵ abrir</span>
-              <span className="num text-[11px] text-ink-3">esc fechar</span>
+              <span className="num text-[12px] text-ink-3">↑ ↓ navegar</span>
+              <span className="num text-[12px] text-ink-3">↵ abrir</span>
+              <span className="num text-[12px] text-ink-3">esc fechar</span>
             </div>
           </div>
         </div>

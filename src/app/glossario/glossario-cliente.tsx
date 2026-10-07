@@ -101,7 +101,7 @@ export default function Glossario({ dados }: { dados: DadosGlossario }) {
             <Panel key={g.secao} className="overflow-hidden">
               <div className="flex items-center justify-between gap-3 px-4 h-11 border-b border-line bg-panel-2">
                 <h2 className="text-[13px] font-semibold text-ink">{g.secao}</h2>
-                <span className="num text-[11px] text-ink-3">
+                <span className="num text-[12px] text-ink-3">
                   {g.termos.length}
                 </span>
               </div>
@@ -146,7 +146,7 @@ function VerbeteGlossario({ t }: { t: Termo }) {
           </p>
         )}
 
-        <p className="flex items-center gap-1.5 text-[11px] text-ink-3 mt-2">
+        <p className="flex items-center gap-1.5 text-[12px] text-ink-3 mt-2">
           <MapPin className="w-3 h-3 shrink-0" strokeWidth={2} />
           {t.onde}
         </p>

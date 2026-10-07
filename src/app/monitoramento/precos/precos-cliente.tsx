@@ -249,13 +249,13 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
                       }
                       return (
                         <div className="panel px-2.5 py-2 min-w-[190px]" style={{ boxShadow: "var(--sh-3)" }}>
-                          <p className="num text-[11px] font-semibold text-ink-2 mb-1.5">
+                          <p className="num text-[12px] font-semibold text-ink-2 mb-1.5">
                             {p.chave}
                           </p>
                           <p className="num text-[14px] font-semibold text-ink">
                             {money(p.preco)}
                           </p>
-                          <p className="text-[11px] text-ink-3 mt-1">
+                          <p className="text-[12px] text-ink-3 mt-1">
                             {count(p.unidades)} un ·{" "}
                             {p.min != null && p.max != null && p.min !== p.max
                               ? `${money(p.min)} a ${money(p.max)}`
@@ -340,7 +340,7 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
                               </span>
                               <Badge tone={CORES_CURVA[s.curva]}>{s.curva}</Badge>
                             </span>
-                            <span className="text-[11.5px] text-ink-2 block truncate max-w-[300px]">
+                            <span className="text-[12px] text-ink-2 block truncate max-w-[300px]">
                               {s.titulo}
                             </span>
                           </span>

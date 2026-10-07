@@ -21,8 +21,8 @@ export const AXIS = {
   stroke: "var(--line)",
   tick: {
     fill: "var(--ink-3)",
-    fontSize: 11,
-    fontFamily: "var(--f-num)",
+    fontSize: 12,
+    fontFamily: "var(--f-ui)",
   },
   tickLine: false,
   axisLine: false,
@@ -49,11 +49,11 @@ export function ChartTooltip({
   if (!active || !payload?.length) return null;
   return (
     <div
-      className="panel panel-2 px-2.5 py-2 min-w-[130px]"
+      className="panel panel-2 px-3 py-3 min-w-[130px]"
       style={{ boxShadow: "var(--sh-3)" }}
     >
       {label !== undefined && (
-        <p className="text-[11px] font-semibold text-ink-2 mb-1.5">{label}</p>
+        <p className="text-[12px] font-semibold text-ink-2 mb-1.5">{label}</p>
       )}
       <div className="flex flex-col gap-1">
         {payload.map((p, i) => (
@@ -63,7 +63,7 @@ export function ChartTooltip({
                 className="w-2 h-2 rounded-[2px] shrink-0"
                 style={{ background: p.color }}
               />
-              <span className="text-[11px] text-ink-2 truncate">
+              <span className="text-[12px] text-ink-2 truncate">
                 {p.name ?? p.dataKey}
               </span>
             </span>
@@ -94,7 +94,7 @@ export function Legend({
             className="w-2.5 h-2.5 rounded-[3px] shrink-0"
             style={{ background: it.color }}
           />
-          <span className="text-[11px] text-ink-2">{it.label}</span>
+          <span className="text-[12px] text-ink-2">{it.label}</span>
         </span>
       ))}
     </div>

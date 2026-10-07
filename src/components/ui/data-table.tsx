@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { Pagination, usePagination } from "./pagination";
 import { cn } from "@/lib/utils";
-import { ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 
 export type Column<T> = {
   key: string;
@@ -55,6 +56,8 @@ export function DataTable<T>({
     });
   }, [rows, sort, columns]);
 
+  const { visible, pagination } = usePagination(sorted);
+
   function toggleSort(key: string) {
     setSort((s) =>
       s?.key === key
@@ -65,15 +68,12 @@ export function DataTable<T>({
 
   if (rows.length === 0 && empty) return <>{empty}</>;
 
-  const titleCol = columns.find((c) => c.mobile === "title") ?? columns[0];
-  const subtitleCol = columns.find((c) => c.mobile === "subtitle");
-  const metricCols = columns.filter((c) => c.mobile === "metric").slice(0, 3);
 
   return (
     <>
       {/* ── Desktop: tabela densa ─────────────────────────────── */}
-      <div className={cn("hidden md:block overflow-x-auto", className)}>
-        <table className="w-full border-collapse text-[13px]">
+      <div className={cn("gerizo-table-scroll", className)} tabIndex={0} role="region" aria-label="Tabela de resultados. Role para ver todas as colunas.">
+        <table className="w-full border-collapse text-[13px]" style={{ minWidth: columns.length > 6 ? 920 : columns.length > 3 ? 620 : undefined }}>
           <thead>
             <tr className="bg-panel-2">
               {columns.map((c) => {
@@ -87,9 +87,11 @@ export function DataTable<T>({
                 return (
                   <th
                     key={c.key}
+                    scope="col"
+                    aria-sort={active ? sort!.dir === "asc" ? "ascending" : "descending" : undefined}
                     style={{ width: c.width }}
                     className={cn(
-                      "h-9 px-3 border-b border-line font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap",
+                      "h-11 px-4 border-b border-line font-medium text-[12px] text-ink-2 whitespace-nowrap",
                       c.align === "right" ? "text-right" : "text-left",
                       c.sticky &&
                         "sticky left-0 z-10 bg-panel-2 border-r border-line"
@@ -99,7 +101,7 @@ export function DataTable<T>({
                       <button
                         onClick={() => toggleSort(c.key)}
                         className={cn(
-                          "inline-flex items-center gap-1 hover:text-ink transition-colors",
+                          "inline-flex min-h-10 items-center gap-1.5 hover:text-ink transition-colors",
                           active && "text-ink",
                           c.align === "right" && "flex-row-reverse"
                         )}
@@ -116,10 +118,17 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody>
-            {sorted.map((row, i) => (
+            {visible.map((row, i) => (
               <tr
                 key={rowKey(row)}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onClick={onRowClick ? (event) => {
+                  if ((event.target as HTMLElement).closest("a,button,input,select,textarea")) return;
+                  onRowClick(row);
+                } : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={onRowClick ? (event) => {
+                  if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onRowClick(row); }
+                } : undefined}
                 className={cn(
                   "border-b border-line last:border-0 transition-colors",
                   i % 2 === 1 && "bg-panel-2/55",
@@ -130,7 +139,7 @@ export function DataTable<T>({
                   <td
                     key={c.key}
                     className={cn(
-                      "px-3 text-ink-2",
+                      "px-4 py-2.5 text-ink-2",
                       c.align === "right" && "text-right",
                       c.sticky &&
                         "sticky left-0 z-10 bg-panel border-r border-line"
@@ -146,44 +155,7 @@ export function DataTable<T>({
         </table>
       </div>
 
-      {/* ── Mobile: cartões empilhados, nunca scroll lateral ──── */}
-      <ul className="md:hidden divide-y divide-line">
-        {sorted.map((row) => (
-          <li key={rowKey(row)}>
-            <button
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              disabled={!onRowClick}
-              className="w-full text-left px-4 py-3 flex items-center gap-3 active:bg-panel-3 transition-colors disabled:active:bg-transparent"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-medium text-ink truncate">
-                  {titleCol.cell(row)}
-                </div>
-                {subtitleCol && (
-                  <div className="text-[11px] text-ink-3 truncate mt-0.5">
-                    {subtitleCol.cell(row)}
-                  </div>
-                )}
-                {metricCols.length > 0 && (
-                  <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mt-2">
-                    {metricCols.map((c) => (
-                      <span key={c.key} className="flex flex-col">
-                        <span className="text-[10px] uppercase tracking-[0.04em] text-ink-3 font-semibold">
-                          {c.header}
-                        </span>
-                        <span className="text-[13px] text-ink">{c.cell(row)}</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {onRowClick && (
-                <ChevronRight className="w-4 h-4 text-ink-3 shrink-0" />
-              )}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <Pagination {...pagination} />
     </>
   );
 }

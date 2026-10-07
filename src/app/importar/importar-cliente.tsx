@@ -274,7 +274,7 @@ export default function ImportarCliente() {
                 setErro(null);
               }}
             />
-            <p className="text-[11.5px] text-ink-3 mt-2.5 leading-relaxed">
+            <p className="text-[12px] text-ink-3 mt-2.5 leading-relaxed">
               Não precisa dizer qual é: o formato sai da estrutura do arquivo.
               Nada é gravado antes de você conferir a prévia.
             </p>
@@ -290,7 +290,7 @@ export default function ImportarCliente() {
                   </span>
                 </span>
                 {enviando && (
-                  <span className="text-[11.5px] text-ink-3 text-center max-w-sm">
+                  <span className="text-[12px] text-ink-3 text-center max-w-sm">
                     Arquivo grande vai direto para o armazenamento, sem passar
                     pelo servidor — é o que permite passar do limite de 4,5 MB
                     da plataforma.
@@ -510,7 +510,7 @@ function Resultado({
             <span className="num font-semibold">{count(o.total)}</span> sem
             correspondência
           </p>
-          <p className="num text-[11.5px] text-ink-3 break-all">
+          <p className="num text-[12px] text-ink-3 break-all">
             {o.exemplos.join(", ")}
             {o.total > o.exemplos.length && ` e mais ${o.total - o.exemplos.length}`}
           </p>

@@ -292,7 +292,7 @@ function LinhaAnuncio({
           <span className="block text-[12.5px] font-medium text-ink truncate">
             {a.titulo || a.mlb}
           </span>
-          <span className="block text-[11.5px] text-ink-3 truncate">
+          <span className="block text-[12px] text-ink-3 truncate">
             {a.sku ? `${a.sku} · ` : ""}
             {a.mlb}
             {a.campanhas > 1 ? ` · ${a.campanhas} campanhas` : ""}
@@ -327,7 +327,7 @@ function LinhaAnuncio({
             Sem ela "vs piso" negativo com decisão "participa" parece
             contradição — e é a primeira coisa que se pergunta ao abrir.
           */}
-          <p className="mb-2 text-[11px] text-ink-3 leading-relaxed">
+          <p className="mb-2 text-[12px] text-ink-3 leading-relaxed">
             <strong className="text-ink-2">Tabela</strong> é o preço que
             preserva a margem naquela comissão — muda de faixa para faixa.{" "}
             <strong className="text-ink-2">Piso</strong> é tabela − 5%, o menor
@@ -399,7 +399,7 @@ function LinhaAnuncio({
           </div>
 
           {a.participam === 0 && a.recusadaMaisProxima?.folgaAtePiso != null && (
-            <p className="mt-2 text-[11.5px] text-ink-3">
+            <p className="mt-2 text-[12px] text-ink-3">
               Nenhuma proposta passa. A mais próxima está{" "}
               <span className="num font-medium text-ink-2">
                 {money(Math.abs(a.recusadaMaisProxima.folgaAtePiso))}
@@ -452,10 +452,10 @@ function LinhaOferta({
           <span className="text-ink truncate">{o.campanha}</span>
           {o.temReducao && <Badge tone="brand">redução</Badge>}
           {melhor && (
-            <span className="text-[11px] font-medium text-up">melhor aceitável</span>
+            <span className="text-[12px] font-medium text-up">melhor aceitável</span>
           )}
           {maisProxima && (
-            <span className="text-[11px] font-medium text-warn">faltou menos</span>
+            <span className="text-[12px] font-medium text-warn">faltou menos</span>
           )}
         </span>
       </td>
@@ -486,7 +486,7 @@ function LinhaOferta({
               %
             </span>
             {o.reducaoTarifa != null && (
-              <span className="block text-[10.5px] text-ink-3">
+              <span className="block text-[12px] text-ink-3">
                 {money(o.reducaoTarifa)}
               </span>
             )}
@@ -509,7 +509,7 @@ function LinhaOferta({
       <td className="px-2 py-1.5 text-right num text-ink-3">
         {o.pisoEfetivo != null ? money(o.pisoEfetivo) : "—"}
         {o.descontoExtra != null && (
-          <span className="block text-[10.5px] text-ink-3">
+          <span className="block text-[12px] text-ink-3">
             piso −{Math.round(o.descontoExtra * 100)}%
           </span>
         )}
@@ -542,12 +542,12 @@ function LinhaOferta({
         {o.participa ? (
           <Badge tone="up">participa</Badge>
         ) : (
-          <span className="text-[11.5px] text-ink-3">{o.motivo || "fora"}</span>
+          <span className="text-[12px] text-ink-3">{o.motivo || "fora"}</span>
         )}
       </td>
 
       {!semOrigem && (
-        <td className="px-2 py-1.5 text-[11.5px] text-ink-3 whitespace-nowrap">
+        <td className="px-2 py-1.5 text-[12px] text-ink-3 whitespace-nowrap">
           {o.arquivo
             ? `${o.arquivo.replace(/\.xlsx$/i, "").slice(0, 26)}${
                 o.linhaPlanilha ? ` · linha ${o.linhaPlanilha}` : ""

@@ -180,7 +180,7 @@ function Aparencia() {
                     <span className="block text-[13px] font-medium text-ink">
                       {a.rotulo}
                     </span>
-                    <span className="block text-[11px] text-ink-3 leading-snug mt-0.5">
+                    <span className="block text-[12px] text-ink-3 leading-snug mt-0.5">
                       {a.descricao}
                     </span>
                   </span>
@@ -232,7 +232,7 @@ function Aparencia() {
                   >
                     {d.rotulo}
                   </span>
-                  <span className="num block text-[11px] text-ink-3">
+                  <span className="num block text-[12px] text-ink-3">
                     {d.altura}
                   </span>
                 </span>

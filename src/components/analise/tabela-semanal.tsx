@@ -126,7 +126,7 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
     <div className="px-4 py-3.5">
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <p className="label">Semana a semana</p>
-        <p className="text-[11px] text-ink-3 text-right">
+        <p className="text-[12px] text-ink-3 text-right">
           ordene pelo cabeçalho · clique na semana para ver os dias
         </p>
       </div>
@@ -142,7 +142,7 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
                     key={c.id}
                     title={c.dica}
                     className={
-                      "h-8 px-2 border-b border-line font-semibold text-[10px] uppercase tracking-[0.04em] whitespace-nowrap " +
+                      "h-8 px-2 border-b border-line font-semibold text-[12px] uppercase tracking-[0.04em] whitespace-nowrap " +
                       (c.align === "left" ? "text-left" : "text-right") +
                       (ativa ? " text-ink" : " text-ink-3")
                     }
@@ -261,7 +261,7 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
                     <tr className="border-b border-line bg-panel-2">
                       <td colSpan={COLUNAS.length} className="px-2 py-2.5">
                         {w.dias.length === 0 ? (
-                          <p className="text-[11px] text-ink-3">
+                          <p className="text-[12px] text-ink-3">
                             Nenhuma venda nesta semana. Na vitrine o preço era{" "}
                             <span className="num">{money(w.precoAnunciado)}</span>.
                           </p>
@@ -274,17 +274,17 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
                                   key={d.data}
                                   className="flex items-center gap-1.5 h-7 px-2 rounded-r1 border border-line bg-panel"
                                 >
-                                  <span className="text-[11px] font-medium text-ink-2">
+                                  <span className="text-[12px] font-medium text-ink-2">
                                     {d.diaSemana}
                                   </span>
-                                  <span className="num text-[11px] text-ink-3">
+                                  <span className="num text-[12px] text-ink-3">
                                     {d.data.slice(8)}/{d.data.slice(5, 7)}
                                   </span>
                                   <span className="num text-[12px] font-semibold text-ink">
                                     {count(d.vendas)}
                                     <span className="text-ink-3 font-normal"> un</span>
                                   </span>
-                                  <span className="num text-[11px] text-ink-2">
+                                  <span className="num text-[12px] text-ink-2">
                                     {money(d.preco)}
                                   </span>
                                 </span>

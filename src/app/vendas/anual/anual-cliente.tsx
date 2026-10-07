@@ -269,6 +269,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
   return (
     <>
       <PageHeader
+        mobileFilters={false}
         title="Acompanhamento anual"
         breadcrumb="Vendas"
         description={`${ANO} · ${nomeEscopo(escopo)} · valores em R$ salvo indicação`}
@@ -470,14 +471,14 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
             >
               <thead>
                 <tr className="bg-panel-2">
-                  <th className="sticky left-0 z-20 bg-panel-2 h-9 px-3 border-b border-r border-line text-left font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap">
+                  <th className="sticky left-0 z-20 bg-panel-2 h-9 px-3 border-b border-r border-line text-left font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap">
                     Mês
                   </th>
                   {colunas.map((c) => (
                     <th
                       key={c.key}
                       style={{ width: `${c.width}px` }}
-                      className="h-9 px-3 border-b border-line text-right font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap"
+                      className="h-9 px-3 border-b border-line text-right font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap"
                     >
                       {c.header}
                     </th>
@@ -500,7 +501,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                       style={{ height: "var(--row)", width: "112px" }}
                     >
                       <span className="font-medium text-ink">{m.rotulo}</span>
-                      <span className="num text-[11px] text-ink-3 ml-1.5">
+                      <span className="num text-[12px] text-ink-3 ml-1.5">
                         {ANO}
                       </span>
                     </td>
@@ -571,7 +572,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                           { l: "Líquida", v: moneyShort(d.receitaLiquida) },
                         ].map((k) => (
                           <span key={k.l} className="flex flex-col min-w-0">
-                            <span className="text-[10px] uppercase tracking-[0.04em] text-ink-3 font-semibold truncate">
+                            <span className="text-[12px] uppercase tracking-[0.04em] text-ink-3 font-semibold truncate">
                               {k.l}
                             </span>
                             <span className="num text-[12px] text-ink truncate">
@@ -614,7 +615,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                   { l: "% da meta", v: pct(totalD.pctMeta) },
                 ].map((k) => (
                   <span key={k.l} className="flex flex-col min-w-0">
-                    <span className="text-[10px] uppercase tracking-[0.04em] text-ink-3 font-semibold truncate">
+                    <span className="text-[12px] uppercase tracking-[0.04em] text-ink-3 font-semibold truncate">
                       {k.l}
                     </span>
                     <span className="num text-[12px] font-semibold text-ink truncate">
@@ -728,13 +729,13 @@ function DetalheMes({
         <p className="label mb-2.5">Meta do mês</p>
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-[11px] text-ink-3">Realizado</p>
+            <p className="text-[12px] text-ink-3">Realizado</p>
             <p className="num text-[19px] font-semibold text-ink leading-none mt-1">
               {money(m.receita)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] text-ink-3">Meta</p>
+            <p className="text-[12px] text-ink-3">Meta</p>
             <p className="num text-[19px] font-semibold text-ink-2 leading-none mt-1">
               {money(m.meta)}
             </p>
@@ -800,7 +801,7 @@ function DetalheMes({
                       <span className="num text-[12px] text-ink">
                         {money(mc.receita)}
                       </span>
-                      <span className="num text-[11px] text-ink-3 ml-1.5">
+                      <span className="num text-[12px] text-ink-3 ml-1.5">
                         {pct(share)}
                       </span>
                     </span>

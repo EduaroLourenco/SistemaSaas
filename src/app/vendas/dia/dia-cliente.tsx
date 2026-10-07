@@ -221,7 +221,7 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
               </div>
             ))}
           </div>
-          <p className="text-[11.5px] text-ink-3 mt-2.5 leading-relaxed">
+          <p className="text-[12px] text-ink-3 mt-2.5 leading-relaxed">
             A comparação com a mesma {nomeDoDia(h.diaSemana)} evita a conclusão errada
             mais comum: segunda sempre parece ruim ao lado de domingo.
           </p>
@@ -236,7 +236,7 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
                 {dados.bateram} de {dados.comMeta} dias na meta
               </Badge>
             )}
-            <span className="text-[11.5px] text-ink-3 ml-auto">
+            <span className="text-[12px] text-ink-3 ml-auto">
               verde bateu a meta · vermelho não · clique no dia para abrir
             </span>
           </div>
@@ -291,7 +291,7 @@ function Cartao({
       >
         {v}
       </span>
-      {sub && <span className="text-[11px] text-ink-3">{sub}</span>}
+      {sub && <span className="text-[12px] text-ink-3">{sub}</span>}
     </div>
   );
 }
@@ -344,7 +344,7 @@ function Calendario({
               )}
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="num text-[11px] text-ink-3">{d.data.slice(8, 10)}</span>
+                <span className="num text-[12px] text-ink-3">{d.data.slice(8, 10)}</span>
                 {d.bateu !== null && (
                   <span
                     className={cn(
@@ -356,12 +356,12 @@ function Calendario({
                 )}
               </div>
 
-              <span className="num text-[11.5px] font-semibold text-ink leading-tight">
+              <span className="num text-[12px] font-semibold text-ink leading-tight">
                 {d.receitaLiquida > 0 ? moneyShort(d.receitaLiquida) : "—"}
               </span>
 
               {d.meta > 0 && (
-                <span className="num text-[10px] text-ink-3 leading-tight">
+                <span className="num text-[12px] text-ink-3 leading-tight">
                   meta {moneyShort(d.meta)}
                 </span>
               )}

@@ -156,7 +156,7 @@ export function ErroComSaida({
           </div>
 
           {aberto && detalheTecnico && (
-            <pre className="num text-[11px] text-ink-2 bg-panel border border-line rounded-r1 px-2.5 py-2 mt-2.5 overflow-x-auto whitespace-pre-wrap">
+            <pre className="num text-[12px] text-ink-2 bg-panel border border-line rounded-r1 px-2.5 py-2 mt-2.5 overflow-x-auto whitespace-pre-wrap">
               {detalheTecnico}
             </pre>
           )}

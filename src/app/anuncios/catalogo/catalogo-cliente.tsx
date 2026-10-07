@@ -135,8 +135,8 @@ function BarraComposicao({
               className="w-2.5 h-2.5 rounded-[3px] shrink-0"
               style={{ background: p.cor }}
             />
-            <span className="text-[11px] text-ink-2">{p.rotulo}</span>
-            <span className="num text-[11px] text-ink font-semibold">
+            <span className="text-[12px] text-ink-2">{p.rotulo}</span>
+            <span className="num text-[12px] text-ink font-semibold">
               {count(p.valor)}
             </span>
           </span>
@@ -287,7 +287,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
             <span className="block font-medium text-ink truncate max-w-[230px]">
               {i.titulo}
             </span>
-            <span className="block text-[11px] text-ink-3 truncate">
+            <span className="block text-[12px] text-ink-3 truncate">
               {i.categoria} · {i.conta}
             </span>
           </span>
@@ -365,7 +365,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
             >
               {pct(i.comissaoPraticada)}
             </span>
-            <span className="block text-[10.5px] text-ink-3">
+            <span className="block text-[12px] text-ink-3">
               sobre {money(i.receitaComissao ?? 0)}
             </span>
           </span>
@@ -399,7 +399,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
       cell: (i) => (
         <span className="flex flex-col items-end leading-tight">
           <span className="num text-ink-2">{dataBR(i.atualizadoEm)}</span>
-          <span className="text-[11px] text-ink-3">
+          <span className="text-[12px] text-ink-3">
             {desdeQuando(i.atualizadoEm)}
           </span>
         </span>
@@ -410,6 +410,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
   return (
     <>
       <PageHeader
+        mobileFilters={false}
         title="Catálogo"
         breadcrumb="Anúncios"
         description="Espelho das publicações do canal — preço praticado, comissão e situação por MLB"
@@ -440,7 +441,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Filtros
               {filtrosAtivos > 0 && (
-                <span className="num text-[11px]">({filtrosAtivos})</span>
+                <span className="num text-[12px]">({filtrosAtivos})</span>
               )}
             </Button>
           </>
@@ -543,7 +544,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
         )}
 
         {/* ── Idade do dado ──────────────────────────────────── */}
-        <div className="flex items-center gap-2 flex-wrap text-[11.5px] text-ink-3">
+        <div className="flex items-center gap-2 flex-wrap text-[12px] text-ink-3">
           <span>
             Tudo nesta tela vem da API do Mercado Livre.{" "}
             {dados.sincronizadoEm ? (
@@ -584,7 +585,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
               {IMPORTACOES_CATALOGO.slice(0, 5).map((imp) => (
                 <li key={imp.id} className="px-3 py-2 bg-panel">
                   <p className="num text-[12px] font-medium text-ink truncate">{imp.arquivo}</p>
-                  <p className="num text-[11px] text-ink-3 mt-0.5">
+                  <p className="num text-[12px] text-ink-3 mt-0.5">
                     {imp.enviadoEm} · {imp.linhas} linhas
                   </p>
                 </li>
@@ -898,7 +899,7 @@ function OrigemDosDados({
           <div className="flex items-center gap-2 mb-2">
             <Badge tone={TOM_ORIGEM[o.tom]}>{o.fonte}</Badge>
             {o.tom === "pedidos" && (
-              <span className="num text-[11px] text-ink-3">
+              <span className="num text-[12px] text-ink-3">
                 {count(comComissaoPraticada)} de {count(total)} anúncios
               </span>
             )}
@@ -915,7 +916,7 @@ function OrigemDosDados({
       ))}
 
       <div className="px-4 py-3.5">
-        <p className="text-[11.5px] text-ink-3 leading-relaxed">
+        <p className="text-[12px] text-ink-3 leading-relaxed">
           O que esta tela <span className="text-ink-2 font-medium">não</span> mostra: preço
           vendido, unidades e receita. Nada disso é catálogo — é pedido, e fica em Vendas e
           em Performance de preço. Misturar os dois aqui daria a impressão de que o preço

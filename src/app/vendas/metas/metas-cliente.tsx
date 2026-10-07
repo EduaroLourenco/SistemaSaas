@@ -195,7 +195,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
   const decorridos = dias.filter((d) => d.realizado != null);
   const metaAteAgora = decorridos.reduce((s, d) => s + d.meta, 0);
 
-  const th = "px-2.5 py-2 text-[11px] font-semibold text-ink-3 whitespace-nowrap";
+  const th = "px-2.5 py-2 text-[12px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-2.5 py-1.5 border-b border-line";
 
   return (
@@ -287,7 +287,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
             </Button>
           </div>
 
-          <p className="text-[11.5px] text-ink-3 mt-3 leading-relaxed max-w-2xl">
+          <p className="text-[12px] text-ink-3 mt-3 leading-relaxed max-w-2xl">
             O peso de cada canal vem da receita líquida entre{" "}
             <span className="num">{janela.inicio.split("-").reverse().join("/")}</span> e{" "}
             <span className="num">{janela.fim.split("-").reverse().join("/")}</span> —
@@ -305,7 +305,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
             <span className="num text-[12px] text-ink-3">
               {count(selecionados.length)} de {count(canais.length)}
             </span>
-            <span className="ml-auto text-[11.5px] text-ink-3 hidden sm:block">
+            <span className="ml-auto text-[12px] text-ink-3 hidden sm:block">
               O cadeado crava a meta de um canal; o resto se redivide sozinho.
             </span>
           </div>
@@ -441,7 +441,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
                               <span className="num text-[13px] font-semibold text-ink">
                                 {money(f.valor)}
                               </span>
-                              <span className="num text-[10.5px] text-ink-3">
+                              <span className="num text-[12px] text-ink-3">
                                 {pct(f.peso, 1)} do total
                               </span>
                             </div>
@@ -527,7 +527,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
                     className="bg-panel p-2 min-h-[86px] flex flex-col"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="num text-[11px] text-ink-3">
+                      <span className="num text-[12px] text-ink-3">
                         {d.data.slice(8, 10)} {DOW[d.diaSemana]}
                       </span>
                       <button
@@ -569,14 +569,14 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
                         <div className="flex gap-1">
                           <Button
                             variant="primary"
-                            className="h-6 px-2 text-[11px] flex-1"
+                            className="h-6 px-2 text-[12px] flex-1"
                             disabled={salvando}
                             onClick={() => gravarDia(d.data, true)}
                           >
                             Fixar
                           </Button>
                           <Button
-                            className="h-6 px-2 text-[11px]"
+                            className="h-6 px-2 text-[12px]"
                             onClick={() => setEditandoDia(null)}
                           >
                             ✕
@@ -590,7 +590,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
                         </span>
                         {d.realizado != null && (
                           <span
-                            className={`num text-[11px] mt-1 ${
+                            className={`num text-[12px] mt-1 ${
                               bateu ? "text-up" : "text-down"
                             }`}
                           >
@@ -612,7 +612,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
             <p className="text-[12px] font-semibold text-ink mb-1">
               O que acontece com essa meta
             </p>
-            <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-2xl">
+            <p className="text-[12px] text-ink-3 leading-relaxed max-w-2xl">
               Ela alimenta o anual e a tela de Lançamentos, onde o alvo do dia
               aparece ao lado do realizado. Ajustar um dia aqui — fixando com o
               cadeado — redistribui o restante do mês entre os dias livres, então

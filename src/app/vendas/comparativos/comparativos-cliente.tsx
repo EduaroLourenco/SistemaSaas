@@ -381,6 +381,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
   return (
     <>
       <PageHeader
+        mobileFilters={false}
         title="Padrões por dia da semana"
         breadcrumb="Vendas"
         description={`${ANO} · ${nomeEscopo(escopo)} · ${M.label} · ${count(
@@ -482,7 +483,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
               >
                 {M.fmtCurto(c.media)}
               </p>
-              <p className="text-[11px] text-ink-3 mt-1 truncate">
+              <p className="text-[12px] text-ink-3 mt-1 truncate">
                 {M.rotuloMedia} · <span className="num">{count(c.dias)}</span>{" "}
                 dias
               </p>
@@ -495,7 +496,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
 
               <div className="mt-2.5 pt-2 border-t border-line flex flex-col gap-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[11px] text-ink-3 truncate">
+                  <span className="text-[12px] text-ink-3 truncate">
                     {M.rotuloTotal}
                   </span>
                   <span className="num text-[12px] text-ink shrink-0">
@@ -503,7 +504,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[11px] text-ink-3 truncate">
+                  <span className="text-[12px] text-ink-3 truncate">
                     Participação
                   </span>
                   <span className="num text-[12px] text-ink shrink-0">
@@ -588,13 +589,13 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
             title="Mapa de calor — dia × mês"
             hint="cor mais forte = melhor mês daquele dia"
             action={
-              <span className="text-[11px] text-ink-3 hidden sm:block">
+              <span className="text-[12px] text-ink-3 hidden sm:block">
                 {M.rotuloMedia}
               </span>
             }
           />
 
-          <p className="md:hidden px-4 pt-2.5 text-[11px] text-ink-3">
+          <p className="md:hidden px-4 pt-2.5 text-[12px] text-ink-3">
             Arraste para o lado para ver todos os meses.
           </p>
 
@@ -605,18 +606,18 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
             >
               <thead>
                 <tr className="bg-panel-2">
-                  <th className="sticky left-0 z-20 bg-panel-2 h-9 px-3 border-b border-r border-line text-left font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap">
+                  <th className="sticky left-0 z-20 bg-panel-2 h-9 px-3 border-b border-r border-line text-left font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap">
                     Dia
                   </th>
                   {MESES.map((m) => (
                     <th
                       key={m}
-                      className="h-9 px-2 border-b border-line text-right font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap"
+                      className="h-9 px-2 border-b border-line text-right font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap"
                     >
                       {m}
                     </th>
                   ))}
-                  <th className="h-9 px-3 border-b border-l border-line text-right font-semibold text-[11px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap">
+                  <th className="h-9 px-3 border-b border-l border-line text-right font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap">
                     Ano
                   </th>
                 </tr>

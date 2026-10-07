@@ -125,7 +125,7 @@ export function Elasticidade({ item }: { item: AnuncioAnalisado }) {
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="min-w-0">
           <p className="label">Preço e volume</p>
-          <p className="text-[11px] text-ink-3 mt-0.5">
+          <p className="text-[12px] text-ink-3 mt-0.5">
             cada ponto é uma semana · {dados.length} semanas com venda
           </p>
         </div>
@@ -184,13 +184,13 @@ export function Elasticidade({ item }: { item: AnuncioAnalisado }) {
                     className="panel px-2.5 py-2"
                     style={{ boxShadow: "var(--sh-3)" }}
                   >
-                    <p className="num text-[11px] font-semibold text-ink-2">
+                    <p className="num text-[12px] font-semibold text-ink-2">
                       {d.semana} · {d.intervalo}
                     </p>
                     <p className="num text-[12px] text-ink mt-1">
                       {money(d.x)} · {count(d.y)} un
                     </p>
-                    <p className="num text-[11px] text-ink-3">
+                    <p className="num text-[12px] text-ink-3">
                       {count(d.visitas)} visitas ·{" "}
                       {pct((d.y / d.visitas) * 100, 2)}
                     </p>
@@ -227,7 +227,7 @@ export function Elasticidade({ item }: { item: AnuncioAnalisado }) {
         </p>
       )}
 
-      <p className="text-[11px] text-ink-3 mt-2">
+      <p className="text-[12px] text-ink-3 mt-2">
         A faixa observada vai de {money(minP)} a {money(maxP)}. Fora dela é
         chute — e correlação não é causa: sazonalidade e campanha mexem nos
         dois eixos ao mesmo tempo.

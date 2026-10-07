@@ -68,7 +68,7 @@ export default function FornecedoresCliente({
         <div className="flex flex-col gap-0.5 min-w-0">
           <span className="text-ink font-medium">{f.nomeFantasia || f.razaoSocial}</span>
           {f.nomeFantasia && (
-            <span className="text-[11.5px] text-ink-3 truncate max-w-xs">{f.razaoSocial}</span>
+            <span className="text-[12px] text-ink-3 truncate max-w-xs">{f.razaoSocial}</span>
           )}
         </div>
       ),

@@ -29,16 +29,18 @@ export function Segmented<T extends string>({
   return (
     <div
       className={cn(
-        "flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line shrink-0",
+        "gerizo-segmented flex max-w-full items-center gap-1 p-1 rounded-r1 bg-panel-3 border border-line overflow-x-auto",
         className
       )}
     >
       {items.map((o) => (
         <button
           key={o.value}
+          type="button"
+          aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "h-6 px-2.5 rounded-[4px] text-[12px] font-medium transition-colors whitespace-nowrap",
+            "min-h-8 px-3 rounded-[6px] text-[13px] font-medium transition-colors whitespace-nowrap",
             value === o.value
               ? "bg-panel text-ink shadow-[var(--sh-1)]"
               : "text-ink-3 hover:text-ink"
@@ -74,15 +76,17 @@ export function Tabs<T extends string>({
       {tabs.map((t) => (
         <button
           key={t.value}
+          type="button"
+          aria-pressed={value === t.value}
           onClick={() => onChange(t.value)}
           className={cn(
-            "relative h-9 text-[13px] font-medium whitespace-nowrap transition-colors",
+            "relative h-11 text-[13px] font-medium whitespace-nowrap transition-colors",
             value === t.value ? "text-ink" : "text-ink-3 hover:text-ink-2"
           )}
         >
           {t.label}
           {t.count !== undefined && (
-            <span className="num ml-1.5 text-[11px] text-ink-3">{t.count}</span>
+            <span className="num ml-1.5 text-[12px] text-ink-3">{t.count}</span>
           )}
           {value === t.value && (
             <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-brand rounded-full" />
@@ -102,8 +106,9 @@ export const Input = React.forwardRef<
   return (
     <input
       ref={ref}
+      aria-invalid={invalid || undefined}
       className={cn(
-        "h-8 px-2.5 rounded-r1 border bg-panel text-[13px] text-ink w-full",
+        "h-10 px-3 rounded-r1 border bg-panel text-[14px] text-ink w-full",
         "placeholder:text-ink-3 transition-colors focus:border-brand",
         invalid ? "border-down" : "border-line",
         props.type === "number" || props.inputMode === "decimal"
@@ -131,7 +136,7 @@ export function Field({
     <label className={cn("flex flex-col gap-1.5 min-w-0", className)}>
       <span className="label">{label}</span>
       {children}
-      {hint && <span className="text-[11px] text-ink-3">{hint}</span>}
+      {hint && <span className="text-[12px] text-ink-3">{hint}</span>}
     </label>
   );
 }
@@ -147,7 +152,7 @@ export function Select({
     <div className="relative">
       <select
         className={cn(
-          "h-8 pl-2.5 pr-7 rounded-r1 border border-line bg-panel text-[13px] text-ink w-full",
+          "h-10 pl-3 pr-8 rounded-r1 border border-line bg-panel text-[13px] text-ink w-full",
           "appearance-none transition-colors focus:border-brand cursor-pointer",
           className
         )}
@@ -175,8 +180,7 @@ export function Toggle({
 }) {
   const body = (
     <span
-      role="switch"
-      aria-checked={checked}
+      aria-hidden="true"
       className={cn(
         "w-9 h-5 rounded-full transition-colors relative shrink-0 block",
         checked ? "bg-brand" : "bg-line-2"
@@ -193,7 +197,7 @@ export function Toggle({
 
   if (!label) {
     return (
-      <button onClick={() => onChange(!checked)} className="shrink-0">
+      <button type="button" role="switch" aria-checked={checked} aria-label="Ativar opção" onClick={() => onChange(!checked)} className="shrink-0 min-h-10 min-w-10 flex items-center justify-center">
         {body}
       </button>
     );
@@ -201,12 +205,15 @@ export function Toggle({
 
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
       onClick={() => onChange(!checked)}
       className="flex items-center gap-3 w-full text-left min-h-11 md:min-h-0"
     >
       <span className="min-w-0 flex-1">
         <span className="block text-[13px] text-ink">{label}</span>
-        {hint && <span className="block text-[11px] text-ink-3">{hint}</span>}
+        {hint && <span className="block text-[12px] text-ink-3">{hint}</span>}
       </span>
       {body}
     </button>
@@ -219,13 +226,19 @@ export function Checkbox({
   checked,
   onChange,
   label,
+  "aria-label": ariaLabel,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label?: string;
+  "aria-label"?: string;
 }) {
   return (
     <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={ariaLabel ?? label ?? "Selecionar item"}
       onClick={() => onChange(!checked)}
       className="flex items-center gap-2 text-left"
     >
@@ -295,6 +308,7 @@ export function FileDrop({
   return (
     <div>
       <button
+        type="button"
         onClick={() => ref.current?.click()}
         onDragOver={(e) => {
           e.preventDefault();
@@ -307,18 +321,18 @@ export function FileDrop({
           onFiles?.(Array.from(e.dataTransfer.files));
         }}
         className={cn(
-          "w-full rounded-r2 border border-dashed flex flex-col items-center justify-center py-8 px-4 transition-colors",
+          "w-full rounded-r2 border-2 border-dashed flex flex-col items-center justify-center py-14 px-6 transition-colors",
           dragging
             ? "border-brand bg-brand-wash"
             : "border-line-2 bg-panel-2 hover:bg-panel-3"
         )}
       >
         <UploadCloud
-          className={cn("w-5 h-5 mb-2", dragging ? "text-brand" : "text-ink-3")}
+          className={cn("w-9 h-9 mb-4", dragging ? "text-brand" : "text-ink-3")}
           strokeWidth={1.75}
         />
         <span className="text-[13px] font-medium text-ink">{hint}</span>
-        <span className="text-[11px] text-ink-3 mt-0.5">{accept}</span>
+        <span className="text-[12px] text-ink-3 mt-0.5">{accept}</span>
       </button>
 
       <input
@@ -341,12 +355,14 @@ export function FileDrop({
                 {f.name}
               </span>
               {f.size !== undefined && (
-                <span className="num text-[11px] text-ink-3 shrink-0">
+                <span className="num text-[12px] text-ink-3 shrink-0">
                   {(f.size / 1024).toFixed(0)} KB
                 </span>
               )}
               {onRemove && (
                 <button
+                  type="button"
+                  aria-label={`Remover ${f.name}`}
                   onClick={() => onRemove(i)}
                   className="w-5 h-5 flex items-center justify-center text-ink-3 hover:text-down shrink-0"
                 >
@@ -378,56 +394,39 @@ export function Sheet({
   children: React.ReactNode;
   width?: string;
 }) {
+  const ref = React.useRef<HTMLDialogElement>(null);
+  const titleId = React.useId();
+  const descriptionId = React.useId();
   React.useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    const dialog = ref.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    return () => { if (dialog?.open) dialog.close(); };
+  }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <div
-        className="absolute inset-0"
-        style={{ background: "var(--veil)" }}
-        onClick={onClose}
-      />
-      <div
-        className="relative ml-auto w-full bg-panel border-l border-line flex flex-col max-sm:mt-auto max-sm:max-h-[92vh] max-sm:rounded-t-r3 max-sm:border-l-0 max-sm:border-t"
-        style={{ maxWidth: width, boxShadow: "var(--sh-3)" }}
-      >
-        <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-line shrink-0">
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      aria-describedby={subtitle ? descriptionId : undefined}
+      className="gerizo-sheet"
+      style={{ "--sheet-width": width } as React.CSSProperties}
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <div className="flex h-full min-h-0 flex-col bg-panel text-ink">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line px-6 py-5">
           <div className="min-w-0">
-            <p className="text-[14px] font-semibold text-ink leading-snug">
-              {title}
-            </p>
-            {subtitle && (
-              <p className="text-[11px] text-ink-3 mt-0.5 truncate">{subtitle}</p>
-            )}
+            <h2 id={titleId} className="text-[20px] font-semibold leading-snug">{title}</h2>
+            {subtitle && <p id={descriptionId} className="mt-1 text-[13px] leading-relaxed text-ink-2">{subtitle}</p>}
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 -mr-1 shrink-0 flex items-center justify-center rounded-r1 text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
-          >
-            <X className="w-4 h-4" />
+          <button type="button" onClick={onClose} aria-label="Fechar painel" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-r1 text-ink-2 hover:bg-panel-3">
+            <X className="h-5 w-5" />
           </button>
-        </div>
-
-        <div className="overflow-y-auto flex-1">{children}</div>
-
-        {footer && (
-          <div
-            className="px-4 py-3 border-t border-line flex gap-2 shrink-0"
-            style={{
-              paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))",
-            }}
-          >
-            {footer}
-          </div>
-        )}
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
+        {footer && <footer className="gerizo-sheet-footer flex shrink-0 flex-wrap gap-2 border-t border-line bg-panel px-6 py-4">{footer}</footer>}
       </div>
-    </div>
+    </dialog>
   );
 }
 
@@ -447,46 +446,12 @@ export function FilterSheet({
   children: React.ReactNode;
 }) {
   return (
-    <div className="md:hidden fixed inset-0 z-50">
-      <div
-        className="absolute inset-0"
-        style={{ background: "var(--veil)" }}
-        onClick={onClose}
-      />
-      <div className="absolute inset-x-0 bottom-0 max-h-[85vh] bg-panel rounded-t-r3 border-t border-line flex flex-col">
-        <div className="flex items-center justify-between px-4 h-12 border-b border-line shrink-0">
-          <span className="text-[13px] font-semibold text-ink">{title}</span>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 -mr-2 flex items-center justify-center text-ink-2"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="overflow-y-auto p-4 space-y-4">{children}</div>
-
-        <div
-          className="p-4 pt-0 flex gap-2 shrink-0"
-          style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
-        >
-          {onClear && (
-            <button
-              onClick={onClear}
-              className="flex-1 h-10 rounded-r1 border border-line-2 bg-panel text-[13px] font-medium text-ink"
-            >
-              Limpar
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className="flex-1 h-10 rounded-r1 border border-brand bg-brand text-brand-ink text-[13px] font-medium"
-          >
-            {applyLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+    <Sheet title={title} onClose={onClose} footer={<>
+      {onClear && <button type="button" onClick={onClear} className="flex-1 h-11 rounded-r1 border border-line-2 text-[14px] font-medium">Limpar</button>}
+      <button type="button" onClick={onClose} className="flex-1 h-11 rounded-r1 border border-brand bg-brand text-brand-ink text-[14px] font-medium">{applyLabel}</button>
+    </>}>
+      <div className="gerizo-filter-sheet space-y-5 p-5">{children}</div>
+    </Sheet>
   );
 }
 
@@ -533,7 +498,7 @@ export function SectionTitle({
   return (
     <div className="flex items-end justify-between gap-3 pt-1">
       <div className="min-w-0">
-        <h2 className="text-[14px] font-semibold text-ink">{title}</h2>
+        <h2 className="text-[18px] font-semibold text-ink">{title}</h2>
         {hint && <p className="text-[12px] text-ink-3 mt-0.5">{hint}</p>}
       </div>
       {action}

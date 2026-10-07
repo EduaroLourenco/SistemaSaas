@@ -146,7 +146,7 @@ export default function ContasCliente({
               <Repeat className="w-3 h-3 text-ink-3 shrink-0" aria-label="ocorrência de recorrência" />
             )}
           </span>
-          <span className="text-[11.5px] text-ink-3 truncate max-w-xs">
+          <span className="text-[12px] text-ink-3 truncate max-w-xs">
             {[
               c.fornecedorId ? nomeForn.get(c.fornecedorId) : null,
               c.documento,
@@ -284,7 +284,7 @@ export default function ContasCliente({
                 {vencidas.length}
               </span>
               {vencidas.length > 0 && (
-                <span className="text-[11px] text-down">
+                <span className="text-[12px] text-down">
                   {money(vencidas.reduce((s, c) => s + c.valor, 0))}
                 </span>
               )}
@@ -296,7 +296,7 @@ export default function ContasCliente({
             <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
               <span className="label">Previsto</span>
               <span className="num text-[19px] font-semibold text-ink">{money(previsto)}</span>
-              <span className="text-[11px] text-ink-3">gerado por recorrência</span>
+              <span className="text-[12px] text-ink-3">gerado por recorrência</span>
             </div>
           </div>
         ) : undefined

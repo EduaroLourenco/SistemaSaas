@@ -103,12 +103,12 @@ export default function EmpresasCliente({ dados }: { dados: DadosEmpresas }) {
               <p className="text-[12.5px] text-ink font-medium">
                 {criada.nome} criada, com canais e categorias de partida.
               </p>
-              <p className="text-[11.5px] text-ink-3 mt-0.5">
+              <p className="text-[12px] text-ink-3 mt-0.5">
                 Mande este link para o dono. Ele define a senha e entra como proprietário. O
                 link vale 7 dias e só funciona para o e-mail convidado.
               </p>
               <div className="flex items-center gap-2 mt-2">
-                <code className="num text-[11px] text-ink-2 bg-panel-3 rounded-r1 px-2 py-1 truncate flex-1 min-w-0">
+                <code className="num text-[12px] text-ink-2 bg-panel-3 rounded-r1 px-2 py-1 truncate flex-1 min-w-0">
                   {linkDe(criada.token)}
                 </code>
                 <Button variant="ghost" onClick={() => copiar(criada.token)}>
@@ -148,7 +148,7 @@ export default function EmpresasCliente({ dados }: { dados: DadosEmpresas }) {
                 {ocupado ? "Criando…" : "Criar e convidar"}
               </Button>
             </div>
-            {erro && <p className="text-[11.5px] text-down">{erro}</p>}
+            {erro && <p className="text-[12px] text-down">{erro}</p>}
           </form>
         </Panel>
       )}
@@ -259,11 +259,11 @@ function LinhaEmpresa({ empresa, souAdmin }: { empresa: Empresa; souAdmin: boole
               </Badge>
             )}
             <div className="flex-1" />
-            <span className="hidden sm:inline text-[11.5px] text-ink-3 num">
+            <span className="hidden sm:inline text-[12px] text-ink-3 num">
               {empresa.operacoes} op · {empresa.membros} pessoas · {empresa.contas} contas
             </span>
             {empresa.conectadas > 0 ? (
-              <span className="inline-flex items-center gap-1 text-up text-[11.5px]">
+              <span className="inline-flex items-center gap-1 text-up text-[12px]">
                 <Plug className="w-3.5 h-3.5" />
                 <span className="num">{empresa.conectadas}</span>
               </span>
@@ -274,7 +274,7 @@ function LinhaEmpresa({ empresa, souAdmin }: { empresa: Empresa; souAdmin: boole
                * venha de planilha — pode estar entrando por fora, como
                * entra hoje pela sincronização rodada na mão.
                */
-              <span className="text-[11.5px] text-ink-3">não conectada</span>
+              <span className="text-[12px] text-ink-3">não conectada</span>
             )}
             <Button size="sm" variant="ghost" onClick={() => setEditando(true)} title="Renomear">
               <Pencil className="w-3.5 h-3.5" />
@@ -283,14 +283,14 @@ function LinhaEmpresa({ empresa, souAdmin }: { empresa: Empresa; souAdmin: boole
         )}
       </div>
 
-      {erro && <p className="text-[11.5px] text-down mt-1.5 ml-7">{erro}</p>}
+      {erro && <p className="text-[12px] text-down mt-1.5 ml-7">{erro}</p>}
 
       {aberta && (
         <div className="mt-2.5 ml-7 flex flex-col gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">Operações</p>
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-ink-3">Operações</p>
 
           {operacoes === null ? (
-            <p className="text-[11.5px] text-ink-3">carregando…</p>
+            <p className="text-[12px] text-ink-3">carregando…</p>
           ) : (
             operacoes.map((o) => (
               <LinhaOperacao
@@ -324,7 +324,7 @@ function LinhaEmpresa({ empresa, souAdmin }: { empresa: Empresa; souAdmin: boole
 
           {podeApagar && (
             <div className="mt-1.5 pt-2.5 border-t border-line flex flex-col gap-1.5">
-              <p className="text-[11.5px] text-ink-3">
+              <p className="text-[12px] text-ink-3">
                 Apagar leva junto operações, canais, anúncios e financeiro.{" "}
                 <span className="text-ink-2">Empresa com pedido não é apagada.</span> Para
                 confirmar, digite <span className="text-ink num">{empresa.nome}</span>.
@@ -403,7 +403,7 @@ function LinhaOperacao({
       ) : (
         <>
           <span className="text-[12px] text-ink">{operacao.nome}</span>
-          <span className="text-[11px] text-ink-3 num">
+          <span className="text-[12px] text-ink-3 num">
             {operacao.contas} contas
             {operacao.pedidos > 0 && ` · ${operacao.pedidos.toLocaleString("pt-BR")} pedidos`}
             {operacao.conectadas > 0 && ` · ${operacao.conectadas} com API`}
@@ -413,7 +413,7 @@ function LinhaOperacao({
             <Pencil className="w-3.5 h-3.5" />
           </Button>
           {bloqueio ? (
-            <span className="text-[11px] text-ink-3" title={`Não pode apagar: ${bloqueio}`}>
+            <span className="text-[12px] text-ink-3" title={`Não pode apagar: ${bloqueio}`}>
               {bloqueio}
             </span>
           ) : (

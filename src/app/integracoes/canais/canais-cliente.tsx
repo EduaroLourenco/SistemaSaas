@@ -98,7 +98,7 @@ export default function CanaisCliente({
       render: (c) => (
         <div className="flex flex-col gap-0.5 min-w-0">
           <span className="text-ink font-medium truncate">{c.nome}</span>
-          <span className="text-[11.5px] text-ink-3">{c.canalNome}</span>
+          <span className="text-[12px] text-ink-3">{c.canalNome}</span>
         </div>
       ),
     },
@@ -133,7 +133,7 @@ export default function CanaisCliente({
          */
         const ga4 = c.canalTipo === "loja_propria" && (
           <div className="flex flex-col gap-0.5 items-start mt-1.5 pt-1.5 border-t border-line w-full">
-            <span className="text-[11px] text-ink-3">Google Analytics</span>
+            <span className="text-[12px] text-ink-3">Google Analytics</span>
             {c.ga4 && (
               <Badge tone={c.ga4.erro ? "down" : c.ga4.conectada && c.ga4.propriedade ? "up" : "warn"}>
                 {c.ga4.erro
@@ -145,19 +145,19 @@ export default function CanaisCliente({
             )}
             <a
               href={`/api/ga4/conectar?conta=${c.id}`}
-              className="text-[11px] font-medium text-brand hover:underline"
+              className="text-[12px] font-medium text-brand hover:underline"
             >
               {c.ga4?.conectada ? "Reconectar" : "Conectar Google Analytics"}
             </a>
             {quando(c.ga4?.sincronizadaEm ?? null) && (
-              <span className="num text-[11px] text-ink-3">sync {quando(c.ga4?.sincronizadaEm ?? null)}</span>
+              <span className="num text-[12px] text-ink-3">sync {quando(c.ga4?.sincronizadaEm ?? null)}</span>
             )}
           </div>
         );
         if (!COM_API.has(c.canalCodigo)) {
           return (
             <div className="flex flex-col items-start">
-              <span className="text-[11.5px] text-ink-3">por planilha</span>
+              <span className="text-[12px] text-ink-3">por planilha</span>
               {ga4}
             </div>
           );
@@ -170,13 +170,13 @@ export default function CanaisCliente({
             {c.canalCodigo === "mercado_livre" && (
               <Link
                 href={`/api/meli/conectar?conta=${c.id}`}
-                className="text-[11px] font-medium text-brand hover:underline"
+                className="text-[12px] font-medium text-brand hover:underline"
               >
                 {c.conectada ? "Reconectar" : "Conectar"}
               </Link>
             )}
             {quando(c.sincronizadaEm) && (
-              <span className="num text-[11px] text-ink-3">
+              <span className="num text-[12px] text-ink-3">
                 sync {quando(c.sincronizadaEm)}
               </span>
             )}
@@ -249,7 +249,7 @@ export default function CanaisCliente({
       render: (c) => (
         <div className="flex flex-col gap-0.5 min-w-0">
           <span className="text-ink font-medium truncate">{c.nome}</span>
-          <span className="num text-[11.5px] text-ink-3">{c.codigo}</span>
+          <span className="num text-[12px] text-ink-3">{c.codigo}</span>
         </div>
       ),
     },
@@ -269,7 +269,7 @@ export default function CanaisCliente({
         COM_API.has(c.codigo) ? (
           <Badge tone="up">Lê por API</Badge>
         ) : (
-          <span className="text-[11.5px] text-ink-3">por planilha</span>
+          <span className="text-[12px] text-ink-3">por planilha</span>
         ),
     },
     {

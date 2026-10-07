@@ -183,9 +183,9 @@ function Cartao({ r, antes }: { r: ResumoTipo; antes?: ResumoTipo }) {
     <Panel className="p-4">
       <div className="flex items-center gap-2 mb-3">
         <Badge tone={r.tipo === "premium" ? "brand" : "neutral"}>{NOME[r.tipo]}</Badge>
-        <span className="num text-[11px] text-ink-3">{count(r.anuncios)} anúncios</span>
+        <span className="num text-[12px] text-ink-3">{count(r.anuncios)} anúncios</span>
         {antes && (
-          <span className="ml-auto flex items-center gap-1.5 text-[11px] text-ink-3">
+          <span className="ml-auto flex items-center gap-1.5 text-[12px] text-ink-3">
             receita
             <Delta value={variacao(r.receita, antes.receita) ?? 0} />
           </span>
@@ -317,7 +317,7 @@ function Pares({ pares }: { pares: ParSku[] }) {
       celula: (p) => (
         <span className="min-w-0">
           <span className="num text-ink font-medium">{p.sku}</span>
-          <span className="block text-[11.5px] text-ink-3 truncate max-w-[260px]">
+          <span className="block text-[12px] text-ink-3 truncate max-w-[260px]">
             {p.titulo}
           </span>
         </span>

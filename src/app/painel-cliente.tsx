@@ -457,7 +457,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <Delta value={c.delta} />
-                  <span className="num text-[11px] text-ink-3">
+                  <span className="num text-[12px] text-ink-3">
                     {pct(c.participacao)} do total
                   </span>
                 </div>

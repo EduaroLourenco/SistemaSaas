@@ -72,7 +72,7 @@ function LinhaAlavanca({
     <tr>
       <td className="px-3 py-2.5 border-b border-line">
         <p className="text-[12.5px] text-ink font-medium">{nome}</p>
-        <p className="text-[11px] text-ink-3">{ajuda}</p>
+        <p className="text-[12px] text-ink-3">{ajuda}</p>
       </td>
       <td className="px-3 py-2.5 border-b border-line text-right num text-[13px] text-ink-2">
         {a.atual != null ? formatar(a.atual) : "—"}
@@ -91,7 +91,7 @@ function LinhaAlavanca({
             {pct(a.variacao, 1)}
           </span>
         ) : (
-          <span className="text-[11px] text-ink-3">—</span>
+          <span className="text-[12px] text-ink-3">—</span>
         )}
       </td>
     </tr>
@@ -240,7 +240,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
 
         {/* ── Quais canais entram na conta ── */}
         <Panel className="p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-3 mb-2">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.07em] text-ink-3 mb-2">
             Canais na conta
           </p>
           {/* Canais como fichas: com dez canais, dez caixas de seleção
@@ -270,7 +270,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
             })}
           </div>
           {d.metaIncompleta.length > 0 && (
-            <p className="text-[11.5px] text-ink-3 mt-2.5">
+            <p className="text-[12px] text-ink-3 mt-2.5">
               A meta de {d.metaIncompleta.join(", ")} é do canal inteiro e ficou de fora:
               marque todas as contas dele para comparar com a meta.
             </p>
@@ -299,29 +299,29 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
                 <div>
-                  <p className="text-[11px] text-ink-3 mb-1">
+                  <p className="text-[12px] text-ink-3 mb-1">
                     Deveria ter vendido
                   </p>
                   <p className="num text-[20px] font-semibold text-ink leading-none">
                     {money(d.metaAteAqui)}
                   </p>
-                  <p className="text-[11px] text-ink-3 mt-1">
+                  <p className="text-[12px] text-ink-3 mt-1">
                     até {brData(d.ate)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-ink-3 mb-1">Vendi</p>
+                  <p className="text-[12px] text-ink-3 mb-1">Vendi</p>
                   <p className="num text-[20px] font-semibold text-ink leading-none">
                     {money(d.receitaPaga)}
                   </p>
-                  <p className="num text-[11px] text-ink-3 mt-1">
+                  <p className="num text-[12px] text-ink-3 mt-1">
                     {d.metaAteAqui > 0
                       ? `${pct((d.receitaPaga * 100) / d.metaAteAqui, 0)} da meta`
                       : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-ink-3 mb-1">
+                  <p className="text-[12px] text-ink-3 mb-1">
                     {devendo ? "Falta recuperar" : "Adiantado"}
                   </p>
                   <p
@@ -331,18 +331,18 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
                   >
                     {money(Math.abs(d.gap))}
                   </p>
-                  <p className="text-[11px] text-ink-3 mt-1">
+                  <p className="text-[12px] text-ink-3 mt-1">
                     {d.diasRestantes} dias restantes
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-ink-3 mb-1">
+                  <p className="text-[12px] text-ink-3 mb-1">
                     Precisa por dia
                   </p>
                   <p className="num text-[20px] font-semibold text-ink leading-none">
                     {d.porDiaRestante != null ? money(d.porDiaRestante) : "—"}
                   </p>
-                  <p className="text-[11px] text-ink-3 mt-1">
+                  <p className="text-[12px] text-ink-3 mt-1">
                     para fechar {moneyShort(d.metaMes)}
                   </p>
                 </div>
@@ -350,7 +350,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
 
               {/* ── Quem recupera o atraso ── */}
               <div className="mt-4 pt-3 border-t border-line">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-3 mb-2">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.07em] text-ink-3 mb-2">
                   Quem recupera o atraso
                 </p>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -396,7 +396,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
                         );
                       })}
                     </div>
-                    <p className="text-[11.5px] text-ink-3 mt-2 leading-relaxed max-w-2xl">
+                    <p className="text-[12px] text-ink-3 mt-2 leading-relaxed max-w-2xl">
                       {destinos.length === 0 ? (
                         <span className="text-warn">
                           Escolha ao menos um canal para receber o atraso.
@@ -453,7 +453,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
                     </>
                   )}
                 </Button>
-                <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-lg">
+                <p className="text-[12px] text-ink-3 leading-relaxed max-w-lg">
                   Divide {money(d.faltaNoMes)} entre os {d.diasRestantes} dias
                   que faltam, pelo peso de cada dia da semana. Dias fixados à
                   mão são preservados.
@@ -483,7 +483,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
               <p className="text-[13px] font-semibold text-ink">
                 O que precisaria mudar
               </p>
-              <p className="text-[11.5px] text-ink-3 mt-0.5">
+              <p className="text-[12px] text-ink-3 mt-0.5">
                 Cada linha resolve a meta do mês mexendo só naquela alavanca e
                 mantendo as outras duas como estão hoje.
               </p>
@@ -491,16 +491,16 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
             <table className="w-full border-collapse">
               <thead className="bg-panel-2">
                 <tr>
-                  <th className="px-3 py-2 text-[11px] font-semibold text-ink-3 text-left">
+                  <th className="px-3 py-2 text-[12px] font-semibold text-ink-3 text-left">
                     Alavanca
                   </th>
-                  <th className="px-3 py-2 text-[11px] font-semibold text-ink-3 text-right">
+                  <th className="px-3 py-2 text-[12px] font-semibold text-ink-3 text-right">
                     Cenário atual
                   </th>
-                  <th className="px-3 py-2 text-[11px] font-semibold text-ink-3 text-right">
+                  <th className="px-3 py-2 text-[12px] font-semibold text-ink-3 text-right">
                     Cenário ideal
                   </th>
-                  <th className="px-3 py-2 text-[11px] font-semibold text-ink-3 text-right">
+                  <th className="px-3 py-2 text-[12px] font-semibold text-ink-3 text-right">
                     Diferença
                   </th>
                 </tr>
@@ -558,7 +558,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
             },
           ].map((k) => (
             <Panel key={k.r} className="p-3">
-              <p className="text-[11px] text-ink-3 mb-1">{k.r}</p>
+              <p className="text-[12px] text-ink-3 mb-1">{k.r}</p>
               <p
                 className={`num text-[17px] font-semibold leading-none ${
                   k.alerta ? "text-down" : "text-ink"
@@ -567,7 +567,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
                 {k.v}
               </p>
               {k.nota && (
-                <p className="num text-[11px] text-ink-3 mt-1.5">{k.nota}</p>
+                <p className="num text-[12px] text-ink-3 mt-1.5">{k.nota}</p>
               )}
             </Panel>
           ))}

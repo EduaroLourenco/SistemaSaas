@@ -148,7 +148,7 @@ export default function PerformancePrecoCliente({
 
   const detalhe = aberto ? linhas.find((l) => l.sku === aberto) ?? null : null;
 
-  const th = "px-2.5 py-2 text-[11px] font-semibold text-ink-3 whitespace-nowrap";
+  const th = "px-2.5 py-2 text-[12px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-2.5 py-1.5 border-b border-line";
 
   /*
@@ -255,7 +255,7 @@ export default function PerformancePrecoCliente({
         )}
 
         {!avisoVitrine && faltamPrecos && (
-          <p className="text-[11.5px] text-ink-3 mb-2">
+          <p className="text-[12px] text-ink-3 mb-2">
             {count(vitrine.total - vitrine.comPreco)} dos {count(vitrine.total)} anúncios
             do recorte estão sem preço de vitrine — nessas linhas a coluna sai vazia.
           </p>
@@ -284,7 +284,7 @@ export default function PerformancePrecoCliente({
             },
           ].map((k) => (
             <Panel key={k.r} className="p-3">
-              <p className="text-[11px] text-ink-3 mb-1">{k.r}</p>
+              <p className="text-[12px] text-ink-3 mb-1">{k.r}</p>
               <p
                 className={`num text-[18px] font-semibold leading-none ${
                   k.alerta ? "text-down" : "text-ink"
@@ -293,7 +293,7 @@ export default function PerformancePrecoCliente({
                 {k.v}
               </p>
               {k.nota && (
-                <p className="text-[11px] text-ink-3 mt-1.5">{k.nota}</p>
+                <p className="text-[12px] text-ink-3 mt-1.5">{k.nota}</p>
               )}
             </Panel>
           ))}
@@ -308,11 +308,11 @@ export default function PerformancePrecoCliente({
                   <span className="num">{detalhe.sku}</span> — unidades por dia
                   em cada preço
                 </p>
-                <p className="text-[11.5px] text-ink-3 truncate max-w-xl">
+                <p className="text-[12px] text-ink-3 truncate max-w-xl">
                   {detalhe.titulo}
                 </p>
                 {detalhe.mlbs.length > 0 && (
-                  <p className="num text-[11px] text-ink-3 mt-0.5">
+                  <p className="num text-[12px] text-ink-3 mt-0.5">
                     {detalhe.mlbs.map((m) => `${m.mlb} (${m.tipo})`).join(" · ")}
                   </p>
                 )}
@@ -385,7 +385,7 @@ export default function PerformancePrecoCliente({
             {/* Barras cinza são faixas sem evidência: existem no gráfico
                 para mostrar que houve venda ali, e não competem pelo
                 título de melhor preço. */}
-            <p className="text-[11px] text-ink-3 mt-2 leading-relaxed">
+            <p className="text-[12px] text-ink-3 mt-2 leading-relaxed">
               Verde é a faixa de melhor desempenho. Cinza são faixas com menos
               de 3 dias ou 3 unidades — aparecem porque houve venda, mas não
               disputam o melhor preço. A linha tracejada é o preço do último pedido.
@@ -458,7 +458,7 @@ export default function PerformancePrecoCliente({
                             {l.sku}
                           </span>
                         </div>
-                        <p className="text-[11px] text-ink-3 truncate max-w-[220px]">
+                        <p className="text-[12px] text-ink-3 truncate max-w-[220px]">
                           {l.titulo}
                         </p>
                       </td>
@@ -471,12 +471,12 @@ export default function PerformancePrecoCliente({
                             <span className="num text-[13px] font-semibold text-up">
                               {money(l.melhor.preco)}
                             </span>
-                            <span className="num text-[10.5px] text-ink-3">
+                            <span className="num text-[12px] text-ink-3">
                               {count(l.melhor.unidades)} un / {count(l.melhor.dias)} dias
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-ink-3">
+                          <span className="text-[12px] text-ink-3">
                             sem evidência
                           </span>
                         )}
@@ -493,14 +493,14 @@ export default function PerformancePrecoCliente({
                             <span className="num text-[13px] text-ink font-medium">
                               {money(l.precoUltimo)}
                             </span>
-                            <span className="num text-[10.5px] text-ink-3">
+                            <span className="num text-[12px] text-ink-3">
                               {l.dataUltimo
                                 ? `${l.dataUltimo.slice(8, 10)}/${l.dataUltimo.slice(5, 7)}`
                                 : ""}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-ink-3">sem venda</span>
+                          <span className="text-[12px] text-ink-3">sem venda</span>
                         )}
                       </td>
                       {/* A média ao lado mostra se o último preço é o novo
@@ -511,7 +511,7 @@ export default function PerformancePrecoCliente({
                             {money(l.precoRecente)}
                           </span>
                         ) : (
-                          <span className="text-[11px] text-ink-3">—</span>
+                          <span className="text-[12px] text-ink-3">—</span>
                         )}
                       </td>
                       {/* A vitrine fica ao lado e nunca vira base de
@@ -524,7 +524,7 @@ export default function PerformancePrecoCliente({
                               {money(l.precoVitrine)}
                             </span>
                             {l.precoUltimo != null && l.precoVitrine > 0 && (
-                              <span className="num text-[10.5px] text-ink-3">
+                              <span className="num text-[12px] text-ink-3">
                                 {pct(
                                   ((l.precoUltimo - l.precoVitrine) / l.precoVitrine) * 100,
                                   0
@@ -533,7 +533,7 @@ export default function PerformancePrecoCliente({
                             )}
                           </div>
                         ) : (
-                          <span className="text-[11px] text-ink-3">—</span>
+                          <span className="text-[12px] text-ink-3">—</span>
                         )}
                       </td>
                       <td className={`${td} text-right`}>
@@ -551,7 +551,7 @@ export default function PerformancePrecoCliente({
                             {pct(l.variacao, 1)}
                           </span>
                         ) : (
-                          <span className="text-[11px] text-ink-3">—</span>
+                          <span className="text-[12px] text-ink-3">—</span>
                         )}
                       </td>
                       <td className={`${td} text-right`}>
@@ -565,12 +565,12 @@ export default function PerformancePrecoCliente({
                               {l.impacto > 0 ? "+" : ""}
                               {pct(l.impacto, 0)}
                             </span>
-                            <span className="num text-[10.5px] text-ink-3">
+                            <span className="num text-[12px] text-ink-3">
                               {l.unDiaRecente} un/dia agora
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-ink-3">
+                          <span className="text-[12px] text-ink-3">
                             sem venda recente
                           </span>
                         )}
@@ -579,7 +579,7 @@ export default function PerformancePrecoCliente({
                         {s ? (
                           <Badge tone={s.tom}>{s.rotulo}</Badge>
                         ) : (
-                          <span className="text-[11px] text-ink-3">—</span>
+                          <span className="text-[12px] text-ink-3">—</span>
                         )}
                       </td>
                     </tr>
@@ -590,7 +590,7 @@ export default function PerformancePrecoCliente({
           </div>
 
           {visiveis.length > 200 && (
-            <p className="px-3 py-2 text-[11.5px] text-ink-3 border-t border-line">
+            <p className="px-3 py-2 text-[12px] text-ink-3 border-t border-line">
               Mostrando os 200 de maior receita. Use a busca ou os filtros.
             </p>
           )}
@@ -602,7 +602,7 @@ export default function PerformancePrecoCliente({
             <p className="text-[12px] font-semibold text-ink mb-1">
               Como ler, e o que isto não prova
             </p>
-            <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-3xl mb-1.5">
+            <p className="text-[12px] text-ink-3 leading-relaxed max-w-3xl mb-1.5">
               <span className="text-ink-2 font-medium">
                 Todo preço desta tela é preço VENDIDO
               </span>{" "}
@@ -612,7 +612,7 @@ export default function PerformancePrecoCliente({
               anúncio. Os dois divergem bastante, e é de propósito que estão lado a lado:
               a distância entre eles é o desconto que a operação vem dando.
             </p>
-            <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-3xl">
+            <p className="text-[12px] text-ink-3 leading-relaxed max-w-3xl">
               O melhor preço é o que teve mais{" "}
               <span className="text-ink-2">unidades por dia</span> enquanto
               esteve valendo — não o que somou mais unidades, que premiaria o
@@ -620,7 +620,7 @@ export default function PerformancePrecoCliente({
               dias e 3 unidades; sem isso, um pedido grande num único dia
               venceria.
             </p>
-            <p className="text-[11.5px] text-ink-3 leading-relaxed max-w-3xl mt-1.5">
+            <p className="text-[12px] text-ink-3 leading-relaxed max-w-3xl mt-1.5">
               <span className="text-ink-2 font-medium">Isto é correlação.</span>{" "}
               O preço mais baixo costuma coincidir com campanha, e campanha traz
               tráfego que venderia mais a qualquer preço. Serve para escolher o
