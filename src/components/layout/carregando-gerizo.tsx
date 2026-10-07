@@ -7,9 +7,9 @@ import { usePathname } from "next/navigation";
  * Tela de carregamento com a marca: fundo branco e as letras de "gerizo."
  * voando até formar o nome.
  *
- * Aparece nos dois momentos em que a espera é esperada e longa — entrar no
- * sistema e trocar de empresa — e em nenhum outro: carregamento de tela
- * comum continua com o esqueleto da própria tela, que diz o que vem.
+ * Aparece em três situações: ao entrar no sistema, ao trocar de empresa,
+ * e em qualquer tela cujo esqueleto de carregamento passe de 0,6s (modo
+ * automático). Tela rápida continua só com o esqueleto, sem piscar a marca.
  *
  * Quem liga chama `iniciarCarregando(modo)`:
  *  - "navegacao": some sozinha quando o endereço muda (o login vai para a
@@ -23,7 +23,8 @@ import { usePathname } from "next/navigation";
  */
 
 const EVENTO = "gerizo:carregando";
-type Modo = "navegacao" | "manual";
+/* "auto": ligada sozinha porque o esqueleto de uma tela demorou. */
+type Modo = "navegacao" | "manual" | "auto";
 
 export function iniciarCarregando(modo: Modo = "manual") {
   window.dispatchEvent(new CustomEvent(EVENTO, { detail: { ligar: true, modo } }));
@@ -47,6 +48,12 @@ const LETRAS = [
 
 const MINIMO = 1100;
 const MAXIMO = 30000;
+/* Esqueleto visível por mais que isto = tela lenta, entra a marca. Abaixo
+   disso o esqueleto resolve sozinho e a marca só piscaria. */
+const LIMIAR_AUTO = 600;
+/* No modo automático a palavra não precisa terminar de se formar: a
+   espera já foi longa, segurar mais 1,1s seria atrasar a tela. */
+const MINIMO_AUTO = 500;
 
 export function CarregandoGerizo() {
   const pathname = usePathname();
@@ -57,7 +64,7 @@ export function CarregandoGerizo() {
   const esconder = React.useCallback(() => {
     const e = estado.current;
     if (!e) return;
-    const falta = Math.max(0, MINIMO - (Date.now() - e.desde));
+    const falta = Math.max(0, (e.modo === "auto" ? MINIMO_AUTO : MINIMO) - (Date.now() - e.desde));
     timers.current.push(
       window.setTimeout(() => {
         estado.current = null;
@@ -102,6 +109,45 @@ export function CarregandoGerizo() {
     timers.current.push(espera);
     return () => window.clearInterval(espera);
   }, [pathname, esconder]);
+
+  /*
+   * Modo automático, para qualquer tela: se o esqueleto de carregamento
+   * (aria-busy="true", o mesmo dos loading.tsx) continuar na tela por mais
+   * de LIMIAR_AUTO, a marca entra; sai quando o esqueleto some. Não há
+   * lista de telas lentas — a tela que ficar lenta amanhã ganha a marca
+   * sem ninguém lembrar de cadastrá-la.
+   */
+  React.useEffect(() => {
+    let espera: number | null = null;
+    const ocupado = () => Boolean(document.querySelector('main [aria-busy="true"]'));
+    const verificar = () => {
+      if (ocupado()) {
+        if (espera == null && !estado.current) {
+          espera = window.setTimeout(() => {
+            espera = null;
+            if (ocupado() && !estado.current) {
+              estado.current = { modo: "auto", desde: Date.now(), caminho: window.location.pathname };
+              setVisivel(true);
+              timers.current.push(window.setTimeout(() => esconder(), MAXIMO));
+            }
+          }, LIMIAR_AUTO);
+        }
+      } else {
+        if (espera != null) {
+          window.clearTimeout(espera);
+          espera = null;
+        }
+        if (estado.current?.modo === "auto") esconder();
+      }
+    };
+    const obs = new MutationObserver(verificar);
+    obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-busy"] });
+    verificar();
+    return () => {
+      obs.disconnect();
+      if (espera != null) window.clearTimeout(espera);
+    };
+  }, [esconder]);
 
   if (!visivel) return null;
 
