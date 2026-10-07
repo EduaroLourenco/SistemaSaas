@@ -179,7 +179,10 @@ export function MatrizAnuncios({
       .map((g) => ({
         sku: g.sku,
         titulo: g.titulo,
+        // A barra para em 300% para um SKU fora da curva não esmagar os
+        // outros; o tooltip mostra o número de verdade.
         variacao: Math.max(-100, Math.min(300, g.tendencia!)),
+        real: g.tendencia!,
         receita: g.receita,
       }));
   }, [grupos]);
@@ -191,7 +194,7 @@ export function MatrizAnuncios({
           title="Quem cresceu, quem caiu"
           hint="Média das últimas semanas contra as primeiras — oscilação de uma semana não muda o sinal"
         />
-        <div className="h-[260px] px-2 pt-3 pb-1">
+        <div className="h-[380px] px-2 pt-3 pb-1">
           {movimento.length === 0 ? (
             <p className="text-[13px] text-ink-3 px-3 py-8 text-center">
               Sem semanas suficientes para comparar.
@@ -214,8 +217,12 @@ export function MatrizAnuncios({
                   type="category"
                   dataKey="sku"
                   {...AXIS}
-                  width={78}
-                  tick={{ fontSize: 10 }}
+                  width={84}
+                  interval={0}
+                  /* Herdar o tick do AXIS: só trocar o tamanho perdia a cor,
+                     e o Recharts pintava o rótulo com a cor da linha — quase
+                     branco, ilegível. */
+                  tick={{ ...AXIS.tick, fill: "var(--ink-2)" }}
                 />
                 <ReferenceLine x={0} stroke="var(--line-2)" />
                 <Tooltip
@@ -236,8 +243,8 @@ export function MatrizAnuncios({
                           <span
                             className={d.variacao >= 0 ? "text-up" : "text-down"}
                           >
-                            {d.variacao >= 0 ? "+" : ""}
-                            {d.variacao.toLocaleString("pt-BR", {
+                            {d.real >= 0 ? "+" : ""}
+                            {d.real.toLocaleString("pt-BR", {
                               maximumFractionDigits: 0,
                             })}
                             %

@@ -9,6 +9,7 @@ import { Button, Panel, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select, Field } from "@/components/ui/controls";
 import { money, pct, count } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   Save, Plus, Trash2, Loader2, AlertCircle, Check, ArrowDownToLine,
 } from "lucide-react";
@@ -249,6 +250,12 @@ export default function CustosCliente({
       );
     });
   }, [linhas, busca, soIncompletos]);
+  /*
+   * 50 SKUs por página: a lista inteira fazia a tela passar de 19 mil
+   * pixels (21 telas de rolagem). Só a apresentação pagina — selecionar
+   * "todos" e editar em lote continuam valendo para a lista filtrada toda.
+   */
+  const { visible: paginaSkus, pagination: paginacaoSkus } = usePagination(visiveis, 50);
 
   async function salvarSku() {
     if (!edicoes.size) return;
@@ -609,7 +616,7 @@ export default function CustosCliente({
                     </tr>
                   </thead>
                   <tbody>
-                    {visiveis.map((l) => (
+                    {paginaSkus.map((l) => (
                       <tr
                         key={l.produtoId}
                         className={cn(
@@ -731,6 +738,7 @@ export default function CustosCliente({
                   </tbody>
                 </table>
               </div>
+              <Pagination {...paginacaoSkus} />
             </>
           )}
 
