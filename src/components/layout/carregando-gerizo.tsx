@@ -119,7 +119,9 @@ export function CarregandoGerizo() {
    */
   React.useEffect(() => {
     let espera: number | null = null;
-    const ocupado = () => Boolean(document.querySelector('main [aria-busy="true"]'));
+    // Durante a abertura do app a moldura já mostra a marca: não empilhar.
+    const ocupado = () =>
+      Boolean(document.querySelector('main [aria-busy="true"]')) && !document.getElementById("gerizo-abertura");
     const verificar = () => {
       if (ocupado()) {
         if (espera == null && !estado.current) {
@@ -151,8 +153,18 @@ export function CarregandoGerizo() {
 
   if (!visivel) return null;
 
+  return <TelaGerizo />;
+}
+
+/**
+ * O desenho da tela de carregamento — fundo branco, letras e barra — sem
+ * estado nenhum. Separado para a moldura poder desenhá-lo JÁ NO HTML do
+ * servidor, na abertura do app: aí ele roda só com CSS, antes de o
+ * JavaScript da página chegar.
+ */
+export function TelaGerizo({ id }: { id?: string }) {
   return (
-    <div className="gerizo-carregando" role="status" aria-live="polite" aria-label="Carregando">
+    <div id={id} className="gerizo-carregando" role="status" aria-live="polite" aria-label="Carregando">
       <div className="gerizo-carregando-marca" aria-hidden="true">
         {LETRAS.map((l, i) => (
           <span

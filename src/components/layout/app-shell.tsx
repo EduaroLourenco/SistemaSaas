@@ -25,6 +25,7 @@ import { BuscaGlobal } from "./busca-global";
 import { Brand } from "@/components/ui/brand";
 import { Sheet, FilterSheet } from "@/components/ui/controls";
 import { Disclosure } from "@/components/ui/disclosure";
+import { TelaGerizo } from "./carregando-gerizo";
 
 /* ══ Marca — monograma neutro, sem nome definido ══════════════ */
 
@@ -320,10 +321,35 @@ function useMenuLateral(pathname: string) {
   return { aberto, alternar };
 }
 
+/*
+ * Abertura do app: a tela da marca vai JÁ NO HTML do servidor (o estado
+ * começa ligado e o servidor desenha), então roda só com CSS desde o
+ * primeiro byte — antes, ao tocar no ícone, a tela ficava branca até o
+ * JavaScript chegar e ligar a animação. Sai quando a tela está pronta (sem
+ * esqueleto, aria-busy) e a palavra já se formou (1,1s desde o início da
+ * página). Navegação dentro do app não remonta a moldura, então só a
+ * abertura passa por aqui.
+ */
+function useAbertura() {
+  const [ligada, setLigada] = React.useState(true);
+  React.useEffect(() => {
+    const t = window.setInterval(() => {
+      const pronta = !document.querySelector('main [aria-busy="true"]');
+      if (pronta && performance.now() >= 1100) {
+        window.clearInterval(t);
+        setLigada(false);
+      }
+    }, 100);
+    return () => window.clearInterval(t);
+  }, []);
+  return ligada;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = React.useState(false);
   const menu = useMenuLateral(pathname);
+  const abertura = useAbertura();
 
   React.useEffect(() => {
     setMoreOpen(false);
@@ -335,6 +361,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-full">
+      {abertura && <TelaGerizo id="gerizo-abertura" />}
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-r1 focus:bg-panel focus:p-3">Ir para o conteúdo</a>
       {/* barra superior */}
       <header className="fixed top-0 inset-x-0 z-40 bg-panel border-b border-line">

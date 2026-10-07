@@ -351,3 +351,11 @@ button:disabled { cursor: not-allowed; }
   from { transform: translateX(-110%); }
   to { transform: translateX(260%); }
 }
+
+/* Abertura do app (vem no HTML do servidor): visível desde o primeiro
+   byte, sem o fade de entrada. Rede de segurança se o JavaScript nunca
+   chegar para retirá-la: some sozinha em 20s. */
+#gerizo-abertura {
+  animation: gerizo-some 300ms ease-out 20s forwards;
+}
+@keyframes gerizo-some { to { opacity: 0; visibility: hidden; } }

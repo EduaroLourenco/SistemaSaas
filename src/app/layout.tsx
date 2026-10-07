@@ -25,7 +25,25 @@ export const metadata: Metadata = {
    * é só "gerizo" — sem isto o iPhone usava o título inteiro e cortava em
    * "Gerizo·Intelig…" — e o app abre em tela cheia, sem a barra do Safari.
    */
-  appleWebApp: { capable: true, title: "gerizo", statusBarStyle: "default" },
+  appleWebApp: {
+    capable: true,
+    title: "gerizo",
+    statusBarStyle: "default",
+    /*
+     * Imagem de abertura do iPhone: cobre o instante em que o servidor
+     * ainda não respondeu nada — antes, branco puro. O iOS só usa a imagem
+     * do tamanho exato do aparelho, daí uma por modelo.
+     */
+    startupImage: [
+      [1320, 2868, 440, 956, 3], [1206, 2622, 402, 874, 3], [1290, 2796, 430, 932, 3],
+      [1179, 2556, 393, 852, 3], [1284, 2778, 428, 926, 3], [1170, 2532, 390, 844, 3],
+      [1125, 2436, 375, 812, 3], [1242, 2688, 414, 896, 3], [828, 1792, 414, 896, 2],
+      [750, 1334, 375, 667, 2],
+    ].map(([w, h, dw, dh, dpr]) => ({
+      url: `/brand/abertura/${w}x${h}.png`,
+      media: `(device-width: ${dw}px) and (device-height: ${dh}px) and (-webkit-device-pixel-ratio: ${dpr}) and (orientation: portrait)`,
+    })),
+  },
 };
 
 export const viewport: Viewport = {
