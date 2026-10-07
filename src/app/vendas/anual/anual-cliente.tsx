@@ -358,14 +358,14 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                   <YAxis
                     yAxisId="l"
                     {...AXIS}
-                    width={estreito ? 48 : 62}
+                    width={estreito ? 56 : 70}
                     tickFormatter={(v: number) => moneyShort(v)}
                   />
                   <YAxis
                     yAxisId="r"
                     orientation="right"
                     {...AXIS}
-                    width={62}
+                    width={70}
                     hide={estreito}
                     tickFormatter={(v: number) => moneyShort(v)}
                   />

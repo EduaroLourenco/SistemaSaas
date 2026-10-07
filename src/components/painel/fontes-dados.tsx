@@ -31,7 +31,7 @@ export function FontesDados({ dados }: { dados: DadosFontes }) {
     dados.piorAtraso !== null && dados.piorAtraso >= ATRASO_ATENCAO;
 
   return (
-    <Panel className={cn("p-4", alerta && "border-warn/30")}>
+    <Panel className={cn("p-4 h-full", alerta && "border-warn/30")}>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
         <span className="flex items-center gap-2 min-w-0">
           <Database className="w-4 h-4 text-ink-3 shrink-0" strokeWidth={2} />

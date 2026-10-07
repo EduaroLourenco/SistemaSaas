@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Panel, PanelHeader, Badge, Button } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 import type { Recomendacao } from "@/lib/dados/recomendacoes";
-import { Check, ChevronLeft, ChevronRight, ArrowRight, RotateCcw } from "lucide-react";
+import { Check, ArrowRight, RotateCcw } from "lucide-react";
 
 /**
  * Fila de recomendações do dia, em carrossel.
@@ -52,7 +52,6 @@ function lerResolvidas(): Set<string> {
 export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
   const [resolvidas, setResolvidas] = React.useState<Set<string>>(new Set());
   const [pronto, setPronto] = React.useState(false);
-  const trilho = React.useRef<HTMLDivElement>(null);
 
   // Só lê o armazenamento depois de montar: no servidor ele não existe, e
   // ler durante a renderização faria o HTML divergir do que o navegador
@@ -90,16 +89,12 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
     });
   }
 
-  function rolar(direcao: 1 | -1) {
-    trilho.current?.scrollBy({ left: direcao * 340, behavior: "smooth" });
-  }
-
   const visiveis = pronto ? itens.filter((i) => !resolvidas.has(i.id)) : itens;
   const resolvidasHoje = itens.length - visiveis.length;
 
   if (!itens.length) {
     return (
-      <Panel className="px-4 py-5 flex items-center gap-3">
+      <Panel className="px-4 py-5 flex items-center gap-3 h-full">
         <span className="w-8 h-8 rounded-r1 bg-up-wash flex items-center justify-center shrink-0">
           <Check className="w-4 h-4 text-up" strokeWidth={2.5} />
         </span>
@@ -113,26 +108,24 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
     );
   }
 
+  /*
+   * Lista vertical, ao lado das Fontes de dados (referência aprovada da
+   * Visão geral). Era um carrossel horizontal de largura total: a segunda
+   * recomendação ficava fora da tela e só aparecia por seta. Empilhadas,
+   * as três primeiras são lidas de uma vez; o resto rola dentro do painel.
+   */
   return (
-    <Panel className="overflow-hidden">
+    <Panel className="overflow-hidden h-full flex flex-col">
       <PanelHeader
         title="Recomendações do dia"
         hint="o que mudou e merece decisão · resolver esconde até amanhã"
         action={
-          <span className="flex items-center gap-1">
-            {resolvidasHoje > 0 && (
-              <Button size="sm" variant="ghost" onClick={desfazer}>
-                <RotateCcw className="w-3.5 h-3.5" />
-                {resolvidasHoje} resolvida{resolvidasHoje > 1 ? "s" : ""}
-              </Button>
-            )}
-            <Button size="sm" variant="ghost" onClick={() => rolar(-1)} aria-label="Anterior">
-              <ChevronLeft className="w-4 h-4" />
+          resolvidasHoje > 0 ? (
+            <Button size="sm" variant="ghost" onClick={desfazer}>
+              <RotateCcw className="w-3.5 h-3.5" />
+              {resolvidasHoje} resolvida{resolvidasHoje > 1 ? "s" : ""}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => rolar(1)} aria-label="Próxima">
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </span>
+          ) : undefined
         }
       />
 
@@ -143,16 +136,13 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
           </p>
         </div>
       ) : (
-        <div
-          ref={trilho}
-          className="flex gap-3 overflow-x-auto px-4 py-4 snap-x snap-mandatory"
-        >
+        <div className="flex flex-col gap-2.5 overflow-y-auto px-4 py-4 max-h-[460px]">
           {visiveis.map((r) => (
             <article
               key={r.id}
               className={cn(
-                "snap-start shrink-0 w-[300px] rounded-r2 border p-3.5",
-                "flex flex-col gap-2.5 bg-panel",
+                "rounded-r2 border p-3.5",
+                "flex flex-col gap-2 bg-panel",
                 r.severidade === "critico" ? "border-down/35" : "border-line"
               )}
             >

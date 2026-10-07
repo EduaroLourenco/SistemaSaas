@@ -38,7 +38,7 @@
 
   /* séries de gráfico */
   --s1: #10bfa0; --s2: #3b82f6; --s3: #e8a21a; --s4: #7a4dd8; --s5: #7e93b5;
-  --s6: #c12e4b; --s7: #5f7a2e; --s8: #9c5a3c; --s9: #4d5a75; --s10: #7a6ba8;
+  --s6: #c12e4b; --s7: #0f766e; --s8: #8c564b; --s9: #1e3a8a; --s10: #9aae1f;
 
   /* elevação — 3 níveis, nunca colorida */
   --sh-1: 0 1px 2px rgba(16, 24, 40, 0.05);
@@ -88,7 +88,7 @@
     --down: #ff8ca1; --down-wash: #3b202a;
     --info: #8bb6ff; --info-wash: #1c2c49;
     --s1: #50d1b3; --s2: #8bb6ff; --s3: #f4bd59; --s4: #b287c4; --s5: #5cb2ca;
-    --s6: #ff8ca1; --s7: #93b45f; --s8: #c78d6d; --s9: #8d9bb4; --s10: #a99ad4;
+    --s6: #ff8ca1; --s7: #99f6e4; --s8: #c08a7d; --s9: #8d9bb4; --s10: #d4e157;
     --sh-1: 0 1px 2px rgba(0, 0, 0, 0.4);
     --sh-2: 0 1px 3px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
     --sh-3: 0 16px 48px -16px rgba(0, 0, 0, 0.8);
@@ -120,7 +120,7 @@
   --down: #ff8ca1; --down-wash: #3b202a;
   --info: #8bb6ff; --info-wash: #1c2c49;
   --s1: #50d1b3; --s2: #8bb6ff; --s3: #f4bd59; --s4: #b287c4; --s5: #5cb2ca;
-  --s6: #ff8ca1; --s7: #93b45f; --s8: #c78d6d; --s9: #8d9bb4; --s10: #a99ad4;
+  --s6: #ff8ca1; --s7: #99f6e4; --s8: #c08a7d; --s9: #8d9bb4; --s10: #d4e157;
   --sh-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --sh-2: 0 1px 3px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
   --sh-3: 0 16px 48px -16px rgba(0, 0, 0, 0.8);

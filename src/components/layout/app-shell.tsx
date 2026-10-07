@@ -332,10 +332,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* rail lateral */}
       <aside
-        className="hidden md:block fixed left-0 bottom-0 z-30 bg-panel border-r border-line overflow-y-auto"
+        className="hidden md:flex flex-col fixed left-0 bottom-0 z-30 bg-panel border-r border-line"
         style={{ top: "var(--topbar)", width: "var(--rail)" }}
       >
-        <NavTree pathname={pathname} />
+        <div className="flex-1 overflow-y-auto">
+          <NavTree pathname={pathname} />
+        </div>
+        <RodapeEmpresa />
       </aside>
 
       {/* conteúdo */}
@@ -352,6 +355,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {moreOpen && <Sheet title="Menu" onClose={() => setMoreOpen(false)}><NavTree pathname={pathname} onNavigate={() => setMoreOpen(false)} /></Sheet>}
     </div>
+  );
+}
+
+/*
+ * Rodapé do menu: de QUEM é o número na tela. Com várias empresas no
+ * sistema, saber em qual se está não pode depender do seletor do topo, que
+ * some quando a pessoa só tem uma operação. Lê a mesma rota do seletor.
+ */
+function RodapeEmpresa() {
+  const [empresa, setEmpresa] = React.useState<{ empresa: string; operacao: string; varias: boolean } | null>(null);
+  React.useEffect(() => {
+    let vivo = true;
+    fetch("/api/operacao")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!vivo || !d?.id) return;
+        const ops = (d.operacoes ?? []) as { id: string; nome: string; empresa: string }[];
+        const atual = ops.find((o) => o.id === d.id);
+        if (atual) setEmpresa({ empresa: atual.empresa || atual.nome, operacao: atual.nome, varias: ops.length > 1 });
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
+  if (!empresa) return null;
+  return (
+    <Link
+      href="/configuracoes"
+      className="flex items-center gap-2.5 border-t border-line px-4 py-3 hover:bg-panel-3 transition-colors"
+      title="Configurações"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-[13px] font-semibold text-panel">
+        {empresa.empresa.trim().charAt(0).toUpperCase()}
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-[13px] font-medium text-ink">{empresa.empresa}</span>
+        {empresa.varias && <span className="truncate text-[12px] text-ink-3">{empresa.operacao}</span>}
+      </span>
+    </Link>
   );
 }
 

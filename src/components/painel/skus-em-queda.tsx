@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Segmented } from "@/components/ui/controls";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import { AXIS, GRID } from "@/components/ui/chart";
 import { money, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -73,6 +74,9 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
     () => (curva === "todas" ? itens : itens.filter((i) => i.curva === curva)),
     [itens, curva]
   );
+  /* Dez por página: a lista inteira passava de 25 linhas e empurrava a
+     Visão geral para baixo. A ordem (curva A primeiro) não muda. */
+  const { visible: pagina, pagination } = usePagination(filtrados, 10);
 
   if (!itens.length) {
     return (
@@ -126,7 +130,7 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtrados.map((s) => {
+            {pagina.map((s) => {
               const expandido = aberto === s.sku;
               return (
                 <React.Fragment key={s.sku}>
@@ -249,6 +253,7 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
           </tbody>
         </table>
       </div>
+      <Pagination {...pagination} />
     </Panel>
   );
 }

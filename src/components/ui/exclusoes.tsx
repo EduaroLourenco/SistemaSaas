@@ -46,7 +46,13 @@ export function PainelExclusoes({
   const router = useRouter();
   const ativo = exclusoes.length > 0;
 
-  const [aberto, setAberto] = React.useState(ativo);
+  /*
+   * Começa recolhido mesmo com exclusão ativa: o selo e a frase "os números
+   * desta tela não incluem…" já avisam; o formulário e a lista são segunda
+   * camada. Aberto por padrão, ocupava meia dobra da Visão geral antes do
+   * primeiro número.
+   */
+  const [aberto, setAberto] = React.useState(false);
   const [data, setData] = React.useState("");
   const [dataFim, setDataFim] = React.useState("");
   const [canal, setCanal] = React.useState("");

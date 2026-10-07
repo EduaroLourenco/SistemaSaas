@@ -54,21 +54,29 @@ export function StatTile({
   spark?: number[];
   className?: string;
 }) {
+  /*
+   * O valor é o motivo do cartão e NUNCA corta. Antes era 26px fixo com
+   * `truncate`: em 4 colunas a 1440px, "R$ 1.715.722,79" virava
+   * "R$ 1.715.7…" — o número principal da tela inicial sem caber na caixa
+   * feita para ele. Agora o tamanho acompanha a largura do próprio cartão
+   * (container query, `cqw`), e o minigráfico só aparece quando sobra
+   * espaço ao lado.
+   */
   return (
     <div
       className={cn(
-        "panel panel-1 px-5 py-4 flex flex-col justify-between min-w-0",
+        "@container panel panel-1 px-5 py-4 flex flex-col justify-between min-w-0",
         className
       )}
     >
       <p className="label truncate">{label}</p>
 
-      <div className="mt-1.5 flex items-end justify-between gap-3 min-w-0">
+      <div className="mt-1.5 flex items-center justify-between gap-3 min-w-0">
         <div className="min-w-0">
-          <p className="num text-[26px] leading-none font-semibold text-ink truncate">
+          <p className="num leading-none font-semibold text-ink whitespace-nowrap [font-size:clamp(15px,6.4cqw,26px)]">
             {value}
           </p>
-          <div className="flex items-center gap-1.5 mt-1.5 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-2 min-w-0">
             {delta !== undefined && <Delta value={delta} inverse={inverse} />}
             {hint && (
               <span className="text-[12px] text-ink-3">{hint}</span>
@@ -77,7 +85,7 @@ export function StatTile({
         </div>
 
         {spark && spark.length > 1 && (
-          <div className="w-16 h-9 shrink-0 hidden xs:block sm:block">
+          <div className="w-16 h-9 shrink-0 hidden @[15rem]:block">
             <Sparkline
               data={spark}
               tone={

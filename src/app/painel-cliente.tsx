@@ -157,7 +157,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       header: "Produto",
       mobile: "title",
       cell: (r) => (
-        <span className="font-medium text-ink block truncate max-w-[320px]">
+        <span className="font-medium text-ink block truncate max-w-[190px] 2xl:max-w-[320px]">
           {r.titulo}
         </span>
       ),
@@ -169,7 +169,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       mobile: "subtitle",
       cell: (r) => <span className="num text-[12px] text-ink-3">{r.sku}</span>,
       sortValue: (r) => r.sku,
-      width: "120px",
+      width: "92px",
     },
     {
       key: "vendas",
@@ -178,7 +178,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       mobile: "metric",
       cell: (r) => <span className="num">{count(r.vendas)}</span>,
       sortValue: (r) => r.vendas,
-      width: "90px",
+      width: "72px",
     },
     {
       key: "receita",
@@ -189,7 +189,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         <span className="num font-semibold text-ink">{money(r.receita)}</span>
       ),
       sortValue: (r) => r.receita,
-      width: "130px",
+      width: "120px",
     },
     {
       key: "conversao",
@@ -206,7 +206,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           </span>
         ),
       sortValue: (r) => (r.visitas > 0 ? r.conversao : -1),
-      width: "110px",
+      width: "96px",
     },
   ];
 
@@ -271,9 +271,16 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         {/* O que mudou e merece decisão — antes dos totais */}
         {/* Antes dos números: até onde o dado vai decide se dá para
             confiar no que vem abaixo. */}
-        <FontesDados dados={dados.fontes} />
-
-        <FilaRecomendacoes itens={dados.recomendacoes} />
+        {/* Referência aprovada: de onde vem o dado e o que mudou, lado a lado
+            na primeira dobra. */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-stretch">
+          <div className="xl:col-span-3 min-w-0">
+            <FontesDados dados={dados.fontes} />
+          </div>
+          <div className="xl:col-span-2 min-w-0">
+            <FilaRecomendacoes itens={dados.recomendacoes} />
+          </div>
+        </div>
 
         <PainelExclusoes
           exclusoes={dados.exclusoes}
@@ -338,7 +345,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                   />
                   <YAxis
                     {...AXIS}
-                    width={52}
+                    width={64}
                     tickFormatter={(v: number) => moneyShort(v)}
                   />
                   <Tooltip
@@ -406,9 +413,9 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           </Panel>
         </div>
 
-        {/* Top SKUs — os alertas migraram para o painel "Desde ontem" */}
-        <div className="grid grid-cols-1 gap-3">
-          <Panel className="overflow-hidden">
+        {/* Top SKUs e canais lado a lado, como na referência aprovada. */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-start">
+          <Panel className="overflow-hidden xl:col-span-3 min-w-0">
             <PanelHeader
               title="Produtos com maior receita"
               hint={canalAtual ? `no período · ${canalAtual.nome}` : "no período"}
@@ -428,10 +435,10 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
               defaultSort={{ key: "receita", dir: "desc" }}
             />
           </Panel>
-        </div>
 
-        {/* Resumo dos canais */}
-        <Panel className="overflow-hidden">
+        {/* Resumo dos canais — lista, um por linha: cabe na coluna estreita e
+            o olho desce comparando receita e variação na mesma vertical. */}
+        <Panel className="overflow-hidden xl:col-span-2 min-w-0">
           <PanelHeader
             title="Canais"
             hint={
@@ -440,31 +447,28 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 : "faturamento e variação no período"
             }
           />
-          <div className="grid grid-cols-2 lg:grid-cols-5 divide-x divide-y lg:divide-y-0 divide-line">
+          <ul className="divide-y divide-line">
             {CANAIS.map((c) => (
-              <div key={c.id} className="px-4 py-3.5">
-                <span className="flex items-center gap-1.5 mb-2">
-                  <span
-                    className="w-2 h-2 rounded-[2px] shrink-0"
-                    style={{ background: CANAL_CORES[c.id] }}
-                  />
-                  <span className="text-[12px] font-medium text-ink-2 truncate">
-                    {c.nome}
-                  </span>
+              <li key={c.id} className="flex items-center gap-3 px-4 py-2.5">
+                <span
+                  className="w-2.5 h-2.5 rounded-[3px] shrink-0"
+                  style={{ background: CANAL_CORES[c.id] }}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium text-ink">{c.nome}</span>
+                  <span className="num text-[12px] text-ink-3">{pct(c.participacao)} do total</span>
                 </span>
-                <p className="num text-[17px] font-semibold text-ink leading-none">
+                <span className="num text-[13px] font-semibold text-ink whitespace-nowrap">
                   {money(c.faturamento)}
-                </p>
-                <div className="flex items-center gap-2 mt-2">
+                </span>
+                <span className="w-[72px] shrink-0 text-right">
                   <Delta value={c.delta} />
-                  <span className="num text-[12px] text-ink-3">
-                    {pct(c.participacao)} do total
-                  </span>
-                </div>
-              </div>
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </Panel>
+        </div>
         {/*
           Quedas por SKU no fim: os totais dizem QUANTO, esta seção diz
           ONDE. Vem depois porque só faz sentido depois de saber que caiu.
