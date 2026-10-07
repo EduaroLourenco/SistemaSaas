@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { Panel, Button, Badge } from "@/components/ui/primitives";
+import { Panel, Button } from "@/components/ui/primitives";
 import { ErroComSaida } from "@/components/ui/leitura";
 import { cn } from "@/lib/utils";
-import { Send, Loader2, Database, Sparkles, RotateCcw } from "lucide-react";
+import { Send, Loader2, Database, Sparkles, RotateCcw, TrendingUp, Ban, Package, MousePointerClick, ChevronRight } from "lucide-react";
 
 /**
  * Conversa sobre a operação.
@@ -153,128 +153,187 @@ export default function Conversa() {
 
   const vazio = mensagens.length === 0;
 
+  /*
+   * Layout da referência aprovada de Conversar, com o que o sistema tem:
+   * o chat num painel com a pergunta fixa embaixo, e ao lado as sugestões
+   * e como a resposta é feita. A coluna de histórico de conversas e o
+   * painel de filtro de contexto da referência ficam de fora — não há
+   * conversa salva nem filtro de contexto na IA, e o pacote do redesenho
+   * proíbe inventar funcionalidade.
+   */
   return (
     <>
       <PageHeader
-        title="Conversar sobre a operação"
+        title="Conversar"
         breadcrumb="Operação"
-        description="Pergunte em português — as respostas saem de consulta ao banco, não de resumo"
-        actions={
-          mensagens.length > 0 ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setMensagens([]);
-                setErro(null);
-              }}
-            >
-              <RotateCcw className="w-3 h-3" strokeWidth={2.25} />
-              Recomeçar
-            </Button>
-          ) : undefined
-        }
+        description="Pergunte em português — a resposta sai de consulta ao banco, não de resumo"
       />
 
       <PageBody>
-        <div className="flex flex-col gap-3 max-w-[780px] pb-2">
-          {vazio && (
-            <Panel className="p-5">
-              <span className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-brand" strokeWidth={2} />
-                <p className="text-[14px] font-semibold text-ink">
-                  Pergunte sobre a operação
-                </p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
+          <Panel className="lg:col-span-2 flex flex-col overflow-hidden min-w-0 lg:h-[calc(100vh-var(--topbar)-170px)] lg:min-h-[520px]">
+            <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-wash text-brand">
+                <Sparkles className="h-4 w-4" />
               </span>
-              <p className="text-[12.5px] text-ink-2 leading-relaxed mb-4">
-                As respostas vêm de consulta ao banco no momento da pergunta —
-                pedidos, anúncios, cancelamentos. Nada é resumido de antemão, e
-                cada consulta feita aparece na tela para você julgar a resposta
-                em vez de aceitá-la.
-              </p>
-              <div className="flex flex-col gap-1.5">
-                {SUGESTOES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => perguntar(s)}
-                    className="text-left text-[13px] text-ink-2 hover:text-ink px-3 py-2 rounded-r1 border border-line hover:border-line-2 bg-panel-2 hover:bg-panel-3 transition-colors"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </Panel>
-          )}
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-semibold text-ink">
+                  {vazio ? "Nova conversa" : "Conversa sobre a operação"}
+                </span>
+                <span className="block text-[12px] text-ink-3">
+                  {vazio ? "Escolha uma sugestão ou escreva abaixo" : `${mensagens.filter((m) => m.papel === "user").length} pergunta(s)`}
+                </span>
+              </span>
+              {!vazio && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    setMensagens([]);
+                    setErro(null);
+                  }}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  Nova conversa
+                </Button>
+              )}
+            </div>
 
-          {mensagens.map((m, i) => (
-            <Bolha
-              key={i}
-              mensagem={m}
-              pensando={pensando && i === mensagens.length - 1}
-            />
-          ))}
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+              {vazio && (
+                <div className="m-auto flex max-w-md flex-col items-center gap-2 py-8 text-center">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-wash text-brand">
+                    <Sparkles className="h-5 w-5" />
+                  </span>
+                  <p className="text-[15px] font-semibold text-ink">Pergunte sobre a operação</p>
+                  <p className="text-[13px] text-ink-2 leading-relaxed">
+                    Pedidos, anúncios, cancelamentos. Cada consulta feita aparece na conversa, para você julgar a
+                    resposta em vez de só aceitá-la.
+                  </p>
+                </div>
+              )}
 
-          {aguardando && (
-            <span className="inline-flex items-center gap-2 text-[12.5px] text-warn">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              {aguardando}
-            </span>
-          )}
+              {mensagens.map((m, i) => (
+                <Bolha key={i} mensagem={m} pensando={pensando && i === mensagens.length - 1} />
+              ))}
 
-          {erro && (
-            <ErroComSaida
-              titulo="A conversa não completou"
-              causa={erro}
-              passo={
-                erro.toLowerCase().includes("chave")
-                  ? "A própria mensagem acima diz onde pegar a chave e em qual variável colocá-la. Depois de salvar, reinicie o servidor."
-                  : erro.toLowerCase().includes("limite")
-                  ? "Espere um minuto e pergunte de novo. Se acontecer sempre, vale trocar de provedor em IA_PROVEDOR."
-                  : erro.toLowerCase().includes("sobrecarregado")
-                  ? "Não é a sua pergunta. Espere um minuto e mande de novo — o servidor já tentou algumas vezes sozinho."
-                  : "Tente de novo. Se persistir, me diga o que apareceu."
-              }
-            />
-          )}
+              {aguardando && (
+                <span className="inline-flex items-center gap-2 text-[12.5px] text-warn">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {aguardando}
+                </span>
+              )}
 
-          <div ref={fim} />
+              {erro && (
+                <ErroComSaida
+                  titulo="A conversa não completou"
+                  causa={erro}
+                  passo={
+                    erro.toLowerCase().includes("chave")
+                      ? "A própria mensagem acima diz onde pegar a chave e em qual variável colocá-la. Depois de salvar, reinicie o servidor."
+                      : erro.toLowerCase().includes("limite")
+                      ? "Espere um minuto e pergunte de novo. Se acontecer sempre, vale trocar de provedor em IA_PROVEDOR."
+                      : erro.toLowerCase().includes("sobrecarregado")
+                      ? "Não é a sua pergunta. Espere um minuto e mande de novo — o servidor já tentou algumas vezes sozinho."
+                      : "Tente de novo. Se persistir, me diga o que apareceu."
+                  }
+                />
+              )}
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              perguntar(entrada);
-            }}
-            className="flex items-end gap-2 sticky bottom-0 bg-ground pt-2"
-          >
-            <textarea
-              value={entrada}
-              onChange={(e) => setEntrada(e.target.value)}
-              onKeyDown={(e) => {
-                // Enter envia, Shift+Enter quebra linha: é a convenção que
-                // as pessoas já têm no dedo.
-                if (e.key === "Enter" && !e.shiftKey) {
+              <div ref={fim} />
+            </div>
+
+            <div className="border-t border-line px-4 py-3 flex flex-col gap-2.5">
+              {!vazio && !pensando && (
+                <div className="flex gap-2 overflow-x-auto pb-0.5">
+                  {SUGESTOES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => perguntar(s)}
+                      className="shrink-0 rounded-full border border-line-2 bg-panel px-3 py-1.5 text-[12.5px] text-ink-2 hover:text-ink hover:bg-panel-3"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <form
+                onSubmit={(e) => {
                   e.preventDefault();
                   perguntar(entrada);
-                }
-              }}
-              rows={1}
-              placeholder="O que você quer entender?"
-              disabled={pensando}
-              className="flex-1 min-w-0 resize-none px-3 py-2.5 rounded-r1 bg-panel border border-line text-[13.5px] text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand-wash disabled:opacity-60 max-h-[140px]"
-            />
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!entrada.trim() || pensando}
-              className="h-[42px] px-3.5 shrink-0"
-            >
-              {pensando ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" strokeWidth={2.25} />
-              )}
-            </Button>
-          </form>
+                }}
+                className="flex items-end gap-2"
+              >
+                <textarea
+                  value={entrada}
+                  onChange={(e) => setEntrada(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter envia, Shift+Enter quebra linha: é a convenção que
+                    // as pessoas já têm no dedo.
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      perguntar(entrada);
+                    }
+                  }}
+                  rows={1}
+                  aria-label="Sua pergunta"
+                  placeholder="Pergunte sobre vendas, produtos, anúncios…"
+                  disabled={pensando}
+                  className="flex-1 min-w-0 resize-none px-3 py-2.5 rounded-r1 bg-panel-2 border border-line-2 text-[14px] text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand-wash disabled:opacity-60 max-h-[140px]"
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={!entrada.trim() || pensando}
+                  aria-label="Enviar pergunta"
+                  className="h-[44px] px-3.5 shrink-0"
+                >
+                  {pensando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" strokeWidth={2.25} />}
+                </Button>
+              </form>
+            </div>
+          </Panel>
+
+          <div className="flex flex-col gap-3 min-w-0">
+            <Panel className="overflow-hidden">
+              <div className="px-4 pt-4 pb-2">
+                <p className="text-[15px] font-semibold text-ink">Sugestões</p>
+                <p className="text-[12px] text-ink-3">Perguntas que o sistema sabe responder com dado</p>
+              </div>
+              <div className="flex flex-col gap-2 px-3 pb-3">
+                {SUGESTOES.map((s, i) => {
+                  const Icone = [TrendingUp, Ban, Package, MousePointerClick][i] ?? Sparkles;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => perguntar(s)}
+                      disabled={pensando}
+                      className="flex items-center gap-3 rounded-r2 border border-line bg-panel px-3 py-2.5 text-left hover:bg-panel-3 disabled:opacity-60"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-panel-3 text-ink-2">
+                        <Icone className="h-4 w-4" />
+                      </span>
+                      <span className="flex-1 text-[13px] text-ink">{s}</span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" />
+                    </button>
+                  );
+                })}
+              </div>
+            </Panel>
+
+            <Panel className="p-4">
+              <p className="flex items-center gap-2 text-[14px] font-semibold text-ink">
+                <Database className="h-4 w-4 text-ink-3" />
+                Como a resposta é feita
+              </p>
+              <p className="mt-1.5 text-[12.5px] text-ink-2 leading-relaxed">
+                As respostas vêm de consulta ao banco no momento da pergunta, só da empresa selecionada. Nada é resumido de
+                antemão, e cada consulta feita aparece na conversa.
+              </p>
+            </Panel>
+          </div>
         </div>
       </PageBody>
     </>
@@ -291,7 +350,7 @@ function Bolha({
   if (mensagem.papel === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] px-3.5 py-2.5 rounded-r2 bg-brand text-brand-ink text-[13.5px] leading-relaxed whitespace-pre-wrap">
+        <div className="max-w-[85%] px-3.5 py-2.5 rounded-r2 bg-brand-wash text-ink text-[14px] leading-relaxed whitespace-pre-wrap">
           {mensagem.texto}
         </div>
       </div>
@@ -299,40 +358,149 @@ function Bolha({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {(mensagem.consultas?.length ?? 0) > 0 && (
-        <div className="flex flex-col gap-1">
-          {mensagem.consultas!.map((c, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1.5 text-[12px] text-ink-3"
-            >
-              <Database className="w-3 h-3 shrink-0" strokeWidth={2} />
-              {NOME_CONSULTA[c.nome] ?? c.nome}
-              {resumoEntrada(c.entrada) && (
-                <span className="num text-ink-3/80">
-                  · {resumoEntrada(c.entrada)}
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
-      )}
+    <div className="flex gap-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-wash text-brand">
+        <Sparkles className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1 flex flex-col gap-2">
+        {/* As consultas como blocos: o que foi lido para responder. */}
+        {(mensagem.consultas?.length ?? 0) > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {mensagem.consultas!.map((c, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1.5 rounded-r1 border border-line bg-panel-2 px-2 py-1 text-[12px] text-ink-2"
+              >
+                <Database className="w-3.5 h-3.5 shrink-0 text-ink-3" strokeWidth={2} />
+                {NOME_CONSULTA[c.nome] ?? c.nome}
+                {resumoEntrada(c.entrada) && <span className="num text-ink-3">· {resumoEntrada(c.entrada)}</span>}
+              </span>
+            ))}
+          </div>
+        )}
 
-      {mensagem.texto ? (
-        <div className="text-[13.5px] text-ink leading-relaxed whitespace-pre-wrap">
-          {mensagem.texto}
-        </div>
-      ) : (
-        pensando && (
-          <span className="inline-flex items-center gap-2 text-[12.5px] text-ink-3">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Consultando os dados…
-          </span>
-        )
-      )}
+        {mensagem.texto ? (
+          <div className="rounded-r2 border border-line bg-panel-2 px-3.5 py-2.5 text-[14px] text-ink leading-relaxed flex flex-col gap-2">
+            <Formatado texto={mensagem.texto} />
+          </div>
+        ) : (
+          pensando && (
+            <span className="inline-flex items-center gap-2 text-[12.5px] text-ink-3">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Consultando os dados…
+            </span>
+          )
+        )}
+      </div>
     </div>
   );
+}
+
+/*
+ * O Markdown que a IA escreve, e só ele: negrito, listas com "*"/"-",
+ * listas numeradas, títulos com "#" e tabela com "|". Saía cru —
+ * "**Mercado Livre**", "| Canal | Pedidos |" —, o que tornava a resposta
+ * difícil de ler. Monta elementos do React em vez de HTML, então texto da
+ * resposta nunca vira marcação.
+ * ponytail: subconjunto à mão; se a IA passar a usar link ou código,
+ * trocar por uma biblioteca de Markdown.
+ */
+function negrito(linha: string): React.ReactNode[] {
+  return linha.split(/(\*\*[^*]+\*\*)/g).map((parte, i) =>
+    parte.startsWith("**") && parte.endsWith("**") && parte.length > 4 ? (
+      <strong key={i} className="font-semibold">
+        {parte.slice(2, -2)}
+      </strong>
+    ) : (
+      parte
+    )
+  );
+}
+
+function Formatado({ texto }: { texto: string }) {
+  const blocos: React.ReactNode[] = [];
+  let lista: { ordenada: boolean; itens: string[] } | null = null;
+  const fecharLista = () => {
+    if (!lista) return;
+    const Tag = lista.ordenada ? "ol" : "ul";
+    blocos.push(
+      <Tag key={blocos.length} className={cn("pl-5 flex flex-col gap-1", lista.ordenada ? "list-decimal" : "list-disc")}>
+        {lista.itens.map((it, i) => (
+          <li key={i}>{negrito(it)}</li>
+        ))}
+      </Tag>
+    );
+    lista = null;
+  };
+
+  let tabela: string[][] | null = null;
+  const fecharTabela = () => {
+    if (!tabela) return;
+    const [cab, ...corpo] = tabela;
+    blocos.push(
+      <div key={blocos.length} className="overflow-x-auto rounded-r1 border border-line bg-panel">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="text-left text-[12px] font-semibold text-ink-2">
+              {cab.map((c, i) => (
+                <th key={i} className="px-3 py-1.5 whitespace-nowrap">
+                  {negrito(c)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {corpo.map((l, i) => (
+              <tr key={i} className="border-t border-line">
+                {l.map((c, j) => (
+                  <td key={j} className={cn("px-3 py-1.5", /^[\sR$\d.,%+\-–kmi]+$/.test(c) && "num text-right whitespace-nowrap")}>
+                    {negrito(c)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+    tabela = null;
+  };
+
+  for (const bruta of texto.split("\n")) {
+    const linha = bruta.trim();
+    // Tabela: linhas com "|". A linha "|---|---|" só separa o cabeçalho.
+    if (linha.startsWith("|") && linha.endsWith("|")) {
+      fecharLista();
+      if (/^\|[\s:|-]+\|$/.test(linha)) continue;
+      (tabela ??= []).push(linha.slice(1, -1).split("|").map((c) => c.trim()));
+      continue;
+    }
+    fecharTabela();
+    const marcador = linha.match(/^[*-]\s+(.*)$/);
+    const numero = linha.match(/^\d+[.)]\s+(.*)$/);
+    if (marcador || numero) {
+      const ordenada = Boolean(numero);
+      if (lista && lista.ordenada !== ordenada) fecharLista();
+      lista ??= { ordenada, itens: [] };
+      lista.itens.push((marcador ?? numero)![1]);
+      continue;
+    }
+    fecharLista();
+    if (!linha) continue;
+    const titulo = linha.match(/^#{1,4}\s+(.*)$/);
+    blocos.push(
+      titulo ? (
+        <p key={blocos.length} className="font-semibold text-ink">
+          {negrito(titulo[1])}
+        </p>
+      ) : (
+        <p key={blocos.length}>{negrito(linha)}</p>
+      )
+    );
+  }
+  fecharLista();
+  fecharTabela();
+  return <>{blocos}</>;
 }
 
 /** "de 2026-08-01 a 2026-08-29 · por canal" — só o que ajuda a julgar. */
