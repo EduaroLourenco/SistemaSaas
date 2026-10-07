@@ -578,7 +578,7 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
                       className={`px-2.5 py-1.5 text-right num border-l border-line-2 ${f.texto}`}
                       style={{ background: f.fundo, color: f.cor }}
                     >
-                      {total.toFixed(1)}%
+                      {pct(total)}
                     </td>
                   </tr>
                 );
@@ -607,7 +607,7 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
           contra <span className="num">{pct(salto.media)}</span> de média dele no
           período —{" "}
           <span className="num font-semibold">
-            {(salto.taxa - salto.media).toFixed(1)} p.p.
+            {(salto.taxa - salto.media).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} p.p.
           </span>{" "}
           acima do próprio normal. Um canal que sempre cancela muito é um custo
           conhecido; um que piorou num mês específico tem causa e data, e é esse

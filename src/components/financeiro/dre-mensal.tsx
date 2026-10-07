@@ -4,6 +4,8 @@ import * as React from "react";
 import { Panel } from "@/components/ui/primitives";
 import { money, moneyShort, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { AXIS, GRID, ChartTooltip } from "@/components/ui/chart";
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Resultado } from "@/lib/dados/margem";
 
 /**
@@ -195,7 +197,7 @@ export function DreMensal({
                           </span>
                           {p != null && (
                             <span className="num block text-[12px] text-ink-3 leading-tight">
-                              {p.toFixed(1)}%
+                              {pct(p)}
                             </span>
                           )}
                         </td>
@@ -247,21 +249,13 @@ function EvolucaoMargem({ mensal }: { mensal: Resultado[] }) {
   const min = Math.min(0, ...todos);
   const faixa = max - min || 1;
 
-  const L = 54, R = 16, T = 18, B = 26;
-  const largura = Math.max(320, pontos.length * 74);
-  const alturaPlot = 128;
-  const x = (i: number) =>
-    L + (pontos.length === 1 ? 0 : (i * (largura - L - R)) / (pontos.length - 1));
-  const y = (v: number) => T + alturaPlot - ((v - min) / faixa) * alturaPlot;
-
-  const linha = (campo: "margem" | "resultado") =>
-    pontos
-      .map((p, i) => [p[campo], i] as const)
-      .filter((par): par is readonly [number, number] => par[0] != null)
-      .map(([v, i]) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`)
-      .join(" ");
-
-  const zeroY = y(0);
+  /*
+   * Recharts, como os outros gráficos do sistema. Era um SVG à mão com
+   * viewBox de 320px esticado à largura da tela: com quatro meses, tudo
+   * escalava ~3,7× — o rótulo de 10px virava ~40px e o gráfico ocupava
+   * quase uma tela inteira.
+   */
+  const dados = pontos.map((p) => ({ rotulo: p.rotulo, margem: p.margem, resultado: p.resultado ?? null }));
 
   return (
     <div className="px-4 py-3 border-t border-line">
@@ -279,52 +273,25 @@ function EvolucaoMargem({ mensal }: { mensal: Resultado[] }) {
         <span className="text-[12px] text-ink-3 ml-auto">% da receita líquida</span>
       </div>
 
-      <div className="overflow-x-auto">
-        <svg
-          viewBox={`0 0 ${largura} ${T + alturaPlot + B}`}
-          className="block"
-          style={{ width: "100%", minWidth: largura, height: "auto" }}
-          role="img"
-          aria-label="Evolução da margem de contribuição e do resultado, em porcentagem da receita líquida."
-        >
-          {/* zero só aparece quando há prejuízo em algum mês */}
-          {min < 0 && (
-            <line
-              x1={L} y1={zeroY} x2={largura - R} y2={zeroY}
-              stroke="var(--down)" strokeWidth="1" strokeDasharray="3 3"
-            />
-          )}
-          <line
-            x1={L} y1={T + alturaPlot} x2={largura - R} y2={T + alturaPlot}
-            stroke="var(--line-2)" strokeWidth="1"
-          />
-          <text x={L - 8} y={T + 4} textAnchor="end" className="num" fontSize="10" fill="var(--ink-3)">
-            {max.toFixed(0)}%
-          </text>
-          <text x={L - 8} y={T + alturaPlot} textAnchor="end" className="num" fontSize="10" fill="var(--ink-3)">
-            {min.toFixed(0)}%
-          </text>
-
-          <polyline points={linha("margem")} fill="none" stroke="var(--brand)" strokeWidth="2" strokeLinejoin="round" />
-          {temResultado && (
-            <polyline points={linha("resultado")} fill="none" stroke="var(--up)" strokeWidth="2" strokeLinejoin="round" />
-          )}
-
-          {pontos.map((p, i) => (
-            <g key={i}>
-              <circle cx={x(i)} cy={y(p.margem)} r="3" fill="var(--brand)" />
-              {p.resultado != null && (
-                <circle cx={x(i)} cy={y(p.resultado)} r="3" fill="var(--up)" />
-              )}
-              <text
-                x={x(i)} y={T + alturaPlot + 15} textAnchor="middle"
-                className="num" fontSize="10" fill="var(--ink-3)"
-              >
-                {p.rotulo}
-              </text>
-            </g>
-          ))}
-        </svg>
+      <div
+        className="h-[200px]"
+        role="img"
+        aria-label="Evolução da margem de contribuição e do resultado, em porcentagem da receita líquida."
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={dados} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="rotulo" {...AXIS} />
+            <YAxis {...AXIS} width={48} domain={[min, max]} tickFormatter={(v: number) => `${v.toFixed(0)}%`} />
+            {/* zero só aparece quando há prejuízo em algum mês */}
+            {min < 0 && <ReferenceLine y={0} stroke="var(--down)" strokeDasharray="3 3" />}
+            <Tooltip content={<ChartTooltip formatter={(v) => pct(Number(v))} />} />
+            <Line type="monotone" dataKey="margem" name="Margem de contribuição" stroke="var(--brand)" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
+            {temResultado && (
+              <Line type="monotone" dataKey="resultado" name="Resultado" stroke="var(--up)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
+            )}
+          </LineChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
@@ -369,7 +336,7 @@ export function LinhaVertical({
       </span>
       {p != null && (
         <span className="num text-[12px] text-ink-3 shrink-0 w-12 text-right">
-          {p.toFixed(1)}%
+          {pct(p)}
         </span>
       )}
       <span
