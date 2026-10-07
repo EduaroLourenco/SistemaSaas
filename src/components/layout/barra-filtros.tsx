@@ -77,11 +77,17 @@ export function Filtro({
   className?: string;
 }) {
   return (
-    <label className={cn("flex flex-col gap-1 min-w-0 shrink-0", className)}>
+    /*
+     * `max-w-full` + rolagem própria no conteúdo: com `shrink-0` sozinho, um
+     * filtro largo (as pílulas de conta da Análise de anúncios, as métricas
+     * do Semanal) passava da largura do celular e a PÁGINA inteira rolava
+     * para o lado. Agora só o filtro rola, dentro dele.
+     */
+    <label className={cn("flex flex-col gap-1 min-w-0 max-w-full shrink-0", className)}>
       <span className="text-[12px] font-semibold tracking-normal text-ink-3 leading-none">
         {rotulo}
       </span>
-      {children}
+      <div className="max-w-full overflow-x-auto">{children}</div>
     </label>
   );
 }
