@@ -18,8 +18,14 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: { default: "Gerizo · Inteligência de mercado", template: "%s · Gerizo" },
-  icons: { icon: "/brand/gerizo-favicon.png" },
   description: "Gerizo — Inteligência de mercado para e-commerce e marketplaces",
+  /*
+   * Os ícones vêm dos arquivos de convenção (app/icon.png e
+   * app/apple-icon.png, o "g." oficial). Na tela inicial do celular o nome
+   * é só "gerizo" — sem isto o iPhone usava o título inteiro e cortava em
+   * "Gerizo·Intelig…" — e o app abre em tela cheia, sem a barra do Safari.
+   */
+  appleWebApp: { capable: true, title: "gerizo", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
