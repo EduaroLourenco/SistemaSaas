@@ -130,7 +130,11 @@ export default async function Pagina({ params }: { params: Promise<{ token: stri
               "/cadastro?email=" +
               encodeURIComponent(convite.email) +
               "&destino=" +
-              encodeURIComponent(volta),
+              encodeURIComponent(volta) +
+              // Só para o cadastro dizer "para entrar em X": quem decide o
+              // acesso continua sendo aceitar_convite, no banco.
+              "&empresa=" +
+              encodeURIComponent(convite.empresa),
             rotulo: "Criar conta",
           },
           // Quem já tem conta não passa pelo cadastro só para achar o link

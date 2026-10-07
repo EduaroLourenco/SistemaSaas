@@ -28,6 +28,14 @@ export default function Cadastro() {
    */
   const convidado = busca.get("email") ?? "";
   const destino = busca.get("destino");
+  /*
+   * Vindo de convite, a empresa já existe — foi o administrador que a
+   * criou. Pedir o nome dela de novo confundia ("tenho que digitar igual?")
+   * e não servia para nada: depois de confirmar o e-mail a pessoa volta ao
+   * convite e entra na empresa de quem convidou.
+   */
+  const porConvite = Boolean(destino?.startsWith("/convite/"));
+  const empresaDoConvite = busca.get("empresa") ?? "";
   /* Quem veio de um convite e JÁ tem conta volta para o convite depois de
      entrar — sem isto o link do convite se perde no meio do caminho. */
   const paraLogin = destino ? "/entrar?destino=" + encodeURIComponent(destino) : "/entrar";
@@ -55,7 +63,7 @@ export default function Cadastro() {
       email,
       password: senha,
       options: {
-        data: { full_name: nome.trim(), empresa: empresa.trim() },
+        data: porConvite ? { full_name: nome.trim() } : { full_name: nome.trim(), empresa: empresa.trim() },
         // Volta ao convite depois de confirmar, em vez de cair na raiz e
         // deixar a pessoa procurando o link no e-mail outra vez.
         ...(destino ? { emailRedirectTo: window.location.origin + destino } : {}),
@@ -94,8 +102,17 @@ export default function Cadastro() {
           </h1>
           <p className="text-[13px] text-ink-2 mt-1.5">
             Mandamos um link para <span className="font-medium text-ink">{email}</span>.
-            Abra o link e a empresa <span className="font-medium text-ink">{empresa}</span> é
-            criada no primeiro acesso.
+            {porConvite ? (
+              <>
+                Abra o link e você entra
+                {empresaDoConvite ? <> em <span className="font-medium text-ink">{empresaDoConvite}</span></> : " na empresa que convidou você"}.
+              </>
+            ) : (
+              <>
+                Abra o link e a empresa <span className="font-medium text-ink">{empresa}</span> é
+                criada no primeiro acesso.
+              </>
+            )}
           </p>
           <Link
             href={paraLogin}
@@ -117,10 +134,14 @@ export default function Cadastro() {
         </div>
 
         <h1 className="text-[19px] font-semibold text-ink tracking-tight">
-          Criar conta da empresa
+          {porConvite ? "Criar sua conta" : "Criar conta da empresa"}
         </h1>
         <p className="text-[13px] text-ink-2 mt-1 mb-6">
-          Você entra como proprietário e convida o time depois.
+          {porConvite
+            ? empresaDoConvite
+              ? `Para entrar em ${empresaDoConvite}, que convidou você.`
+              : "Para entrar na empresa que convidou você."
+            : "Você entra como proprietário e convida o time depois."}
         </p>
 
         <form onSubmit={criar} className="flex flex-col gap-3.5">
@@ -136,6 +157,7 @@ export default function Cadastro() {
             />
           </label>
 
+          {!porConvite && (
           <label className="flex flex-col gap-1.5">
             <span className="label">Nome da empresa</span>
             <input
@@ -146,6 +168,7 @@ export default function Cadastro() {
               className="h-10 px-3 rounded-r1 bg-panel border border-line text-[14px] text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand-wash"
             />
           </label>
+          )}
 
           <label className="flex flex-col gap-1.5">
             <span className="label">E-mail</span>
