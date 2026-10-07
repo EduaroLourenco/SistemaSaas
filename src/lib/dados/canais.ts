@@ -1,5 +1,6 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { vtexConectada } from "@/lib/vtex/cliente";
 
 /**
  * Os canais e as contas de venda da empresa.
@@ -158,6 +159,20 @@ export async function carregarCanais(): Promise<{
       })(),
     };
   });
+
+  /*
+   * A VTEX pode ter a credencial nas variáveis de ambiente em vez do
+   * cofre (é o caso da Probel). Olhar só o cofre fazia a tela dizer "Não
+   * conectada" para uma loja que sincroniza todo dia. Mesma regra da página
+   * de Integrações.
+   */
+  await Promise.all(
+    linhas
+      .filter((l) => l.canalCodigo === "vtex" && !l.conectada)
+      .map(async (l) => {
+        l.conectada = await vtexConectada(l.id).catch(() => false);
+      })
+  );
 
   linhas.sort(
     (a, b) =>

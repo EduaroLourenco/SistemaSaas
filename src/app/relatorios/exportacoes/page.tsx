@@ -4,6 +4,7 @@ import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Download, Loader2, AlertCircle, Package, Sparkles } from "lucide-react";
+import { Disclosure } from "@/components/ui/disclosure";
 
 /**
  * Exportações.
@@ -135,14 +136,14 @@ export default function Exportacoes() {
                 exclusões de análise aplicadas, então bate com o que as telas
                 mostram.
               </p>
-              <p className="text-[12px] text-ink-3 leading-relaxed max-w-xl mt-1.5">
+              <Disclosure title="Como o arquivo vem" className="mt-2.5 max-w-xl">
                 Vem em formato de máquina — vírgula, decimal com ponto, data
                 aaaa-mm-dd. E um <span className="num">LEIA-ME.md</span> que diz
                 o que os dados <span className="font-medium text-ink-2">não</span>{" "}
                 permitem concluir: margem não é calculável sem custo, e visita
                 fora do Mercado Livre é desconhecida, não zero. Sem isso, quem
                 analisar inventa os dois.
-              </p>
+              </Disclosure>
             </div>
             <Button
               variant="primary"
@@ -179,14 +180,14 @@ export default function Exportacoes() {
                 preço praticado e o retido pelo canal — a queda aparece lendo
                 da esquerda para a direita.
               </p>
-              <p className="text-[12px] text-ink-3 leading-relaxed max-w-xl mt-1.5">
+              <Disclosure title="Como ler a comissão" className="mt-2.5 max-w-xl">
                 A comissão vem em duas colunas —{" "}
                 <span className="font-medium text-ink-2">tarifa de tabela</span>{" "}
                 e <span className="font-medium text-ink-2">retido</span>. Elas
                 discordam quando houve redução por campanha, e a diferença entre
                 as duas é o que a campanha economizou. Célula vazia significa
                 sem informação, nunca zero.
-              </p>
+              </Disclosure>
             </div>
             <Button
               variant="default"
@@ -237,8 +238,9 @@ export default function Exportacoes() {
                     {f.descricao}
                   </p>
                 </span>
+                {/* Secundário: a ação principal da tela é o pacote completo. */}
                 <Button
-                  variant="primary"
+                  variant="default"
                   className="self-start"
                   onClick={() => exportar(f)}
                   disabled={baixando !== null}
@@ -260,14 +262,6 @@ export default function Exportacoes() {
           </div>
         </Panel>
 
-        <Panel className="px-4 py-3">
-          <p className="text-[12.5px] text-ink-2 leading-relaxed">
-            <span className="font-semibold text-ink">Exportação agendada: </span>
-            ainda não existe. Precisa de um processo rodando fora da requisição
-            e de envio de e-mail configurado — hoje o SMTP do projeto é o
-            compartilhado do Supabase, que não entrega de forma confiável.
-          </p>
-        </Panel>
       </PageBody>
     </>
   );
