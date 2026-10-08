@@ -55,6 +55,23 @@ export function temRecorte(item: Item): boolean {
     estrategiaDe(item).anuncios.length
   );
 }
+/** A venda é da ação? Canal/conta e produto/anúncio, sem olhar data. */
+export function filtroDaAcao(item: Item): (l: LinhaVenda) => boolean {
+  const anuncios = new Set(estrategiaDe(item).anuncios),
+    skus = new Set(item.skus.map((s) => s.toUpperCase()));
+  return (l) => {
+    if (
+      (item.canais.length || item.contas.length) &&
+      !item.canais.includes(l.canal) &&
+      !item.contas.includes(l.conta)
+    )
+      return false;
+    if (anuncios.size ? !anuncios.has(l.anuncio) : skus.size && !skus.has(l.sku.toUpperCase()))
+      return false;
+    return true;
+  };
+}
+
 export function resumirVendas(
   linhas: LinhaVenda[],
   item: Item,
@@ -62,8 +79,7 @@ export function resumirVendas(
   fim: string,
   exclusoes: ExclusaoVenda[],
 ): ResumoVendas {
-  const anuncios = new Set(estrategiaDe(item).anuncios),
-    skus = new Set(item.skus.map((s) => s.toUpperCase()));
+  const daAcao = filtroDaAcao(item);
   const pedidos = new Set<string>(),
     cancelados = new Set<string>(),
     excluidos = new Set<string>(),
@@ -73,18 +89,7 @@ export function resumirVendas(
     ultimoRegistro: string | null = null;
   for (const l of linhas) {
     if (l.data < inicio || l.data > fim) continue;
-    if (
-      (item.canais.length || item.contas.length) &&
-      !item.canais.includes(l.canal) &&
-      !item.contas.includes(l.conta)
-    )
-      continue;
-    if (
-      anuncios.size
-        ? !anuncios.has(l.anuncio)
-        : skus.size && !skus.has(l.sku.toUpperCase())
-    )
-      continue;
+    if (!daAcao(l)) continue;
     encontrados.add(l.pedido);
     if (l.atualizado && (!ultimoRegistro || l.atualizado > ultimoRegistro))
       ultimoRegistro = l.atualizado;
