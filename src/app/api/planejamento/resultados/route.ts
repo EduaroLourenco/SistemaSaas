@@ -1,12 +1,11 @@
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "@/lib/dados/operacao";
-import { paginar } from "@/lib/dados/paginar";
+import { carregarVendasPlanejamento, RegistrosDemais } from "@/lib/dados/planejamento-vendas";
 import { detalhesVazios, type Item } from "@/lib/planejamento/modelo";
 import {
   periodosDoResultado,
   resumirVendas,
   temRecorte,
-  type LinhaVenda,
 } from "@/lib/planejamento/resultados";
 
 const resposta = (v: unknown, status = 200) =>
@@ -62,83 +61,7 @@ export async function GET(req: Request) {
   if (!periodo)
     return resposta({ erro: "O período planejado ainda não começou." }, 400);
   try {
-    const [linhas, anuncios, produtos, exclusoes] = await Promise.all([
-      paginar(() =>
-        sb
-          .from("pedido_itens")
-          .select(
-            "id,anuncio_id,codigo_externo,sku,quantidade,total,pedidos!inner(id,operacao_id,data,canal_id,conta_canal_id,cancelado,atualizado_em)",
-          )
-          .eq("operacao_id", op.id)
-          .eq("pedidos.operacao_id", op.id)
-          .gte("pedidos.data", periodo.anteriorInicio)
-          .lte("pedidos.data", periodo.fim)
-          .order("id"),
-      ),
-      paginar(() =>
-        sb
-          .from("anuncios")
-          .select("id,produto_id,sku_canal,codigo_externo,conta_canal_id")
-          .eq("operacao_id", op.id)
-          .order("id"),
-      ),
-      paginar(() =>
-        sb
-          .from("produtos")
-          .select("id,sku")
-          .eq("operacao_id", op.id)
-          .order("id"),
-      ),
-      paginar(() =>
-        sb
-          .from("exclusoes_analise")
-          .select("id,data_inicio,data_fim,canal_id,conta_canal_id")
-          .eq("operacao_id", op.id)
-          .lte("data_inicio", periodo.fim)
-          .gte("data_fim", periodo.anteriorInicio)
-          .order("id"),
-      ),
-    ]);
-    if ([linhas, anuncios, produtos, exclusoes].some((a) => a.length >= 200000))
-      return resposta(
-        {
-          erro: "O período tem registros demais para esta consulta. Use uma ação com período menor.",
-        },
-        422,
-      );
-    const porId = new Map(anuncios.map((a) => [a.id, a]));
-    const porCodigo = new Map(
-      anuncios.map((a) => [
-        `${a.conta_canal_id}:${String(a.codigo_externo).toUpperCase()}`,
-        a,
-      ]),
-    );
-    const skuProduto = new Map(produtos.map((p) => [p.id, p.sku]));
-    const vendas: LinhaVenda[] = linhas.map((l) => {
-      const p = Array.isArray(l.pedidos) ? l.pedidos[0] : l.pedidos;
-      if (!p) throw new Error("Pedido sem vínculo acessível.");
-      const a =
-        (l.anuncio_id ? porId.get(l.anuncio_id) : null) ??
-        porCodigo.get(
-          `${p.conta_canal_id}:${String(l.codigo_externo).toUpperCase()}`,
-        );
-      return {
-        pedido: p.id,
-        data: p.data,
-        canal: p.canal_id,
-        conta: p.conta_canal_id,
-        cancelado: p.cancelado,
-        sku:
-          (a?.produto_id ? skuProduto.get(a.produto_id) : null) ??
-          a?.sku_canal ??
-          l.sku ??
-          "",
-        anuncio: a?.id ?? "",
-        quantidade: Number(l.quantidade),
-        receita: Number(l.total),
-        atualizado: p.atualizado_em,
-      };
-    });
+    const { vendas, exclusoes } = await carregarVendasPlanejamento(op.id, periodo.anteriorInicio, periodo.fim);
     return resposta({
       atual: resumirVendas(
         vendas,
@@ -158,6 +81,11 @@ export async function GET(req: Request) {
       parcial: item.fim >= hoje,
     });
   } catch (e) {
+    if (e instanceof RegistrosDemais)
+      return resposta(
+        { erro: "O período tem registros demais para esta consulta. Use uma ação com período menor." },
+        422,
+      );
     console.error(
       "[planejamento/resultados]",
       e instanceof Error ? e.message : "Falha de consulta",

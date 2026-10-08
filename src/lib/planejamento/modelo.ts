@@ -96,6 +96,15 @@ export type Produto = {
   sku: string;
   titulo: string;
   origem: "produto" | "anuncio";
+  /** Curva pela receita dos últimos 90 dias. Sem venda, null. */
+  curva?: "A" | "B" | "C" | null;
+  receita90?: number;
+  unidades90?: number;
+  /** Menor preço anunciado ativo; sem anúncio com API, o último vendido. */
+  preco?: number | null;
+  precoOrigem?: "anuncio" | "vendido" | null;
+  estoque?: number | null;
+  temCusto?: boolean;
 };
 export type Canal = { id: string; nome: string };
 export type Conta = Canal & { canal_id: string };

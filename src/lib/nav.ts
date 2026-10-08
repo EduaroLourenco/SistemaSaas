@@ -35,7 +35,15 @@ export type NavGroup = {
 /** Estrutura de no máximo 2 níveis. */
 export const NAV: NavGroup[] = [
   { label: "Visão geral", icon: LayoutDashboard, href: "/" },
-  { label: "Planejamento", icon: CalendarDays, href: "/planejamento" },
+  {
+    label: "Planejamento",
+    icon: CalendarDays,
+    items: [
+      { label: "Calendário e campanhas", href: "/planejamento" },
+      // Deu certo? Cada ação contra o resto do canal no mesmo período.
+      { label: "Resultados", href: "/planejamento/resultados" },
+    ],
+  },
   { label: "Conversar", icon: MessagesSquare, href: "/conversa" },
   { label: "Alertas", icon: Bell, href: "/alertas" },
   { label: "Importar", icon: Upload, href: "/importar" },

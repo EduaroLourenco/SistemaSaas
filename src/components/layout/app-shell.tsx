@@ -295,7 +295,7 @@ const CHAVE_MENU = "menu-lateral";
 const RECOLHE_SOZINHO = ["/planejamento"];
 
 function useMenuLateral(pathname: string) {
-  const recolheAqui = RECOLHE_SOZINHO.some((p) => pathname.startsWith(p));
+  const recolheAqui = RECOLHE_SOZINHO.includes(pathname);
   const [preferencia, setPreferencia] = React.useState(true);
   const [aqui, setAqui] = React.useState<boolean | null>(null);
 

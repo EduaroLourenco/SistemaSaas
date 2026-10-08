@@ -58,7 +58,7 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
     paginar(() =>
       sb
         .from("produtos")
-        .select("id,sku,titulo")
+        .select("id,sku,titulo,custo_unitario")
         .eq("operacao_id", op.id)
         .order("id"),
     ),
@@ -66,7 +66,7 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
       sb
         .from("anuncios")
         .select(
-          "id,produto_id,sku_canal,titulo,codigo_externo,conta_canal_id,canal_id,tipo",
+          "id,produto_id,sku_canal,titulo,codigo_externo,conta_canal_id,canal_id,tipo,preco_atual,estoque,status",
         )
         .eq("operacao_id", op.id)
         .order("id"),
@@ -121,7 +121,7 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
     const r = resultados[i];
     return r.status === "fulfilled" ? (r.value as T[]) : [];
   }
-  const produtos = dados<{ id: string; sku: string; titulo: string }>(3);
+  const produtos = dados<{ id: string; sku: string; titulo: string; custo_unitario: number | null }>(3);
   const anuncios = dados<{
     id: string;
     produto_id: string | null;
@@ -131,6 +131,9 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
     conta_canal_id: string;
     canal_id: string;
     tipo: string;
+    preco_atual: number | string | null;
+    estoque: number | null;
+    status: string | null;
   }>(4);
   const porId = new Map(produtos.map((p) => [p.id, p.sku]));
   const catalogo = new Map<string, Produto>();
@@ -157,6 +160,7 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
         origem: "anuncio",
       });
   });
+  await enriquecer(catalogo, produtos, anuncios, skuAnuncio, sb, op.id);
   const anuncioPorId = new Map(anuncios.map((a) => [a.id, a]));
   const ofertas = dados<{
     campanha_id: string;
@@ -209,4 +213,83 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
     })),
     promocoes,
   };
+}
+
+/**
+ * O que ajuda a ESCOLHER produto para uma campanha: curva, receita e
+ * unidades dos últimos 90 dias, preço de agora, estoque e se tem custo.
+ * Falha aqui não derruba o planejamento — o seletor só fica sem as colunas.
+ */
+async function enriquecer(
+  catalogo: Map<string, Produto>,
+  produtos: { sku: string; custo_unitario: number | null }[],
+  anuncios: { status: string | null; preco_atual: number | string | null; estoque: number | null }[],
+  skuAnuncio: (a: never) => string,
+  sb: Awaited<ReturnType<typeof clienteServidor>>,
+  operacaoId: string,
+) {
+  const desde = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
+  let itens: { sku: string | null; quantidade: number; total: number | string; pedidos: { data: string } | null }[] = [];
+  try {
+    itens = (await paginar(() =>
+      sb
+        .from("pedido_itens")
+        .select("sku,quantidade,total,pedidos!inner(data,cancelado)")
+        .eq("operacao_id", operacaoId)
+        .gte("pedidos.data", desde)
+        .eq("pedidos.cancelado", false)
+        .order("id"),
+    )) as unknown as typeof itens;
+  } catch (e) {
+    console.error("[planejamento/vendas-90d]", e);
+  }
+  const k = (s: string | null | undefined) => (s ?? "").trim().toUpperCase();
+  const vendas = new Map<string, { receita: number; unidades: number; ultimo: string; precoUltimo: number }>();
+  for (const it of itens) {
+    const chave = k(it.sku);
+    if (!chave || !it.pedidos) continue;
+    const v = vendas.get(chave) ?? { receita: 0, unidades: 0, ultimo: "", precoUltimo: 0 };
+    const q = Number(it.quantidade) || 0;
+    const t = Number(it.total) || 0;
+    v.receita += t;
+    v.unidades += q;
+    if (it.pedidos.data >= v.ultimo && q > 0) {
+      v.ultimo = it.pedidos.data;
+      v.precoUltimo = t / q;
+    }
+    vendas.set(chave, v);
+  }
+  const anuncio = new Map<string, { preco: number | null; estoque: number }>();
+  for (const a of anuncios) {
+    const chave = k(skuAnuncio(a as never));
+    if (!chave) continue;
+    const x = anuncio.get(chave) ?? { preco: null, estoque: 0 };
+    const preco = a.preco_atual != null ? Number(a.preco_atual) : null;
+    if (a.status === "active" && preco && (x.preco == null || preco < x.preco)) x.preco = preco;
+    x.estoque += a.estoque != null && a.estoque < 40_000 ? a.estoque : 0;
+    anuncio.set(chave, x);
+  }
+  const comCusto = new Set(produtos.filter((p) => p.custo_unitario != null).map((p) => k(p.sku)));
+
+  const ordem = [...vendas.entries()].sort((a, b) => b[1].receita - a[1].receita);
+  const total = ordem.reduce((s, [, v]) => s + v.receita, 0);
+  const curva = new Map<string, "A" | "B" | "C">();
+  let acc = 0;
+  for (const [chave, v] of ordem) {
+    acc += v.receita;
+    const pc = total ? (acc / total) * 100 : 100;
+    curva.set(chave, pc <= 80 ? "A" : pc <= 95 ? "B" : "C");
+  }
+
+  for (const [chave, p] of catalogo) {
+    const v = vendas.get(chave);
+    const a = anuncio.get(chave);
+    p.curva = curva.get(chave) ?? null;
+    p.receita90 = v ? Math.round(v.receita) : 0;
+    p.unidades90 = v?.unidades ?? 0;
+    p.preco = a?.preco ?? (v ? Math.round(v.precoUltimo * 100) / 100 : null);
+    p.precoOrigem = a?.preco != null ? "anuncio" : v ? "vendido" : null;
+    p.estoque = a ? a.estoque : null;
+    p.temCusto = comCusto.has(chave);
+  }
 }

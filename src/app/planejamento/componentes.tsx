@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { X, Search, Check, Package, ExternalLink } from "lucide-react";
+import { X, Search, Check, Package, ExternalLink, Plus } from "lucide-react";
 import {
   type Produto,
   type Item,
@@ -86,11 +86,29 @@ export function Produtos({
 }) {
   const [busca, setBusca] = useState("");
   const [limite, setLimite] = useState(40);
-  const encontrados = catalogo.filter((p) =>
-    `${p.sku} ${p.titulo}`
-      .toLocaleLowerCase()
-      .includes(busca.toLocaleLowerCase()),
-  );
+  const [curva, setCurva] = useState<"" | "A" | "B" | "C">("");
+  const [comEstoque, setComEstoque] = useState(false);
+  const [ordem, setOrdem] = useState<"receita" | "nome" | "preco">("receita");
+  /*
+   * Curva, estoque e ordem: escolher "os curva A com estoque" para uma
+   * campanha era rolar a lista inteira lendo nome por nome.
+   */
+  const encontrados = catalogo
+    .filter((p) =>
+      `${p.sku} ${p.titulo}`
+        .toLocaleLowerCase()
+        .includes(busca.toLocaleLowerCase()),
+    )
+    .filter((p) => !curva || p.curva === curva)
+    .filter((p) => !comEstoque || (p.estoque ?? 0) > 0)
+    .sort((a, b) =>
+      ordem === "nome"
+        ? a.titulo.localeCompare(b.titulo, "pt-BR")
+        : ordem === "preco"
+          ? (b.preco ?? 0) - (a.preco ?? 0)
+          : (b.receita90 ?? 0) - (a.receita90 ?? 0),
+    );
+  const temDados = catalogo.some((p) => p.receita90 !== undefined);
   function toggle(sku: string) {
     mudar(
       selecionados.includes(sku)
@@ -112,6 +130,43 @@ export function Produtos({
           }}
         />
       </div>
+      {temDados && (
+        <div className="flex flex-wrap items-center gap-2 text-[12px]">
+          {(["", "A", "B", "C"] as const).map((c) => (
+            <button
+              type="button"
+              key={c || "todas"}
+              className={`pl-chip${curva === c ? " selected" : ""}`}
+              onClick={() => { setCurva(c); setLimite(40); }}
+            >
+              {c ? `Curva ${c}` : "Todas as curvas"}
+            </button>
+          ))}
+          <label className="inline-flex items-center gap-1.5">
+            <input type="checkbox" checked={comEstoque} onChange={(e) => setComEstoque(e.target.checked)} />
+            com estoque
+          </label>
+          <select
+            aria-label="Ordenar"
+            value={ordem}
+            onChange={(e) => setOrdem(e.target.value as typeof ordem)}
+            className="h-8 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2"
+          >
+            <option value="receita">Maior receita (90 dias)</option>
+            <option value="preco">Maior preço</option>
+            <option value="nome">Nome</option>
+          </select>
+          {encontrados.length > 0 && (
+            <button
+              type="button"
+              className="pl-chip"
+              onClick={() => mudar([...new Set([...selecionados, ...encontrados.map((p) => p.sku)])])}
+            >
+              <Plus size={13} /> Selecionar os {encontrados.length} filtrados
+            </button>
+          )}
+        </div>
+      )}
       <div className="pl-products-summary">
         <span>{selecionados.length} produtos selecionados</span>
         {selecionados.length > 0 && (
@@ -150,6 +205,13 @@ export function Produtos({
               <small>
                 {p.sku}
                 {p.origem === "anuncio" ? " · SKU do anúncio" : ""}
+                {p.curva ? ` · curva ${p.curva}` : ""}
+                {p.receita90 ? ` · ${p.receita90.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} em 90 dias` : ""}
+                {p.preco != null
+                  ? ` · ${p.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}${p.precoOrigem === "vendido" ? " (último vendido)" : " agora"}`
+                  : ""}
+                {p.estoque != null ? ` · estoque ${p.estoque}` : ""}
+                {p.temCusto === false ? " · sem custo" : ""}
               </small>
             </span>
           </label>
