@@ -104,6 +104,8 @@ export type Produto = {
   preco?: number | null;
   precoOrigem?: "anuncio" | "vendido" | null;
   estoque?: number | null;
+  /** Anúncio ativo sem controle de estoque (venda sob encomenda). */
+  semControle?: boolean;
   temCusto?: boolean;
 };
 export type Canal = { id: string; nome: string };

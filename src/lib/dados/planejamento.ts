@@ -259,14 +259,17 @@ async function enriquecer(
     }
     vendas.set(chave, v);
   }
-  const anuncio = new Map<string, { preco: number | null; estoque: number }>();
+  const anuncio = new Map<string, { preco: number | null; estoque: number; semControle?: boolean }>();
   for (const a of anuncios) {
     const chave = k(skuAnuncio(a as never));
     if (!chave) continue;
     const x = anuncio.get(chave) ?? { preco: null, estoque: 0 };
     const preco = a.preco_atual != null ? Number(a.preco_atual) : null;
-    if (a.status === "active" && preco && (x.preco == null || preco < x.preco)) x.preco = preco;
-    x.estoque += a.estoque != null && a.estoque < 40_000 ? a.estoque : 0;
+    const ativo = a.status === "ativo" || a.status === "active";
+    if (ativo && preco && (x.preco == null || preco < x.preco)) x.preco = preco;
+    // 40.000+ é o marcador de "sem controle" (sob encomenda): disponível, não quantidade.
+    if (ativo && a.estoque != null && a.estoque >= 40_000) x.semControle = true;
+    else x.estoque += a.estoque ?? 0;
     anuncio.set(chave, x);
   }
   const comCusto = new Set(produtos.filter((p) => p.custo_unitario != null).map((p) => k(p.sku)));
@@ -290,6 +293,7 @@ async function enriquecer(
     p.preco = a?.preco ?? (v ? Math.round(v.precoUltimo * 100) / 100 : null);
     p.precoOrigem = a?.preco != null ? "anuncio" : v ? "vendido" : null;
     p.estoque = a ? a.estoque : null;
+    p.semControle = a?.semControle ?? false;
     p.temCusto = comCusto.has(chave);
   }
 }

@@ -447,10 +447,11 @@ async function gravarEstoqueDiario(
         operacao_id: ctx.operacaoId,
         anuncio_id: id,
         data: dia,
-        /* 40.000 e acima é o marcador de "sem controle de estoque" do
-           canal, não estoque de verdade. Somá-lo daria centenas de
-           milhares de peças que não existem. */
-        estoque: a.estoque! >= 40_000 ? 0 : a.estoque!,
+        /* Gravado como veio. 40.000 e acima é o marcador de "sem controle
+           de estoque" do canal (venda sob encomenda): quem lê trata como
+           disponível e nunca soma. Antes virava 0, e o anúncio sob
+           encomenda aparecia como sem estoque na análise de queda. */
+        estoque: a.estoque!,
         /* O preço da vitrine no dia: é o que a análise de queda usa para
            dizer se a venda caiu porque o preço subiu (db/33). */
         preco: a.preco,

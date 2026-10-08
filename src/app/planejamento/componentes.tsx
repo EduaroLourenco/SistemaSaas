@@ -100,7 +100,7 @@ export function Produtos({
         .includes(busca.toLocaleLowerCase()),
     )
     .filter((p) => !curva || p.curva === curva)
-    .filter((p) => !comEstoque || (p.estoque ?? 0) > 0)
+    .filter((p) => !comEstoque || p.semControle || (p.estoque ?? 0) > 0)
     .sort((a, b) =>
       ordem === "nome"
         ? a.titulo.localeCompare(b.titulo, "pt-BR")
@@ -210,7 +210,7 @@ export function Produtos({
                 {p.preco != null
                   ? ` · ${p.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}${p.precoOrigem === "vendido" ? " (último vendido)" : " agora"}`
                   : ""}
-                {p.estoque != null ? ` · estoque ${p.estoque}` : ""}
+                {p.semControle ? " · sob encomenda" : p.estoque != null ? ` · estoque ${p.estoque}` : ""}
                 {p.temCusto === false ? " · sem custo" : ""}
               </small>
             </span>

@@ -679,9 +679,12 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
     const x = dia(v.data);
     x.visitas = (x.visitas ?? 0) + v.visitas;
   }
+  const semControle = new Set<string>();
   for (const r of retratos) {
     const x = dia(r.data);
-    x.estoque = (x.estoque ?? 0) + r.estoque;
+    // Marcador de sem controle (sob encomenda): disponível, mas não é quantidade.
+    if (r.estoque >= 40_000) semControle.add(r.data);
+    else x.estoque = (x.estoque ?? 0) + r.estoque;
     const preco = "preco" in r ? r.preco : null;
     if (preco != null && n(preco) > 0) x.vit.push(n(preco));
   }
@@ -695,6 +698,6 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
       precoVendido: x.unidades ? r2(x.receita / x.unidades) : null,
       // Vários anúncios: o menor preço do dia é o que o comprador vê primeiro.
       precoVitrine: x.vit.length ? Math.min(...x.vit) : null,
-      estoque: x.estoque,
+      estoque: semControle.has(data) ? null : x.estoque,
     }));
 }
