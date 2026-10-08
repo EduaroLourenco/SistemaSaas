@@ -168,12 +168,14 @@ export default function CanaisCliente({
               {c.ultimoErro ? "Com erro" : c.conectada ? "Conectada" : "Não conectada"}
             </Badge>
             {c.canalCodigo === "mercado_livre" && (
-              <Link
+              <a
                 href={`/api/meli/conectar?conta=${c.id}`}
+                      /* <a> e não <Link>: o Link pré-carrega o endereço, e pré-carregar uma
+                         rota de conexão OAuth dispara a rota sem ninguém clicar. */
                 className="text-[12px] font-medium text-brand hover:underline"
               >
                 {c.conectada ? "Reconectar" : "Conectar"}
-              </Link>
+              </a>
             )}
             {quando(c.sincronizadaEm) && (
               <span className="num text-[12px] text-ink-3">

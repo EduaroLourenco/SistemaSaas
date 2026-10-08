@@ -120,12 +120,14 @@ export default async function Integracoes() {
                           ? "Ainda sem sincronização registrada"
                           : "Enquanto não conectada, os números desta conta entram por planilha"}
                     </p>
-                    <Link
+                    <a
                       href={`/api/meli/conectar?conta=${c.id}`}
+                      /* <a> e não <Link>: o Link pré-carrega o endereço, e pré-carregar uma
+                         rota de conexão OAuth dispara a rota sem ninguém clicar. */
                       className="text-[12px] font-medium text-brand hover:underline shrink-0"
                     >
                       {conectada ? "Reconectar" : "Conectar"}
-                    </Link>
+                    </a>
                   </div>
                   {comErro && reg?.ultimo_erro && (
                     <p className="text-[12px] text-down mt-1.5">{reg.ultimo_erro}</p>
