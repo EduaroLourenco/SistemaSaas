@@ -53,21 +53,21 @@ function Linha({ v }: { v: Verificacao }) {
             <span className="text-[13px] font-medium text-ink">{v.pergunta}</span>
             <Badge tone={TOM[v.estado]}>{ROTULO[v.estado]}</Badge>
           </span>
-          <span className="mt-0.5 block text-[12.5px] leading-relaxed text-ink-2">{v.resposta}</span>
+          <span className="mt-0.5 block text-[12.5px] leading-relaxed break-words text-ink-2">{v.resposta}</span>
         </span>
       </button>
       {aberta && v.detalhes.length > 0 && (
         <ul className="ml-6 mt-2 flex flex-col gap-1">
           {v.detalhes.map((d) => (
             <li key={d.nome} className="flex flex-wrap items-baseline justify-between gap-x-3 text-[12.5px]">
-              <span className="flex min-w-0 items-center gap-1.5 text-ink">
+              <span className="flex min-w-0 items-center gap-1.5 break-words text-ink">
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{ background: d.estado === "ok" ? "var(--up)" : d.estado === "atencao" ? "var(--warn)" : "var(--down)" }}
                 />
-                {d.nome}
+                <span className="min-w-0 break-words">{d.nome}</span>
               </span>
-              <span className="num text-ink-2">{d.valor}</span>
+              <span className="num max-w-full break-words text-ink-2">{d.valor}</span>
             </li>
           ))}
         </ul>

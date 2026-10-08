@@ -73,7 +73,7 @@ export function CartaoAlerta({ alerta }: { alerta: Alerta }) {
 
   return (
     <div className="panel">
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex items-start sm:items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3">
         <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", t.fundo)}>
           <Icone className={cn("h-[18px] w-[18px]", t.cor)} strokeWidth={2.25} />
         </span>
@@ -82,7 +82,7 @@ export function CartaoAlerta({ alerta }: { alerta: Alerta }) {
             <Badge tone={t.badge}>{ROTULO[alerta.severidade]}</Badge>
             <p className="text-[14px] font-semibold text-ink leading-snug min-w-0">{alerta.titulo}</p>
           </div>
-          <p className="num mt-1 text-[12.5px] text-ink-2 truncate">
+          <p className="num mt-1 text-[12.5px] leading-relaxed text-ink-2 break-words">
             {alerta.numeros.map((n) => `${n.rotulo} ${n.valor}`).join(" · ")}
           </p>
         </div>

@@ -1436,7 +1436,10 @@
     padding: 12px 18px max(12px, env(safe-area-inset-bottom));
     flex-wrap: wrap;
   }
-  .st-studio :is(input, select, textarea) {
+  .st-studio :is(input, select, textarea),
+  .st-studio .pl-drawer input:not([type="checkbox"]),
+  .st-studio .pl-drawer select,
+  .st-studio .pl-drawer textarea {
     font-size: 16px;
     max-width: 100%;
   }
@@ -1452,6 +1455,10 @@
   .st-board {
     overscroll-behavior-x: contain;
   }
+}
+@media (max-width: 360px) {
+  .st-search { flex-basis: 100%; }
+  .st-toolbar-actions { justify-content: space-between; }
 }
 [data-theme="dark"] .pl-root.st-studio {
   --ground: #1d1c26;

@@ -80,7 +80,7 @@ export default async function Integracoes() {
         <SaudeDados verificacoes={saude} />
 
         <div className="space-y-3">
-          <div className="flex items-end justify-between gap-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <SectionTitle
               title="Mercado Livre · API"
               hint="Sincroniza sozinho às 13h e à 01h (horário de Brasília)"
@@ -103,7 +103,7 @@ export default async function Integracoes() {
                 <Panel key={c.id} className="px-4 py-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-ink truncate">{c.nome}</p>
+                      <p className="text-[13px] font-semibold text-ink break-words">{c.nome}</p>
                       <p className="text-[12px] text-ink-3 mt-0.5">
                         Pedidos, visitas, catálogo, estoque, comissão e frete
                       </p>
@@ -112,7 +112,7 @@ export default async function Integracoes() {
                       {!conectada ? "Não conectada" : comErro ? "Com erro" : "Conectada"}
                     </Badge>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-line flex items-center justify-between gap-3">
+                  <div className="mt-3 pt-3 border-t border-line flex flex-wrap items-center justify-between gap-3">
                     <p className="num text-[12px] text-ink-2">
                       {reg?.ultima_sincronizacao
                         ? `Última sincronização: ${quando(reg.ultima_sincronizacao)}`
@@ -130,7 +130,7 @@ export default async function Integracoes() {
                     </a>
                   </div>
                   {comErro && reg?.ultimo_erro && (
-                    <p className="text-[12px] text-down mt-1.5">{reg.ultimo_erro}</p>
+                    <p className="text-[12px] text-down mt-1.5 break-words">{reg.ultimo_erro}</p>
                   )}
                 </Panel>
               );

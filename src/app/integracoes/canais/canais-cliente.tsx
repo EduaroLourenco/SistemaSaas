@@ -97,7 +97,7 @@ export default function CanaisCliente({
       titulo: "Conta",
       render: (c) => (
         <div className="flex flex-col gap-0.5 min-w-0">
-          <span className="text-ink font-medium truncate">{c.nome}</span>
+          <span className="text-ink font-medium break-words">{c.nome}</span>
           <span className="text-[12px] text-ink-3">{c.canalNome}</span>
         </div>
       ),
@@ -337,6 +337,7 @@ export default function CanaisCliente({
   if (aba === "canais") {
     return (
       <Cadastro<Canal>
+        mobileCards
         recurso="canais"
         titulo="Canais"
         singular="Canal"
@@ -365,6 +366,7 @@ export default function CanaisCliente({
 
   return (
     <Cadastro<ContaCanal>
+      mobileCards
       recurso="contas-canal"
       titulo="Contas de venda"
       singular="Conta"

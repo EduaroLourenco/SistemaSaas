@@ -210,16 +210,15 @@ body {
 }
 
 /* ── utilitários do sistema ───────────────────────────────── */
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r2);
-}
-.panel-1 {
-  box-shadow: var(--sh-1);
-}
-.panel-2 {
-  box-shadow: var(--sh-2);
+/* As variações de fundo e borda do componente devem prevalecer sobre a base. */
+@layer components {
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r2);
+  }
+  .panel-1 { box-shadow: var(--sh-1); }
+  .panel-2 { box-shadow: var(--sh-2); }
 }
 
 .label {
@@ -228,6 +227,20 @@ body {
   letter-spacing: 0;
   color: var(--ink-3);
 }
+
+.gerizo-kpi-help {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--sh-3);
+}
+.gerizo-kpi-help::backdrop { background: var(--veil); }
 
 .hairline {
   border-bottom: 1px solid var(--line);
@@ -306,13 +319,23 @@ button:disabled { cursor: not-allowed; }
 
 /* Proporções do acompanhamento anual na referência aprovada. */
 .gerizo-annual {
-  --annual-revenue: #4e7d7b;
-  --annual-target: #a7bac8;
-  --annual-accumulated: #d99a62;
-  --annual-target-accumulated: #6984ad;
+  --annual-revenue: #176d69;
+  --annual-target: #586781;
+  --annual-accumulated: #d98b25;
+  --annual-target-accumulated: #4b94be;
 }
-.gerizo-annual-table { --row: 34px; }
+.gerizo-annual-table { --row: 28px; }
 [data-density="comfortable"] .gerizo-annual-table { --row: 42px; }
+@media (min-width: 768px) {
+  .gerizo-page-header--compact { padding-top: 12px; }
+  .gerizo-page-header--compact > p { margin-bottom: 4px; font-size: 11px; }
+  .gerizo-page-header--compact h1 { font-size: 26px; }
+  .gerizo-page-header--compact .gerizo-header-row p { font-size: 13px; }
+  .gerizo-page-header--compact > div:last-child:not(.gerizo-header-row) { margin-top: 12px; }
+  .gerizo-page-header--compact .gerizo-segmented button { min-height: 28px; }
+  .gerizo-annual { padding-block: 16px; }
+  .gerizo-annual > :not(:last-child) { margin-bottom: 12px; }
+}
 [data-theme="dark"] .gerizo-annual {
   --annual-revenue: #72aaa5;
   --annual-target: #829aad;

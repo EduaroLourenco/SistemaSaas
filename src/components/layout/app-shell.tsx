@@ -572,14 +572,14 @@ function subscribeMobile(callback: () => void) {
 const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
 const serverMobile = () => false;
 
-export function PageHeader({ title, breadcrumb, description, badge, actions, filters, mobileFilters = true, inlineFilters = false }: {
+export function PageHeader({ title, breadcrumb, description, badge, actions, filters, mobileFilters = true, inlineFilters = false, compact = false }: {
   title: string; breadcrumb?: string; description?: string; badge?: React.ReactNode;
-  actions?: React.ReactNode; filters?: React.ReactNode; mobileFilters?: boolean; inlineFilters?: boolean;
+  actions?: React.ReactNode; filters?: React.ReactNode; mobileFilters?: boolean; inlineFilters?: boolean; compact?: boolean;
 }) {
   const mobile = React.useSyncExternalStore(subscribeMobile, isMobile, serverMobile);
   const [openFilters, setOpenFilters] = React.useState(false);
   return (
-    <header className={cn("gerizo-page-header px-4 pt-5 pb-1 md:px-6 md:pt-5", inlineFilters && "gerizo-page-header--inline")}>
+    <header className={cn("gerizo-page-header px-4 pt-5 pb-1 md:px-6 md:pt-5", inlineFilters && "gerizo-page-header--inline", compact && "gerizo-page-header--compact")}>
       {breadcrumb && <p className="mb-1.5 text-[12px] font-medium text-ink-3">{breadcrumb}</p>}
       <div className="gerizo-header-row flex flex-wrap items-center justify-between gap-4">
         {/* Base de 14rem: com `flex-1` puro o título encolhia até zero e os

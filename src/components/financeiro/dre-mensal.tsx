@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { AXIS, GRID, ChartTooltip } from "@/components/ui/chart";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Resultado } from "@/lib/dados/margem";
+import { Wallet, Percent, TrendingUp, ShieldCheck } from "lucide-react";
 
 /**
  * A DRE mês a mês, com análise vertical.
@@ -107,11 +108,11 @@ export function DreMensal({
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" role="region" aria-label="DRE mês a mês. Deslize para ver os meses." tabIndex={0}>
         <table className="w-full text-[12.5px]">
           <thead>
             <tr className="border-b border-line">
-              <th className="label text-left px-3 py-2 sticky left-0 bg-panel z-10 min-w-[210px]">
+              <th className="label text-left px-3 py-2 sticky left-0 bg-panel z-10 w-36 min-w-36 max-w-36 md:w-[210px] md:min-w-[210px] md:max-w-[210px]">
                 Conta
               </th>
               {colunas.map((r, i) => (
@@ -148,7 +149,7 @@ export function DreMensal({
                   >
                     <td
                       className={cn(
-                        "px-3 py-1.5 sticky left-0 z-10",
+                        "px-3 py-1.5 sticky left-0 z-10 w-36 min-w-36 max-w-36 md:w-[210px] md:min-w-[210px] md:max-w-[210px] whitespace-normal break-words",
                         l.forte ? "bg-panel-2 font-semibold text-ink" : "bg-panel text-ink-2"
                       )}
                     >
@@ -358,9 +359,11 @@ export function LinhaVertical({
 export function ResumoDre({ r }: { r: Resultado }) {
   const parcial = r.cobertura < 99.5;
   const cartoes = [
-    { k: "Receita líquida", v: money(r.receitaLiquida), sub: `bruta ${moneyShort(r.receitaBruta)}` },
+    { k: "Receita líquida", v: money(r.receitaLiquida), sub: `bruta ${moneyShort(r.receitaBruta)}`, icone: Wallet, tom: "bg-info-wash text-info" },
     {
       k: "Margem de contribuição",
+      icone: Percent,
+      tom: "bg-brand-wash text-brand",
       v: r.margemPct != null ? pct(r.margemPct, 1) : "—",
       /*
        * A porcentagem é sobre a receita APURADA, não sobre a do período.
@@ -373,29 +376,34 @@ export function ResumoDre({ r }: { r: Resultado }) {
     },
     {
       k: "Resultado",
+      icone: TrendingUp,
+      tom: r.resultado == null ? "bg-panel-3 text-ink-3" : r.resultado < 0 ? "bg-down-wash text-down" : "bg-up-wash text-up",
       v: r.resultadoPct != null ? pct(r.resultadoPct, 1) : "—",
       // Sem cobertura não há resultado. Dizer o que falta vale mais que
       // um número vermelho que só reflete a mídia do período.
       sub: r.resultado != null ? money(r.resultado) : "falta custo por SKU",
       ruim: r.resultado != null && r.resultado < 0,
     },
-    { k: "Cobertura da margem", v: pct(r.cobertura, 1), sub: `${moneyShort(r.receitaSemCusto)} sem custo` },
+    { k: "Cobertura da margem", v: pct(r.cobertura, 1), sub: `${moneyShort(r.receitaSemCusto)} sem custo`, icone: ShieldCheck, tom: parcial ? "bg-warn-wash text-warn" : "bg-up-wash text-up" },
   ];
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden mb-3">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
       {cartoes.map((c) => (
-        <div key={c.k} className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
-          <span className="label">{c.k}</span>
+        <div key={c.k} className="gerizo-stat-tile @container panel panel-1 min-w-0 px-3.5 py-3.5 flex flex-col gap-1.5">
+          <span className="flex items-center gap-2">
+            <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-full", c.tom)} aria-hidden="true"><c.icone size={16} /></span>
+            <span className="label leading-snug">{c.k}</span>
+          </span>
           <span
             className={cn(
-              "num text-[19px] font-semibold",
+              "gerizo-metric-value num leading-tight font-bold [font-size:clamp(16px,8.5cqw,26px)]",
               c.ruim ? "text-down" : "text-ink"
             )}
           >
             {c.v}
           </span>
-          <span className="text-[12px] text-ink-3 num">{c.sub}</span>
+          <span className="text-[12px] text-ink-3 num break-words">{c.sub}</span>
         </div>
       ))}
     </div>

@@ -4,6 +4,45 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Delta } from "./primitives";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
+import { Info, X } from "lucide-react";
+
+/** A mesma definição do indicador, acessível também por toque e teclado. */
+function AjudaIndicador({ label, texto }: { label: string; texto: string }) {
+  const ref = React.useRef<HTMLDialogElement>(null);
+  const tituloId = React.useId();
+  const textoId = React.useId();
+  return (
+    <>
+      <button
+        type="button"
+        title={texto}
+        aria-label={`Entender ${label}`}
+        aria-haspopup="dialog"
+        onClick={() => ref.current?.showModal()}
+        className="absolute -right-2 -top-2 grid min-h-10 w-10 place-items-center rounded-r1 text-ink-3 hover:bg-panel-3 hover:text-brand md:-right-1 md:-top-1 md:min-h-6 md:w-6"
+      >
+        <Info size={14} aria-hidden="true" />
+      </button>
+      <dialog
+        ref={ref}
+        aria-labelledby={tituloId}
+        aria-describedby={textoId}
+        className="gerizo-kpi-help"
+        onClick={(event) => { if (event.target === event.currentTarget) ref.current?.close(); }}
+      >
+        <div className="p-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2 id={tituloId} className="text-[18px] font-semibold text-ink">{label}</h2>
+            <button type="button" onClick={() => ref.current?.close()} aria-label="Fechar explicação" className="grid h-10 w-10 shrink-0 place-items-center rounded-r1 text-ink-2 hover:bg-panel-3">
+              <X size={18} />
+            </button>
+          </div>
+          <p id={textoId} className="mt-2 text-[14px] font-normal leading-relaxed text-ink-2">{texto}</p>
+        </div>
+      </dialog>
+    </>
+  );
+}
 
 export function Sparkline({
   data,
@@ -54,7 +93,7 @@ export function StatTile({
   hint?: string;
   spark?: number[];
   className?: string;
-  /** O que o número é, em uma frase: abre ao passar o mouse ou focar o ⓘ. */
+  /** A definição abre ao tocar ou ativar pelo teclado o botão de ajuda. */
   ajuda?: string;
 }) {
   /*
@@ -72,19 +111,10 @@ export function StatTile({
         className
       )}
     >
-      <p className="label leading-snug flex items-center gap-1">
+      <div className={cn("label relative leading-snug", ajuda && "pr-7")}>
         {label}
-        {ajuda && (
-          <span
-            tabIndex={0}
-            title={ajuda}
-            aria-label={`O que é: ${ajuda}`}
-            className="inline-flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full border border-line-2 text-[9px] font-semibold normal-case text-ink-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
-          >
-            i
-          </span>
-        )}
-      </p>
+        {ajuda && <AjudaIndicador label={label} texto={ajuda} />}
+      </div>
 
       <div className="mt-1.5 flex items-center justify-between gap-3 min-w-0">
         <div className="min-w-0">

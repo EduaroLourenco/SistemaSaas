@@ -269,6 +269,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
   return (
     <>
       <PageHeader
+        compact
         mobileFilters={false}
         title="Acompanhamento anual"
         breadcrumb="Vendas"
@@ -339,7 +340,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
             }
           />
           <div className="px-2 pt-3 pb-2">
-            <div className="h-[240px]">
+            <div className="h-[240px] md:h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   data={dadosGrafico}
@@ -463,7 +464,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
           {/* desktop */}
           <div className="gerizo-annual-table hidden md:block overflow-x-auto" role="region" aria-label="Resultados mês a mês" tabIndex={0}>
             <table
-              className="w-full border-collapse text-[13px]"
+              className="w-full border-collapse text-[12px]"
               style={{ minWidth: `${larguraMinima}px` }}
             >
               <thead>

@@ -70,6 +70,8 @@ type Props<T extends { id: string }> = {
   faltaMigracao?: string | null;
   /** Renderizado acima da tabela — totais, filtros extras. */
   resumo?: React.ReactNode;
+  /** No celular, mantém os campos e ações de cada registro em um cartão. */
+  mobileCards?: boolean;
   /** Campo extra no rodapé da folha, ao lado dos botões. */
   extraFooter?: (v: Registro, set: (k: string, valor: unknown) => void) => React.ReactNode;
   /** Corpo do POST, quando a tela precisa mandar algo além dos campos. */
@@ -88,6 +90,7 @@ export function Cadastro<T extends { id: string }>({
   vazio,
   faltaMigracao,
   resumo,
+  mobileCards = false,
   extraFooter,
   aoGravar,
 }: Props<T>) {
@@ -188,8 +191,8 @@ export function Cadastro<T extends { id: string }>({
       {resumo}
 
       <Panel>
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
-          <div className="relative flex-1 max-w-xs">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b border-line">
+          <div className="relative min-w-0 flex-[1_1_9rem] max-w-xs">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
             <Input
               value={filtro}
@@ -214,7 +217,8 @@ export function Cadastro<T extends { id: string }>({
             <EmptyState title={vazio.titulo} description={vazio.descricao} />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className={cn("overflow-x-auto", mobileCards && "hidden md:block")}>
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-line">
@@ -273,6 +277,26 @@ export function Cadastro<T extends { id: string }>({
               </tbody>
             </table>
           </div>
+          {mobileCards && <div className="divide-y divide-line md:hidden">
+            {visiveis.map((l) => (
+              <article key={l.id} className="p-4">
+                <div className="mb-3 text-[14px] font-semibold text-ink">{colunas[0]?.render(l)}</div>
+                <dl className="space-y-2 text-[13px]">
+                  {colunas.slice(1).map((c) => (
+                    <div key={c.chave} className="flex items-start gap-3">
+                      <dt className="w-20 shrink-0 text-[12px] text-ink-3">{c.titulo}</dt>
+                      <dd className={cn("min-w-0 flex-1 break-words text-ink-2", c.numerica && "num")}>{c.render(l)}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="mt-3 flex gap-2 border-t border-line pt-3">
+                  <Button onClick={() => editar(l)} className="flex-1"><Pencil size={14} />Editar</Button>
+                  <Button onClick={() => setConfirmar(l)} aria-label={`Apagar ${singular.toLowerCase()}`} className="text-ink-3"><Trash2 size={14} />Apagar</Button>
+                </div>
+              </article>
+            ))}
+          </div>}
+          </>
         )}
       </Panel>
 
@@ -292,7 +316,7 @@ export function Cadastro<T extends { id: string }>({
             </>
           }
         >
-          <div className="p-4 grid grid-cols-2 gap-3">
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {campos
               .filter((c) => !c.visivel || c.visivel(valores))
               .map((c) => (
@@ -300,7 +324,7 @@ export function Cadastro<T extends { id: string }>({
                   key={c.chave}
                   label={c.obrigatorio ? `${c.rotulo} *` : c.rotulo}
                   hint={c.dica}
-                  className={c.largo ? "col-span-2" : ""}
+                  className={c.largo ? "sm:col-span-2" : ""}
                 >
                   <CampoEntrada
                     campo={c}
