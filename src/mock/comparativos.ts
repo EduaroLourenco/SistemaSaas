@@ -9,7 +9,14 @@
 
 import { CANAL_CORES, CANAL_NOMES } from "@/mock";
 
-export const ANO = 2026;
+/*
+ * O ano do calendário é o CORRENTE (Brasília), não um número fixo. Estava
+ * 2026 escrito à mão: em janeiro de 2027 a tela cruzaria as vendas de 2027
+ * com os dias da semana de 2026 — errado, e sem aviso.
+ */
+export const ANO = Number(
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric" }).format(new Date())
+);
 
 export const MESES = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -61,7 +68,8 @@ export function nomeEscopo(e: EscopoComp) {
 
 /* ── calendário do ano ──────────────────────────────────────── */
 
-const DIAS_NO_MES = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+const BISSEXTO = new Date(Date.UTC(ANO, 1, 29)).getUTCMonth() === 1;
+const DIAS_NO_MES = [31, BISSEXTO ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 export type DiaCalendario = {
   /** índice no ano, 0-based */
