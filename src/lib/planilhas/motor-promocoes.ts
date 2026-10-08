@@ -26,6 +26,33 @@ export interface FormulaBaseData {
   baseMlb: Map<string, BaseMLBEntry>;
   precosSKU: Map<string, Record<number, number>>;
   precosMLB: Map<string, Record<number, number>>;
+  /** Custos por SKU (chave em maiúsculas), para a regra de margem. */
+  custos?: Map<string, CustoSku>;
+  /** De onde sai o preço mínimo. Ausente = só a tabela, como sempre foi. */
+  regra?: RegraPreco;
+}
+
+/** O que compõe o custo de uma unidade, fora a comissão (que é a variável). */
+export interface CustoSku {
+  mercadoria: number;
+  embalagem: number;
+  frete: number;
+  /** Em pontos percentuais. */
+  impostoPct: number;
+}
+
+/**
+ * De onde sai o preço mínimo de uma promoção.
+ *
+ *   tabela — a Fórmula base, como sempre foi.
+ *   margem — calculado dos custos: o preço que ainda deixa `margemMinima`%.
+ *   maior  — o maior dos dois. Só participa o que passa nas duas réguas:
+ *            é o modo em que nenhuma promoção aceita dá prejuízo.
+ */
+export interface RegraPreco {
+  modo: "tabela" | "margem" | "maior";
+  /** Em pontos percentuais, ex.: 8 para 8%. */
+  margemMinima: number;
 }
 
 /**
@@ -176,6 +203,41 @@ export interface ResultadoItem {
 }
 
 export function getPrecoTabela(data: FormulaBaseData, sku: string, mlb: string, comissao: number): number | null {
+  const tabela = precoDaFormula(data, sku, mlb, comissao);
+  const modo = data.regra?.modo ?? "tabela";
+  if (modo === "tabela") return tabela;
+  const margem = precoDaMargem(data, sku, comissao);
+  if (modo === "margem") return margem;
+  // "maior": sem custo cadastrado, a tabela sozinha decide.
+  if (margem == null) return tabela;
+  if (tabela == null) return margem;
+  return Math.max(tabela, margem);
+}
+
+/**
+ * O "preço de tabela" que a margem pede.
+ *
+ * A convenção do motor é que a tabela × PISO (95% no Meli) é o menor preço
+ * que preserva a margem — é por isso que ele aceita oferta até 5% abaixo
+ * da tabela. Para a regra de margem caber na mesma convenção, a "tabela"
+ * dela é o preço da margem mínima dividido pelo piso: os 5% de tolerância
+ * caem exatamente em cima da margem pedida, nunca abaixo.
+ */
+export function precoDaMargem(data: FormulaBaseData, sku: string, comissao: number): number | null {
+  const c = data.custos?.get(sku.trim().toUpperCase());
+  if (!c || !data.regra) return null;
+  const restante = 100 - comissao * 100 - c.impostoPct - data.regra.margemMinima;
+  if (restante <= 0) return null;
+  const precoMargem = ((c.mercadoria + c.embalagem + c.frete) * 100) / restante;
+  return Math.round((precoMargem / PISO) * 100) / 100;
+}
+
+/** Por que não há preço mínimo — muda conforme a regra. */
+function semPreco(data: FormulaBaseData): string {
+  return data.regra?.modo === "margem" ? "sem custo cadastrado (Financeiro › Custos)" : "sem preço de tabela";
+}
+
+function precoDaFormula(data: FormulaBaseData, sku: string, mlb: string, comissao: number): number | null {
   const k = Math.round(comissao * 1000) / 1000;
   
   if (data.precosSKU.has(sku)) {
@@ -254,7 +316,7 @@ export function processItem(
     );
 
     const tabela = getPrecoTabela(data, sku, mlb, considerar);
-    if (tabela === null) return { action: negativeAction, pendencia: `sem preço de tabela para a comissão ${(considerar*100).toFixed(1)}%`, newPrice: null };
+    if (tabela === null) return { action: negativeAction, pendencia: `${semPreco(data)} para a comissão ${(considerar*100).toFixed(1)}%`, newPrice: null };
 
     // Tolerância do canal: aceita a oferta que chega até o desconto mínimo
     // abaixo da tabela. No Meli são os 5% de sempre.
@@ -305,7 +367,7 @@ export function processItem(
 
     let p = getPrecoTabela(data, sku, mlb, comissao);
     
-    if (p === null) return { action: negativeAction, pendencia: "sem preço de tabela", newPrice: null };
+    if (p === null) return { action: negativeAction, pendencia: semPreco(data), newPrice: null };
     
     /*
      * Sem desconto extra, a oferta é a tabela cheia — comportamento que já
@@ -401,7 +463,7 @@ function itemCampanhaPropria(
 
   const tabela = getPrecoTabela(data, sku, mlb, comissao);
   if (tabela === null) {
-    return { action: negativeAction, pendencia: "sem preço de tabela", newPrice: null, newPercentage: null };
+    return { action: negativeAction, pendencia: semPreco(data), newPrice: null, newPercentage: null };
   }
 
   /*

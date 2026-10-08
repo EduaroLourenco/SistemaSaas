@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import JSZip from "jszip";
 import { lerFormulaBase, resumoFormulaBase } from "@/lib/planilhas/formula-base";
 import { carregarFormulaBase } from "@/lib/dados/formula-base";
+import { carregarCustosPromocao, baseDosAnuncios } from "@/lib/dados/custos-promocao";
+import type { RegraPreco } from "@/lib/planilhas/motor-promocoes";
 import { processarPlanilha, type LinhaProcessada } from "@/lib/planilhas/processar";
 import { generateReport, type ReportItem } from "@/lib/planilhas/relatorio-gerencial";
 import { guardarPacote } from "@/lib/planilhas/pacotes";
@@ -26,6 +28,9 @@ export async function POST(req: NextRequest) {
     const planilhas = formData.getAll("planilha") as File[];
     const base = formData.get("formulaBase") as File | null;
     const descontoExtra = parseFloat((formData.get("descontoExtra") as string) || "0");
+    const pedida = String(formData.get("regra") ?? "tabela");
+    const modo: RegraPreco["modo"] = pedida === "margem" || pedida === "maior" ? pedida : "tabela";
+    const margemMinima = Math.min(60, Math.max(0, parseFloat((formData.get("margemMinima") as string) || "0") || 0));
 
     if (!planilhas.length) {
       return NextResponse.json(
@@ -52,7 +57,12 @@ export async function POST(req: NextRequest) {
       origemBase = "arquivo enviado agora";
     } else {
       const guardada = await carregarFormulaBase();
-      if (!guardada) {
+      if (!guardada && modo !== "tabela") {
+        // Sem Fórmula base, a regra de margem anda sozinha: o tipo e a
+        // alíquota de cada anúncio vêm da sincronização.
+        formulaData = await baseDosAnuncios();
+        origemBase = "sem Fórmula base — tipo e comissão dos anúncios sincronizados";
+      } else if (!guardada) {
         return NextResponse.json(
           {
             erro:
@@ -61,9 +71,25 @@ export async function POST(req: NextRequest) {
           },
           { status: 400 }
         );
+      } else {
+        formulaData = guardada.dados;
+        origemBase = `base guardada, vigente desde ${guardada.vigenteDe}`;
       }
-      formulaData = guardada.dados;
-      origemBase = `base guardada, vigente desde ${guardada.vigenteDe}`;
+    }
+
+    let custosUsados = 0;
+    let custosIncompletos = 0;
+    if (modo !== "tabela") {
+      const { custos, incompletos } = await carregarCustosPromocao();
+      custosUsados = custos.size;
+      custosIncompletos = incompletos;
+      if (!custos.size && modo === "margem") {
+        return NextResponse.json(
+          { erro: "Nenhum SKU com custo completo. Preencha em Financeiro › Custos (mercadoria, embalagem, imposto e peso)." },
+          { status: 400 }
+        );
+      }
+      formulaData = { ...formulaData, custos, regra: { modo, margemMinima } };
     }
 
     const resumoBase = resumoFormulaBase(formulaData);
@@ -195,6 +221,7 @@ export async function POST(req: NextRequest) {
       // De onde veio a base — a tela mostra, para ninguém processar uma
       // semana inteira com a versão errada sem perceber.
       origemBase,
+      regra: { modo, margemMinima, custosUsados, custosIncompletos },
       arquivos,
       resumo: {
         lidos: todasLinhas.length,

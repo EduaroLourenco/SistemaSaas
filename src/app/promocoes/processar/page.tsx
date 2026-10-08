@@ -58,9 +58,18 @@ type Linha = {
   tags: Tag[];
 };
 
+type Regra = "tabela" | "margem" | "maior";
+
+const REGRAS: { value: Regra; label: string }[] = [
+  { value: "tabela", label: "Tabela de preço" },
+  { value: "margem", label: "Margem pelos custos" },
+  { value: "maior", label: "As duas (mais seguro)" },
+];
+
 type Resultado = {
   id: string;
   resumoBase: { itens: number; precosPorSku: number; precosPorMlb: number };
+  regra?: { modo: Regra; margemMinima: number; custosUsados: number; custosIncompletos: number };
   arquivos: { nome: string; campanha: string; linhas: number }[];
   resumo: {
     lidos: number;
@@ -160,6 +169,8 @@ export default function ProcessarPromocoes() {
   const [planilhas, setPlanilhas] = React.useState<File[]>([]);
   const [base, setBase] = React.useState<File[]>([]);
   const [descontoExtra, setDescontoExtra] = React.useState("0");
+  const [regra, setRegra] = React.useState<Regra>("tabela");
+  const [margemMinima, setMargemMinima] = React.useState("8");
   const [processando, setProcessando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [resultado, setResultado] = React.useState<Resultado | null>(null);
@@ -224,6 +235,8 @@ export default function ProcessarPromocoes() {
     // O campo aceita 5 ou 0,05 — o motor espera fração.
     const d = parseFloat(descontoExtra.replace(",", ".")) || 0;
     fd.append("descontoExtra", String(d > 1 ? d / 100 : d));
+    fd.append("regra", regra);
+    fd.append("margemMinima", String(parseFloat(margemMinima.replace(",", ".")) || 0));
 
     try {
       const r = await fetch("/api/promocoes/processar", { method: "POST", body: fd });
@@ -545,6 +558,34 @@ export default function ProcessarPromocoes() {
               </div>
             </Panel>
 
+            <Panel className="overflow-hidden lg:col-span-2">
+              <PanelHeader title="Regra do preço mínimo" hint="abaixo dele, o item não entra na promoção" />
+              <div className="flex flex-col gap-3 p-4">
+                <Segmented options={REGRAS} value={regra} onChange={setRegra} />
+                {regra !== "tabela" && (
+                  <Field
+                    label="Margem mínima (%)"
+                    hint="O que precisa sobrar depois de mercadoria, embalagem, frete, comissão e imposto."
+                  >
+                    <Input
+                      inputMode="decimal"
+                      value={margemMinima}
+                      onChange={(e) => setMargemMinima(e.target.value)}
+                      className="max-w-[140px] max-sm:h-11"
+                    />
+                  </Field>
+                )}
+                <p className="text-[12px] leading-relaxed text-ink-2">
+                  {regra === "tabela" &&
+                    "O preço mínimo vem da Fórmula base, como sempre foi."}
+                  {regra === "margem" &&
+                    "O preço mínimo é calculado dos custos de cada SKU (Financeiro › Custos): o menor preço que ainda deixa a margem pedida, já com a comissão da campanha. Não precisa de Fórmula base. SKU sem custo completo fica de fora, como pendência."}
+                  {regra === "maior" &&
+                    "O item só entra se passar nas duas réguas: a Fórmula base E a margem mínima pelos custos. É o modo em que nenhuma promoção aceita dá prejuízo. SKU sem custo cadastrado segue só a tabela."}
+                </p>
+              </div>
+            </Panel>
+
             <Panel className="overflow-hidden">
               <PanelHeader title="Fórmula base" hint="referência de preço de tabela" />
               <div className="p-4">
@@ -723,6 +764,17 @@ export default function ProcessarPromocoes() {
                 por código de anúncio.{" "}
                 <span className="num">{count(resultado.resumo.recalculados)}</span> itens
                 tiveram o preço recalculado.
+                {resultado.regra && resultado.regra.modo !== "tabela" && (
+                  <>
+                    {" "}Regra: {resultado.regra.modo === "margem" ? "margem pelos custos" : "tabela e margem"} de{" "}
+                    <span className="num">{resultado.regra.margemMinima}%</span>, com custo completo em{" "}
+                    <span className="num">{count(resultado.regra.custosUsados)}</span> SKUs
+                    {resultado.regra.custosIncompletos > 0 && (
+                      <> ({count(resultado.regra.custosIncompletos)} com custo incompleto, ver Financeiro › Custos)</>
+                    )}
+                    .
+                  </>
+                )}
               </p>
             </Panel>
 
