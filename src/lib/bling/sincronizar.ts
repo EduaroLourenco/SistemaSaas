@@ -149,7 +149,19 @@ export async function sincronizarBling(integ: Integracao, de: string, ate: strin
     const itens = pedidos.flatMap((p) => {
       const pid = idPorCodigo.get(`bling-${p.id}`);
       if (!pid) return [];
-      return (detalhes.get(p.id)?.itens ?? [])
+      /*
+       * Desconto do pedido rateado nos itens. O Bling devolve o item pelo
+       * preço de lista, e o cupom/desconto do canal (Shopee, Magalu) fica
+       * no pedido: os itens somavam MAIS que o pedido em 148 de 256 pedidos
+       * da Shopee, e a receita por produto saía inflada. Com o rateio,
+       * itens + frete = total do pedido, a mesma relação dos outros canais.
+       */
+      const brutos = detalhes.get(p.id)?.itens ?? [];
+      const somaItens = brutos.reduce((t, it) => t + (Number(it.quantidade) || 0) * (Number(it.valor) || 0), 0);
+      const frete = Number(detalhes.get(p.id)?.transporte?.frete) || 0;
+      const liquido = (Number(p.total) || 0) - frete;
+      const fator = somaItens > 0 && liquido > 0 && liquido < somaItens ? liquido / somaItens : 1;
+      return brutos
         .map((it) => ({
           operacao_id: integ.operacaoId,
           pedido_id: pid,
@@ -157,7 +169,7 @@ export async function sincronizarBling(integ: Integracao, de: string, ate: strin
           sku: it.codigo || null,
           titulo: it.descricao ?? null,
           quantidade: Math.round(Number(it.quantidade) || 0),
-          preco_unitario: Math.max(0, Number(it.valor) || 0),
+          preco_unitario: Math.round(Math.max(0, (Number(it.valor) || 0) * fator) * 100) / 100,
         }))
         .filter((it) => it.quantidade > 0);
     });

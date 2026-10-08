@@ -5,7 +5,7 @@
  */
 export const AJUDA_KPI: Record<string, string> = {
   faturamento:
-    "Soma de todos os pedidos do período, incluindo os que depois foram cancelados (o cancelado aparece no cartão Valor cancelado).",
+    "Soma do valor dos pedidos do período: produtos + frete cobrado do comprador, incluindo os que depois foram cancelados (o cancelado aparece no cartão Valor cancelado). As telas por produto (SKU, Por que caiu) somam só os produtos, por isso dão menos.",
   pedidos: "Quantidade de pedidos, cancelados incluídos.",
   ticket: "Valor médio por pedido, sem os cancelados: (faturamento − cancelado) ÷ (pedidos − cancelados).",
   conversao:

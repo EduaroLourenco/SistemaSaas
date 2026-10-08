@@ -1,4 +1,5 @@
 import "server-only";
+import { paginar } from "./paginar";
 import { FAIXA_MIN, FAIXA_MAX_GRAVACAO } from "./comissao-plausivel";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { parsePerformanceReport } from "@/lib/planilhas/desempenho";
@@ -618,15 +619,32 @@ async function pedidos(
   // Descobre o id de cada pedido para prender os itens.
   const codigos = [...itensPorChave.keys()].map((k) => k.split("|")[1]);
   const idPorChave = new Map<string, string>();
+  const contaDoPedido = new Map<string, string>();
   for (let i = 0; i < codigos.length; i += 200) {
     const { data } = await sb
       .from("pedidos")
-      .select("id, canal_id, codigo_externo")
+      .select("id, canal_id, conta_canal_id, codigo_externo")
       .eq("operacao_id", operacaoId)
       .in("codigo_externo", codigos.slice(i, i + 200));
     for (const p of data ?? []) {
       idPorChave.set(`${p.canal_id}|${p.codigo_externo}`, p.id as string);
+      contaDoPedido.set(p.id as string, p.conta_canal_id as string);
     }
+  }
+
+  /*
+   * O item já nasce ligado ao anúncio, pela conta + código do anúncio (MLB).
+   * Sem isso, 3.484 itens de planilha ficaram sem anúncio, e cada tela que
+   * lia por anúncio precisava refazer a busca pelo código — a primeira que
+   * esquecesse mostraria menos venda, sem erro.
+   */
+  const anunciosOp = await paginar(() =>
+    sb.from("anuncios").select("id,conta_canal_id,codigo_externo").eq("operacao_id", operacaoId).order("id")
+  ).catch(() => [] as { id: string; conta_canal_id: string; codigo_externo: string }[]);
+  const anuncioPorChave = new Map<string, string | null>();
+  for (const a of anunciosOp as { id: string; conta_canal_id: string; codigo_externo: string }[]) {
+    const k = `${a.conta_canal_id}|${String(a.codigo_externo).toUpperCase()}`;
+    anuncioPorChave.set(k, anuncioPorChave.has(k) ? null : a.id); // duas vezes = ambíguo, não liga
   }
 
   /*
@@ -655,6 +673,7 @@ async function pedidos(
       linhasItem.push({
         operacao_id: operacaoId,
         pedido_id: pedidoId,
+        anuncio_id: anuncioPorChave.get(`${contaDoPedido.get(pedidoId)}|${String(it.codigoExterno ?? "").toUpperCase()}`) ?? null,
         codigo_externo: it.codigoExterno,
         sku: it.sku || null,
         titulo: it.titulo,
