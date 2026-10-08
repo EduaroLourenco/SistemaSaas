@@ -1,3 +1,4 @@
+import { abastecerProdutos } from "@/lib/produtos/abastecer";
 import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { consolidarDiarias } from "@/lib/sync/diarias";
@@ -192,6 +193,9 @@ export async function sincronizarBling(integ: Integracao, de: string, ate: strin
     .update({ config, ultima_sincronizacao: new Date().toISOString(), ultimo_erro: null, status: "conectada" })
     .eq("id", integ.id);
   integ.config = config;
+
+  // SKU novo vendido pelo Bling ganha produto, para ter onde pôr custo.
+  if (itensGravados) await abastecerProdutos(sb, integ.operacaoId).catch(() => null);
 
   return { pedidos: gravados, itens: itensGravados, pulados, pendentes: juntos };
 }

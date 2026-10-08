@@ -1,3 +1,4 @@
+import { abastecerProdutos } from "@/lib/produtos/abastecer";
 import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { paginar } from "@/lib/dados/paginar";
@@ -47,7 +48,7 @@ import { consolidarSemanais } from "@/lib/sync/semanais";
 
 type Resumo = {
   anuncios: { lidos: number; gravados: number };
-  produtos: { pesoPreenchido: number };
+  produtos: { pesoPreenchido: number; criados?: number };
   pedidos: { lidos: number; gravados: number; itens: number; comComissao: number; comFrete: number };
   visitas: { anuncios: number; linhas: number; falharam: number };
   estoque: { linhas: number };
@@ -161,6 +162,18 @@ async function gravarCatalogo(
   resumo.anuncios = { lidos: itens.length, gravados: linhas.length };
 
   /*
+   * Produto para todo SKU novo, e anúncio ligado ao produto: sem o elo a
+   * margem não acha o custo, e o SKU inteiro cai fora do cálculo calado.
+   * Antes do peso, para o produto recém-criado já receber o do pacote.
+   */
+  try {
+    const r = await abastecerProdutos(sb, ctx.operacaoId);
+    resumo.produtos.criados = r.criados;
+  } catch (e) {
+    resumo.avisos.push((e as Error).message);
+  }
+
+  /*
    * O peso vai para `produtos`, e SÓ onde ainda está vazio.
    *
    * O peso do pacote é dado do canal e serve de partida para a faixa de
@@ -222,66 +235,6 @@ async function gravarCatalogo(
         });
       }
       resumo.produtos.pesoPreenchido = alvo.length;
-    }
-  }
-
-  /* Casa anúncio com produto pelo SKU, para a margem enxergar o custo. */
-  await casarAnuncioComProduto(ctx, resumo);
-}
-
-/**
- * Liga `anuncios.produto_id` ao produto de mesmo SKU.
- *
- * Sem esse elo a margem não acha o custo de mercadoria do anúncio e o SKU
- * inteiro cai fora do cálculo — silenciosamente, porque o item existe e a
- * venda também.
- */
-async function casarAnuncioComProduto(
-  ctx: Awaited<ReturnType<typeof resolverConta>>,
-  resumo: Resumo
-) {
-  const sb = clientePrivilegiado();
-  const [an, pr] = await Promise.all([
-    sb
-      .from("anuncios")
-      .select("id,sku_canal,produto_id")
-      .eq("conta_canal_id", ctx.contaCanalId)
-      .is("produto_id", null),
-    sb.from("produtos").select("id,sku").eq("operacao_id", ctx.operacaoId),
-  ]);
-
-  if (an.error || pr.error) {
-    resumo.avisos.push("Não consegui casar anúncio com produto pelo SKU.");
-    return;
-  }
-
-  const porSku = new Map(
-    (pr.data ?? []).map((p) => [String(p.sku).toUpperCase(), p.id as string])
-  );
-  const ligar = (an.data ?? [])
-    .filter((a) => a.sku_canal)
-    .map((a) => ({ id: a.id as string, produto: porSku.get(String(a.sku_canal).toUpperCase()) }))
-    .filter((x): x is { id: string; produto: string } => Boolean(x.produto));
-
-  if (!ligar.length) return;
-
-  // UPDATE pelo mesmo motivo do peso: `anuncios` tem NOT NULL em canal_id,
-  // conta_canal_id, codigo_externo e titulo, e o upsert os exigiria todos.
-  const porProduto = new Map<string, string[]>();
-  for (const x of ligar) {
-    const lista = porProduto.get(x.produto) ?? [];
-    lista.push(x.id);
-    porProduto.set(x.produto, lista);
-  }
-
-  for (const [produtoId, ids] of porProduto) {
-    const { error } = await sb
-      .from("anuncios")
-      .update({ produto_id: produtoId })
-      .in("id", ids);
-    if (error) {
-      resumo.avisos.push(`Falha ao ligar anúncio ao produto: ${error.message}`);
-      return;
     }
   }
 }

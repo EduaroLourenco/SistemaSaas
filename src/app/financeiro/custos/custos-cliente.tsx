@@ -10,6 +10,7 @@ import { Tabs, Input, Select, Field } from "@/components/ui/controls";
 import { money, pct, count } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Pagination, usePagination } from "@/components/ui/pagination";
+import { CadastroProdutos } from "./cadastro-produtos";
 import {
   Save, Plus, Trash2, Loader2, AlertCircle, Check, ArrowDownToLine,
 } from "lucide-react";
@@ -210,6 +211,7 @@ export default function CustosCliente({
   }
   const [aba, setAba] = React.useState<Aba>("sku");
   const [erro, setErro] = React.useState<string | null>(null);
+  const [aviso, setAviso] = React.useState<string | null>(null);
   const [salvando, setSalvando] = React.useState(false);
   const [salvo, setSalvo] = React.useState(false);
 
@@ -382,9 +384,25 @@ export default function CustosCliente({
         title="Custos"
         breadcrumb="Financeiro"
         description="O que falta para fechar margem"
+        actions={<CadastroProdutos aoMudar={setAviso} />}
       />
 
       <PageBody>
+        {aviso && (
+          <Panel className="px-4 py-3 mb-3 border-brand/30">
+            <p className="text-[13px] text-ink">{aviso}</p>
+          </Panel>
+        )}
+        {linhas.length === 0 && (
+          <Panel className="p-5 mb-3">
+            <p className="text-[15px] font-semibold text-ink">Nenhum produto cadastrado ainda</p>
+            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink-2">
+              Comece por <strong>Trazer produtos</strong>: cria um produto para cada SKU que já foi anunciado ou
+              vendido. Depois <strong>Baixar planilha</strong>, preencha custo, embalagem, imposto e peso, e{" "}
+              <strong>Subir planilha</strong>. Produto que nunca vendeu entra por <strong>Novo produto</strong>.
+            </p>
+          </Panel>
+        )}
         <Panel className="p-4 mb-3">
           <div className="flex items-center gap-6 flex-wrap">
             <div>
