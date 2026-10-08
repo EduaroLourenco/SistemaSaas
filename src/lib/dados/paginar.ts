@@ -48,14 +48,37 @@ const SIMULTANEAS = 8;
 type Consulta<T> = {
   range: (de: number, ate: number) => PromiseLike<{ data: T[] | null; error: unknown }>;
 };
+type ComOrdem<T> = Consulta<T> & { order?: (coluna: string, o?: { ascending?: boolean }) => Consulta<T> };
 
 export async function paginar<T>(
-  montar: () => Consulta<T>,
+  montarOriginal: () => Consulta<T>,
   limite = 200_000
 ): Promise<T[]> {
+  /*
+   * Desempate pelo `id`, sempre.
+   *
+   * As páginas são pedidas em paralelo, e cada uma é uma consulta separada.
+   * Ordenadas só por uma coluna com empate (`data`, `sku`, `semana_iso`),
+   * o banco pode devolver as linhas empatadas em ordem diferente em cada
+   * pedido: uma linha aparece em duas páginas e outra em nenhuma — sem erro,
+   * só um total levemente errado. Dezenas de leituras ordenavam assim.
+   * O `id` entra DEPOIS da ordem pedida, então não muda a ordem de quem lê.
+   * Tabela sem `id` cai na consulta original.
+   */
+  let semId = false;
+  const montar = (): Consulta<T> => {
+    const q = montarOriginal() as ComOrdem<T>;
+    return semId || typeof q.order !== "function" ? q : q.order("id", { ascending: true });
+  };
+
   // A consulta é remontada a cada página: um construtor do supabase-js já
   // usado não aceita `range` de novo.
-  const primeira = await montar().range(0, PAGINA - 1);
+  let primeira = await montar().range(0, PAGINA - 1);
+  const codigo = (primeira.error as { code?: string } | null)?.code;
+  if (codigo === "42703" || codigo === "PGRST100" || codigo === "PGRST204") {
+    semId = true;
+    primeira = await montar().range(0, PAGINA - 1);
+  }
   if (primeira.error) throw erroDeVerdade(primeira.error, "ao ler a primeira página");
 
   const inicio = primeira.data ?? [];

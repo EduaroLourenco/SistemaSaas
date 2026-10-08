@@ -417,12 +417,9 @@ export default function CustosCliente({
               </p>
             </div>
             <p className="text-[12.5px] text-ink-2 leading-relaxed max-w-lg">
-              Cada custo aparece em duas linhas na mesma célula: em cima o{" "}
-              <span className="font-medium text-ink">praticado</span>, que a
-              venda revelou; embaixo o{" "}
-              <span className="text-ink-3">de tabela</span>, que vale antes de
-              existir venda. Enquanto faltar qualquer componente, a margem não
-              é calculada — a coluna diz o que falta em vez de chutar zero.
+              Em cada célula: em cima o <span className="font-medium text-ink">praticado</span> (o que a venda revelou),
+              embaixo o <span className="text-ink-3">de tabela</span>. Faltando um custo, a margem fica vazia e a coluna diz
+              o que falta.
             </p>
           </div>
         </Panel>

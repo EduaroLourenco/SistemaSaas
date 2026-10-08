@@ -57,6 +57,21 @@ function precoNaComissao(
 export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
   const sb = await clienteServidor();
 
+  /*
+   * Só a versão VIGENTE da Fórmula base (a mais recente até hoje), como em
+   * carregarFormulaBase. Antes vinham todas as versões, da mais nova para a
+   * mais antiga, e o Map sobrescrevia: ficava a MAIS ANTIGA. Com três
+   * versões guardadas (26/08, 10/09, 30/09), a tela comparava com a tabela
+   * de agosto — e lia 76 mil linhas para usar 26 mil.
+   */
+  const { data: versoes } = await sb
+    .from("formula_base_itens")
+    .select("vigente_de")
+    .lte("vigente_de", new Date().toISOString().slice(0, 10))
+    .order("vigente_de", { ascending: false })
+    .limit(1);
+  const vigenteDe = (versoes?.[0]?.vigente_de as string | undefined) ?? "0000-01-01";
+
   const [{ data: imports }, itens, precos, anuncios] = await Promise.all([
     sb
       .from("importacoes")
@@ -68,14 +83,16 @@ export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
       sb
         .from("formula_base_itens")
         .select("mlb,tipo_anuncio,comissao_padrao,vigente_de")
-        .order("vigente_de", { ascending: false })
+        .eq("vigente_de", vigenteDe)
+        .order("id")
     ),
     // 24 mil linhas: sem paginar, chegavam mil — 4% da matriz de preços.
     paginar(() =>
       sb
         .from("formula_base_precos")
         .select("chave_tipo,chave,comissao,preco,vigente_de")
-        .order("vigente_de", { ascending: false })
+        .eq("vigente_de", vigenteDe)
+        .order("id")
     ),
     paginar(() =>
       sb

@@ -224,11 +224,8 @@ export default function FinanceiroCliente({
                 — não da operação inteira.
               </p>
               <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
-                Faltam custos de{" "}
-                <span className="num font-medium">{money(r.receitaSemCusto)}</span>{" "}
-                em vendas. Enquanto um SKU não tiver mercadoria, embalagem e
-                imposto cadastrados, as vendas dele ficam de fora — não entram
-                como zero, ficam fora mesmo.
+                <span className="num font-medium">{money(r.receitaSemCusto)}</span> em vendas de produtos sem custo
+                ficam de fora (não entram como zero).
               </p>
               <Link
                 href="/financeiro/custos"
@@ -323,27 +320,17 @@ export default function FinanceiroCliente({
                   <span className="num text-[13px] text-ink-3">—</span>
                 </div>
                 <p className="text-[12px] text-ink-3 leading-relaxed mt-1">
-                  Os custos de operação acima são do período inteiro, mas a margem
-                  de contribuição só cobre {pct(r.cobertura, 1)} da receita.
-                  Subtrair um do outro daria um prejuízo que não existe. O
-                  resultado aparece quando os custos por SKU estiverem completos.
+                  Aparece quando os custos cobrirem a receita (hoje, {pct(r.cobertura, 1)}). Antes disso, daria um
+                  prejuízo que não existe.
                 </p>
               </div>
             )}
 
             {/* Quanto do custo foi medido, e quanto foi estimado por tabela. */}
             <div className="mt-4 pt-3 border-t border-line">
-              <p className="text-[12px] text-ink-3 leading-relaxed">
-                Dos {count(r.cadaCoberturaDe.pedidos)} pedidos do período,{" "}
-                <span className="num">
-                  {count(r.cadaCoberturaDe.comissaoPraticada)}
-                </span>{" "}
-                trouxeram a comissão cobrada e{" "}
-                <span className="num">
-                  {count(r.cadaCoberturaDe.fretePraticado)}
-                </span>{" "}
-                o frete do vendedor. Nos demais, a comissão veio da alíquota de
-                tabela e o frete da faixa de peso.
+              <p className="num text-[12px] text-ink-3 leading-relaxed">
+                Comissão real em {count(r.cadaCoberturaDe.comissaoPraticada)} de {count(r.cadaCoberturaDe.pedidos)} pedidos,
+                frete real em {count(r.cadaCoberturaDe.fretePraticado)}. O resto é estimado pela tabela do canal.
               </p>
             </div>
           </Panel>

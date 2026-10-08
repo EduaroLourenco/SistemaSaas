@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Input, Select, Field } from "@/components/ui/controls";
 import { money, pct, count } from "@/lib/format";
@@ -496,28 +497,25 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
           )}
         </Panel>
 
-        <Panel className="p-4 mt-3">
-          <p className="text-[12px] font-semibold text-ink mb-1.5">
-            Como o preço é calculado
-          </p>
-          <p className="num text-[12.5px] text-ink-2 mb-2">
+        <Disclosure title="Como o preço é calculado" className="mt-3">
+          <p className="num text-ink-2 mb-2">
             preço = (mercadoria + embalagem + frete) ÷ (1 − comissão − imposto −
             margem)
           </p>
-          <p className="text-[12px] text-ink-3 leading-relaxed max-w-2xl">
+          <p className="mt-2">
             Comissão, imposto e margem são percentuais do próprio preço, então a
             conta se resolve — não se marca em cima do custo. Marcar por cima
             (custo ÷ 0,80 para 20%) entrega{" "}
             <span className="num text-ink-2">3,7%</span> de margem real neste
             exemplo, não 20%.
           </p>
-          <p className="text-[12px] text-ink-3 leading-relaxed max-w-2xl mt-1.5">
+          <p className="mt-2">
             O juro de parcelamento fica de fora do alvo: só se sabe depois da
             venda, quando o comprador escolhe parcelar. Ele entra na margem
             medida, em Financeiro — e é lá que a diferença entre o alvo e o
             realizado aparece.
           </p>
-        </Panel>
+        </Disclosure>
       </PageBody>
     </>
   );

@@ -77,8 +77,8 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       <PageBody>
         {/* ── Períodos ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {periodos.map((p) => (
-            <Panel key={p.inicio} className="p-3">
+          {periodos.map((p, i) => (
+            <Panel key={`${p.inicio}-${i}`} className="p-3">
               <p className="text-[12px] text-ink-3 mb-1">{p.rotulo}</p>
               <p className="num text-[17px] font-semibold text-ink leading-none">
                 {moneyShort(p.investimento)}
@@ -236,10 +236,10 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                     </tr>
                   </thead>
                   <tbody>
-                    {visiveis.slice(0, 300).map((l) => {
+                    {visiveis.slice(0, 300).map((l, i) => {
                       const s = SITUACAO[l.situacao];
                       return (
-                        <tr key={l.mlb} className="hover:bg-panel-2/50">
+                        <tr key={`${l.mlb}-${i}`} className="hover:bg-panel-2/50">
                           <td className={td}>
                             <div className="flex items-center gap-1.5">
                               <span className="num text-[12.5px] text-ink font-medium">
@@ -341,8 +341,8 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                   </tr>
                 </thead>
                 <tbody>
-                  {campanhas.map((c) => (
-                    <tr key={c.campanha} className="hover:bg-panel-2/50">
+                  {campanhas.map((c, i) => (
+                    <tr key={`${c.campanha}-${i}`} className="hover:bg-panel-2/50">
                       <td className={`${td} text-[12.5px] text-ink`}>{c.campanha}</td>
                       <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
                         {count(c.anuncios)}
@@ -428,9 +428,9 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                     <div className="flex flex-wrap gap-1.5">
                       {lista
                         .slice(0, 12)
-                        .map((l) => (
+                        .map((l, i) => (
                           <span
-                            key={l.mlb}
+                            key={`${l.mlb}-${i}`}
                             className="px-2 py-1 rounded-r1 border border-line text-[12px]"
                             title={l.titulo}
                           >

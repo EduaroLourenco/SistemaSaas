@@ -141,10 +141,8 @@ export default function Exportacoes() {
                 </span>
               </span>
               <p className="text-[12.5px] text-ink-2 leading-relaxed max-w-xl">
-                Um zip com seis CSVs — pedidos, itens, anúncios, desempenho
-                semanal, KPIs diários e o de/para dos canais. Já com as
-                exclusões de análise aplicadas, então bate com o que as telas
-                mostram.
+                Seis arquivos CSV num zip (pedidos, itens, anúncios, desempenho semanal, KPIs diários e canais), com os
+                mesmos números das telas.
               </p>
               <Disclosure title="Como o arquivo vem" className="mt-2.5 max-w-xl">
                 Vem em formato de máquina — vírgula, decimal com ponto, data

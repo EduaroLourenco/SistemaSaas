@@ -3,11 +3,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Input, Select, Field, Checkbox } from "@/components/ui/controls";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import {
-  Target, Loader2, AlertCircle, Check, Lock, Unlock, Info,
+  Target, Loader2, AlertCircle, Check, Lock, Unlock,
 } from "lucide-react";
 import { ratearCanais } from "@/lib/dados/ratear-meta";
 import type { DadosPlanejamento } from "@/lib/dados/metas-planejamento";
@@ -288,11 +289,10 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
           </div>
 
           <p className="text-[12px] text-ink-3 mt-3 leading-relaxed max-w-2xl">
-            O peso de cada canal vem da receita líquida entre{" "}
-            <span className="num">{janela.inicio.split("-").reverse().join("/")}</span> e{" "}
-            <span className="num">{janela.fim.split("-").reverse().join("/")}</span> —
-            cancelamento já descontado. O alvo de cada dia sai do padrão de dia
-            da semana do mesmo período.
+            Peso de cada canal: receita líquida de{" "}
+            <span className="num">{janela.inicio.split("-").reverse().join("/")}</span> a{" "}
+            <span className="num">{janela.fim.split("-").reverse().join("/")}</span>. Alvo de cada dia: o padrão do dia da
+            semana no mesmo período.
           </p>
         </Panel>
 
@@ -606,20 +606,14 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
           )}
         </Panel>
 
-        <Panel className="p-4 mt-3 flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-[12px] font-semibold text-ink mb-1">
-              O que acontece com essa meta
-            </p>
-            <p className="text-[12px] text-ink-3 leading-relaxed max-w-2xl">
+        <Disclosure title="O que acontece com essa meta" className="mt-3">
+          <p className="mt-2">
               Ela alimenta o anual e a tela de Lançamentos, onde o alvo do dia
               aparece ao lado do realizado. Ajustar um dia aqui — fixando com o
               cadeado — redistribui o restante do mês entre os dias livres, então
               o total continua fechando com o que você definiu.
             </p>
-          </div>
-        </Panel>
+        </Disclosure>
       </PageBody>
     </>
   );

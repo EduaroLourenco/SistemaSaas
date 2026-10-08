@@ -605,10 +605,7 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                   Escolha um canal para lançar
                 </p>
                 <p className="text-[12.5px] text-ink-2 leading-relaxed mt-0.5">
-                  No consolidado os campos ficam travados. Cada linha gravada
-                  pertence a uma conta de vendedor, e um número lançado em
-                  &ldquo;Todos os canais&rdquo; não teria a qual delas pertencer
-                  — o Mercado Livre sozinho tem duas.
+                  Cada lançamento pertence a uma conta. Em &ldquo;Todos os canais&rdquo; não há onde gravar.
                 </p>
               </div>
             </div>

@@ -291,9 +291,8 @@ function PorCanal({ dados }: { dados: DadosCancelamento }) {
       />
       {recorte && <PedidosCancelados recorte={recorte} aoFechar={() => setRecorte(null)} />}
       <p className="text-[12px] text-ink-3 mt-3 leading-relaxed">
-        Clique no valor cancelado para ver os pedidos. O ticket cancelado ao lado do normal responde uma pergunta que a taxa
-        sozinha não responde: se o que cancela é sistematicamente mais caro que
-        o que fica, o problema é de produto ou de prazo, não de volume.
+        Clique no valor cancelado para ver os pedidos. Ticket cancelado bem acima do normal indica problema de produto ou
+        de prazo, não de volume.
       </p>
     </Panel>
   );
