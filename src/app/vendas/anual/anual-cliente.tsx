@@ -292,18 +292,15 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                 onChange={setEscopo}
               />
             </div>
-            <span className="num text-[12px] text-ink-3 shrink-0 ml-auto hidden md:block">
-              {pct(totalD.pctMeta)} da meta do ano
-            </span>
           </>
         }
       />
 
-      <PageBody>
+      <PageBody className="gerizo-annual">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatTile
             label="Receita do ano"
-            value={moneyShort(resumo.receita)}
+            value={money(resumo.receita)}
             delta={resumo.deltaReceita}
             hint="vs. ano anterior"
             spark={serie.map((m) => m.receita)}
@@ -342,7 +339,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
             }
           />
           <div className="px-2 pt-3 pb-2">
-            <div className="h-[240px] md:h-[300px]">
+            <div className="h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   data={dadosGrafico}
@@ -377,7 +374,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                     yAxisId="l"
                     dataKey="receita"
                     name="Receita realizada"
-                    fill="var(--s1)"
+                    fill="var(--annual-revenue)"
                     radius={[3, 3, 0, 0]}
                     isAnimationActive={false}
                   />
@@ -386,7 +383,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                       yAxisId="l"
                       dataKey="meta"
                       name="Meta"
-                      fill="var(--s9)"
+                      fill="var(--annual-target)"
                       radius={[3, 3, 0, 0]}
                       isAnimationActive={false}
                     />
@@ -397,7 +394,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                       type="monotone"
                       dataKey="meta"
                       name="Meta"
-                      stroke="var(--s9)"
+                      stroke="var(--annual-target)"
                       strokeWidth={1.5}
                       strokeDasharray="4 3"
                       dot={false}
@@ -410,7 +407,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                       type="monotone"
                       dataKey="acumulado"
                       name="Receita acumulada"
-                      stroke="var(--s3)"
+                      stroke="var(--annual-accumulated)"
                       strokeWidth={1.75}
                       dot={false}
                       isAnimationActive={false}
@@ -422,7 +419,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                       type="monotone"
                       dataKey="metaAcumulada"
                       name="Meta acumulada"
-                      stroke="var(--s5)"
+                      stroke="var(--annual-target-accumulated)"
                       strokeWidth={1.5}
                       strokeDasharray="4 3"
                       dot={false}
@@ -437,14 +434,14 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
               items={
                 estreito
                   ? [
-                      { label: "Receita realizada", color: "var(--s1)" },
-                      { label: "Meta", color: "var(--s9)" },
+                      { label: "Receita realizada", color: "var(--annual-revenue)" },
+                      { label: "Meta", color: "var(--annual-target)" },
                     ]
                   : [
-                      { label: "Receita realizada", color: "var(--s1)" },
-                      { label: "Meta", color: "var(--s9)" },
-                      { label: "Receita acumulada", color: "var(--s3)" },
-                      { label: "Meta acumulada", color: "var(--s5)" },
+                      { label: "Receita realizada", color: "var(--annual-revenue)" },
+                      { label: "Meta", color: "var(--annual-target)" },
+                      { label: "Receita acumulada", color: "var(--annual-accumulated)" },
+                      { label: "Meta acumulada", color: "var(--annual-target-accumulated)" },
                     ]
               }
             />
@@ -464,7 +461,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
           />
 
           {/* desktop */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="gerizo-annual-table hidden md:block overflow-x-auto" role="region" aria-label="Resultados mês a mês" tabIndex={0}>
             <table
               className="w-full border-collapse text-[13px]"
               style={{ minWidth: `${larguraMinima}px` }}
@@ -491,6 +488,13 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                   <tr
                     key={m.mes}
                     onClick={() => setDetalhe(m)}
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setDetalhe(m);
+                      }
+                    }}
                     className={cn(
                       "border-b border-line cursor-pointer transition-colors hover:bg-brand-wash",
                       i % 2 === 1 && "bg-panel-2/55"

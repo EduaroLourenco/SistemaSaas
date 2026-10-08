@@ -1,13 +1,13 @@
 /* Estúdio de campanhas: tokens e componentes restritos ao Planejamento. */
 .pl-root.st-studio {
-  --ground: #f7f7fa;
+  --ground: #f7f9fc;
   --panel: #fff;
   --panel-2: #fafafd;
   --panel-3: #f0eff6;
-  --ink: #353347;
-  --ink-2: #7b788d;
-  --ink-3: #a5a2b5;
-  --line: #ebe9f1;
+  --ink: #10143b;
+  --ink-2: #596586;
+  --ink-3: #6e7991;
+  --line: #e6eaf1;
   --line-2: #d5d0e2;
   --brand: #8063ae;
   --brand-2: #6f539e;
@@ -53,8 +53,8 @@
 }
 .st-topbar h1 {
   margin: 2px 0 0;
-  font-size: 19px;
-  font-weight: 650;
+  font-size: 22px;
+  font-weight: 700;
   letter-spacing: -0.6px;
 }
 .st-topbar > div > span {
@@ -259,7 +259,7 @@
 }
 .st-workspace {
   min-width: 0;
-  padding: 30px 28px;
+  padding: 24px 28px;
 }
 .st-project-header {
   margin-bottom: 26px;
@@ -296,16 +296,16 @@
   margin-top: 10px;
 }
 .st-project-title h2 {
-  font-size: 26px;
+  font-size: 30px;
   line-height: 1.25;
-  font-weight: 550;
+  font-weight: 700;
   letter-spacing: -1px;
   margin: 0;
   overflow-wrap: anywhere;
 }
 .st-project-title p {
   color: var(--ink-2);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
   margin: 9px 0 0;
   max-width: 630px;
@@ -576,13 +576,13 @@
   padding: 0;
 }
 .st-card-open h3 {
-  font-weight: 560;
-  line-height: 1.6;
-  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 .st-card-open p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-2);
   line-height: 1.65;
   margin: 9px 0 0;
@@ -594,7 +594,7 @@
 .st-parent {
   display: block;
   margin-top: 6px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--ink-3);
 }
 .st-product-chips {
@@ -614,7 +614,7 @@
   text-overflow: ellipsis;
 }
 .st-card-channel {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.6;
   margin-top: 12px;
   color: var(--ink-2);
@@ -633,7 +633,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 9px;
+  font-size: 11px;
 }
 .st-card-meta {
   display: flex;
@@ -1325,7 +1325,7 @@
     flex-wrap: wrap;
   }
   .st-topbar h1 {
-    font-size: 17px;
+    font-size: 20px;
   }
   .st-top-actions {
     margin-left: 0;
@@ -1357,20 +1357,31 @@
     width: 100%;
     justify-content: space-between;
     gap: 1px;
+    overflow-x: auto;
   }
   .st-toolbar nav button {
     padding: 8px;
     font-size: 11px;
     gap: 5px;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
   .st-toolbar nav button svg {
     width: 13px;
   }
   .st-studio .st-search input {
-    width: 130px;
+    width: 100%;
+    min-width: 0;
+    font-size: 16px;
+  }
+  .st-search {
+    flex: 1 1 150px;
+    min-width: 0;
   }
   .st-toolbar-actions {
     gap: 3px;
+    width: 100%;
+    flex-wrap: wrap;
   }
   .st-filter-button {
     padding: 6px;
@@ -1422,11 +1433,24 @@
     font-size: 22px !important;
   }
   .st-studio .pl-drawer-foot {
-    padding: 12px 18px;
+    padding: 12px 18px max(12px, env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+  }
+  .st-studio :is(input, select, textarea) {
+    font-size: 16px;
+    max-width: 100%;
   }
   .st-toast {
     bottom: 74px;
     font-size: 11px;
+  }
+}
+@media (max-width: 480px) {
+  .st-sheet-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .st-board {
+    overscroll-behavior-x: contain;
   }
 }
 [data-theme="dark"] .pl-root.st-studio {

@@ -213,6 +213,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
     <>
       <PageHeader
         title="Visão geral"
+        inlineFilters
         description={
           canalAtual ? canalAtual.nome : "Consolidado de todos os canais"
         }
@@ -234,6 +235,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
             */}
             <Filtro rotulo="Canal">
               <SeletorCanal
+                compact
                 canais={dados.canaisInfo.map((c) => ({
                   id: c.id,
                   nome: c.nome,
@@ -266,13 +268,8 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         }
       />
 
-      <PageBody>
-        {/*
-          * O painel abre pelos números. "Fontes de dados" saiu daqui para
-          * Integrações (menu de baixo): ocupava a primeira dobra todo dia
-          * para dizer "está em dia". Volta como um aviso de uma linha só
-          * quando o dado atrasou o bastante para mudar uma decisão.
-          */}
+      <PageBody className="gerizo-overview">
+        {/* Fontes ficam em Integrações por decisão do usuário. Aqui, só o aviso de atraso. */}
         {dados.fontes.piorAtraso !== null && dados.fontes.piorAtraso >= 2 && (
           <Link
             href="/integracoes"
@@ -292,7 +289,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         />
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="gerizo-overview-kpis grid grid-cols-2 lg:grid-cols-4 gap-3">
           {KPIS.map((k) => {
             /*
              * Conversão sem visita não é zero, é desconhecido. Mostrar
@@ -316,7 +313,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         </div>
 
         {/* Faturamento diário + participação */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+        <div className="gerizo-overview-charts grid grid-cols-1 xl:grid-cols-3 gap-3">
           <Panel className="xl:col-span-2 overflow-hidden">
             <PanelHeader
               title="Faturamento por dia"
@@ -327,7 +324,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 </span>
               }
             />
-            <div className="h-[240px] px-2 pt-3 pb-1">
+            <div className="h-[220px] xl:h-[180px] px-2 pt-3 pb-1">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={FATURAMENTO_30D}
@@ -348,7 +345,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                   />
                   <YAxis
                     {...AXIS}
-                    width={64}
+                    width="auto"
                     tickFormatter={(v: number) => moneyShort(v)}
                   />
                   <Tooltip
@@ -379,7 +376,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 canalAtual ? "12 semanas · todos os canais" : "12 semanas"
               }
             />
-            <div className="h-[196px] px-2 pt-3">
+            <div className="h-[190px] xl:h-[140px] px-2 pt-3">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={CANAIS_12_SEMANAS}

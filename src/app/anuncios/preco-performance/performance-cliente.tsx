@@ -4,6 +4,7 @@ import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Input, Select, Segmented } from "@/components/ui/controls";
 import {
@@ -18,7 +19,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { AlertCircle, Info, X, Download, Loader2 } from "lucide-react";
+import { AlertCircle, X, Download, Loader2 } from "lucide-react";
 import type {
   DadosPerformancePreco, LinhaPreco, Situacao,
 } from "@/lib/dados/performance-preco";
@@ -596,38 +597,22 @@ export default function PerformancePrecoCliente({
           )}
         </Panel>
 
-        <Panel className="p-4 mt-3 flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-[12px] font-semibold text-ink mb-1">
-              Como ler, e o que isto não prova
-            </p>
-            <p className="text-[12px] text-ink-3 leading-relaxed max-w-3xl mb-1.5">
-              <span className="text-ink-2 font-medium">
-                Todo preço desta tela é preço VENDIDO
-              </span>{" "}
-              — o que o cliente efetivamente pagou no pedido, já com desconto, campanha e
-              cupom. A única exceção é a coluna{" "}
-              <span className="text-ink-2">Vitrine</span>, que é o preço publicado no
-              anúncio. Os dois divergem bastante, e é de propósito que estão lado a lado:
-              a distância entre eles é o desconto que a operação vem dando.
-            </p>
-            <p className="text-[12px] text-ink-3 leading-relaxed max-w-3xl">
-              O melhor preço é o que teve mais{" "}
-              <span className="text-ink-2">unidades por dia</span> enquanto
-              esteve valendo — não o que somou mais unidades, que premiaria o
-              preço praticado por mais tempo. Só entram faixas com pelo menos 3
-              dias e 3 unidades; sem isso, um pedido grande num único dia
-              venceria.
-            </p>
-            <p className="text-[12px] text-ink-3 leading-relaxed max-w-3xl mt-1.5">
-              <span className="text-ink-2 font-medium">Isto é correlação.</span>{" "}
-              O preço mais baixo costuma coincidir com campanha, e campanha traz
-              tráfego que venderia mais a qualquer preço. Serve para escolher o
-              que testar, não como prova de que baixar o preço aumenta a venda.
-            </p>
-          </div>
-        </Panel>
+        <Disclosure title="Como ler, e o que isto não prova" className="mt-3">
+          <p>
+            <strong>Os preços são de VENDA</strong>: o que o cliente pagou no pedido, com desconto, campanha e cupom. A
+            exceção é a coluna <strong>Vitrine</strong>: o preço que o comprador paga hoje no anúncio, lido todo dia da
+            API do Mercado Livre (com a campanha que estiver valendo).
+          </p>
+          <p className="mt-2">
+            O <strong>melhor preço</strong> é o que vendeu mais <strong>unidades por dia</strong> enquanto valeu (não o que
+            somou mais, que premiaria o preço praticado por mais tempo). Só entram faixas com pelo menos 3 dias e 3
+            unidades.
+          </p>
+          <p className="mt-2">
+            <strong>Isto é correlação.</strong> O preço mais baixo costuma coincidir com campanha, que traz tráfego por
+            si só. Serve para escolher o que testar, não prova que baixar o preço aumenta a venda.
+          </p>
+        </Disclosure>
       </PageBody>
     </>
   );

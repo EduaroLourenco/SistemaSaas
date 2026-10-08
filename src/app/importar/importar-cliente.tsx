@@ -342,7 +342,7 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
     ["Use a exportação original", "Sem abas removidas nem linhas apagadas no topo: é pela estrutura que o arquivo é reconhecido."],
     ["Não precisa dizer qual é", "Desempenho de anúncios, listagem de pedidos, catálogo e tabela de preços: o formato sai do próprio arquivo."],
     ["Confira a prévia", "Nada é gravado antes de você ver o que entra, o período e o que não foi reconhecido."],
-    ["Arquivo grande também vai", "Acima de 4,5 MB o envio vai direto para o armazenamento, sem passar pelo servidor."],
+    ["Arquivo grande também vai", "Envie a planilha completa. Aguarde o envio terminar para conferir a prévia."],
   ];
 
   return (
@@ -350,7 +350,7 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
       <PageHeader
         title="Importar dados"
         breadcrumb="Dados"
-        description="De onde vem cada número do sistema, e a porta para planilhas"
+        description="Conecte seus canais ou envie uma planilha"
       />
 
       <PageBody>
@@ -372,7 +372,7 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
               </span>
               <Link
                 href={c.href}
-                className="mt-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] font-medium text-ink hover:bg-panel-3"
+                className="mt-auto inline-flex min-h-11 md:min-h-9 items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] font-medium text-brand hover:bg-brand-wash"
               >
                 {c.acao}
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -412,9 +412,7 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
                 </span>
                 {enviando && (
                   <span className="text-[12px] text-ink-3 text-center max-w-sm">
-                    Arquivo grande vai direto para o armazenamento, sem passar
-                    pelo servidor — é o que permite passar do limite de 4,5 MB
-                    da plataforma.
+                    Mantenha esta página aberta até o envio terminar.
                   </span>
                 )}
               </div>
@@ -445,7 +443,7 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
 
           </div>
 
-          <Panel className="p-4 flex flex-col gap-3">
+          <Panel className="p-4 flex flex-col gap-3 bg-up-wash/35 border-up/15">
             <div className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-r2 bg-up-wash text-up">
                 <BookOpen className="h-4 w-4" />

@@ -41,7 +41,7 @@
   --s6: #c12e4b; --s7: #0f766e; --s8: #8c564b; --s9: #1e3a8a; --s10: #9aae1f;
 
   /* elevação — 3 níveis, nunca colorida */
-  --sh-1: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --sh-1: 0 1px 2px rgba(16, 24, 40, 0.025);
   --sh-2: 0 1px 3px rgba(16, 24, 40, 0.08), 0 8px 24px -12px rgba(16, 24, 40, 0.18);
   --sh-3: 0 16px 48px -16px rgba(16, 24, 40, 0.28);
   --veil: rgba(16, 24, 40, 0.42);
@@ -241,6 +241,14 @@ body {
 }
 
 .gerizo-nav-active { background: var(--nav-active); color: var(--nav-ink); }
+.gerizo-topbar { background: linear-gradient(100deg, var(--panel) 15%, var(--ground)); }
+.gerizo-shell-brand { background: var(--panel); }
+.gerizo-inline-filters .gerizo-filter-bar { gap: 20px; }
+@media (min-width: 768px) {
+  aside nav[aria-label="Navegação principal"] { padding: 10px 12px; gap: 1px; }
+  aside nav[aria-label="Navegação principal"] :is(a, button) { min-height: 35px; }
+  .gerizo-page-header--inline .gerizo-header-row > :first-child { flex: 1 1 200px; }
+}
 .gerizo-page-header, .gerizo-page-body { width: 100%; max-width: 1520px; margin-inline: auto; }
 .gerizo-disclosure summary::-webkit-details-marker { display: none; }
 .gerizo-disclosure summary::marker { content: ""; }
@@ -294,6 +302,22 @@ button:disabled { cursor: not-allowed; }
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Proporções do acompanhamento anual na referência aprovada. */
+.gerizo-annual {
+  --annual-revenue: #4e7d7b;
+  --annual-target: #a7bac8;
+  --annual-accumulated: #d99a62;
+  --annual-target-accumulated: #6984ad;
+}
+.gerizo-annual-table { --row: 34px; }
+[data-density="comfortable"] .gerizo-annual-table { --row: 42px; }
+[data-theme="dark"] .gerizo-annual {
+  --annual-revenue: #72aaa5;
+  --annual-target: #829aad;
+  --annual-accumulated: #e9b17d;
+  --annual-target-accumulated: #96b2de;
 }
 
 /* ══ Carregamento com a marca (CarregandoGerizo) ═══════════════════════

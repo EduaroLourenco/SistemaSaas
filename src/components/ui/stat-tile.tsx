@@ -65,7 +65,7 @@ export function StatTile({
   return (
     <div
       className={cn(
-        "gerizo-stat-tile @container panel panel-1 px-3 md:px-5 py-4 flex flex-col justify-between min-w-0",
+        "gerizo-stat-tile @container panel panel-1 px-3 md:px-4 py-3.5 flex flex-col justify-between min-w-0",
         className
       )}
     >
@@ -73,10 +73,10 @@ export function StatTile({
 
       <div className="mt-1.5 flex items-center justify-between gap-3 min-w-0">
         <div className="min-w-0">
-          <p className="gerizo-metric-value num leading-tight font-semibold text-ink [font-size:clamp(14px,6.4cqw,26px)]">
+          <p className="gerizo-metric-value num leading-tight font-bold text-ink [font-size:clamp(16px,8.5cqw,26px)]">
             {value}
           </p>
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-2 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1.5 min-w-0">
             {delta !== undefined && <Delta value={delta} inverse={inverse} />}
             {hint && (
               <span className="text-[12px] text-ink-3">{hint}</span>
@@ -85,7 +85,7 @@ export function StatTile({
         </div>
 
         {spark && spark.length > 1 && (
-          <div className="w-16 h-9 shrink-0 hidden @[15rem]:block">
+          <div className="w-16 h-9 shrink-0 hidden @[21rem]:block">
             <Sparkline
               data={spark}
               tone={

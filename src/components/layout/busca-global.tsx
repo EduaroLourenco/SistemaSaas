@@ -138,7 +138,7 @@ export function BuscaGlobal() {
       {/* gatilho no topo */}
       <button
         onClick={() => setAberta(true)}
-        className="hidden lg:flex items-center gap-2 h-9 w-72 px-2.5 rounded-r1 border border-line text-ink-3 hover:bg-panel-3 transition-colors"
+        className="hidden lg:flex items-center gap-2 h-9 w-[clamp(240px,32vw,480px)] px-3 rounded-r1 border border-line bg-panel text-ink-3 hover:bg-panel-3 transition-colors"
       >
         <Search className="w-3.5 h-3.5 shrink-0" />
         <span className="text-[12px] flex-1 text-left">Buscar uma tela…</span>
@@ -177,7 +177,7 @@ export function BuscaGlobal() {
                   setAtivo(0);
                 }}
                 onKeyDown={onKeyCampo}
-                placeholder="MLB, SKU, título, tela ou termo do glossário"
+                placeholder="Buscar uma tela pelo nome…"
                 className="flex-1 h-full bg-transparent text-[14px] text-ink placeholder:text-ink-3 outline-none"
               />
               <button

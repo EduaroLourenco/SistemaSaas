@@ -3,6 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Button, Panel, PanelHeader, Badge, EmptyState } from "@/components/ui/primitives";
 import { FileDrop, SectionTitle, Segmented, Field, Input } from "@/components/ui/controls";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -621,47 +622,27 @@ export default function ProcessarPromocoes() {
               para subir tipos diferentes juntos e cada um é lido com a sua
               lógica. Um botão criaria um jeito de errar que hoje não existe.
             */}
-            <Panel className="lg:col-span-2 overflow-hidden">
-              <PanelHeader
-                title="As três lógicas"
-                hint="o sistema reconhece cada planilha pelas colunas e aplica a regra dela"
-              />
-              <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="rounded-r2 border border-line p-3">
-                  <Badge tone="info">Com redução de tarifa</Badge>
-                  <p className="text-[12px] text-ink-2 mt-2 leading-relaxed">
-                    O canal propõe o preço e abate parte da comissão. O preço{" "}
-                    <b className="text-ink">não é alterado</b> — só se aceita ou recusa,
-                    comparando com a faixa de tabela da comissão que sobrou.
-                  </p>
-                </div>
-                <div className="rounded-r2 border border-line p-3">
-                  <Badge tone="neutral">Sem redução de tarifa</Badge>
-                  <p className="text-[12px] text-ink-2 mt-2 leading-relaxed">
-                    Campanha do canal, comissão cheia. O sistema escreve o{" "}
-                    <b className="text-ink">preço de tabela</b> por cima do proposto, e
-                    recusa quando a tabela está acima do preço publicado.
-                  </p>
-                </div>
-                <div className="rounded-r2 border border-line p-3">
-                  <Badge tone="up">Criada por nós</Badge>
-                  <p className="text-[12px] text-ink-2 mt-2 leading-relaxed">
-                    Promoção que nós montamos no painel. Aqui a alavanca é a{" "}
-                    <b className="text-ink">porcentagem</b>, e o sistema a move{" "}
-                    <b className="text-ink">nos dois sentidos</b> — busca o desconto mais
-                    agressivo que o preço de tabela ainda aguenta. Comissão cheia: 11,5%
-                    clássico, 16,5% premium.
-                  </p>
-                </div>
-              </div>
-              <div className="px-4 pb-4">
-                <p className="text-[12px] text-ink-3 leading-relaxed">
-                  Em todas as três, linha com oferta já fechada é analisada mas{" "}
-                  <b className="text-ink-2">nunca reescrita</b>: trocar um acordo no ar
-                  tira o anúncio da campanha sem ninguém perceber.
-                </p>
-              </div>
-            </Panel>
+            <Disclosure title="Como o sistema decide cada planilha" className="lg:col-span-2">
+              <p>O tipo de planilha é reconhecido pelas colunas, e cada um segue uma regra:</p>
+              <ul className="mt-2 flex flex-col gap-1.5 pl-4 list-disc">
+                <li>
+                  <strong>Com redução de tarifa</strong>: o canal propõe o preço e abate parte da comissão. O preço não muda;
+                  só se aceita ou recusa, comparando com o preço mínimo da comissão que sobrou.
+                </li>
+                <li>
+                  <strong>Sem redução de tarifa</strong>: comissão cheia. O sistema escreve o preço mínimo por cima do
+                  proposto, e recusa quando ele fica acima do preço publicado.
+                </li>
+                <li>
+                  <strong>Criada por nós</strong>: a alavanca é a porcentagem, e o sistema busca o maior desconto que o
+                  preço mínimo aguenta.
+                </li>
+              </ul>
+              <p className="mt-2">
+                O preço mínimo vem da regra escolhida acima (tabela, margem ou as duas). Oferta já fechada é analisada mas
+                nunca reescrita: mexer num acordo no ar tira o anúncio da campanha.
+              </p>
+            </Disclosure>
 
             <div className="lg:col-span-2 flex justify-end">
               <Button

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Panel, PanelHeader, Badge, Button } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 import type { Recomendacao } from "@/lib/dados/recomendacoes";
-import { Check, ArrowRight, RotateCcw } from "lucide-react";
+import { Check, ArrowRight, RotateCcw, TrendingDown, TrendingUp, TriangleAlert, Sparkles } from "lucide-react";
 
 /**
  * Fila de recomendações do dia, em carrossel.
@@ -108,24 +108,19 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
     );
   }
 
-  /*
-   * Lista vertical, ao lado das Fontes de dados (referência aprovada da
-   * Visão geral). Era um carrossel horizontal de largura total: a segunda
-   * recomendação ficava fora da tela e só aparecia por seta. Empilhadas,
-   * as três primeiras são lidas de uma vez; o resto rola dentro do painel.
-   */
+  // A fila ocupa a largura do painel; as fontes permanecem em Integrações.
   return (
-    <Panel className="overflow-hidden h-full flex flex-col">
+    <Panel className="gerizo-recommendations overflow-hidden h-full flex flex-col">
       <PanelHeader
         title="Recomendações do dia"
-        hint="o que mudou e merece decisão · resolver esconde até amanhã"
+        hint="O que mudou e onde agir"
         action={
           resolvidasHoje > 0 ? (
             <Button size="sm" variant="ghost" onClick={desfazer}>
               <RotateCcw className="w-3.5 h-3.5" />
               {resolvidasHoje} resolvida{resolvidasHoje > 1 ? "s" : ""}
             </Button>
-          ) : undefined
+          ) : <Link href="/alertas" className="text-[12px] font-medium text-info whitespace-nowrap">Ver alertas <ArrowRight size={12} className="inline" /></Link>
         }
       />
 
@@ -136,20 +131,23 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5 overflow-y-auto px-4 py-4 max-h-[460px]">
+        <div className="grid gap-3 lg:grid-cols-3 overflow-y-auto px-3 py-3 max-h-[480px]">
           {visiveis.map((r) => (
             <article
               key={r.id}
               className={cn(
-                "rounded-r2 border p-3.5",
-                "flex flex-col gap-2 bg-panel",
-                r.severidade === "critico" ? "border-down/35" : "border-line"
+                "gerizo-recommendation rounded-r2 border border-line p-3",
+                "relative flex flex-col gap-1.5 bg-panel sm:pl-[64px]"
               )}
             >
+              <span className={cn("hidden sm:grid absolute top-3 left-3 h-10 w-10 rounded-full place-items-center", r.severidade === "critico" ? "bg-down-wash text-down" : r.severidade === "atencao" ? "bg-warn-wash text-warn" : "bg-info-wash text-info")} aria-hidden="true">
+                {r.tipo === "queda_sku" ? <TrendingDown size={20} /> : r.tipo === "conversao" || r.tipo === "alta_sku" ? <TrendingUp size={20} /> : r.severidade === "atencao" ? <TriangleAlert size={20} /> : <Sparkles size={20} />}
+              </span>
               <span className="flex items-center justify-between gap-2">
                 <Badge tone={TOM[r.severidade]}>{ROTULO[r.severidade]}</Badge>
                 <button
                   onClick={() => resolver(r.id)}
+                  title="Marcar como resolvida até amanhã"
                   className="text-[12px] text-ink-3 hover:text-ink flex items-center gap-1"
                 >
                   <Check className="w-3.5 h-3.5" />
@@ -166,10 +164,10 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
                 </p>
               </span>
 
-              <span className="flex items-baseline gap-4 mt-auto pt-1">
+              <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mt-auto pt-1">
                 {r.metricas.map((m) => (
                   <span key={m.rotulo}>
-                    <span className="label block">{m.rotulo}</span>
+                    <span className="text-[12px] text-ink-3 mr-1.5">{m.rotulo}</span>
                     <span className="num text-[13px] font-semibold text-ink">
                       {m.valor}
                     </span>

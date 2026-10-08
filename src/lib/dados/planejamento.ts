@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "./operacao";
 import { paginar } from "./paginar";
+import { ultimosPrecosDeVenda } from "./preco-atual";
 import {
   detalhesVazios,
   type Dados,
@@ -249,24 +250,7 @@ async function enriquecer(
    * sem o desconto da campanha — mostraria R$ 4.212 onde o comprador paga
    * R$ 2.140.
    */
-  const semana = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
-  const ultimo = new Map<string, { data: string; preco: number }>();
-  const guardar = (id: string, data: string, preco: unknown) => {
-    const v = Number(preco);
-    const u = ultimo.get(id);
-    if (v > 0 && (!u || data >= u.data)) ultimo.set(id, { data, preco: v });
-  };
-  try {
-    const [cat, ret] = await Promise.all([
-      paginar(() => sb.from("anuncio_catalogo_diario").select("anuncio_id,data,preco_atual").eq("operacao_id", operacaoId).gte("data", semana).not("preco_atual", "is", null).order("id")),
-      paginar(() => sb.from("anuncio_estoque_diario").select("anuncio_id,data,preco").eq("operacao_id", operacaoId).gte("data", semana).not("preco", "is", null).order("id")),
-    ]);
-    for (const c of cat as { anuncio_id: string; data: string; preco_atual: unknown }[]) guardar(c.anuncio_id, c.data, c.preco_atual);
-    // O retrato diário vem depois: no mesmo dia, ele vence o catálogo.
-    for (const r of ret as { anuncio_id: string; data: string; preco: unknown }[]) guardar(r.anuncio_id, r.data, r.preco);
-  } catch (e) {
-    console.error("[planejamento/precos]", e);
-  }
+  const ultimo = await ultimosPrecosDeVenda(sb, operacaoId);
   const k = (s: string | null | undefined) => (s ?? "").trim().toUpperCase();
   const vendas = new Map<string, { receita: number; unidades: number; ultimo: string; precoUltimo: number }>();
   for (const it of itens) {

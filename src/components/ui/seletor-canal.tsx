@@ -26,6 +26,7 @@ export function SeletorCanal({
   onChange,
   rotuloTodos = "Todos os canais",
   className,
+  compact = false,
 }: {
   canais: OpcaoCanal[];
   /** "" significa todos. */
@@ -33,6 +34,7 @@ export function SeletorCanal({
   onChange: (v: string) => void;
   rotuloTodos?: string;
   className?: string;
+  compact?: boolean;
 }) {
   const [aberto, setAberto] = React.useState(false);
   const [caixa, setCaixa] = React.useState<{ x: number; y: number; w: number } | null>(null);
@@ -81,7 +83,7 @@ export function SeletorCanal({
   const opcoes: OpcaoCanal[] = [{ id: "", nome: rotuloTodos }, ...canais];
 
   // Até três canais cabem em fileira sem quebrar o cabeçalho.
-  if (canais.length <= 3) {
+  if (!compact && canais.length <= 3) {
     return (
       <div
         className={cn(

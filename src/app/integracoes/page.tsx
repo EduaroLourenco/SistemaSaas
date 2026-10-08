@@ -7,7 +7,10 @@ import { carregarFontes } from "@/lib/dados/fontes";
 import { contasMeli } from "@/lib/meli/rota";
 import { lojasVtex, vtexConectada } from "@/lib/vtex/cliente";
 import { clienteServidor } from "@/lib/supabase/servidor";
-import { Info } from "lucide-react";
+import { operacaoPadrao } from "@/lib/dados/operacao";
+import { Disclosure } from "@/components/ui/disclosure";
+import { SaudeDados } from "@/components/painel/saude-dados";
+import { carregarSaude } from "@/lib/dados/saude";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +28,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function Integracoes() {
   const sb = await clienteServidor();
-  const [fontes, contas, integracoes, vtex] = await Promise.all([
+  const [fontes, contas, integracoes, vtex, saude, bling] = await Promise.all([
     carregarFontes(),
     contasMeli(),
     sb
@@ -33,11 +36,16 @@ export default async function Integracoes() {
       .select("status,ultima_sincronizacao,ultimo_erro,conta_canal_id")
       .eq("provedor", "mercado_livre"),
     lojasVtex(),
+    carregarSaude(),
+    sb.from("integracoes").select("status,ultima_sincronizacao,ultimo_erro,config").eq("provedor", "bling").maybeSingle(),
   ]);
 
   // A VTEX não tem apelido nem token rotativo; "conectada" é ter credencial.
+  /* lojasVtex() lê com o cliente privilegiado (serve à rotina noturna, que
+     passa por todas as empresas). Aqui, só as desta empresa. */
+  const op = await operacaoPadrao();
   const lojas = await Promise.all(
-    vtex.map(async (l) => ({ ...l, conectada: await vtexConectada(l.id) }))
+    vtex.filter((l) => l.operacaoId === op?.id).map(async (l) => ({ ...l, conectada: await vtexConectada(l.id) }))
   );
 
   type Linha = {
@@ -64,11 +72,13 @@ export default async function Integracoes() {
   return (
     <>
       <PageHeader
-        title="Integrações"
-        description="De onde vem cada número do sistema"
+        title="Fontes de dados"
+        description="De onde vem cada número, até quando vai, e se dá para confiar"
       />
 
       <PageBody>
+        <SaudeDados verificacoes={saude} />
+
         <div className="space-y-3">
           <div className="flex items-end justify-between gap-3">
             <SectionTitle
@@ -147,30 +157,53 @@ export default async function Integracoes() {
                     {l.conectada ? "Conectada" : "Não conectada"}
                   </Badge>
                 </div>
-                <p className="text-[12px] text-ink-2 mt-3 pt-3 border-t border-line">
-                  Pedido criado e nunca pago não entra: a VTEX abre o pedido antes de o
-                  cartão responder, e contá-lo punha a loja com quase metade de
-                  cancelamento que nunca foi venda.
-                </p>
               </Panel>
             ))
           )}
         </div>
 
         <div className="space-y-3">
+          <SectionTitle title="ERP · Bling" hint="Pedidos dos canais sem API própria (Shopee, Amazon, Magalu…), lidos às 02h30" />
+          <Panel className="px-4 py-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-ink">Bling</p>
+                <p className="num text-[12px] text-ink-2 mt-0.5">
+                  {bling.data?.ultima_sincronizacao
+                    ? `Última leitura: ${quando(bling.data.ultima_sincronizacao)}`
+                    : bling.data
+                      ? "Conectado, ainda sem leitura"
+                      : "Não conectado nesta empresa"}
+                </p>
+              </div>
+              <Badge tone={!bling.data ? "neutral" : bling.data.ultimo_erro ? "down" : "up"}>
+                {!bling.data ? "Não conectado" : bling.data.ultimo_erro ? "Com erro" : "Conectado"}
+              </Badge>
+            </div>
+            {bling.data?.ultimo_erro && <p className="text-[12px] text-down mt-1.5">{bling.data.ultimo_erro}</p>}
+            <Link href="/integracoes/canais" className="mt-2 inline-block text-[12px] font-medium text-brand hover:underline">
+              {bling.data ? "Lojas e canais do Bling" : "Conectar o Bling"}
+            </Link>
+          </Panel>
+        </div>
+
+        <div className="space-y-3">
           <SectionTitle title="Planilhas" hint="Fontes que entram pela tela de Importar" />
           <FontesDados dados={fontes} />
-          <Panel className="px-4 py-3 flex gap-2.5">
-            <Info className="w-4 h-4 text-ink-3 shrink-0 mt-px" strokeWidth={1.75} />
-            <p className="text-[12px] text-ink-2">
-              Canais sem API entram por arquivo na tela{" "}
-              <Link href="/importar" className="font-medium text-brand hover:underline">
-                Importar
-              </Link>
-              . A sincronização da API não apaga o que já foi importado: ela
-              preenche os dias seguintes da conta conectada.
+          <Disclosure title="Como as fontes convivem">
+            <p>
+              Canais sem API entram por arquivo na tela <Link href="/importar" className="font-medium text-brand hover:underline">Importar</Link>.
+              A sincronização da API não apaga o que foi importado: preenche os dias seguintes da conta conectada.
             </p>
-          </Panel>
+            <p className="mt-2">
+              Pedido da VTEX criado e nunca pago não entra: a VTEX abre o pedido antes de o cartão responder, e contá-lo
+              punha a loja com quase metade de cancelamento que nunca foi venda.
+            </p>
+            <p className="mt-2">
+              Toda fonte grava pedido a pedido e, a partir deles, os totais do dia. A Visão geral e Vendas leem os totais;
+              Cancelamentos, SKU, Por que caiu e Custos leem os pedidos. A verificação "os totais batem" acima confere as duas.
+            </p>
+          </Disclosure>
         </div>
       </PageBody>
     </>

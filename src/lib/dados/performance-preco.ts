@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { ultimosPrecosDeVenda } from "./preco-atual";
 import { carregarExclusoes, aplicar } from "./exclusoes";
 import { comissaoUtilizavel } from "./comissao-plausivel";
 import {
@@ -273,7 +274,7 @@ export async function carregarPerformancePreco(filtro: {
         sb
           .from("anuncios")
           .select(
-            "codigo_externo,sku_canal,tipo,preco_atual,comissao_atual,canal_id,conta_canal_id,sincronizado_em"
+            "id,codigo_externo,sku_canal,tipo,preco_atual,comissao_atual,canal_id,conta_canal_id,sincronizado_em"
           )
           .order("codigo_externo")
       ),
@@ -305,6 +306,7 @@ export async function carregarPerformancePreco(filtro: {
     total: string | number;
   };
   type Anun = {
+    id: string;
     codigo_externo: string;
     sku_canal: string | null;
     tipo: string;
@@ -377,6 +379,16 @@ export async function carregarPerformancePreco(filtro: {
     comissaoPct: number | null;
   };
   const anuncios = anunciosRaw as unknown as Anun[];
+  /*
+   * A vitrine é o preço que o comprador paga hoje (retrato diário), não o
+   * do cadastro — esse é o cheio, sem o desconto da campanha. Sem retrato,
+   * fica o do cadastro.
+   */
+  const precoReal = await ultimosPrecosDeVenda(sb);
+  for (const a of anuncios) {
+    const r = precoReal.get(a.id);
+    if (r) a.preco_atual = r.preco;
+  }
   // Alíquota por MLB, antes do laço: define o teto de plausibilidade da
   // comissão de cada pedido.
   const tarifaDoMlb = new Map(

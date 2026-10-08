@@ -63,9 +63,9 @@ export function PanelHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-5 py-4 min-h-14 border-b border-line md:flex-nowrap">
-      <div className="flex flex-[1_1_12rem] flex-col gap-1 min-w-0">
-        <h3 className="text-[16px] font-semibold text-ink">{title}</h3>
+    <div className="gerizo-panel-header flex flex-wrap items-center justify-between gap-3 px-4 py-3 min-h-12 border-b border-line md:flex-nowrap">
+      <div className="flex flex-[1_1_12rem] flex-col gap-1 min-w-0 md:flex-row md:flex-wrap md:items-baseline md:gap-x-3">
+        <h3 className="text-[16px] font-semibold tracking-[-0.02em] text-ink">{title}</h3>
         {hint && (
           <span className="text-[12px] text-ink-3 leading-relaxed">
             {hint}

@@ -166,13 +166,13 @@ export default function Conversa() {
       <PageHeader
         title="Conversar"
         breadcrumb="Operação"
-        description="Pergunte em português — a resposta sai de consulta ao banco, não de resumo"
+        description="Converse sobre vendas, produtos e anúncios"
       />
 
       <PageBody>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
-          <Panel className="lg:col-span-2 flex flex-col overflow-hidden min-w-0 lg:h-[calc(100vh-var(--topbar)-170px)] lg:min-h-[520px]">
-            <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+          <Panel className="lg:col-span-2 flex flex-col overflow-hidden min-w-0 h-[calc(100dvh-var(--topbar)-220px)] min-h-[400px] lg:h-[calc(100dvh-var(--topbar)-170px)] lg:min-h-[520px]">
+            <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-wash text-brand">
                 <Sparkles className="h-4 w-4" />
               </span>
@@ -199,7 +199,7 @@ export default function Conversa() {
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
               {vazio && (
                 <div className="m-auto flex max-w-md flex-col items-center gap-2 py-8 text-center">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-wash text-brand">
@@ -207,8 +207,8 @@ export default function Conversa() {
                   </span>
                   <p className="text-[15px] font-semibold text-ink">Pergunte sobre a operação</p>
                   <p className="text-[13px] text-ink-2 leading-relaxed">
-                    Pedidos, anúncios, cancelamentos. Cada consulta feita aparece na conversa, para você julgar a
-                    resposta em vez de só aceitá-la.
+                    Compare resultados, encontre quedas e tire dúvidas.
+                    As fontes consultadas acompanham cada resposta.
                   </p>
                 </div>
               )}
@@ -299,7 +299,7 @@ export default function Conversa() {
             <Panel className="overflow-hidden">
               <div className="px-4 pt-4 pb-2">
                 <p className="text-[15px] font-semibold text-ink">Sugestões</p>
-                <p className="text-[12px] text-ink-3">Perguntas que o sistema sabe responder com dado</p>
+                <p className="text-[12px] text-ink-3">Comece com uma pergunta</p>
               </div>
               <div className="flex flex-col gap-2 px-3 pb-3">
                 {SUGESTOES.map((s, i) => {
@@ -312,7 +312,7 @@ export default function Conversa() {
                       disabled={pensando}
                       className="flex items-center gap-3 rounded-r2 border border-line bg-panel px-3 py-2.5 text-left hover:bg-panel-3 disabled:opacity-60"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-panel-3 text-ink-2">
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${["bg-up-wash text-up", "bg-warn-wash text-warn", "bg-info-wash text-info", "bg-brand-wash text-brand"][i] ?? "bg-brand-wash text-brand"}`}>
                         <Icone className="h-4 w-4" />
                       </span>
                       <span className="flex-1 text-[13px] text-ink">{s}</span>
@@ -329,8 +329,8 @@ export default function Conversa() {
                 Como a resposta é feita
               </p>
               <p className="mt-1.5 text-[12.5px] text-ink-2 leading-relaxed">
-                As respostas vêm de consulta ao banco no momento da pergunta, só da empresa selecionada. Nada é resumido de
-                antemão, e cada consulta feita aparece na conversa.
+                A conversa usa os dados atuais da empresa selecionada.
+                Você pode conferir as consultas junto de cada resposta.
               </p>
             </Panel>
           </div>
@@ -350,7 +350,7 @@ function Bolha({
   if (mensagem.papel === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] px-3.5 py-2.5 rounded-r2 bg-brand-wash text-ink text-[14px] leading-relaxed whitespace-pre-wrap">
+        <div className="max-w-[85%] px-3.5 py-2.5 rounded-r2 bg-info-wash text-ink text-[14px] leading-relaxed whitespace-pre-wrap break-words">
           {mensagem.texto}
         </div>
       </div>
@@ -380,7 +380,7 @@ function Bolha({
         )}
 
         {mensagem.texto ? (
-          <div className="rounded-r2 border border-line bg-panel-2 px-3.5 py-2.5 text-[14px] text-ink leading-relaxed flex flex-col gap-2">
+          <div className="rounded-r2 border border-line bg-panel px-3.5 py-2.5 text-[14px] text-ink leading-relaxed break-words flex flex-col gap-2">
             <Formatado texto={mensagem.texto} />
           </div>
         ) : (

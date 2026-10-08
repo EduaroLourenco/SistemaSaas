@@ -113,15 +113,18 @@ export async function carregarFontes(): Promise<DadosFontes> {
       .limit(200),
   ]);
 
-  const contagem = async (tabela: string) => {
-    const { count } = await sb
-      .from(tabela)
-      .select("id", { count: "exact", head: true });
+  const contagem = async (tabela: string, origem?: string) => {
+    let q = sb.from(tabela).select("id", { count: "exact", head: true });
+    if (origem) q = q.eq("origem", origem);
+    const { count } = await q;
     return count ?? 0;
   };
 
-  const [qtdPedidos, qtdSemanal, qtdDiario] = await Promise.all([
-    contagem("pedidos"),
+  // Pedido por API e por planilha contados à parte: com uma contagem só, as
+  // duas linhas mostravam o mesmo total, e nenhuma dizia de onde vinha o dado.
+  const [qtdPedidosApi, qtdPedidosPlanilha, qtdSemanal, qtdDiario] = await Promise.all([
+    contagem("pedidos", "api"),
+    contagem("pedidos", "planilha"),
     contagem("anuncio_desempenho_semanal"),
     contagem("anuncio_desempenho_diario"),
   ]);
@@ -134,7 +137,11 @@ export async function carregarFontes(): Promise<DadosFontes> {
   // intervalo, diário quando cobre um dia. A cobertura é a mais recente
   // das duas, senão importar um diário depois de um semanal pareceria
   // retrocesso.
-  const coberturaSemanal = (semanal.data?.[0]?.fim as string) ?? null;
+  // O semanal grava o domingo da semana, mesmo com ela em andamento: limita a
+  // hoje, senão a fonte aparecia "atualizada até" um dia que não chegou.
+  const hojeIso = new Date().toISOString().slice(0, 10);
+  const fimSemanal = (semanal.data?.[0]?.fim as string) ?? null;
+  const coberturaSemanal = fimSemanal && fimSemanal > hojeIso ? hojeIso : fimSemanal;
   const coberturaDiario = (diario.data?.[0]?.data as string) ?? null;
   const coberturaApi = (pedidosApi.data?.[0]?.data as string) ?? null;
   const coberturaPlanilha = (pedidosPlanilha.data?.[0]?.data as string) ?? null;
@@ -148,10 +155,10 @@ export async function carregarFontes(): Promise<DadosFontes> {
     {
       id: "pedidos-api",
       nome: "Pedidos por API",
-      alimenta: "Mercado Livre e VTEX — receita, comissão e frete",
+      alimenta: "Canais conectados (Mercado Livre, VTEX, Bling) — receita, comissão e frete",
       cobertura: coberturaApi,
       importadoEm: null,
-      registros: qtdPedidos,
+      registros: qtdPedidosApi,
       atrasoDias: atrasoDe(coberturaApi),
       origem: "api",
     },
@@ -161,7 +168,7 @@ export async function carregarFontes(): Promise<DadosFontes> {
       alimenta: "Magalu, Casas Bahia, Madeira e os demais canais",
       cobertura: coberturaPlanilha,
       importadoEm: ultima("pedidos") ?? ultima("consolidado"),
-      registros: qtdPedidos,
+      registros: qtdPedidosPlanilha,
       atrasoDias: atrasoDe(coberturaPlanilha),
       origem: "planilha",
     },

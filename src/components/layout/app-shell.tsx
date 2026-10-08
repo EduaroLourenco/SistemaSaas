@@ -366,20 +366,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* barra superior */}
       <header className="fixed top-0 inset-x-0 z-40 bg-panel border-b border-line">
         <div
-          className="gerizo-topbar flex items-center gap-1 px-3 md:gap-3 md:px-5"
+          className="gerizo-topbar flex items-center gap-1 px-3 md:gap-3 md:pl-0 md:pr-5"
           style={{ height: "var(--topbar)" }}
         >
+          <div className={cn("gerizo-shell-brand shrink-0 flex items-center justify-between gap-3 md:px-5", menu.aberto && "md:w-[var(--rail)] md:border-r md:border-line md:self-stretch")}>
+          <Wordmark />
           <button
             type="button"
             onClick={menu.alternar}
             aria-label={menu.aberto ? "Recolher menu" : "Abrir menu"}
             title={menu.aberto ? "Recolher menu" : "Abrir menu"}
-            className="hidden md:flex h-9 w-9 -ml-1 shrink-0 items-center justify-center rounded-r1 text-ink-2 hover:bg-panel-3 hover:text-ink"
+            className="hidden md:flex h-8 w-7 shrink-0 items-center justify-center rounded-r1 text-ink-3 hover:bg-panel-3 hover:text-ink"
           >
             {menu.aberto ? <PanelLeftClose className="h-[18px] w-[18px]" /> : <PanelLeftOpen className="h-[18px] w-[18px]" />}
           </button>
-          <div className={cn("shrink-0 flex items-center", menu.aberto && "md:w-[calc(var(--rail)-72px)]")}>
-            <Wordmark />
           </div>
 
           
@@ -572,34 +572,36 @@ function subscribeMobile(callback: () => void) {
 const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
 const serverMobile = () => false;
 
-export function PageHeader({ title, breadcrumb, description, badge, actions, filters, mobileFilters = true }: {
+export function PageHeader({ title, breadcrumb, description, badge, actions, filters, mobileFilters = true, inlineFilters = false }: {
   title: string; breadcrumb?: string; description?: string; badge?: React.ReactNode;
-  actions?: React.ReactNode; filters?: React.ReactNode; mobileFilters?: boolean;
+  actions?: React.ReactNode; filters?: React.ReactNode; mobileFilters?: boolean; inlineFilters?: boolean;
 }) {
   const mobile = React.useSyncExternalStore(subscribeMobile, isMobile, serverMobile);
   const [openFilters, setOpenFilters] = React.useState(false);
   return (
-    <header className="gerizo-page-header px-4 pt-6 pb-1 md:px-6 md:pt-7">
-      {breadcrumb && <p className="mb-2 text-[12px] font-medium text-ink-3">{breadcrumb}</p>}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <header className={cn("gerizo-page-header px-4 pt-5 pb-1 md:px-6 md:pt-5", inlineFilters && "gerizo-page-header--inline")}>
+      {breadcrumb && <p className="mb-1.5 text-[12px] font-medium text-ink-3">{breadcrumb}</p>}
+      <div className="gerizo-header-row flex flex-wrap items-center justify-between gap-4">
         {/* Base de 14rem: com `flex-1` puro o título encolhia até zero e os
             botões tomavam a linha — no Catálogo, a descrição caía uma
             palavra por linha. Assim, se os botões não cabem ao lado, descem. */}
         <div className="min-w-0 flex-[1_1_14rem]">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-ink md:text-[30px]">{title}</h1>
+            <h1 className="text-[25px] font-bold leading-tight tracking-[-0.035em] text-ink md:text-[30px]">{title}</h1>
             {badge}
           </div>
           {description && (description.length > 115
             ? <Disclosure title="Sobre esta análise" className="mt-3 max-w-3xl">{description}</Disclosure>
-            : <p className="mt-2 text-[14px] leading-relaxed text-ink-2">{description}</p>)}
+            : <p className="mt-1 text-[14px] leading-relaxed text-ink-2">{description}</p>)}
         </div>
+        {inlineFilters && filters && !mobile && <div className="gerizo-inline-filters min-w-0">{filters}</div>}
         {(actions || (filters && mobileFilters && mobile)) && <div className="flex max-w-full flex-wrap items-center gap-2">
           {actions}
           {filters && mobileFilters && mobile && <Button onClick={() => setOpenFilters(true)}><SlidersHorizontal size={16} />Filtros</Button>}
         </div>}
       </div>
-      {filters && (!mobile || !mobileFilters) && <div className="mt-5 min-w-0">{filters}</div>}
+      {!inlineFilters && filters && (!mobile || !mobileFilters) && <div className="mt-4 min-w-0">{filters}</div>}
+      {inlineFilters && filters && mobile && !mobileFilters && <div className="mt-4 min-w-0">{filters}</div>}
       {filters && mobile && mobileFilters && openFilters && <FilterSheet onClose={() => setOpenFilters(false)} applyLabel="Ver resultados">{filters}</FilterSheet>}
     </header>
   );

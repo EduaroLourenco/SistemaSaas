@@ -3,7 +3,7 @@
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Badge } from "@/components/ui/primitives";
-import { Download, Loader2, AlertCircle, Package, Sparkles } from "lucide-react";
+import { Download, Loader2, AlertCircle, Package, Sparkles, ChartNoAxesCombined, CalendarDays, Megaphone, Tags, type LucideIcon } from "lucide-react";
 import { Disclosure } from "@/components/ui/disclosure";
 
 /**
@@ -25,6 +25,8 @@ type Formato = {
   titulo: string;
   descricao: string;
   extensao: "CSV" | "XLSX";
+  icone: LucideIcon;
+  tom: string;
 };
 
 const FORMATOS: Formato[] = [
@@ -34,6 +36,8 @@ const FORMATOS: Formato[] = [
     descricao:
       "Uma linha por canal por dia, com visitas, receita, pedidos, mídia, cancelamentos, ticket, ACOS e ROAS.",
     extensao: "CSV",
+    icone: ChartNoAxesCombined,
+    tom: "bg-info-wash text-info",
   },
   {
     id: "consolidado_mensal",
@@ -41,6 +45,8 @@ const FORMATOS: Formato[] = [
     descricao:
       "Uma linha por canal por mês, com ticket, conversão e TACOS já calculados.",
     extensao: "CSV",
+    icone: CalendarDays,
+    tom: "bg-up-wash text-up",
   },
   {
     id: "desempenho_anuncios",
@@ -48,6 +54,8 @@ const FORMATOS: Formato[] = [
     descricao:
       "Histórico semanal por anúncio: visitas, unidades, receita, preço pago, comissão real e conversão.",
     extensao: "XLSX",
+    icone: Megaphone,
+    tom: "bg-brand-wash text-brand",
   },
   {
     id: "historico_promocoes",
@@ -55,6 +63,8 @@ const FORMATOS: Formato[] = [
     descricao:
       "Cada decisão com os quatro preços — ofertado pelo canal, tabela, piso e com desconto extra.",
     extensao: "CSV",
+    icone: Tags,
+    tom: "bg-warn-wash text-warn",
   },
 ];
 
@@ -111,7 +121,7 @@ export default function Exportacoes() {
       <PageHeader
         title="Exportações"
         breadcrumb="Relatórios"
-        description="Gere um arquivo com o que está no banco"
+        description="Seus resultados prontos para analisar e compartilhar"
       />
 
       <PageBody>
@@ -120,7 +130,7 @@ export default function Exportacoes() {
         <Panel className="p-4 mb-3">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0 flex-1">
-              <span className="flex items-center gap-2 mb-1.5">
+              <span className="flex flex-wrap items-center gap-2 mb-1.5">
                 <Package className="w-4 h-4 text-brand shrink-0" strokeWidth={2} />
                 <p className="text-[14px] font-semibold text-ink">
                   Pacote completo da operação
@@ -222,13 +232,14 @@ export default function Exportacoes() {
         <Panel className="overflow-hidden">
           <PanelHeader
             title="Formatos disponíveis"
-            hint="o arquivo é montado na hora, com tudo que existe no banco"
+            hint="Arquivos gerados com os dados atuais"
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-line">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 p-3">
             {FORMATOS.map((f) => (
-              <div key={f.id} className="bg-panel p-4 flex flex-col gap-3">
+              <div key={f.id} className="rounded-r2 border border-line bg-panel p-4 flex flex-col gap-3">
+                <span className={`grid h-12 w-12 place-items-center rounded-r2 ${f.tom}`} aria-hidden="true"><f.icone size={24} strokeWidth={1.7} /></span>
                 <span>
-                  <span className="flex items-center justify-between gap-2 mb-1">
+                  <span className="flex flex-wrap items-start justify-between gap-2 mb-2">
                     <span className="text-[13.5px] font-semibold text-ink">
                       {f.titulo}
                     </span>
@@ -241,7 +252,7 @@ export default function Exportacoes() {
                 {/* Secundário: a ação principal da tela é o pacote completo. */}
                 <Button
                   variant="default"
-                  className="self-start"
+                  className="mt-auto w-full"
                   onClick={() => exportar(f)}
                   disabled={baixando !== null}
                 >
