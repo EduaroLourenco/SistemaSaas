@@ -278,6 +278,42 @@ export function diagnosticar(l: {
   return { causa, explicacao: texto[causa] };
 }
 
+/* ══ Preço de vitrine por dia, de todas as fontes ═════════════ */
+
+/**
+ * O preço anunciado de cada anúncio em cada dia, juntando o que existe.
+ *
+ * A coluna de preço do retrato diário (db/33) só começou em 07/10. Antes
+ * dela já havia preço gravado em dois lugares, e eles cobrem boa parte do
+ * histórico recente:
+ *   · o retrato do catálogo do Meli (`anuncio_catalogo_diario`), diário
+ *     desde 30/09, para os anúncios que disputam catálogo;
+ * Prioridade, quando as duas têm o mesmo dia: o retrato diário.
+ * Chave: `anuncio|AAAA-MM-DD`.
+ *
+ * O "Atualizar preços" semanal (`anuncio_precos_vitrine`) e o preço do
+ * cadastro do anúncio ficam DE FORA de propósito: os dois vêm de `/items`,
+ * que dá o preço cheio. Misturar com o preço de campanha inventaria uma
+ * queda de 50% onde só entrou uma promoção.
+ */
+async function precosDeVitrine(
+  sb: Awaited<ReturnType<typeof clienteServidor>>,
+  de: string,
+  ate: string,
+  anuncioIds?: string[]
+): Promise<Map<string, number>> {
+  type Cat = { anuncio_id: string; data: string; preco_atual: number | string };
+  const lerCatalogo = () => {
+    let q = sb.from("anuncio_catalogo_diario").select("anuncio_id,data,preco_atual").gte("data", de).lte("data", ate);
+    if (anuncioIds) q = q.in("anuncio_id", anuncioIds);
+    return q.not("preco_atual", "is", null).order("id");
+  };
+  const catalogo = (await paginar(lerCatalogo).catch(() => [])) as unknown as Cat[];
+  const m = new Map<string, number>();
+  for (const c of catalogo) if (n(c.preco_atual) > 0) m.set(`${c.anuncio_id}|${c.data}`, n(c.preco_atual));
+  return m;
+}
+
 /* ══ Carga ══════════════════════════════════════════════════ */
 
 export async function carregarQueda(opcoes: {
@@ -337,7 +373,7 @@ export async function carregarQueda(opcoes: {
     }
   };
 
-  const [itens, anuncios, desempenho, retratos, contas] = await Promise.all([
+  const [itens, anuncios, desempenho, retratos, contas, vitrineOutras] = await Promise.all([
     paginar(() =>
       sb
         .from("pedido_itens")
@@ -365,6 +401,7 @@ export async function carregarQueda(opcoes: {
     ) as unknown as Promise<Desempenho[]>,
     lerRetratos(),
     carregarContasRecorte(),
+    precosDeVitrine(sb, deAnterior, ate),
   ]);
 
   const nomeConta = new Map(
@@ -461,10 +498,7 @@ export async function carregarQueda(opcoes: {
     if (!g) continue; // sem venda nos dois períodos: não há queda para explicar
     g.anuncios.add(a.id);
     g.onde.add(nomeConta.get(a.conta_canal_id ?? "") ?? "Outros");
-    if (nivel === "anuncio") {
-      g.status = a.status;
-      g.precoAtual = a.preco_atual != null ? n(a.preco_atual) : null;
-    }
+    if (nivel === "anuncio") g.status = a.status;
   }
 
   // ── Visitas ──
@@ -491,12 +525,32 @@ export async function carregarQueda(opcoes: {
         g.semEstoque.delete(r.data);
       } else if (!g.comEstoque.has(r.data)) g.semEstoque.add(r.data);
     }
-    if (r.preco != null && n(r.preco) > 0) {
-      if (!vitrineDesde || r.data < vitrineDesde) vitrineDesde = r.data;
-      const lado = r.data >= de ? g.agora : g.antes;
-      lado.vitrineSoma += n(r.preco);
-      lado.vitrineDias += 1;
-    }
+    if (r.preco != null && n(r.preco) > 0) vitrineOutras.set(`${r.anuncio_id}|${r.data}`, n(r.preco));
+  }
+  /*
+   * Preço de hoje: o último preço de venda registrado de cada anúncio (não
+   * o do cadastro, que é o cheio). No produto, o menor entre os anúncios,
+   * que é o que o comprador vê primeiro.
+   */
+  const ultimo = new Map<string, { data: string; preco: number }>();
+  for (const [k, preco] of vitrineOutras) {
+    const [anuncioId, data] = k.split("|");
+    const u = ultimo.get(anuncioId);
+    if (!u || data > u.data) ultimo.set(anuncioId, { data, preco });
+  }
+  for (const [anuncioId, u] of ultimo) {
+    const g = grupos.get(chavePorAnuncio.get(anuncioId) ?? "");
+    if (g) g.precoAtual = g.precoAtual == null ? u.preco : Math.min(g.precoAtual, u.preco);
+  }
+  for (const [k, preco] of vitrineOutras) {
+    const [anuncioId, data] = k.split("|");
+    const chave = chavePorAnuncio.get(anuncioId);
+    const g = chave && grupos.get(chave);
+    if (!g) continue;
+    if (!vitrineDesde || data < vitrineDesde) vitrineDesde = data;
+    const lado = data >= de ? g.agora : g.antes;
+    lado.vitrineSoma += preco;
+    lado.vitrineDias += 1;
   }
 
   const acompanhados = new Set(retratos.map((r) => r.anuncio_id));
@@ -659,6 +713,7 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
       : Promise.resolve([]),
     lerRetratos(),
   ]);
+  const precos = anuncioIds.length ? await precosDeVitrine(sb, de, ate, anuncioIds) : new Map<string, number>();
 
   const dias = new Map<string, { receita: number; unidades: number; visitas: number | null; vit: number[]; estoque: number | null }>();
   const dia = (d: string) => {
@@ -686,7 +741,11 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
     if (r.estoque >= 40_000) semControle.add(r.data);
     else x.estoque = (x.estoque ?? 0) + r.estoque;
     const preco = "preco" in r ? r.preco : null;
-    if (preco != null && n(preco) > 0) x.vit.push(n(preco));
+    if (preco != null && n(preco) > 0) precos.set(`${r.anuncio_id}|${r.data}`, n(preco));
+  }
+  for (const [k, preco] of precos) {
+    const data = k.split("|")[1];
+    if (data >= de && data <= ate) dia(data).vit.push(preco);
   }
   return [...dias.entries()]
     .sort(([a], [b]) => a.localeCompare(b))

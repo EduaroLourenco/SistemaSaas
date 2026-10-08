@@ -95,6 +95,11 @@ const PERMITIDOS = [
    * de preço pesa na decisão. Um anúncio por chamada.
    */
   /^\/items\/[A-Z]{3}\d+\/price_to_win$/i,
+  /*
+   * O preço que o comprador paga. `/items` devolve o preço CHEIO: o desconto
+   * das campanhas da Central de Promoções só aparece aqui.
+   */
+  /^\/items\/[A-Z]{3}\d+\/(sale_price|prices)$/i,
   // perguntas sem resposta — só a contagem interessa
   /^\/questions\/search$/,
   // custo real do envio: `senders[].cost` é o que o vendedor paga

@@ -772,25 +772,28 @@ export async function pedidos({
 }): Promise<Pedido[]> {
   const v = await vendedor(conta);
 
-  for (const rota of ["/orders/search/recent", "/orders/search"]) {
-    const brutos: OrdemBruta[] = [];
-
-    for (let inicio = de; inicio <= ate; inicio = somarDias(inicio, janelaDias)) {
-      const fim = somarDias(inicio, janelaDias - 1);
-      brutos.push(
-        ...(await buscarJanela(rota, v.id, inicio, fim > ate ? ate : fim, conta))
-      );
-    }
-
-    if (brutos.length) {
-      // O mesmo pedido pode vir em duas janelas na fronteira; tira repetido.
-      const porId = new Map<number, OrdemBruta>();
-      for (const o of brutos) porId.set(o.id, o);
-      return [...porId.values()].map(normalizarPedido);
+  /*
+   * `/orders/search` primeiro, e por janela. A versão anterior tentava
+   * `/orders/search/recent` antes e, se ele trouxesse QUALQUER pedido,
+   * parava ali — só que o "recent" cobre só as últimas semanas (julho de
+   * 2026 voltava 0 nele e 452 no `/orders/search`). Pedir 12 meses trazia
+   * um. O "recent" fica só como reserva, se o outro recusar a janela.
+   */
+  const brutos: OrdemBruta[] = [];
+  for (let inicio = de; inicio <= ate; inicio = somarDias(inicio, janelaDias)) {
+    const fim = somarDias(inicio, janelaDias - 1);
+    const ateJanela = fim > ate ? ate : fim;
+    try {
+      brutos.push(...(await buscarJanela("/orders/search", v.id, inicio, ateJanela, conta)));
+    } catch {
+      brutos.push(...(await buscarJanela("/orders/search/recent", v.id, inicio, ateJanela, conta)));
     }
   }
 
-  return [];
+  // O mesmo pedido pode vir em duas janelas na fronteira; tira repetido.
+  const porId = new Map<number, OrdemBruta>();
+  for (const o of brutos) porId.set(o.id, o);
+  return [...porId.values()].map(normalizarPedido);
 }
 
 /* ── Visitas ─────────────────────────────────────────────────── */
@@ -943,8 +946,6 @@ export type AnuncioCompleto = {
   titulo: string;
   sku: string | null;
   preco: number | null;
-  /** Preço riscado na vitrine, quando há desconto. */
-  precoOriginal: number | null;
   status: string | null;
   /** `gold_pro` = premium, `gold_special` = clássico. */
   tipoBruto: string | null;
@@ -966,7 +967,6 @@ type ItemBruto = {
   title?: string;
   seller_custom_field?: string | null;
   price?: number;
-  original_price?: number | null;
   status?: string;
   listing_type_id?: string;
   available_quantity?: number;
@@ -1035,7 +1035,6 @@ export async function catalogoCompleto({
         titulo: b.title ?? "",
         sku: b.seller_custom_field?.trim() || null,
         preco: b.price ?? null,
-        precoOriginal: b.original_price ?? null,
         status: b.status ?? null,
         tipoBruto: b.listing_type_id ?? null,
         tipo: tipoDe(b.listing_type_id),

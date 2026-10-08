@@ -470,7 +470,7 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
         <Badge tone={TOM[l.causa]}>{l.causa}</Badge> <span className="ml-1">{l.explicacao}</span>
       </p>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Numero rotulo="Receita" antes={money(l.antes.receita)} agora={money(l.agora.receita)} />
         <Numero rotulo="Unidades" antes={count(l.antes.unidades)} agora={count(l.agora.unidades)} />
         <Numero
@@ -478,10 +478,17 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
           antes={l.antes.visitas != null ? count(l.antes.visitas) : "—"}
           agora={l.agora.visitas != null ? count(l.agora.visitas) : "—"}
         />
+        {/* Preço: o anunciado existe mesmo sem venda; o vendido, só com venda. */}
         <Numero
-          rotulo={l.antes.precoVitrine != null ? "Preço vitrine (médio)" : "Preço vendido (médio)"}
-          antes={money((l.antes.precoVitrine ?? l.antes.precoVendido) || 0)}
-          agora={money((l.agora.precoVitrine ?? l.agora.precoVendido) || 0)}
+          rotulo="Preço anunciado (médio)"
+          antes={l.antes.precoVitrine != null ? money(l.antes.precoVitrine) : "sem registro"}
+          agora={l.agora.precoVitrine != null ? money(l.agora.precoVitrine) : "sem registro"}
+          extra={l.precoAtual != null ? `hoje ${money(l.precoAtual)}` : undefined}
+        />
+        <Numero
+          rotulo="Preço vendido (médio)"
+          antes={l.antes.precoVendido != null ? money(l.antes.precoVendido) : "sem venda"}
+          agora={l.agora.precoVendido != null ? money(l.agora.precoVendido) : "sem venda"}
         />
       </div>
 
@@ -529,7 +536,7 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
 
       <div>
         <p className="label mb-1.5">
-          Dia a dia · barras = receita · {temVitrine ? "linha = preço de vitrine" : "pontos = preço vendido no dia"}
+          Dia a dia · barras = receita · {temVitrine ? "laranja = preço anunciado · " : ""}roxo = preço vendido no dia
           {temVisita ? " · pontilhado = visitas" : ""}
         </p>
         {erro ? (
@@ -566,16 +573,25 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
                   }}
                 />
                 <Bar yAxisId="r" dataKey="receita" fill="var(--s1)" fillOpacity={0.55} isAnimationActive={false} />
+                {/* Anunciado: retratos com buracos entre eles (o semanal, o catálogo),
+                    por isso pontos ligados só onde há dias seguidos. Vendido: só em dia
+                    com venda, e ligar os pontos inventaria uma tendência. */}
+                {temVitrine && (
+                  <Line
+                    yAxisId="p"
+                    dataKey="precoVitrine"
+                    stroke="var(--warn)"
+                    strokeWidth={2}
+                    dot={{ r: 2, fill: "var(--warn)" }}
+                    isAnimationActive={false}
+                  />
+                )}
                 <Line
                   yAxisId="p"
-                  dataKey={temVitrine ? "precoVitrine" : "precoVendido"}
-                  stroke="var(--warn)"
-                  strokeWidth={2}
-                  /* Vitrine é contínua (um retrato por dia). Preço vendido só existe
-                     em dia com venda: ligar os pontos inventaria uma tendência. */
-                  dot={temVitrine ? false : { r: 3, fill: "var(--warn)" }}
-                  connectNulls={!!temVitrine}
-                  strokeOpacity={temVitrine ? 1 : 0}
+                  dataKey="precoVendido"
+                  stroke="var(--s4)"
+                  strokeOpacity={0}
+                  dot={{ r: 3, fill: "var(--s4)" }}
                   isAnimationActive={false}
                 />
                 {temVisita && (
@@ -599,12 +615,13 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
   );
 }
 
-function Numero({ rotulo, antes, agora }: { rotulo: string; antes: string; agora: string }) {
+function Numero({ rotulo, antes, agora, extra }: { rotulo: string; antes: string; agora: string; extra?: string }) {
   return (
     <div className="min-w-0 rounded-r1 border border-line bg-panel px-3 py-2">
       <p className="text-[11px] text-ink-3">{rotulo}</p>
       <p className="num truncate text-[13px] font-semibold text-ink">{agora}</p>
       <p className="num truncate text-[11px] text-ink-3">antes {antes}</p>
+      {extra && <p className="num truncate text-[11px] font-medium text-ink-2">{extra}</p>}
     </div>
   );
 }

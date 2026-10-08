@@ -452,29 +452,19 @@ async function gravarEstoqueDiario(
            disponível e nunca soma. Antes virava 0, e o anúncio sob
            encomenda aparecia como sem estoque na análise de queda. */
         estoque: a.estoque!,
-        /* O preço da vitrine no dia: é o que a análise de queda usa para
-           dizer se a venda caiu porque o preço subiu (db/33). */
-        preco: a.preco,
-        preco_original: a.precoOriginal,
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  let semPreco = false;
+  // O preço NÃO vai aqui: `/items` dá o preço cheio. O que o comprador paga
+  // sai de `sale_price`, na rotina de preços (src/lib/meli/precos.ts). Sem a
+  // coluna no payload, o upsert não apaga o preço que ela gravou no dia.
   await emLotes(linhas, 500, async (lote) => {
-    const gravar = (l: typeof lote) =>
-      sb.from("anuncio_estoque_diario").upsert(l, { onConflict: "anuncio_id,data" });
-    let { error: e } = semPreco
-      ? await gravar(lote.map(({ preco: _p, preco_original: _o, ...r }) => r as typeof lote[number]))
-      : await gravar(lote);
-    // Sem a migração 33 as colunas de preço não existem: grava só o estoque.
-    if (e && (e.code === "PGRST204" || e.code === "42703")) {
-      semPreco = true;
-      ({ error: e } = await gravar(lote.map(({ preco: _p, preco_original: _o, ...r }) => r as typeof lote[number])));
-    }
+    const { error: e } = await sb
+      .from("anuncio_estoque_diario")
+      .upsert(lote, { onConflict: "anuncio_id,data" });
     if (e) throw new Error(`Falha ao gravar estoque diário: ${e.message}`);
   });
-  if (semPreco) resumo.avisos.push("Preço diário não gravado: rode db/33_preco_diario.sql.");
   resumo.estoque = { linhas: linhas.length };
 }
 
