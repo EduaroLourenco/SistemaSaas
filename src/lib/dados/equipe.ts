@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { ORDEM_PAPEL, type Papel } from "./papeis";
+import { operacaoPadrao } from "./operacao";
 
 /*
  * Só o TIPO é reexportado. `PAPEIS` fica em `papeis.ts` e a tela importa de
@@ -70,27 +71,26 @@ export async function carregarEquipe(): Promise<Equipe> {
   if (!eu) return VAZIA;
 
   /*
-   * A organização vem do próprio vínculo. Quem tem mais de uma vê a
-   * primeira — trocar de empresa é assunto de outra tela, e inventar um
-   * seletor aqui seria adivinhar qual delas a pessoa quis.
+   * A empresa é a ATIVA no seletor, não a primeira do vínculo. Antes era a
+   * primeira: o admin da plataforma (membro só da Probel) entrava na Bom de
+   * Compras, via a equipe da Probel, e o convite feito ali caía na Probel.
+   * `operacaoPadrao()` só aceita operação que a sessão enxerga (RLS), então
+   * o cookie não abre empresa alheia.
    */
-  const { data: meus, error: eMeus } = await sb
-    .from("membros")
-    .select("id,organizacao_id,papel,criado_em,organizacoes(nome)")
-    .eq("usuario_id", eu)
-    .order("criado_em")
-    .limit(1);
+  const ativa = await operacaoPadrao();
+  if (!ativa) return VAZIA;
+  const organizacaoId = ativa.organizacaoId;
+  const organizacaoNome = ativa.empresa || null;
 
-  if (eMeus) {
-    if (faltando(eMeus.code)) return { ...VAZIA, faltaMigracao: "db/01_schema.sql" };
-    throw new Error(`Não consegui ler seu vínculo: ${eMeus.message}`);
+  // O papel vem do banco: o do vínculo, ou proprietário para o admin da
+  // plataforma na empresa em que entrou (db/32). Sem a 32, o admin só lê.
+  const { data: papelBanco, error: ePapel } = await sb.rpc("papel_na_organizacao", {
+    p_organizacao: organizacaoId,
+  });
+  if (ePapel && !faltando(ePapel.code) && ePapel.code !== "PGRST202") {
+    throw new Error(`Não consegui ler seu papel: ${ePapel.message}`);
   }
-  const meu = meus?.[0];
-  if (!meu) return VAZIA;
-
-  const organizacaoId = meu.organizacao_id as string;
-  const org = meu.organizacoes as { nome: string }[] | { nome: string } | null;
-  const organizacaoNome = (Array.isArray(org) ? org[0]?.nome : org?.nome) ?? null;
+  const meuPapel = (papelBanco as Papel | null) ?? null;
 
   const [{ data: membros }, { data: convites, error: eConvites }] = await Promise.all([
     sb
@@ -150,7 +150,7 @@ export async function carregarEquipe(): Promise<Equipe> {
   return {
     organizacaoId,
     organizacaoNome,
-    meuPapel: meu.papel as Papel,
+    meuPapel,
     membros: lista,
     convites: pendentes,
     faltaMigracao: eConvites && faltando(eConvites.code) ? "db/20_cadastro_e_convites.sql" : null,

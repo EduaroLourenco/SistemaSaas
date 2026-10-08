@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { erroEquipe as erroDoBanco } from "@/lib/equipe-erros";
 
 export const runtime = "nodejs";
 
@@ -17,17 +18,6 @@ export const runtime = "nodejs";
 
 const PAPEIS = new Set(["proprietario", "administrador", "editor", "leitor"]);
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-function erroDoBanco(e: { message: string; code?: string }) {
-  // As funções comunicam a recusa por `raise exception`, com a frase que a
-  // tela deve mostrar. Repassar é melhor que traduzir e perder o motivo.
-  if (e.code === "P0001") return { erro: e.message, status: 403 };
-  if (e.code === "42883") {
-    return { erro: "Rode a migração db/22_equipe.sql no Supabase.", status: 400 };
-  }
-  if (e.code === "23505") return { erro: "Já existe convite para esse e-mail.", status: 409 };
-  return { erro: e.message, status: 400 };
-}
 
 export async function POST(req: Request) {
   const sb = await clienteServidor();
