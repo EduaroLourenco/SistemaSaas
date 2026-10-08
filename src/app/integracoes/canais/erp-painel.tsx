@@ -122,7 +122,12 @@ export function ErpPainel({
                     return (
                       <tr key={loja} className="border-t border-line">
                         <td className="px-5 py-2.5 num">{loja === "0" ? "0 (sem loja: venda direta)" : loja}</td>
-                        <td className="px-3 py-2.5 num text-ink-2">{pend?.exemplo ?? "—"}</td>
+                        <td className="px-3 py-2.5 num text-ink-2">
+                          {pend?.exemplo ?? "—"}
+                          {pend && provavel(pend.exemplo) && (
+                            <span className="block text-[12px] text-ink-3">parece {provavel(pend.exemplo)}</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2.5">
                           {pend ? (
                             <Badge tone="warn">{pend.pedidos} pedido(s) parado(s)</Badge>
@@ -173,4 +178,17 @@ export function ErpPainel({
       </Panel>
     </div>
   );
+}
+
+/*
+ * O canal provável pelo formato do número do pedido. O app do Bling sem o
+ * escopo "Canais de venda" não devolve o nome da loja, e só o número dá a
+ * pista. É sugestão para quem escolhe, nunca ligação automática.
+ */
+function provavel(exemplo: string): string | null {
+  if (/^\d{3}-\d{7}-\d{7}$/.test(exemplo)) return "Amazon";
+  if (/^\d{6}[A-Z0-9]{8}$/.test(exemplo)) return "Shopee";
+  if (/^2000\d{12}$/.test(exemplo)) return "Mercado Livre";
+  if (/^\d{1,7}$/.test(exemplo)) return "loja própria (site)";
+  return null;
 }

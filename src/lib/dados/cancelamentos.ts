@@ -19,6 +19,8 @@ import { carregarExclusoes, aplicar, type Exclusao } from "./exclusoes";
 
 export type CancelamentoCanal = {
   canalId: string;
+  /** A conta de canal — o que o clique usa para listar os pedidos. */
+  contaId: string;
   canal: string;
   conta: string;
   mostrarConta: boolean;
@@ -197,6 +199,7 @@ export async function carregarCancelamentos(
       canais.get(chave) ??
       {
         canalId: c.canal_id,
+        contaId: chave,
         canal: c.canais?.nome ?? "Outros",
         conta: c.nome,
         mostrarConta: (contasPorCanal.get(c.canal_id) ?? 1) > 1,

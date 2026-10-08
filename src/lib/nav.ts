@@ -8,6 +8,7 @@ import {
   Wallet,
   FileBarChart,
   Plug,
+  Database,
   Users,
   Building2,
   BookMarked,
@@ -127,6 +128,8 @@ export const NAV_FOOTER: NavGroup[] = [
    */
   { label: "Empresas", icon: Building2, href: "/empresas" },
   { label: "Canais e contas", icon: Plug, href: "/integracoes/canais" },
+  // Saiu da Visão geral: até onde cada fonte vai, e quando chegou.
+  { label: "Fontes de dados", icon: Database, href: "/integracoes" },
   { label: "Equipe", icon: Users, href: "/equipe" },
   { label: "Glossário", icon: BookMarked, href: "/glossario" },
   { label: "Configurações", icon: Settings, href: "/configuracoes" },

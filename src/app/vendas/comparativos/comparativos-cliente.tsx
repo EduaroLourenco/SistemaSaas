@@ -15,6 +15,7 @@ import {
   FilterSheet,
   SectionTitle,
   HeatCell,
+  LegendaCalor,
 } from "@/components/ui/controls";
 import { AXIS, GRID, ChartTooltip, Legend, SERIES } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,15 @@ type EscopoComp = string;
  * Recebe a série em vez de lê-la de um módulo: assim a mesma função serve
  * para qualquer canal e para o consolidado, sem estado escondido.
  */
+/*
+ * Hoje em São Paulo. A série tem o ano inteiro, com zero nos dias que ainda
+ * não chegaram; contar esses dias no divisor fazia o mês corrente parecer
+ * um desastre (outubro com 7 dias de venda dividido por 31) e pintava de
+ * vermelho o mês que só não terminou.
+ */
+const HOJE = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+const jaPassou = (i: number) => (CALENDARIO[i]?.iso ?? "") <= HOJE;
+
 function agregarSerie(serie: RegistroDia[], indices: number[]): Agregado {
   const c2 = (v: number) => Math.round(v * 100) / 100;
   let visitas = 0, receita = 0, pedidos = 0, ads = 0;
@@ -64,7 +74,7 @@ function agregarSerie(serie: RegistroDia[], indices: number[]): Agregado {
     meta += r.meta;
   }
   return {
-    dias: indices.length, visitas, receita: c2(receita), pedidos,
+    dias: indices.filter(jaPassou).length, visitas, receita: c2(receita), pedidos,
     ads: c2(ads), pedidosCancelados, valorCancelado: c2(valorCancelado), meta,
   };
 }
@@ -194,9 +204,9 @@ const ordinal = (n: number) => `${n}º`;
 
 /** Intensidade do mapa de calor: piso visível para o pior mês da linha. */
 function intensidade(v: number, min: number, max: number) {
-  if (!v) return 0;
+  if (!v) return null;
   if (max === min) return 0.5;
-  return 0.12 + ((v - min) / (max - min)) * 0.88;
+  return (v - min) / (max - min);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -384,9 +394,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
         mobileFilters={false}
         title="Padrões por dia da semana"
         breadcrumb="Vendas"
-        description={`${ANO} · ${nomeEscopo(escopo)} · ${M.label} · ${count(
-          CALENDARIO.length
-        )} dias analisados`}
+        description={`${ANO} · ${nomeEscopo(escopo)} · ${M.label} · ${count(CALENDARIO.filter((d) => d.iso <= HOJE).length)} dias analisados`}
         actions={
           <Button
             size="sm"
@@ -587,12 +595,8 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
         <Panel className="overflow-hidden">
           <PanelHeader
             title="Mapa de calor — dia × mês"
-            hint="cor mais forte = melhor mês daquele dia"
-            action={
-              <span className="text-[12px] text-ink-3 hidden sm:block">
-                {M.rotuloMedia}
-              </span>
-            }
+            hint={`verde = melhor mês daquele dia da semana, vermelho = pior · ${M.rotuloMedia}`}
+            action={<LegendaCalor pior="pior mês" melhor="melhor mês" />}
           />
 
           <p className="md:hidden px-4 pt-2.5 text-[12px] text-ink-3">
@@ -647,7 +651,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
                               v
                             )} · ${ordinal(l.rank[m])} de ${MESES.length} meses`}
                           >
-                            {M.fmtCurto(v)}
+                            {v ? M.fmtCurto(v) : "—"}
                           </HeatCell>
                         </div>
                       </td>
@@ -673,7 +677,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
                       className="px-2 text-right whitespace-nowrap h-9"
                     >
                       <span className="num text-[12px] text-ink">
-                        {M.fmtCurto(v)}
+                        {v ? M.fmtCurto(v) : "—"}
                       </span>
                     </td>
                   ))}

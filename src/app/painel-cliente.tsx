@@ -17,7 +17,6 @@ import type { DadosPainel } from "@/lib/dados/painel";
 import { recortar } from "@/lib/periodo";
 import { FilaRecomendacoes } from "@/components/painel/fila-recomendacoes";
 import { PainelExclusoes } from "@/components/ui/exclusoes";
-import { FontesDados } from "@/components/painel/fontes-dados";
 import { SkusEmQueda } from "@/components/painel/skus-em-queda";
 import { money, moneyShort, count, pct, shortDate } from "@/lib/format";
 import {
@@ -268,19 +267,23 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       />
 
       <PageBody>
-        {/* O que mudou e merece decisão — antes dos totais */}
-        {/* Antes dos números: até onde o dado vai decide se dá para
-            confiar no que vem abaixo. */}
-        {/* Referência aprovada: de onde vem o dado e o que mudou, lado a lado
-            na primeira dobra. */}
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-stretch">
-          <div className="xl:col-span-3 min-w-0">
-            <FontesDados dados={dados.fontes} />
-          </div>
-          <div className="xl:col-span-2 min-w-0">
-            <FilaRecomendacoes itens={dados.recomendacoes} />
-          </div>
-        </div>
+        {/*
+          * O painel abre pelos números. "Fontes de dados" saiu daqui para
+          * Integrações (menu de baixo): ocupava a primeira dobra todo dia
+          * para dizer "está em dia". Volta como um aviso de uma linha só
+          * quando o dado atrasou o bastante para mudar uma decisão.
+          */}
+        {dados.fontes.piorAtraso !== null && dados.fontes.piorAtraso >= 2 && (
+          <Link
+            href="/integracoes"
+            className="flex items-center justify-between gap-3 rounded-r2 border border-warn/40 bg-[var(--warn-wash)] px-4 py-2.5 text-[13px] text-ink hover:border-warn"
+          >
+            <span>
+              Algum dado do painel está {dados.fontes.piorAtraso} dias atrasado. Os números abaixo podem estar incompletos.
+            </span>
+            <span className="shrink-0 font-medium text-brand">Ver fontes</span>
+          </Link>
+        )}
 
         <PainelExclusoes
           exclusoes={dados.exclusoes}
@@ -412,6 +415,8 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
             </div>
           </Panel>
         </div>
+
+        <FilaRecomendacoes itens={dados.recomendacoes} />
 
         {/* Top SKUs e canais lado a lado, como na referência aprovada. */}
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-start">

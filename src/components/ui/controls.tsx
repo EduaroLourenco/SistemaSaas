@@ -508,25 +508,46 @@ export function SectionTitle({
 
 /* ── Mapa de calor ──────────────────────────────────────────── */
 
+/*
+ * Escala divergente: vermelho = pior, verde = melhor, meio neutro. Era um
+ * roxo só, mais forte quanto maior — obrigava a ler a legenda para saber
+ * se a cor era boa ou ruim. Vermelho e verde já dizem.
+ */
+export function corDoCalor(intensity: number | null) {
+  if (intensity === null) return "var(--panel)";
+  const i = Math.max(0, Math.min(1, intensity));
+  const forca = Math.round(Math.abs(i - 0.5) * 2 * 60);
+  return `color-mix(in srgb, var(${i < 0.5 ? "--down" : "--up"}) ${forca}%, var(--panel))`;
+}
+
+/** A régua do mapa: sem ela a cor é decoração. */
+export function LegendaCalor({ pior = "pior", melhor = "melhor" }: { pior?: string; melhor?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-3">
+      {pior}
+      {[0, 0.25, 0.5, 0.75, 1].map((i) => (
+        <span key={i} className="h-3.5 w-3.5 rounded-[3px] border border-line" style={{ background: corDoCalor(i) }} />
+      ))}
+      {melhor}
+    </span>
+  );
+}
+
 export function HeatCell({
   intensity,
   children,
   title,
 }: {
-  /** 0–1 */
-  intensity: number;
+  /** 0 = pior, 1 = melhor. `null` = sem dado (fundo neutro). */
+  intensity: number | null;
   children: React.ReactNode;
   title?: string;
 }) {
-  const i = Math.max(0, Math.min(1, intensity));
   return (
     <span
       title={title}
-      className="num flex items-center justify-end px-2 h-full text-[12px] tabular-nums"
-      style={{
-        background: `color-mix(in srgb, var(--brand) ${(i * 78).toFixed(0)}%, var(--panel))`,
-        color: i > 0.55 ? "var(--brand-ink)" : "var(--ink)",
-      }}
+      className="num flex items-center justify-end px-2 h-full text-[12px] tabular-nums text-ink"
+      style={{ background: corDoCalor(intensity) }}
     >
       {children}
     </span>

@@ -4,7 +4,7 @@ import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { Panel, Badge, EmptyState } from "@/components/ui/primitives";
-import { Segmented } from "@/components/ui/controls";
+import { Segmented, Sheet } from "@/components/ui/controls";
 import { Leitura, TudoCerto } from "@/components/ui/leitura";
 import { Metrica, Celula, REGRAS } from "@/components/ui/metrica";
 import { Tabela, type Coluna } from "@/components/ui/tabela";
@@ -188,6 +188,7 @@ function dataBr(iso: string | null) {
 }
 
 function PorCanal({ dados }: { dados: DadosCancelamento }) {
+  const [recorte, setRecorte] = React.useState<Recorte | null>(null);
   const colunas: Coluna<CancelamentoCanal>[] = [
     {
       id: "canal",
@@ -247,11 +248,19 @@ function PorCanal({ dados }: { dados: DadosCancelamento }) {
       cabecalho: "Valor cancelado",
       alinhar: "dir",
       chave: true,
-      celula: (c) => (
-        <span className="num text-ink font-semibold">
-          {money(c.valorCancelado)}
-        </span>
-      ),
+      celula: (c) =>
+        c.cancelados > 0 ? (
+          <button
+            type="button"
+            onClick={() => setRecorte({ contaId: c.contaId, nome: c.mostrarConta ? `${c.canal} · ${c.conta}` : c.canal })}
+            className="num text-ink font-semibold underline decoration-line-2 underline-offset-4 hover:text-brand hover:decoration-brand"
+            title="Ver os pedidos cancelados"
+          >
+            {money(c.valorCancelado)}
+          </button>
+        ) : (
+          <span className="num text-ink-3">{money(0)}</span>
+        ),
       bruto: (c) => Number(c.valorCancelado.toFixed(2)),
     },
     {
@@ -280,8 +289,9 @@ function PorCanal({ dados }: { dados: DadosCancelamento }) {
         chave={(c) => `${c.canalId}-${c.conta}`}
         nomeExportacao="cancelamentos-por-canal"
       />
+      {recorte && <PedidosCancelados recorte={recorte} aoFechar={() => setRecorte(null)} />}
       <p className="text-[12px] text-ink-3 mt-3 leading-relaxed">
-        O ticket cancelado ao lado do normal responde uma pergunta que a taxa
+        Clique no valor cancelado para ver os pedidos. O ticket cancelado ao lado do normal responde uma pergunta que a taxa
         sozinha não responde: se o que cancela é sistematicamente mais caro que
         o que fica, o problema é de produto ou de prazo, não de volume.
       </p>
@@ -417,7 +427,7 @@ function PorSku({ dados }: { dados: DadosCancelamento }) {
  * Exatamente o que a legibilidade pede, nos dois.
  */
 const FAIXAS = [
-  { ate: 5, fundo: "transparent", texto: "text-ink-3", cor: undefined },
+  { ate: 5, fundo: "var(--up-wash)", texto: "text-ink-2", cor: undefined },
   { ate: 10, fundo: "var(--warn-wash)", texto: "text-ink-2", cor: undefined },
   {
     ate: 15,
@@ -455,6 +465,8 @@ function rotuloMes(m: string) {
 
 function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
   const [medida, setMedida] = React.useState<Medida>("valor");
+  const [recorte, setRecorte] = React.useState<Recorte | null>(null);
+  const nomeLinha = (l: DadosCancelamento["matriz"][number]) => (l.mostrarConta ? `${l.canal} · ${l.conta}` : l.canal);
   const { matriz, mesesDisponiveis: meses } = dados;
 
   if (!matriz.length || !meses.length) {
@@ -563,14 +575,27 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
                         );
                       }
                       const fx = faixaDe(t);
+                      const dica = `${count(cel!.cancelados)} de ${count(cel!.pedidos)} pedidos · ${money(cel!.valorCancelado)}`;
                       return (
                         <td
                           key={m}
-                          className={`px-2.5 py-1.5 text-center num ${fx.texto}`}
+                          className={`p-0 text-center num ${fx.texto}`}
                           style={{ background: fx.fundo, color: fx.cor }}
-                          title={`${count(cel!.cancelados)} de ${count(cel!.pedidos)} pedidos · ${money(cel!.valorCancelado)}`}
                         >
-                          {t.toFixed(t >= 10 ? 0 : 1)}%
+                          {cel!.cancelados > 0 ? (
+                            <button
+                              type="button"
+                              title={`${dica} · clique para ver os pedidos`}
+                              onClick={() => setRecorte({ contaId: l.chave, nome: nomeLinha(l), mes: m })}
+                              className="w-full px-2.5 py-1.5 hover:outline hover:outline-2 hover:-outline-offset-2 hover:outline-ink focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
+                            >
+                              {t.toFixed(t >= 10 ? 0 : 1)}%
+                            </button>
+                          ) : (
+                            <span className="block px-2.5 py-1.5" title={dica}>
+                              {t.toFixed(t >= 10 ? 0 : 1)}%
+                            </span>
+                          )}
                         </td>
                       );
                     })}
@@ -591,8 +616,9 @@ function CanalPorMes({ dados }: { dados: DadosCancelamento }) {
           {medida === "valor"
             ? "Taxa sobre o VALOR: quanto do faturamento daquele mês voltou. Um canal que cancela poucos pedidos grandes aparece aqui e some na contagem."
             : "Taxa sobre a QUANTIDADE: quantos pedidos de cada cem voltaram. Um canal que cancela muitos pedidos pequenos aparece aqui e some no valor."}{" "}
-          O ponto (·) é mês sem pedido nenhum — não é zero de cancelamento.
+          O ponto (·) é mês sem pedido nenhum — não é zero de cancelamento. Clique numa taxa para ver os pedidos daquele mês.
         </p>
+        {recorte && <PedidosCancelados recorte={recorte} aoFechar={() => setRecorte(null)} />}
       </Panel>
 
       {salto ? (
@@ -719,5 +745,92 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
       <span className="text-[12px] text-ink-2">{rotulo}</span>
       <span className="num text-[12px] font-semibold text-ink">{valor}</span>
     </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Os pedidos por trás do número
+   ══════════════════════════════════════════════════════════════ */
+
+type PedidoCancelado = {
+  id: string;
+  codigo: string | null;
+  data: string;
+  status: string | null;
+  total: number;
+  itens: { sku: string | null; titulo: string | null; quantidade: number }[];
+};
+
+type Recorte = { contaId: string; nome: string; mes?: string };
+
+/**
+ * A lista que responde "quais foram?". Carrega só quando abre: a tela
+ * inteira não precisa trazer milhares de pedidos para o caso de alguém
+ * clicar num número.
+ */
+function PedidosCancelados({ recorte, aoFechar }: { recorte: Recorte; aoFechar: () => void }) {
+  const [estado, setEstado] = React.useState<
+    { carregando: true } | { carregando: false; erro?: string; pedidos: PedidoCancelado[]; cortado: boolean }
+  >({ carregando: true });
+
+  React.useEffect(() => {
+    let vivo = true;
+    const qs = new URLSearchParams({ conta: recorte.contaId, ...(recorte.mes ? { mes: recorte.mes } : {}) });
+    fetch(`/api/cancelamentos/pedidos?${qs}`)
+      .then(async (r) => {
+        const j = await r.json();
+        if (!vivo) return;
+        setEstado(r.ok ? { carregando: false, pedidos: j.pedidos, cortado: j.cortado } : { carregando: false, erro: j.erro, pedidos: [], cortado: false });
+      })
+      .catch((e) => vivo && setEstado({ carregando: false, erro: String(e), pedidos: [], cortado: false }));
+    return () => {
+      vivo = false;
+    };
+  }, [recorte.contaId, recorte.mes]);
+
+  const soma = estado.carregando ? 0 : estado.pedidos.reduce((s, p) => s + p.total, 0);
+  return (
+    <Sheet
+      title="Pedidos cancelados"
+      subtitle={`${recorte.nome}${recorte.mes ? ` · ${rotuloMes(recorte.mes)}` : " · período todo"}`}
+      onClose={aoFechar}
+      width="640px"
+    >
+      {estado.carregando ? (
+        <p className="text-[13px] text-ink-3" aria-busy="true">Carregando…</p>
+      ) : estado.erro ? (
+        <p className="text-[13px] text-down">{estado.erro}</p>
+      ) : estado.pedidos.length === 0 ? (
+        <p className="text-[13px] text-ink-3">Nenhum pedido cancelado neste recorte.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="num text-[13px] text-ink-2">
+            {count(estado.pedidos.length)} pedido(s) · {money(soma)}
+            {estado.cortado && " — os 300 mais recentes; o total do recorte está na tabela"}
+          </p>
+          <ul className="divide-y divide-line border-y border-line">
+            {estado.pedidos.map((p) => (
+              <li key={p.id} className="py-2.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="num text-[13px] font-medium text-ink">{p.codigo ?? "sem número"}</span>
+                  <span className="num text-[13px] font-semibold text-ink">{money(p.total)}</span>
+                </div>
+                <p className="num text-[12px] text-ink-3">
+                  {dataBr(p.data)}
+                  {p.status && !/cancel/i.test(p.status) && ` · ${p.status}`}
+                </p>
+                {p.itens.map((i, k) => (
+                  <p key={k} className="text-[12px] text-ink-2 leading-snug">
+                    {i.quantidade > 1 && <span className="num">{i.quantidade}× </span>}
+                    {i.titulo ?? i.sku}
+                    {i.sku && i.titulo && <span className="num text-ink-3"> · {i.sku}</span>}
+                  </p>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Sheet>
   );
 }
