@@ -307,6 +307,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 inverse={k.inverse}
                 hint={semBase ? "sem visita registrada no recorte" : k.hint}
                 spark={semBase ? undefined : k.spark}
+                ajuda={k.ajuda}
               />
             );
           })}

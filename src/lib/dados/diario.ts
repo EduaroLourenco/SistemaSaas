@@ -131,6 +131,9 @@ export async function carregarDiario(canalId?: string): Promise<DadosDiario> {
     d.receita += n(l.receita);
     d.pedidos += l.pedidos;
     d.visitas += l.visitas;
+    // Conversão só com pedido de conta que tem visita (loja própria e
+    // marketplaces sem API não informam visita).
+    if (l.visitas > 0) d.pedidosComVisita = (d.pedidosComVisita ?? 0) + l.pedidos;
     d.ads += n(l.investimento_ads);
     d.cancelado += n(l.valor_cancelado);
     d.pedidosCancelados += l.pedidos_cancelados;

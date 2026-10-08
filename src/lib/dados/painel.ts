@@ -1,4 +1,5 @@
 import "server-only";
+import { AJUDA_KPI } from "@/lib/ajuda-kpi";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { carregarBaseVendas, chaveCanal } from "./vendas";
 import { paginar } from "./paginar";
@@ -105,7 +106,7 @@ export async function carregarPainel(): Promise<DadosPainel> {
 
   const somar = (filtro: Set<string>) => {
     const t = {
-      receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedCanc: 0,
+      receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedCanc: 0, pedComVisita: 0,
     };
     for (const l of linhas) {
       if (!filtro.has(l.data)) continue;
@@ -115,6 +116,7 @@ export async function carregarPainel(): Promise<DadosPainel> {
       t.ads += l.ads;
       t.cancelado += l.cancelado;
       t.pedCanc += l.pedidosCancelados;
+      if (l.visitas > 0) t.pedComVisita += l.pedidos;
     }
     return t;
   };
@@ -129,9 +131,14 @@ export async function carregarPainel(): Promise<DadosPainel> {
 
   const ticket = (t: typeof a) =>
     ticketMedio(t.receita, t.cancelado, t.pedidos, t.pedCanc) ?? 0;
-  const conv = (t: typeof a) => (t.visitas ? (t.pedidos * 100) / t.visitas : 0);
+  /*
+   * Conversão: só pedidos de canal-dia COM visita medida. Antes dividia os
+   * pedidos de todos os canais (loja própria, marketplaces sem API) pelas
+   * visitas do Mercado Livre, e o número saía inflado.
+   */
+  const conv = (t: typeof a) => (t.visitas ? (t.pedComVisita * 100) / t.visitas : 0);
 
-  const kpis: Kpi[] = [
+  const kpis: Kpi[] = ([
     {
       id: "faturamento", label: "Faturamento", value: a.receita, format: "money",
       delta: delta(a.receita, b.receita), hint: "vs. 30 dias anteriores",
@@ -162,7 +169,7 @@ export async function carregarPainel(): Promise<DadosPainel> {
       delta: delta(a.cancelado, b.cancelado), inverse: true, hint: "vs. 30 dias anteriores",
       spark: spark((l) => l.cancelado),
     },
-  ];
+  ] as Kpi[]).map((k) => ({ ...k, ajuda: AJUDA_KPI[k.id] }));
 
   const porDia = new Map<string, DiaFaturamento>();
   for (const l of linhas) {

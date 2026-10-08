@@ -15,6 +15,8 @@ export type Kpi = {
   inverse?: boolean;
   hint: string;
   spark: number[];
+  /** O que o número é, em uma frase. Aparece no ⓘ ao lado do nome. */
+  ajuda?: string;
 };
 
 export const KPIS: Kpi[] = [

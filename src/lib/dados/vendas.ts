@@ -398,18 +398,19 @@ export async function carregarSemanal(): Promise<DadosSemanal> {
 
   const acc = new Map<
     number,
-    { receita: number; pedidos: number; visitas: number; ads: number; cancelado: number; pedCanc: number; dias: Set<string> }
+    { receita: number; pedidos: number; visitas: number; pedComVisita: number; ads: number; cancelado: number; pedCanc: number; dias: Set<string> }
   >();
 
   for (const l of base.linhas) {
     const { ano, semana } = semanaIsoDe(l.data);
     if (ano !== base.ano) continue;
     const a = acc.get(semana) ?? {
-      receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedCanc: 0, dias: new Set<string>(),
+      receita: 0, pedidos: 0, visitas: 0, pedComVisita: 0, ads: 0, cancelado: 0, pedCanc: 0, dias: new Set<string>(),
     };
     a.receita += l.receita;
     a.pedidos += l.pedidos;
     a.visitas += l.visitas;
+    if (l.visitas > 0) a.pedComVisita += l.pedidos;
     a.ads += l.ads;
     a.cancelado += l.cancelado;
     a.pedCanc += l.pedidosCancelados;
@@ -454,7 +455,8 @@ export async function carregarSemanal(): Promise<DadosSemanal> {
       pedidosCancelados: a?.pedCanc ?? 0,
       ticket: ticketMedio(receita, cancelado, pedidos, a?.pedCanc ?? 0) ?? 0,
       visitas,
-      conversao: visitas ? (pedidos * 100) / visitas : 0,
+      // Só pedido de conta com visita no numerador (ver painel.ts).
+      conversao: visitas ? ((a?.pedComVisita ?? 0) * 100) / visitas : 0,
       ads,
       tacos: receita ? (ads * 100) / receita : 0,
       // Parcial = a semana em que os dados param. Marcar evita comparar

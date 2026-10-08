@@ -45,6 +45,7 @@ export function StatTile({
   hint,
   spark,
   className,
+  ajuda,
 }: {
   label: string;
   value: string;
@@ -53,6 +54,8 @@ export function StatTile({
   hint?: string;
   spark?: number[];
   className?: string;
+  /** O que o número é, em uma frase: abre ao passar o mouse ou focar o ⓘ. */
+  ajuda?: string;
 }) {
   /*
    * O valor é o motivo do cartão e NUNCA corta. Antes era 26px fixo com
@@ -69,7 +72,19 @@ export function StatTile({
         className
       )}
     >
-      <p className="label leading-snug">{label}</p>
+      <p className="label leading-snug flex items-center gap-1">
+        {label}
+        {ajuda && (
+          <span
+            tabIndex={0}
+            title={ajuda}
+            aria-label={`O que é: ${ajuda}`}
+            className="inline-flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full border border-line-2 text-[9px] font-semibold normal-case text-ink-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            i
+          </span>
+        )}
+      </p>
 
       <div className="mt-1.5 flex items-center justify-between gap-3 min-w-0">
         <div className="min-w-0">

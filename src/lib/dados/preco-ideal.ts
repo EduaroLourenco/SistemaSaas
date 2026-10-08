@@ -70,7 +70,9 @@ export async function carregarPrecoIdeal(): Promise<DadosPrecoIdeal> {
     .lte("vigente_de", new Date().toISOString().slice(0, 10))
     .order("vigente_de", { ascending: false })
     .limit(1);
-  const vigenteDe = (versoes?.[0]?.vigente_de as string | undefined) ?? "0000-01-01";
+  const vigenteDe = versoes?.[0]?.vigente_de as string | undefined;
+  // Sem Fórmula base (empresa nova) não há o que cruzar.
+  if (!vigenteDe) return { relatorios: [], cruzamentos: {}, categorias: [], contas: [], vazio: true };
 
   const [{ data: imports }, itens, precos, anuncios] = await Promise.all([
     sb

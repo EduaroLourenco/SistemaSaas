@@ -1,4 +1,5 @@
 import type { Kpi, DiaFaturamento, Canal } from "@/mock";
+import { AJUDA_KPI } from "@/lib/ajuda-kpi";
 import { ticketMedio } from "./ticket";
 
 /**
@@ -127,7 +128,8 @@ export function recortar(
     );
 
   const dica = `vs. ${n} dias anteriores`;
-  const kpis: Kpi[] = [
+  const kpis: Kpi[] = ([
+
     { id: "faturamento", label: "Faturamento", value: a.receita, format: "money",
       delta: variacao(a.receita, b.receita), hint: dica, spark: spark((l) => l.receita) },
     { id: "pedidos", label: "Pedidos", value: a.pedidos, format: "count",
@@ -141,7 +143,7 @@ export function recortar(
     { id: "cancelado", label: "Valor cancelado", value: a.cancelado, format: "money",
       delta: variacao(a.cancelado, b.cancelado), inverse: true, hint: dica,
       spark: spark((l) => l.cancelado) },
-  ];
+  ] as Kpi[]).map((k) => ({ ...k, ajuda: AJUDA_KPI[k.id] }));
 
   const zeroCanal = {
     rec: 0, ped: 0, vis: 0, ant: 0, pedComVis: 0, canc: 0, pedCanc: 0,

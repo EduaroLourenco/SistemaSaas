@@ -53,11 +53,12 @@ function resumir(p: Periodo): Resumo {
       receita: a.receita + d.receita,
       pedidos: a.pedidos + d.pedidos,
       visitas: a.visitas + d.visitas,
+      pedComVisita: a.pedComVisita + (d.pedidosComVisita ?? 0),
       ads: a.ads + d.ads,
       cancelado: a.cancelado + d.cancelado,
       pedidosCancelados: a.pedidosCancelados + d.pedidosCancelados,
     }),
-    { receita: 0, pedidos: 0, visitas: 0, ads: 0, cancelado: 0, pedidosCancelados: 0 }
+    { receita: 0, pedidos: 0, visitas: 0, pedComVisita: 0, ads: 0, cancelado: 0, pedidosCancelados: 0 }
   );
 
   return {
@@ -68,7 +69,7 @@ function resumir(p: Periodo): Resumo {
     pedidosValidos: pedidosValidos(s.pedidos, s.pedidosCancelados),
     ticket: ticketMedio(s.receita, s.cancelado, s.pedidos, s.pedidosCancelados) ?? 0,
     visitas: s.visitas,
-    conversao: s.visitas ? (s.pedidos / s.visitas) * 100 : 0,
+    conversao: s.visitas ? (s.pedComVisita / s.visitas) * 100 : 0,
     ads: s.ads,
     tacos: s.receita ? (s.ads / s.receita) * 100 : 0,
     cancelado: s.cancelado,

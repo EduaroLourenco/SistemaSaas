@@ -5,6 +5,8 @@
  */
 
 export type DiaPeriodo = {
+  /** Pedidos de conta com visita medida no dia: o numerador certo da conversão. */
+  pedidosComVisita?: number;
   /** Índice do dia dentro do período: 1 = primeiro dia. */
   dia: number;
   /**
