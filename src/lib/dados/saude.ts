@@ -150,6 +150,55 @@ export async function carregarSaude(): Promise<Verificacao[]> {
     });
   }
 
+  /* 2b. Cancelamento fora do padrão, conta a conta, mês a mês */
+  {
+    /*
+     * Pega a troca de fonte que muda o número sem ninguém mexer na operação.
+     * Em ago/set de 2026 a planilha da VTEX trouxe pedido nunca pago como
+     * "Cancelado": 99% e 49% de cancelamento, contra 5–13% nos outros meses.
+     * O "Valor cancelado" e a taxa da loja subiram só por causa da fonte.
+     */
+    const desde = diaSP(-200);
+    const linhas = (await paginar(() =>
+      sb.from("vendas_diarias").select("conta_canal_id,data,pedidos,pedidos_cancelados").eq("operacao_id", op.id).gte("data", desde).order("id")
+    )) as { conta_canal_id: string; data: string; pedidos: number; pedidos_cancelados: number }[];
+    const porContaMes = new Map<string, Map<string, { p: number; c: number }>>();
+    for (const l of linhas) {
+      const m = porContaMes.get(l.conta_canal_id) ?? new Map();
+      const k = l.data.slice(0, 7);
+      const x = m.get(k) ?? { p: 0, c: 0 };
+      x.p += n(l.pedidos);
+      x.c += n(l.pedidos_cancelados);
+      m.set(k, x);
+      porContaMes.set(l.conta_canal_id, m);
+    }
+    const detalhes: Verificacao["detalhes"] = [];
+    for (const c of contas) {
+      const meses = [...(porContaMes.get(c.id) ?? new Map()).entries()].filter(([, x]) => x.p >= 20);
+      if (meses.length < 3) continue;
+      const taxas = meses.map(([, x]) => x.c / x.p).sort((a, b) => a - b);
+      const mediana = taxas[Math.floor(taxas.length / 2)];
+      for (const [mes, x] of meses) {
+        const t = x.c / x.p;
+        if (t >= 0.25 && t >= mediana * 2.5)
+          detalhes.push({
+            nome: `${nome(c)} · ${mes.split("-").reverse().join("/")}`,
+            valor: `${Math.round(t * 100)}% cancelado (normal da conta: ${Math.round(mediana * 100)}%)`,
+            estado: "atencao",
+          });
+      }
+    }
+    verificacoes.push({
+      id: "cancelamento-anomalo",
+      pergunta: "Algum mês tem cancelamento fora do padrão da conta?",
+      estado: detalhes.length ? "atencao" : "ok",
+      resposta: detalhes.length
+        ? `${detalhes.length} mês(es) muito acima do normal. Costuma ser troca de fonte (planilha que conta pedido nunca pago como cancelado) e não cancelamento de verdade: o Valor cancelado e a taxa de cancelamento desses meses ficam inflados.`
+        : "Nenhum mês destoa do padrão de cancelamento da própria conta.",
+      detalhes,
+    });
+  }
+
   /* 3. Preço de venda de hoje (Mercado Livre) */
   {
     const [ativos, comPreco] = await Promise.all([
