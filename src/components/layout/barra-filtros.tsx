@@ -129,7 +129,7 @@ export function FiltroAcoes({
         // `ml-auto` só a partir de `sm`. No celular a faixa já empilhou, e
         // empurrar as ações para a direita deixava um vão à esquerda com o
         // botão principal encostado na borda.
-        "flex items-center gap-2 shrink-0 sm:ml-auto",
+        "flex max-w-full flex-wrap items-center gap-2 sm:ml-auto",
         className
       )}
     >

@@ -249,8 +249,9 @@ body {
 .gerizo-table-scroll th { color: var(--ink-2); font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
 .gerizo-table-scroll td { min-height: var(--row); }
 .gerizo-table-scroll tbody tr:hover { background: var(--panel-2); }
-.gerizo-table-scroll :is(th, td):first-child { position: sticky; left: 0; background: var(--panel); z-index: 1; }
-.gerizo-table-scroll th:first-child { background: var(--panel-2); z-index: 13; }
+.gerizo-table-scroll:not(.gerizo-data-table) :is(th, td):first-child { position: sticky; left: 0; background: var(--panel); z-index: 1; }
+.gerizo-table-scroll:not(.gerizo-data-table) th:first-child { background: var(--panel-2); z-index: 13; }
+.gerizo-metric-value { max-width: 100%; overflow-wrap: anywhere; }
 .gerizo-sheet {
   position: fixed; inset: 0 0 0 auto; margin: 0; padding: 0;
   width: min(var(--sheet-width, 520px), 100vw); height: 100dvh;
@@ -272,6 +273,18 @@ button:disabled { cursor: not-allowed; }
   button, select, input:not([type="checkbox"]):not([type="radio"]), a[role="button"] { min-height: 42px; }
   input, textarea, select { font-size: max(16px, 1em); }
   .gerizo-filter-sheet .gerizo-segmented { flex-wrap: wrap; }
+  .gerizo-topbar .gerizo-logo { width: 84px; height: 28px; }
+  .gerizo-topbar > :is(button, a), .gerizo-topbar > div > button { flex-shrink: 0; min-width: 42px; }
+  .gerizo-table-title { width: 140px; max-width: 140px; white-space: normal; overflow-wrap: anywhere; }
+  .gerizo-table-title > * { max-width: 100%; }
+  .gerizo-data-table th { width: var(--mobile-column-width, auto) !important; padding-inline: 12px; }
+  .gerizo-panel-actions > .flex { flex-wrap: wrap; }
+  .grid:has(> .gerizo-stat-tile) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+  .grid:has(> .gerizo-metric) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 128px), 1fr)); }
+  .gerizo-filter-sheet .gerizo-filter-bar > [role="group"] { width: 100%; }
+  .gerizo-filter-sheet .gerizo-filter-bar > label > div { overflow: visible; }
+  .gerizo-filter-sheet :is(input, select, textarea) { max-width: 100%; }
+  .gerizo-sheet-footer > :is(button, a) { flex: 1 1 auto; white-space: normal; }
 }
 
 @media (prefers-reduced-motion: reduce) {

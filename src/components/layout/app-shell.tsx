@@ -366,7 +366,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* barra superior */}
       <header className="fixed top-0 inset-x-0 z-40 bg-panel border-b border-line">
         <div
-          className="flex items-center gap-2 px-3 md:gap-3 md:px-5"
+          className="gerizo-topbar flex items-center gap-1 px-3 md:gap-3 md:px-5"
           style={{ height: "var(--topbar)" }}
         >
           <button
@@ -399,7 +399,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Bell className="w-4 h-4" />
           </Link>
 
-          <ThemeToggle />
+          <div className="hidden md:flex"><ThemeToggle /></div>
 
           <Link href="/glossario" aria-label="Ajuda e glossário" title="Ajuda e glossário" className="hidden sm:flex h-9 w-9 items-center justify-center rounded-r1 text-ink-2 hover:bg-panel-3"><CircleHelp size={18} /></Link>
           <MenuConta />
@@ -426,7 +426,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         id="conteudo"
         tabIndex={-1}
-        className={cn("min-w-0 pb-20 md:pb-0 transition-[padding] duration-200", menu.aberto && "md:pl-[var(--rail)]")}
+        className={cn("min-w-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 transition-[padding] duration-200", menu.aberto && "md:pl-[var(--rail)]")}
         style={{ paddingTop: "var(--topbar)" }}
       >
         {children}
@@ -434,7 +434,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <MobileTabBar pathname={pathname} onMore={() => setMoreOpen(true)} />
 
-      {moreOpen && <Sheet title="Menu" onClose={() => setMoreOpen(false)}><NavTree pathname={pathname} onNavigate={() => setMoreOpen(false)} /></Sheet>}
+      {moreOpen && <Sheet title="Menu" onClose={() => setMoreOpen(false)}>
+        <RodapeEmpresa />
+        <NavTree pathname={pathname} onNavigate={() => setMoreOpen(false)} />
+        <div className="mx-4 mb-5 flex items-center justify-between border-t border-line pt-3"><span className="text-ink-2">Aparência</span><ThemeToggle /></div>
+      </Sheet>}
     </div>
   );
 }
@@ -578,7 +582,10 @@ export function PageHeader({ title, breadcrumb, description, badge, actions, fil
     <header className="gerizo-page-header px-4 pt-6 pb-1 md:px-6 md:pt-7">
       {breadcrumb && <p className="mb-2 text-[12px] font-medium text-ink-3">{breadcrumb}</p>}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
+        {/* Base de 14rem: com `flex-1` puro o título encolhia até zero e os
+            botões tomavam a linha — no Catálogo, a descrição caía uma
+            palavra por linha. Assim, se os botões não cabem ao lado, descem. */}
+        <div className="min-w-0 flex-[1_1_14rem]">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-ink md:text-[30px]">{title}</h1>
             {badge}
@@ -587,7 +594,7 @@ export function PageHeader({ title, breadcrumb, description, badge, actions, fil
             ? <Disclosure title="Sobre esta análise" className="mt-3 max-w-3xl">{description}</Disclosure>
             : <p className="mt-2 text-[14px] leading-relaxed text-ink-2">{description}</p>)}
         </div>
-        {(actions || (filters && mobileFilters && mobile)) && <div className="flex flex-wrap items-center gap-2">
+        {(actions || (filters && mobileFilters && mobile)) && <div className="flex max-w-full flex-wrap items-center gap-2">
           {actions}
           {filters && mobileFilters && mobile && <Button onClick={() => setOpenFilters(true)}><SlidersHorizontal size={16} />Filtros</Button>}
         </div>}

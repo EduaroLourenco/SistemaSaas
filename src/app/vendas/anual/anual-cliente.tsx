@@ -358,14 +358,14 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                   <YAxis
                     yAxisId="l"
                     {...AXIS}
-                    width={estreito ? 56 : 70}
+                    width="auto"
                     tickFormatter={(v: number) => moneyShort(v)}
                   />
                   <YAxis
                     yAxisId="r"
                     orientation="right"
                     {...AXIS}
-                    width={70}
+                    width="auto"
                     hide={estreito}
                     tickFormatter={(v: number) => moneyShort(v)}
                   />
@@ -562,7 +562,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                         </span>
                       </div>
 
-                      <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2">
+                      <div className="mt-2 grid grid-cols-2 min-[400px]:grid-cols-3 gap-x-3 gap-y-2">
                         {[
                           { l: "Pedidos", v: count(m.pedidos) },
                           { l: "Ticket", v: money(d.ticket) },
@@ -575,7 +575,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                             <span className="text-[12px] uppercase tracking-[0.04em] text-ink-3 font-semibold truncate">
                               {k.l}
                             </span>
-                            <span className="num text-[12px] text-ink truncate">
+                            <span className="num text-[13px] text-ink break-words">
                               {k.v}
                             </span>
                           </span>
@@ -605,7 +605,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                   {money(total.receita)}
                 </span>
               </div>
-              <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2">
+              <div className="mt-2 grid grid-cols-2 min-[400px]:grid-cols-3 gap-x-3 gap-y-2">
                 {[
                   { l: "Pedidos", v: count(total.pedidos) },
                   { l: "Ticket", v: money(totalD.ticket) },
@@ -618,7 +618,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                     <span className="text-[12px] uppercase tracking-[0.04em] text-ink-3 font-semibold truncate">
                       {k.l}
                     </span>
-                    <span className="num text-[12px] font-semibold text-ink truncate">
+                    <span className="num text-[13px] font-semibold text-ink break-words">
                       {k.v}
                     </span>
                   </span>

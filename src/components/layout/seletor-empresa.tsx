@@ -139,20 +139,22 @@ export function SeletorEmpresa() {
         onClick={() => setAberto((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={aberto}
+        aria-label={escolhida ? `Trocar empresa: ${escolhida.empresa} · ${escolhida.nome}` : "Trocar empresa"}
         title={escolhida ? `${escolhida.empresa} · ${escolhida.nome}` : "Trocar de empresa"}
-        className="h-8 max-w-[220px] px-2 rounded-r1 flex items-center gap-1.5 text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="h-10 w-[42px] md:w-auto md:max-w-[220px] px-2 rounded-r1 flex items-center justify-center gap-1.5 text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         <Building2 className="w-3.5 h-3.5 shrink-0" />
-        <span className="text-[12px] font-medium truncate">
+        <span className="hidden md:block text-[12px] font-medium truncate">
           {escolhida ? escolhida.empresa || escolhida.nome : "Empresa"}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+        <ChevronDown className="hidden md:block w-3.5 h-3.5 shrink-0" />
       </button>
 
       {aberto && (
         <div
           role="listbox"
-          className="absolute left-0 top-full mt-1 z-50 w-[272px] max-h-[60vh] overflow-y-auto rounded-r2 bg-panel border border-line shadow-lg py-1"
+          aria-label="Empresas e operações"
+          className="fixed left-3 right-3 top-[var(--topbar)] z-50 max-h-[60dvh] overflow-y-auto rounded-r2 bg-panel border border-line shadow-lg py-1 md:absolute md:left-0 md:right-auto md:top-full md:mt-1 md:w-[272px]"
         >
           {erro && (
             <p className="px-3 py-2 text-[12px] text-down">{erro}</p>

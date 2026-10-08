@@ -669,7 +669,7 @@ function PorMes({ dados }: { dados: DadosCancelamento }) {
             <BarChart data={serie} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid {...GRID} />
               <XAxis dataKey="rotulo" {...AXIS} />
-              <YAxis {...AXIS} width={52} tickFormatter={(v) => moneyShort(Number(v))} />
+              <YAxis {...AXIS} width="auto" tickFormatter={(v) => moneyShort(Number(v))} />
               <Tooltip
                 cursor={{ fill: "var(--panel-3)" }}
                 content={({ active, payload }) => {

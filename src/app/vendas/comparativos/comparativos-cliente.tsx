@@ -556,7 +556,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
                   />
                   <YAxis
                     {...AXIS}
-                    width={M.larguraEixo}
+                    width="auto"
                     tickFormatter={(v: number) => M.fmtEixo(v)}
                   />
                   <Tooltip

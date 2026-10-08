@@ -598,7 +598,7 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
                   />
                   <YAxis
                     {...AXIS}
-                    width={metrica.larguraEixo}
+                    width="auto"
                     tickFormatter={(v) => metrica.eixo(Number(v))}
                   />
                   <Tooltip

@@ -72,7 +72,7 @@ export function DataTable<T>({
   return (
     <>
       {/* ── Desktop: tabela densa ─────────────────────────────── */}
-      <div className={cn("gerizo-table-scroll", className)} tabIndex={0} role="region" aria-label="Tabela de resultados. Role para ver todas as colunas.">
+      <div className={cn("gerizo-table-scroll gerizo-data-table", className)} tabIndex={0} role="region" aria-label="Tabela de resultados. Deslize para ver todas as colunas.">
         <table className="w-full border-collapse text-[13px]" style={{ minWidth: columns.length > 6 ? 920 : columns.length > 3 ? 620 : undefined }}>
           <thead>
             <tr className="bg-panel-2">
@@ -89,12 +89,12 @@ export function DataTable<T>({
                     key={c.key}
                     scope="col"
                     aria-sort={active ? sort!.dir === "asc" ? "ascending" : "descending" : undefined}
-                    style={{ width: c.width }}
+                    style={{ width: c.width, "--mobile-column-width": c.mobile === "title" ? "164px" : c.width } as React.CSSProperties}
                     className={cn(
                       "h-11 px-4 border-b border-line font-medium text-[12px] text-ink-2 whitespace-nowrap",
                       c.align === "right" ? "text-right" : "text-left",
                       c.sticky &&
-                        "sticky left-0 z-10 bg-panel-2 border-r border-line"
+                        "md:sticky md:left-0 z-10 bg-panel-2 border-r border-line"
                     )}
                   >
                     {sortable ? (
@@ -139,14 +139,14 @@ export function DataTable<T>({
                   <td
                     key={c.key}
                     className={cn(
-                      "px-4 py-2.5 text-ink-2",
-                      c.align === "right" && "text-right",
+                      "px-3 md:px-4 py-2.5 text-ink-2",
+                      c.align === "right" && "text-right whitespace-nowrap",
                       c.sticky &&
-                        "sticky left-0 z-10 bg-panel border-r border-line"
+                        "md:sticky md:left-0 z-10 bg-panel border-r border-line"
                     )}
                     style={{ height: "var(--row)" }}
                   >
-                    {c.cell(row)}
+                    <div className={cn(c.mobile === "title" && "gerizo-table-title")}>{c.cell(row)}</div>
                   </td>
                 ))}
               </tr>
@@ -154,6 +154,8 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
+
+      {columns.length > 3 && <p className="px-4 py-2 text-[12px] text-ink-3 md:hidden">Deslize a tabela para ver mais colunas.</p>}
 
       <Pagination {...pagination} />
     </>

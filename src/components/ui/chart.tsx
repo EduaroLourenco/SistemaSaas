@@ -49,7 +49,7 @@ export function ChartTooltip({
   if (!active || !payload?.length) return null;
   return (
     <div
-      className="panel panel-2 px-3 py-3 min-w-[130px]"
+      className="panel panel-2 px-3 py-3 min-w-[130px] max-w-[calc(100vw-48px)]"
       style={{ boxShadow: "var(--sh-3)" }}
     >
       {label !== undefined && (
@@ -67,7 +67,7 @@ export function ChartTooltip({
                 {p.name ?? p.dataKey}
               </span>
             </span>
-            <span className="num text-[12px] font-semibold text-ink">
+            <span className="num shrink-0 whitespace-nowrap text-[12px] font-semibold text-ink">
               {formatter && typeof p.value === "number"
                 ? formatter(p.value)
                 : p.value}

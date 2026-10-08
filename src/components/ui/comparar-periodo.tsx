@@ -88,7 +88,7 @@ export function CompararPeriodo({
         </Button>
       }
     >
-      <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-3 px-4 py-2 border-b border-line">
+      <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-3 px-4 py-2 border-b border-line">
         <span className="label">Indicador</span>
         <span className="label text-right min-w-[92px]">{rotuloAnterior}</span>
         <span className="label text-right min-w-[92px]">{rotuloAtual}</span>
@@ -108,12 +108,12 @@ export function CompararPeriodo({
             <div
               key={l.chave}
               className={cn(
-                "grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-3",
+                "grid grid-cols-2 sm:grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-3 gap-y-3",
                 "px-4 py-2.5 border-b border-line last:border-0",
                 l.destaque && "bg-panel-2"
               )}
             >
-              <span className="min-w-0">
+              <span className="col-span-2 sm:col-span-1 min-w-0">
                 <span
                   className={cn(
                     "text-[12.5px] block",
@@ -129,24 +129,27 @@ export function CompararPeriodo({
                 )}
               </span>
 
-              <span className="num text-[13px] text-ink-3 text-right min-w-[92px]">
+              <span className="num text-[13px] text-ink-3 sm:text-right min-w-0 sm:min-w-[92px] break-words">
+                <span className="block label mb-1 sm:hidden">{rotuloAnterior}</span>
                 {l.anterior != null ? l.formato(l.anterior) : "—"}
               </span>
 
               <span
                 className={cn(
-                  "num text-right min-w-[92px]",
+                  "num text-right min-w-0 sm:min-w-[92px] break-words",
                   l.destaque ? "text-[14px] font-semibold text-ink" : "text-[13px] text-ink-2"
                 )}
               >
+                <span className="block label mb-1 sm:hidden">{rotuloAtual}</span>
                 {l.atual != null ? l.formato(l.atual) : "—"}
               </span>
 
-              <span className="text-right min-w-[86px]">
+              <span className="col-span-2 sm:col-span-1 min-w-0 sm:min-w-[86px] sm:text-right">
+                <span className="block label mb-1 sm:hidden">Diferença</span>
                 {dif == null ? (
                   <span className="text-ink-3 text-[12px]">—</span>
                 ) : (
-                  <span className="flex flex-col items-end leading-tight">
+                  <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1 sm:flex-col sm:items-end leading-tight">
                     {/*
                       Diferença absoluta primeiro, percentual embaixo: um
                       "+300%" pode ser R$ 30 numa base de R$ 10, e o

@@ -35,7 +35,12 @@ export function Metrica({
   className?: string;
 }) {
   return (
-    <div className={cn("min-w-0", className)}>
+    /*
+     * O valor nunca corta. Era 26px fixo com truncate: em meia largura de
+     * celular "R$ 1.395.356,09" virava "R$ 1.395…". O tamanho acompanha a
+     * largura do próprio bloco (container query), como no StatTile.
+     */
+    <div className={cn("gerizo-metric @container min-w-0", className)}>
       <div className="flex items-center gap-1.5 mb-1">
         {destaque && (
           <span
@@ -43,10 +48,10 @@ export function Metrica({
             style={{ background: destaque }}
           />
         )}
-        <span className="label truncate">{rotulo}</span>
+        <span className="label leading-snug">{rotulo}</span>
       </div>
 
-      <p className="num text-[26px] leading-none font-semibold text-ink tabular-nums truncate">
+      <p className="gerizo-metric-value num leading-tight font-semibold text-ink tabular-nums" style={{ fontSize: `clamp(14px, ${Math.min(12, 150 / Math.max(1, valor.length))}cqw, 26px)` }}>
         {valor}
       </p>
 
@@ -66,7 +71,7 @@ export function Metrica({
       )}
 
       {detalhe && (
-        <p className="text-[12px] text-ink-3 mt-1 truncate">{detalhe}</p>
+        <p className="text-[12px] text-ink-3 mt-1 leading-snug">{detalhe}</p>
       )}
     </div>
   );

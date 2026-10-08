@@ -85,13 +85,13 @@ export function Matriz<T>({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-x-auto", className)}>
+    <div className={cn("gerizo-matrix max-w-full overflow-x-auto", className)} tabIndex={0} role="region" aria-label="Comparação por período. Deslize para ver os outros períodos.">
       <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr className="border-b border-line">
             <th
               className="sticky left-0 z-20 bg-panel text-left align-bottom px-3 py-2
-                         border-r border-line min-w-[168px]"
+                         border-r border-line min-w-[124px] md:min-w-[168px]"
             >
               <span className="label">Indicador</span>
             </th>
@@ -102,9 +102,8 @@ export function Matriz<T>({
                   "px-3 py-2 text-right align-bottom min-w-[104px] bg-panel",
                   onAbrirColuna && "cursor-pointer hover:bg-panel-3"
                 )}
-                onClick={onAbrirColuna ? () => onAbrirColuna(i) : undefined}
               >
-                <span className="flex items-center justify-end gap-1">
+                <button type="button" disabled={!onAbrirColuna} onClick={onAbrirColuna ? () => onAbrirColuna(i) : undefined} className="flex min-h-10 w-full items-center justify-end gap-1 whitespace-nowrap text-right disabled:cursor-default" aria-label={`Comparar ${c.rotulo}`}>
                   <span className="num text-[12px] font-semibold text-ink">
                     {c.rotulo}
                   </span>
@@ -119,7 +118,7 @@ export function Matriz<T>({
                   {onAbrirColuna && (
                     <ChevronRight className="w-3 h-3 text-ink-3" />
                   )}
-                </span>
+                </button>
                 {c.sub && (
                   <span className="num block text-[12px] text-ink-3 mt-0.5">
                     {c.sub}
@@ -143,10 +142,11 @@ export function Matriz<T>({
                 scope="row"
                 className={cn(
                   "sticky left-0 z-10 text-left px-3 py-2 border-r border-line",
-                  "font-normal whitespace-nowrap",
+                  "font-normal",
                   ind.destaque ? "bg-panel-2" : "bg-panel"
                 )}
               >
+                <div className="w-[100px] whitespace-normal break-words md:w-auto md:whitespace-nowrap">
                 <span
                   className={cn(
                     "text-[12.5px]",
@@ -160,13 +160,14 @@ export function Matriz<T>({
                     {ind.dica}
                   </span>
                 )}
+                </div>
               </th>
 
               {periodos.map((p, i) => {
                 const v = ind.valor(p);
                 const ant = i > 0 ? ind.valor(periodos[i - 1]) : null;
                 return (
-                  <td key={i} className="px-3 py-2 text-right align-middle">
+                  <td key={i} className="min-w-[144px] px-3 py-2 text-right align-middle whitespace-nowrap">
                     <span
                       className={cn(
                         "num block leading-tight",

@@ -467,11 +467,11 @@ export function KeyValue({
   tone?: "up" | "down" | "warn";
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 h-8 border-b border-line last:border-0">
-      <span className="text-[12px] text-ink-3 truncate">{label}</span>
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 min-h-9 py-1.5 border-b border-line last:border-0">
+      <span className="min-w-0 text-[12px] text-ink-3">{label}</span>
       <span
         className={cn(
-          "num text-[13px] shrink-0",
+          "num text-[13px] max-w-full break-words",
           tone === "up" && "text-up",
           tone === "down" && "text-down",
           tone === "warn" && "text-warn",
@@ -496,7 +496,7 @@ export function SectionTitle({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-end justify-between gap-3 pt-1">
+    <div className="flex flex-wrap items-end justify-between gap-3 pt-1">
       <div className="min-w-0">
         <h2 className="text-[18px] font-semibold text-ink">{title}</h2>
         {hint && <p className="text-[12px] text-ink-3 mt-0.5">{hint}</p>}
