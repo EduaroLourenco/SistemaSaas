@@ -1,5 +1,5 @@
 "use client";
-import type { ReactNode, CSSProperties } from "react";
+import { useState, type ReactNode, type CSSProperties } from "react";
 import {
   ArrowUpRight,
   CalendarDays,
@@ -16,10 +16,12 @@ import {
   Sparkles,
   X,
   Undo2,
+  Trash2,
 } from "lucide-react";
 import { type Dados, type Item, formatarData } from "@/lib/planejamento/modelo";
 import type { Oportunidade } from "@/lib/planejamento/sazonal";
 
+/* A confirmação vive no topo da campanha: excluir leva junto as ações dela. */
 export default function EstudioShell({
   dados,
   selecionada,
@@ -41,6 +43,7 @@ export default function EstudioShell({
   desfazer,
   ocupado,
   editar,
+  excluir,
   proximas,
   planejar,
   children,
@@ -65,10 +68,12 @@ export default function EstudioShell({
   desfazer: (() => void) | null;
   ocupado: boolean;
   editar: (i: Item) => void;
+  excluir: (i: Item) => Promise<void>;
   proximas: Oportunidade[];
   planejar: (o: Oportunidade) => void;
   children: ReactNode;
 }) {
+  const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null);
   const campanhas = dados.itens.filter((i) => i.natureza === "campanha");
   const campanha = campanhas.find((i) => i.id === selecionada);
   const acoes = dados.itens.filter(
@@ -222,6 +227,33 @@ export default function EstudioShell({
                 <span className="st-project-status">{campanha.status}</span>
               )}
             </div>
+            {campanha && confirmarExclusao === campanha.id && (
+              <div className="pl-delete-confirm" role="alert" style={{ position: "static", borderRadius: 12, marginBottom: 12 }}>
+                <p>
+                  Excluir a campanha “{campanha.titulo}”?
+                  {(() => {
+                    const n = dados.itens.filter((x) => x.campanha_id === campanha.id).length;
+                    return n ? ` As ${n} ações dela também serão excluídas.` : "";
+                  })()}{" "}
+                  Não dá para desfazer.
+                </p>
+                <button
+                  type="button"
+                  className="pl-btn danger"
+                  style={{ background: "var(--down)", color: "var(--panel)", borderColor: "var(--down)" }}
+                  disabled={ocupado}
+                  onClick={async () => {
+                    await excluir(campanha);
+                    setConfirmarExclusao(null);
+                  }}
+                >
+                  Sim, excluir
+                </button>
+                <button type="button" className="pl-btn" onClick={() => setConfirmarExclusao(null)}>
+                  Manter
+                </button>
+              </div>
+            )}
             <div className="st-project-title">
               <div>
                 <h2>
@@ -240,12 +272,24 @@ export default function EstudioShell({
                 </p>
               </div>
               {campanha ? (
-                <button
-                  className="st-secondary"
-                  onClick={() => editar(campanha)}
-                >
-                  Briefing da campanha <ArrowUpRight size={14} />
-                </button>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <button
+                    className="st-secondary"
+                    onClick={() => editar(campanha)}
+                  >
+                    Briefing da campanha <ArrowUpRight size={14} />
+                  </button>
+                  {/* Excluir à vista: antes só existia dentro do briefing, num
+                      ícone de lixeira sem nome. */}
+                  <button
+                    className="st-secondary danger"
+                    style={{ borderColor: "var(--down)" }}
+                    disabled={ocupado}
+                    onClick={() => setConfirmarExclusao(campanha.id)}
+                  >
+                    <Trash2 size={14} /> Excluir campanha
+                  </button>
+                </div>
               ) : (
                 <div className="st-mini-progress">
                   <div>

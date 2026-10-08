@@ -394,6 +394,9 @@ export default function Planejamento({
         desfazer={desfazer ? () => void desfazerMudanca() : null}
         ocupado={ocupado || emLote}
         editar={abrir}
+        excluir={async (i) => {
+          await persistir("item", i, true);
+        }}
         proximas={proximas}
         planejar={planejar}
       >
@@ -712,6 +715,13 @@ export default function Planejamento({
             return false;
           }}
           fechar={() => setFicha(null)}
+          excluir={
+            ficha.id && dados.itens.some((x) => x.id === ficha.id)
+              ? async (i) => {
+                  if (await persistir("item", i, true)) setFicha(null);
+                }
+              : undefined
+          }
           detalhar={abrir}
           ocupado={ocupado || emLote}
           erro={erro}

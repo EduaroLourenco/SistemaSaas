@@ -19,6 +19,7 @@ export default function Ficha({
   salvar,
   fechar,
   detalhar,
+  excluir,
   ocupado,
   erro,
 }: {
@@ -27,12 +28,16 @@ export default function Ficha({
   salvar: (i: Item) => Promise<boolean>;
   fechar: () => void;
   detalhar: (i: Item) => void;
+  /** Ausente em ação ainda não salva: não há o que excluir. */
+  excluir?: (i: Item) => Promise<void>;
   ocupado: boolean;
   erro: string;
 }) {
   const [item, setItem] = useState(() => structuredClone(inicial)),
     [tarefa, setTarefa] = useState(""),
-    [erroLocal, setErroLocal] = useState("");
+    [erroLocal, setErroLocal] = useState(""),
+    [confirmar, setConfirmar] = useState(false);
+  const filhos = dados.itens.filter((x) => x.campanha_id === inicial.id);
   const sujo = JSON.stringify(inicial) !== JSON.stringify(item);
   const atualizar = (p: Partial<Item>) => setItem((i) => ({ ...i, ...p }));
   function sair() {
@@ -290,11 +295,38 @@ export default function Ficha({
           >
             Fechar
           </button>
+          {/* Excluir à vista, no rodapé: antes só existia no editor completo,
+              atrás de um ícone de lixeira, e ninguém achava. */}
+          {excluir && (
+            <button
+              type="button"
+              className="st-secondary danger"
+              style={{ marginLeft: "auto", marginRight: 8, borderColor: "var(--down)" }}
+              onClick={() => setConfirmar(true)}
+              disabled={ocupado}
+            >
+              <Trash2 size={15} /> Excluir
+            </button>
+          )}
           <button className="st-primary" disabled={ocupado || !dados.pronto}>
             <Save size={15} />
             {ocupado ? "Salvando…" : "Salvar"}
           </button>
         </footer>
+        {confirmar && excluir && (
+          <div className="pl-delete-confirm" role="alert">
+            <p>
+              Excluir “{inicial.titulo}”?
+              {filhos.length > 0 ? ` As ${filhos.length} ações desta campanha também serão excluídas.` : ""} Não dá para desfazer.
+            </p>
+            <button type="button" className="pl-btn danger" style={{ background: "var(--down)", color: "var(--panel)", borderColor: "var(--down)" }} disabled={ocupado} onClick={() => excluir(inicial)}>
+              Sim, excluir
+            </button>
+            <button type="button" className="pl-btn" onClick={() => setConfirmar(false)}>
+              Manter
+            </button>
+          </div>
+        )}
       </form>
     </Painel>
   );
