@@ -8,6 +8,7 @@
     { "path": "/api/cron/vtex", "schedule": "30 4 * * *" },
     { "path": "/api/cron/ga4", "schedule": "0 5 * * *" },
     { "path": "/api/cron/bling", "schedule": "30 5 * * *" },
-    { "path": "/api/cron/meli-precos", "schedule": "30 9 * * *" }
+    { "path": "/api/cron/meli-precos", "schedule": "30 9 * * *" },
+    { "path": "/api/cron/meli-precos", "schedule": "0 10 * * *" }
   ]
 }

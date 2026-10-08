@@ -37,9 +37,23 @@ export async function capturarPrecosDeVenda(
     .order("vendidos_total", { ascending: false, nullsFirst: false })
     .limit(3000);
   if (error) throw new Error(`Não consegui ler os anúncios: ${error.message}`);
-  const anuncios = (data ?? []) as Anuncio[];
-
   const dia = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  /*
+   * Quem já tem preço de hoje fica de fora: a rotina roda duas vezes de
+   * manhã, e a segunda só completa o que a primeira não alcançou no prazo.
+   */
+  const ids = ((data ?? []) as Anuncio[]).map((a) => a.id);
+  const feitos = new Set<string>();
+  for (let j = 0; j < ids.length; j += 300) {
+    const { data: ja } = await sb
+      .from("anuncio_estoque_diario")
+      .select("anuncio_id")
+      .eq("data", dia)
+      .not("preco", "is", null)
+      .in("anuncio_id", ids.slice(j, j + 300));
+    for (const r of ja ?? []) feitos.add(r.anuncio_id as string);
+  }
+  const anuncios = ((data ?? []) as Anuncio[]).filter((a) => !feitos.has(a.id));
   const linhas: Record<string, unknown>[] = [];
   let falharam = 0;
   let i = 0;
@@ -77,7 +91,7 @@ export async function capturarPrecosDeVenda(
     if (e) throw new Error(`Falha ao gravar preços: ${e.message}`);
   }
   return {
-    ativos: anuncios.length,
+    ativos: anuncios.length + feitos.size,
     gravados: linhas.length,
     falharam,
     semTempo: Math.max(0, anuncios.length - i),
