@@ -199,6 +199,22 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
     [semanasSelecionadas]
   );
 
+  /*
+   * A variação dos cartões: o mesmo resumo nas N semanas ANTERIORES ao
+   * recorte. Antes os cinco cartões tinham percentuais fixos no código
+   * (11,8%, 6,4%, −2,1%, 9,2%, −15%), sobra de protótipo, e mostravam a
+   * mesma "variação" em qualquer recorte. Sem semanas para comparar, o
+   * cartão fica sem variação.
+   */
+  const resumoAnterior = React.useMemo(() => {
+    const n = Number(recorte);
+    if (SEMANAS.length < 2 * n) return null;
+    return analisar(ANUNCIOS_ANALISE, SEMANAS.slice(-2 * n, -n).map((x) => x.semana)).resumo;
+  }, [recorte, SEMANAS, ANUNCIOS_ANALISE]);
+  const variacaoDe = (atual: number, anterior: number | undefined) =>
+    anterior ? ((atual - anterior) / anterior) * 100 : undefined;
+  const dicaComparacao = resumoAnterior ? `vs. ${recorte} semanas anteriores` : "sem período anterior para comparar";
+
   // Filtros de atributo (não afetam as médias da carteira, de propósito:
   // "acima da média" tem de significar a média de tudo, não a do filtro).
   /*
@@ -639,22 +655,23 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
           <StatTile
             label="Receita acumulada"
             value={money(resumo.receita)}
-            delta={11.8}
-            hint={`${recorte} semanas`}
+            delta={variacaoDe(resumo.receita, resumoAnterior?.receita)}
+            hint={dicaComparacao}
           />
-          <StatTile label="Unidades vendidas" value={count(resumo.vendas)} delta={6.4} />
+          <StatTile label="Unidades vendidas" value={count(resumo.vendas)} delta={variacaoDe(resumo.vendas, resumoAnterior?.vendas)} hint={dicaComparacao} />
           <StatTile
             label="Conversão média"
             value={pct(resumo.conversao, 2)}
-            delta={-2.1}
+            delta={variacaoDe(resumo.conversao, resumoAnterior?.conversao)}
+            hint={dicaComparacao}
           />
-          <StatTile label="Visitas acumuladas" value={count(resumo.visitas)} delta={9.2} />
+          <StatTile label="Visitas acumuladas" value={count(resumo.visitas)} delta={variacaoDe(resumo.visitas, resumoAnterior?.visitas)} hint={dicaComparacao} />
           <StatTile
             label="Margem subsidiada"
             value={money(resumo.subsidio)}
-            delta={-15}
+            delta={variacaoDe(resumo.subsidio, resumoAnterior?.subsidio)}
             inverse
-            hint="deixada na mesa"
+            hint="vendido abaixo do preço ideal"
           />
         </div>
 

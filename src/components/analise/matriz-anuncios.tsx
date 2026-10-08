@@ -355,13 +355,16 @@ export function MatrizAnuncios({
                         const c = valorDe(g, w, metrica);
                         return (
                           <td key={w} className="px-3 py-2 text-right">
+                            {/* Zero vira um ponto: com dezenas de células "R$ 0,00", a semana que
+                                vendeu sumia no meio. "—" segue sendo semana sem dado nenhum. */}
                             <span
                               className={cn(
                                 "num",
-                                c.valor == null ? "text-ink-3" : "text-ink-2"
+                                c.valor == null || c.valor === 0 ? "text-ink-3" : "text-ink-2"
                               )}
+                              title={c.valor === 0 ? "sem venda nesta semana" : undefined}
                             >
-                              {c.valor == null ? "—" : FORMATO[metrica](c.valor)}
+                              {c.valor == null ? "—" : c.valor === 0 ? "·" : FORMATO[metrica](c.valor)}
                             </span>
                           </td>
                         );
