@@ -51,6 +51,7 @@ export const NAV: NavGroup[] = [
       { label: "Comparar período", href: "/vendas/diario" },
       { label: "Comparativos", href: "/vendas/comparativos" },
       { label: "Análise de SKU", href: "/vendas/skus" },
+      { label: "Por que caiu", href: "/vendas/queda" },
       { label: "Cancelamentos", href: "/vendas/cancelamentos" },
       { label: "Metas", href: "/vendas/metas" },
       { label: "Lançamentos", href: "/vendas/lancamentos" },

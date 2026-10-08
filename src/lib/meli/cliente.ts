@@ -943,6 +943,8 @@ export type AnuncioCompleto = {
   titulo: string;
   sku: string | null;
   preco: number | null;
+  /** Preço riscado na vitrine, quando há desconto. */
+  precoOriginal: number | null;
   status: string | null;
   /** `gold_pro` = premium, `gold_special` = clássico. */
   tipoBruto: string | null;
@@ -964,6 +966,7 @@ type ItemBruto = {
   title?: string;
   seller_custom_field?: string | null;
   price?: number;
+  original_price?: number | null;
   status?: string;
   listing_type_id?: string;
   available_quantity?: number;
@@ -1032,6 +1035,7 @@ export async function catalogoCompleto({
         titulo: b.title ?? "",
         sku: b.seller_custom_field?.trim() || null,
         preco: b.price ?? null,
+        precoOriginal: b.original_price ?? null,
         status: b.status ?? null,
         tipoBruto: b.listing_type_id ?? null,
         tipo: tipoDe(b.listing_type_id),

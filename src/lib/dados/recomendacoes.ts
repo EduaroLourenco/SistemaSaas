@@ -316,6 +316,9 @@ export async function carregarPainelNovo(): Promise<DadosPainelNovo> {
     if (venDepois === 0 && visDepois > 0) {
       // O caso mais grave: continua recebendo visita e não vende nenhuma.
       causaProvavel = "parou de vender";
+    } else if (dPreco != null && dPreco >= 4 && dConversao != null && dConversao <= -10 && venAntes >= 3 && venDepois >= 3) {
+      // A mesma regra da tela "Por que caiu": preço subiu e a conversão caiu.
+      causaProvavel = "preço subiu";
     } else if (dConversao != null && dConversao <= -20 && dVisitas > -10) {
       causaProvavel = "parou de converter";
     } else if (dVisitas <= -20 && (dConversao == null || dConversao > -10)) {

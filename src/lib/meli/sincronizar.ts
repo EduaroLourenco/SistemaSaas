@@ -498,16 +498,29 @@ async function gravarEstoqueDiario(
            canal, não estoque de verdade. Somá-lo daria centenas de
            milhares de peças que não existem. */
         estoque: a.estoque! >= 40_000 ? 0 : a.estoque!,
+        /* O preço da vitrine no dia: é o que a análise de queda usa para
+           dizer se a venda caiu porque o preço subiu (db/33). */
+        preco: a.preco,
+        preco_original: a.precoOriginal,
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
+  let semPreco = false;
   await emLotes(linhas, 500, async (lote) => {
-    const { error: e } = await sb
-      .from("anuncio_estoque_diario")
-      .upsert(lote, { onConflict: "anuncio_id,data" });
+    const gravar = (l: typeof lote) =>
+      sb.from("anuncio_estoque_diario").upsert(l, { onConflict: "anuncio_id,data" });
+    let { error: e } = semPreco
+      ? await gravar(lote.map(({ preco: _p, preco_original: _o, ...r }) => r as typeof lote[number]))
+      : await gravar(lote);
+    // Sem a migração 33 as colunas de preço não existem: grava só o estoque.
+    if (e && (e.code === "PGRST204" || e.code === "42703")) {
+      semPreco = true;
+      ({ error: e } = await gravar(lote.map(({ preco: _p, preco_original: _o, ...r }) => r as typeof lote[number])));
+    }
     if (e) throw new Error(`Falha ao gravar estoque diário: ${e.message}`);
   });
+  if (semPreco) resumo.avisos.push("Preço diário não gravado: rode db/33_preco_diario.sql.");
   resumo.estoque = { linhas: linhas.length };
 }
 

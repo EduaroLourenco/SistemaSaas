@@ -109,6 +109,12 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
               value={curva}
               onChange={setCurva}
             />
+            <Link
+              href="/vendas/queda"
+              className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-r1 px-2 text-[12.5px] font-medium text-brand hover:bg-panel-3"
+            >
+              Por que caiu <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </span>
         }
       />
