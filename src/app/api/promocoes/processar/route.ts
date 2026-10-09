@@ -29,6 +29,12 @@ export async function POST(req: NextRequest) {
     const base = formData.get("formulaBase") as File | null;
     const descontoExtra = parseFloat((formData.get("descontoExtra") as string) || "0");
     const pedida = String(formData.get("regra") ?? "tabela");
+    /*
+     * "piso" não é uma origem de preço, é um jeito de usar a que já existe:
+     * a tabela guardada passa a ser lida como mínimo aceitável em vez de
+     * preço a propor. Por isso cai em modo "tabela" com comoUsar "piso".
+     */
+    const comoUsar: RegraPreco["comoUsar"] = pedida === "piso" ? "piso" : "alvo";
     const modo: RegraPreco["modo"] = pedida === "margem" || pedida === "maior" ? pedida : "tabela";
     const margemMinima = Math.min(60, Math.max(0, parseFloat((formData.get("margemMinima") as string) || "0") || 0));
 
@@ -89,7 +95,10 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      formulaData = { ...formulaData, custos, regra: { modo, margemMinima } };
+      formulaData = { ...formulaData, custos, regra: { modo, margemMinima, comoUsar } };
+    } else if (comoUsar === "piso") {
+      // Sem custo nenhum a carregar: o piso já está na tabela guardada.
+      formulaData = { ...formulaData, regra: { modo, margemMinima, comoUsar } };
     }
 
     const resumoBase = resumoFormulaBase(formulaData);
@@ -221,7 +230,7 @@ export async function POST(req: NextRequest) {
       // De onde veio a base — a tela mostra, para ninguém processar uma
       // semana inteira com a versão errada sem perceber.
       origemBase,
-      regra: { modo, margemMinima, custosUsados, custosIncompletos },
+      regra: { modo, margemMinima, comoUsar, custosUsados, custosIncompletos },
       arquivos,
       resumo: {
         lidos: todasLinhas.length,

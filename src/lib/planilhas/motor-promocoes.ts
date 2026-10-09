@@ -53,6 +53,25 @@ export interface RegraPreco {
   modo: "tabela" | "margem" | "maior";
   /** Em pontos percentuais, ex.: 8 para 8%. */
   margemMinima: number;
+  /**
+   * O número da tabela é ALVO ou PISO?
+   *
+   *   alvo (padrão) — é o preço que se quer cobrar. O motor o PROPÕE na
+   *     campanha e aceita a contraproposta do canal até 5% abaixo dele. É
+   *     a Fórmula base do Mercado Livre, onde cada linha é o preço
+   *     pretendido naquela faixa de comissão.
+   *
+   *   piso — é o mínimo que se pode aceitar. O motor não propõe preço
+   *     nenhum: compara o que o canal propôs com o piso e decide
+   *     participar ou não, deixando o preço da campanha como está.
+   *
+   * A distinção não é cosmética. Tratar piso como alvo faz o motor
+   * PROPOR o mínimo: num skate publicado a R$ 399, com o canal propondo
+   * R$ 379,05 e piso de R$ 251,13, ele devolvia "participar em R$ 251,13"
+   * — R$ 148 de desconto que ninguém pediu. É o caso de quem tem custo em
+   * vez de tabela de preço, que é como quase todo cliente começa.
+   */
+  comoUsar?: "alvo" | "piso";
 }
 
 /**
@@ -234,8 +253,11 @@ export function precoDaMargem(data: FormulaBaseData, sku: string, comissao: numb
 
 /** Por que não há preço mínimo — muda conforme a regra. */
 function semPreco(data: FormulaBaseData): string {
-  return data.regra?.modo === "margem" ? "sem custo cadastrado (Financeiro › Custos)" : "sem preço de tabela";
+  if (data.regra?.modo === "margem") return "sem custo cadastrado (Financeiro › Custos)";
+  return data.regra?.comoUsar === "piso" ? "sem piso cadastrado para este SKU" : "sem preço de tabela";
 }
+
+const reais = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 
 function precoDaFormula(data: FormulaBaseData, sku: string, mlb: string, comissao: number): number | null {
   const k = Math.round(comissao * 1000) / 1000;
@@ -374,7 +396,33 @@ export function processItem(
     let p = getPrecoTabela(data, sku, mlb, comissao);
     
     if (p === null) return { action: negativeAction, pendencia: semPreco(data), newPrice: null };
-    
+
+    /*
+     * Base de PISO: a decisão é sobre a proposta do canal, não sobre um
+     * preço nosso.
+     *
+     * `newPrice: null` é o que mantém o preço da planilha intocado — o
+     * mesmo que o Caso A faz. Participar aqui significa aceitar o que o
+     * canal propôs, porque ele já está acima do mínimo; recusar significa
+     * que a proposta fura o piso, e aí o preço não é alterado para o item
+     * ir para a lista de revisão com o motivo em reais.
+     */
+    if (data.regra?.comoUsar === "piso") {
+      if (!finalPrice) {
+        return { action: negativeAction, pendencia: "o canal não propôs preço final", newPrice: null, tabelaCalculada: p };
+      }
+      // Um centésimo de folga: o canal arredonda o preço final que calcula.
+      if (finalPrice >= p - 0.01) {
+        return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: p };
+      }
+      return {
+        action: negativeAction,
+        pendencia: `proposta de ${reais(finalPrice)} abaixo do piso de ${reais(p)}`,
+        newPrice: null,
+        tabelaCalculada: p,
+      };
+    }
+
     /*
      * Sem desconto extra, a oferta é a tabela cheia — comportamento que já
      * vinha do sistema anterior e não foi pedido para mudar.

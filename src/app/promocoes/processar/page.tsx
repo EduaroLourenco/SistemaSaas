@@ -59,10 +59,11 @@ type Linha = {
   tags: Tag[];
 };
 
-type Regra = "tabela" | "margem" | "maior";
+type Regra = "tabela" | "piso" | "margem" | "maior";
 
 const REGRAS: { value: Regra; label: string }[] = [
   { value: "tabela", label: "Tabela de preço" },
+  { value: "piso", label: "Tabela como piso" },
   { value: "margem", label: "Margem pelos custos" },
   { value: "maior", label: "As duas (mais seguro)" },
 ];
@@ -70,7 +71,7 @@ const REGRAS: { value: Regra; label: string }[] = [
 type Resultado = {
   id: string;
   resumoBase: { itens: number; precosPorSku: number; precosPorMlb: number };
-  regra?: { modo: Regra; margemMinima: number; custosUsados: number; custosIncompletos: number };
+  regra?: { modo: Regra; margemMinima: number; comoUsar?: "alvo" | "piso"; custosUsados: number; custosIncompletos: number };
   arquivos: { nome: string; campanha: string; linhas: number }[];
   resumo: {
     lidos: number;
@@ -563,7 +564,7 @@ export default function ProcessarPromocoes() {
               <PanelHeader title="Regra do preço mínimo" hint="abaixo dele, o item não entra na promoção" />
               <div className="flex flex-col gap-3 p-4">
                 <Segmented options={REGRAS} value={regra} onChange={setRegra} />
-                {regra !== "tabela" && (
+                {regra !== "tabela" && regra !== "piso" && (
                   <Field
                     label="Margem mínima (%)"
                     hint="O que precisa sobrar depois de mercadoria, embalagem, frete, comissão e imposto."
@@ -578,7 +579,9 @@ export default function ProcessarPromocoes() {
                 )}
                 <p className="text-[12px] leading-relaxed text-ink-2">
                   {regra === "tabela" &&
-                    "O preço mínimo vem da Fórmula base, como sempre foi."}
+                    "O preço mínimo vem da Fórmula base, como sempre foi. O número dela é o preço que você QUER cobrar: o sistema o propõe na campanha e aceita contraproposta do canal até 5% abaixo."}
+                  {regra === "piso" &&
+                    "O número da Fórmula base é lido como MÍNIMO, não como preço a propor. O sistema não mexe no preço: compara o que o canal propôs com o piso e decide entrar ou não. Use quando a sua tabela é de preço mínimo calculado do custo — tratá-la como alvo faria o sistema propor o mínimo e jogar o preço do anúncio para baixo."}
                   {regra === "margem" &&
                     "O preço mínimo é calculado dos custos de cada SKU (Financeiro › Custos): o menor preço que ainda deixa a margem pedida, já com a comissão da campanha. Não precisa de Fórmula base. SKU sem custo completo fica de fora, como pendência."}
                   {regra === "maior" &&

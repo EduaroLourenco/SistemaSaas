@@ -30,6 +30,20 @@
  * Como os dois dependem do próprio preço que se quer achar, o script
  * resolve os dois ramos e fica com o que é coerente com a sua condição.
  *
+ * ── O número gravado é PISO, e a tela tem de ser avisada ──
+ *
+ * `formula_base_precos.preco` é lido de dois jeitos pelo motor, e a
+ * escolha é de quem processa, em Mercado Livre › Processar planilha:
+ *
+ *   "Tabela de preço" — o número é ALVO. O motor o propõe na campanha.
+ *   "Tabela como piso" — o número é MÍNIMO. O motor compara a proposta
+ *     do canal com ele e não mexe no preço.
+ *
+ * O que este script grava é PISO. Processar com a regra errada fez o
+ * motor propor R$ 251,13 num skate publicado a R$ 399 com o canal
+ * propondo R$ 379,05 — R$ 148 de desconto que ninguém pediu. Então, ao
+ * subir planilha da Bom de Compras, a regra é "Tabela como piso".
+ *
  * ── Por que o mesmo piso em todas as faixas de comissão ──
  *
  * A planilha tem UMA comissão (12,5%). A decisão foi não inventar as
