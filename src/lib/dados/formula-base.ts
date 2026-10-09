@@ -20,6 +20,8 @@ export type BaseDoBanco = {
   dados: FormulaBaseData;
   vigenteDe: string;
   itens: number;
+  /** Tipos completados pelo catálogo, por não estarem na base. */
+  doCatalogo: number;
   precos: number;
 };
 
@@ -78,10 +80,48 @@ export async function carregarFormulaBase(
     alvo.set(chave, linha);
   }
 
+  /*
+   * O tipo que falta na base vem do catálogo, não de pendência.
+   *
+   * O motor recusa com "anúncio sem tipo cadastrado" quando o MLB não está
+   * em `formula_base_itens` — e o Meli cobra tarifa diferente de clássico
+   * e premium, então sem o tipo ele realmente não sabe qual alíquota usar.
+   *
+   * Só que o tipo está em `anuncios`, lido da API na sincronização, para
+   * TODO anúncio. Exigi-lo duplicado dentro da base é exigir que alguém
+   * recadastre à mão o que o canal já informou: na Bom de Compras isso
+   * recusava 90 dos 108 itens de uma campanha cujo tipo o banco conhecia
+   * inteiro (66 premium, 42 clássico).
+   *
+   * Então a base manda, e o catálogo completa o que ela não diz. A ordem
+   * importa: quem cadastrou a base cadastrou por um motivo, e um tipo
+   * trocado no canal não deve reescrever a decisão de quem a montou.
+   *
+   * `comissao_atual` entra quando existe — é a tarifa real daquele
+   * anúncio, melhor que a alíquota padrão do tipo. Está em pontos
+   * percentuais na coluna (16.5 = 16,5%), e o motor compara em fração.
+   */
+  const faltantes = await paginar(() =>
+    sb.from("anuncios").select("codigo_externo,tipo,comissao_atual").order("id")
+  );
+  let completados = 0;
+  for (const a of faltantes) {
+    const mlb = String(a.codigo_externo);
+    if (!a.tipo || baseMlb.has(mlb)) continue;
+    const pct = Number(a.comissao_atual);
+    baseMlb.set(mlb, {
+      tipo: a.tipo === "premium" ? "Premium" : "Clássico",
+      padrao: pct > 0 && pct < 100 ? pct / 100 : 0,
+    });
+    completados++;
+  }
+
   return {
     dados: { baseMlb, precosSKU, precosMLB },
     vigenteDe,
     itens: itens.length,
+    /** Quantos tipos vieram do catálogo por não estarem na base. */
+    doCatalogo: completados,
     precos: precos.length,
   };
 }

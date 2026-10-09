@@ -338,16 +338,22 @@ export function processItem(
      * A alíquota que vale sem redução.
      *
      * Onde o canal separa por tipo — o Meli — depende de clássico ou
-     * premium, e sem o cadastro do anúncio não há como saber qual é. Num
-     * canal de taxa única o tipo não importa, e exigir esse cadastro
-     * recusaria a planilha inteira por uma informação que não existe lá.
+     * premium, e sem saber qual é não há como escolher entre 11,5% e
+     * 16,5%: cinco pontos mudam a faixa de preço inteira. Num canal de
+     * taxa única o tipo não importa, e exigir esse cadastro recusaria a
+     * planilha inteira por uma informação que não existe lá.
+     *
+     * O tipo vem da Fórmula base e, quando ela não traz o anúncio, do
+     * catálogo lido da API (ver carregarFormulaBase). Chegar aqui sem ele
+     * significa que o MLB não existe em nenhum dos dois — anúncio novo,
+     * de outra conta, ou catálogo desatualizado.
      */
     let comissao: number;
     if (config.usaTipoAnuncio) {
       if (!entry || !entry.tipo) {
         return {
           action: negativeAction,
-          pendencia: "anúncio sem tipo cadastrado, e este canal cobra por tipo",
+          pendencia: "anúncio não encontrado no catálogo nem na Fórmula base — sincronize o canal",
           newPrice: null,
         };
       }
@@ -440,13 +446,16 @@ function itemCampanhaPropria(
    * A alíquota cheia do anúncio. Onde o canal separa por tipo — o Meli —
    * sem o cadastro não há como saber se são 11,5% ou 16,5%, e cinco pontos
    * mudam a faixa de preço inteira. Recusar é mais honesto que adivinhar.
+   *
+   * O tipo vem da Fórmula base ou do catálogo da API; faltar nos dois é
+   * MLB desconhecido, não falta de cadastro manual.
    */
   let comissao: number;
   if (config.usaTipoAnuncio) {
     if (!entry || !entry.tipo) {
       return {
         action: negativeAction,
-        pendencia: "anúncio sem tipo cadastrado, e este canal cobra por tipo",
+        pendencia: "anúncio não encontrado no catálogo nem na Fórmula base — sincronize o canal",
         newPrice: null,
         newPercentage: null,
       };
