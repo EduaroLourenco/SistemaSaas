@@ -3,6 +3,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarContasRecorte } from "./contas-recorte";
 import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
+import { diagnosticar, repartir } from "./queda-causa";
 
 /**
  * Por que caiu — produto ou anúncio, período contra o anterior.
@@ -44,7 +45,7 @@ export type Causa =
   | "cresceu"
   | "estável";
 
-type Lado = {
+export type Lado = {
   receita: number;
   unidades: number;
   pedidos: number;
@@ -87,6 +88,11 @@ export type LinhaQueda = {
   estoqueAtual: number | null;
   /** Anúncio sob encomenda (estoque declarado absurdo): o número não vale. */
   sobEncomenda: boolean;
+  /**
+   * Dias ganhando o catálogo, em cada período. Null = anúncio que não
+   * disputa catálogo, ou período anterior ao início do registro (30/09).
+   */
+  catalogo: { antes: { ganhando: number; dias: number }; agora: { ganhando: number; dias: number } } | null;
   causa: Causa;
   explicacao: string;
   /** No produto: os anúncios/contas que o compõem, do que mais caiu. */
@@ -159,147 +165,44 @@ function fechar(a: Acc): Lado {
   };
 }
 
-/* ── A repartição da diferença ── */
-function repartir(antes: Lado, agora: Lado, delta: number): LinhaQueda["efeito"] {
-  const vazio = { visitas: null, conversao: null, unidades: null, preco: 0 };
-  if (antes.receita <= 0 || agora.receita <= 0) {
-    // Um dos lados é zero: o logaritmo não existe. A queda inteira é volume.
-    return { ...vazio, unidades: delta };
-  }
-  const lnR = Math.log(agora.receita / antes.receita);
-  if (Math.abs(lnR) < 1e-9) return { ...vazio, unidades: 0 };
-  const lnP = Math.log(agora.precoVendido! / antes.precoVendido!);
-  const parte = (ln: number) => r2((delta * ln) / lnR);
-  /*
-   * Visita × conversão só quando quase toda a venda vem de anúncio com
-   * visita. Produto vendido também em loja sem visita cairia numa conta
-   * que mistura as duas; aí a leitura honesta é unidades × preço. A
-   * conversão aqui é unidades TOTAIS ÷ visitas, para a soma fechar.
-   */
-  if (antes.visitas && agora.visitas && antes.cobertura >= 0.8 && agora.cobertura >= 0.8) {
-    const lnV = Math.log(agora.visitas / antes.visitas);
-    const lnC = Math.log(agora.unidades / agora.visitas / (antes.unidades / antes.visitas));
-    return { visitas: parte(lnV), conversao: parte(lnC), unidades: null, preco: parte(lnP) };
-  }
-  const lnU = Math.log(agora.unidades / antes.unidades);
-  return { visitas: null, conversao: null, unidades: parte(lnU), preco: parte(lnP) };
-}
+/* A repartição da diferença e a causa vivem em queda-causa.ts — matemática
+ * pura, sem banco, para que scripts/testar-causa-queda.mjs as rode de verdade. */
 
-/* ── A causa, em palavras ── */
-const brl = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-/** Sem sinal: o verbo já diz a direção ("caiu 40%", não "caiu -40%"). */
-const abs = (v: number) => `${Math.abs(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`;
-const pc = (v: number) => `${v > 0 ? "+" : ""}${v.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`;
+/* A causa de cada linha é escolhida em queda-causa.ts — módulo sem banco,
+   para que scripts/testar-causa-queda.mjs rode a decisão de verdade. */
+export { diagnosticar };
 
-export function diagnosticar(l: {
-  antes: Lado;
-  agora: Lado;
-  delta: number;
-  efeito: LinhaQueda["efeito"];
-  diasSemEstoque: number;
-  /** Dias com retrato de estoque no período — a base certa para a proporção. */
-  diasObservados: number;
-  /** Fração da queda que veio de anúncio com estoque acompanhado (0–1). */
-  pesoAcompanhado: number;
-  status: string | null;
-  /** Estoque de hoje, se lido. Diz se a ruptura continua ou já passou. */
-  estoqueAtual?: number | null;
-  sobEncomenda?: boolean;
-}): { causa: Causa; explicacao: string } {
-  const { antes, agora, delta, efeito } = l;
-  /*
-   * Preço vendido com uma ou duas vendas não é evidência: uma venda com frete
-   * embutido ou kit muda a média sozinha. A vitrine não tem esse problema —
-   * é o preço anunciado, todo dia.
-   */
-  const amostraVendida = antes.unidades >= 3 && agora.unidades >= 3;
-  const varPreco =
-    pctVar(agora.precoVitrine, antes.precoVitrine) ??
-    (amostraVendida ? pctVar(agora.precoVendido, antes.precoVendido) : null);
-  const qualPreco = agora.precoVitrine != null && antes.precoVitrine != null ? "na vitrine" : "vendido";
-  const varConv = pctVar(agora.conversao, antes.conversao);
-  const varVis = pctVar(agora.visitas, antes.visitas);
-  const varUn = pctVar(agora.unidades, antes.unidades);
+/* ══ A disputa do catálogo, por dia ══════════════════════════ */
 
-  if (delta >= 0) {
-    if (delta === 0) return { causa: "estável", explicacao: "Sem mudança no período." };
-    return {
-      causa: "cresceu",
-      explicacao: antes.receita > 0
-        ? `Subiu ${brl(delta)} (${pc((delta / antes.receita) * 100)}).`
-        : `Começou a vender no período: ${brl(delta)}.`,
-    };
-  }
+/**
+ * Em que dias o anúncio estava ganhando o catálogo.
+ *
+ * É a prova de que o preço custou a VISITA, e não só a conversão: no
+ * Mercado Livre o preço aparece na busca, antes do clique, e no catálogo
+ * quem não ganha a disputa sai da posição que recebe o tráfego (a API
+ * chama essa fatia de `maximum` para o vencedor e `minimum` para os
+ * outros). Preço que sobe e tira o anúncio do primeiro lugar derruba a
+ * visita sem que nada tenha piorado na exposição paga ou na reputação.
+ *
+ * `competing` é o que a API devolve hoje para quem disputa e não ganha; a
+ * lista do comentário da migração 21 (`losing`) não aparece mais. Os dois
+ * entram em "não ganhando" junto de `listed` e `not_listed`.
+ *
+ * Só existe desde 30/09, e só para anúncio de catálogo — por isso quem
+ * chama trata o vazio como "sem evidência", nunca como "não ganhava".
+ */
+const GANHANDO = new Set(["winning", "sharing_first_place"]);
 
-  // 1. Faltou produto: nada mais importa se não havia o que vender.
-  /*
-   * Só é a causa se a queda veio de onde o estoque é acompanhado. Produto
-   * que caiu na loja própria com o anúncio do Meli zerado tem o Meli zerado
-   * como fato, não como explicação.
-   */
-  if (l.diasSemEstoque >= 2 && l.diasSemEstoque >= l.diasObservados * 0.5 && l.pesoAcompanhado >= 0.5) {
-    /* Se já reabasteceu, a ação é outra: não é repor, é esperar a venda
-       voltar (ou cobrar o posicionamento que o anúncio perdeu parado). */
-    const hoje = l.sobEncomenda
-      ? " Hoje está sob encomenda."
-      : l.estoqueAtual == null
-        ? ""
-        : l.estoqueAtual > 0
-          ? ` Hoje já tem ${l.estoqueAtual.toLocaleString("pt-BR")} em estoque.`
-          : " Hoje ainda está zerado.";
-    return {
-      causa: "sem estoque",
-      explicacao:
-        `Ficou sem estoque em ${l.diasSemEstoque} dos ${l.diasObservados} dias acompanhados. ` +
-        `A queda é de disponibilidade, não de demanda.` + hoje,
-    };
-  }
-  if (agora.unidades === 0 && l.status && l.status !== "active" && l.status !== "ativo") {
-    return { causa: "pausado", explicacao: `O anúncio está ${l.status === "paused" ? "pausado" : l.status} e não vendeu no período.` };
-  }
-
-  // 2. O preço subiu e a venda caiu: a pergunta que a tela existe para responder.
-  // Com visita, é a CONVERSÃO que tem que cair: unidades caindo junto com a
-  // visita é exposição, não preço. Sem visita, só resta olhar as unidades.
-  const vendaCaiu = varConv != null ? varConv <= -10 : varUn != null && varUn <= -10;
-  if (varPreco != null && varPreco >= 4 && vendaCaiu) {
-    const conv = varConv != null ? `a conversão caiu ${abs(varConv)}` : `as unidades caíram ${abs(varUn!)}`;
-    const vis = varVis != null && varVis > -10 ? " com as visitas mantidas" : "";
-    return {
-      causa: "preço subiu",
-      explicacao: `O preço ${qualPreco} subiu ${pc(varPreco)} e ${conv}${vis}. Indício forte de que foi preço.`,
-    };
-  }
-
-  // 3. Recebe visita e não vende.
-  if (agora.unidades === 0) {
-    return agora.visitas
-      ? {
-          causa: "parou de vender",
-          explicacao: `Recebeu ${agora.visitas.toLocaleString("pt-BR")} visitas e não vendeu nenhuma. Confira preço, frete e concorrente.`,
-        }
-      : { causa: "parou de vender", explicacao: "Nenhuma venda no período, e sem visita registrada." };
-  }
-
-  // 4. O fator que mais pesou.
-  const fatores: [Causa, number | null][] = [
-    ["perdeu visitas", efeito.visitas],
-    ["conversão caiu", efeito.conversao],
-    ["vendeu menos", efeito.unidades],
-    ["vendeu mais barato", efeito.preco],
-  ];
-  const [causa] = fatores
-    .filter((f): f is [Causa, number] => f[1] != null)
-    .sort((a, b) => a[1] - b[1])[0] ?? ["vendeu menos", 0];
-
-  const texto: Record<string, string> = {
-    "perdeu visitas": `As visitas caíram ${abs(varVis ?? 0)}${varConv != null && varConv > -10 ? " e a conversão se manteve" : ""}: o anúncio perdeu exposição (posição, catálogo, mídia).`,
-    "conversão caiu": `A conversão caiu ${abs(varConv ?? 0)} com o preço ${varPreco != null ? `${qualPreco} ${pc(varPreco)}` : "estável"}: concorrente, frete, prazo ou reputação.`,
-    "vendeu menos": `Vendeu ${abs(varUn ?? -100)} menos unidades${varPreco != null ? `, com preço ${qualPreco} ${pc(varPreco)}` : ""}. Sem visita registrada, não dá para separar exposição de conversão.`,
-    "vendeu mais barato": `O preço ${qualPreco} caiu ${abs(varPreco ?? 0)} e o volume não compensou: desconto ou promoção que não trouxe venda.`,
-  };
-  return { causa, explicacao: texto[causa] };
+async function disputaPorDia(
+  sb: Awaited<ReturnType<typeof clienteServidor>>,
+  de: string,
+  ate: string
+): Promise<{ anuncio_id: string; data: string; ganhando: boolean }[]> {
+  type Linha = { anuncio_id: string; data: string; situacao: string };
+  const linhas = (await paginar(() =>
+    sb.from("anuncio_catalogo_diario").select("anuncio_id,data,situacao").gte("data", de).lte("data", ate).order("id")
+  ).catch(() => [])) as unknown as Linha[];
+  return linhas.map((l) => ({ anuncio_id: l.anuncio_id, data: l.data, ganhando: GANHANDO.has(l.situacao) }));
 }
 
 /* ══ Preço de vitrine por dia, de todas as fontes ═════════════ */
@@ -398,7 +301,7 @@ export async function carregarQueda(opcoes: {
     }
   };
 
-  const [itens, anuncios, desempenho, retratos, contas, vitrineOutras] = await Promise.all([
+  const [itens, anuncios, desempenho, retratos, contas, vitrineOutras, disputa] = await Promise.all([
     paginar(() =>
       sb
         .from("pedido_itens")
@@ -427,6 +330,7 @@ export async function carregarQueda(opcoes: {
     lerRetratos(),
     carregarContasRecorte(),
     precosDeVitrine(sb, deAnterior, ate),
+    disputaPorDia(sb, deAnterior, ate),
   ]);
 
   const nomeConta = new Map(
@@ -453,6 +357,10 @@ export async function carregarQueda(opcoes: {
     comEstoque: Set<string>;
     status: string | null;
     precoAtual: number | null;
+    /* Dias-anúncio, não dias: produto com dois anúncios de catálogo tem dois
+       registros no mesmo dia, e a proporção ganhando/total segue honesta. */
+    catAntes: { ganhando: number; dias: number };
+    catAgora: { ganhando: number; dias: number };
     partes: Map<string, { onde: string; codigo: string; antes: number; agora: number }>;
   };
   const grupos = new Map<string, Grupo>();
@@ -461,7 +369,8 @@ export async function carregarQueda(opcoes: {
     if (!g) {
       g = {
         chave, ...base, onde: new Set(), anuncios: new Set(), antes: novoAcc(), agora: novoAcc(),
-        semEstoque: new Set(), comEstoque: new Set(), status: null, precoAtual: null, partes: new Map(),
+        semEstoque: new Set(), comEstoque: new Set(), status: null, precoAtual: null,
+        catAntes: { ganhando: 0, dias: 0 }, catAgora: { ganhando: 0, dias: 0 }, partes: new Map(),
       };
       grupos.set(chave, g);
     }
@@ -536,6 +445,16 @@ export async function carregarQueda(opcoes: {
     lado.temVisita = true;
   }
 
+  // ── Disputa do catálogo ──
+  for (const d of disputa) {
+    const chave = chavePorAnuncio.get(d.anuncio_id);
+    const g = chave && grupos.get(chave);
+    if (!g) continue;
+    const lado = d.data >= de ? g.catAgora : g.catAntes;
+    lado.dias += 1;
+    if (d.ganhando) lado.ganhando += 1;
+  }
+
   // ── Retratos diários: estoque e preço de vitrine ──
   let vitrineDesde: string | null = null;
   for (const r of retratos) {
@@ -607,6 +526,10 @@ export async function carregarQueda(opcoes: {
       if (e >= 40_000) sobEncomenda = true;
       else estoqueAtual = (estoqueAtual ?? 0) + e;
     }
+    /* Sem registro nos DOIS lados não há comparação: um período sem dado é
+       "não sei", e dizer "perdeu o catálogo" por isso seria inventar. */
+    const catalogo =
+      g.catAntes.dias > 0 && g.catAgora.dias > 0 ? { antes: g.catAntes, agora: g.catAgora } : null;
     const antes = fechar(g.antes);
     const agora = fechar(g.agora);
     const delta = r2(agora.receita - antes.receita);
@@ -614,7 +537,7 @@ export async function carregarQueda(opcoes: {
     const { causa, explicacao } = diagnosticar({
       antes, agora, delta, efeito, diasSemEstoque: g.semEstoque.size,
       diasObservados: g.semEstoque.size + g.comEstoque.size, pesoAcompanhado, status: g.status,
-      estoqueAtual, sobEncomenda,
+      estoqueAtual, sobEncomenda, catalogo,
     });
     return {
       chave: g.chave,
@@ -635,6 +558,7 @@ export async function carregarQueda(opcoes: {
       precoAtual: g.precoAtual,
       estoqueAtual,
       sobEncomenda,
+      catalogo,
       causa,
       explicacao,
       partes: [...g.partes.values()]

@@ -266,8 +266,16 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
               <p className="mt-2">
                 A causa segue esta ordem: <strong>sem estoque</strong> (metade ou mais dos dias acompanhados zerado, e a
                 queda veio desse anúncio) → <strong>pausado</strong> → <strong>preço subiu</strong> (preço +4% ou mais
-                e conversão −10% ou mais; sem visita, unidades −10%) → <strong>parou de vender</strong> → o fator que
+                e conversão −10% ou mais, OU visitas −10% com a conversão de pé; sem visita, unidades −10%) → <strong>parou de vender</strong> → o fator que
                 mais tirou receita.
+              </p>
+              <p className="mt-2">
+                Visita caindo <strong>também</strong> pode ser preço: no Mercado Livre o preço aparece na busca, antes
+                do clique, e quem acha caro não entra no anúncio — a conversão pode até subir, porque sobra só quem já
+                ia pagar. Quem separa os dois casos é a <strong>disputa do catálogo</strong>: perder o primeiro lugar
+                depois de subir o preço é prova de que foi preço; manter o primeiro lugar é contraprova, e aí a causa
+                volta a ser exposição (verba de anúncio, busca, sazonalidade). Sem esse registro — anúncio fora do
+                catálogo, ou período antes de 30/09 — a frase diz a dúvida em vez de afirmar.
               </p>
               <p className="mt-2">
                 Preço de <strong>vitrine</strong> é o anunciado no dia, lido da API do Mercado Livre na sincronização
@@ -496,7 +504,7 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
         <Badge tone={TOM[l.causa]}>{l.causa}</Badge> <span className="ml-1">{l.explicacao}</span>
       </p>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         <Numero rotulo="Receita" antes={money(l.antes.receita)} agora={money(l.agora.receita)} />
         <Numero rotulo="Unidades" antes={count(l.antes.unidades)} agora={count(l.agora.unidades)} />
         <Numero
@@ -516,6 +524,15 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
           antes={l.antes.precoVendido != null ? money(l.antes.precoVendido) : "sem venda"}
           agora={l.agora.precoVendido != null ? money(l.agora.precoVendido) : "sem venda"}
         />
+        {/* A disputa do catálogo entra como número porque é ela que separa
+            "preço espantou o clique" de "perdeu exposição". */}
+        {l.catalogo && (
+          <Numero
+            rotulo="Ganhou o catálogo"
+            agora={`${l.catalogo.agora.ganhando} de ${l.catalogo.agora.dias} dias`}
+            antes={`${l.catalogo.antes.ganhando} de ${l.catalogo.antes.dias} dias`}
+          />
+        )}
         {/* Estoque é de AGORA, por isso a segunda linha diz os dias zerados
             do período em vez de um "antes" que não existe. */}
         <Numero
