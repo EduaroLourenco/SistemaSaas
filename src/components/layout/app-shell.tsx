@@ -26,6 +26,7 @@ import { Brand } from "@/components/ui/brand";
 import { Sheet, FilterSheet } from "@/components/ui/controls";
 import { Disclosure } from "@/components/ui/disclosure";
 import { TelaGerizo } from "./carregando-gerizo";
+import { BotaoAtualizar } from "@/components/painel/botao-atualizar";
 
 /* ══ Marca — monograma neutro, sem nome definido ══════════════ */
 
@@ -389,6 +390,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex-1" />
 
           <BuscaGlobal />
+
+          <BotaoAtualizar compacto />
 
           <Link
             href="/alertas"

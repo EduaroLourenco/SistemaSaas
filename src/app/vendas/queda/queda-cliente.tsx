@@ -258,6 +258,12 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                 <strong>unidades × preço</strong>.
               </p>
               <p className="mt-2">
+                Cada item recebe <strong>uma causa só</strong> — a pílula não é etiqueta, é o diagnóstico principal.
+                Preço que sobe quase sempre derruba conversão e visita junto, e marcar os três não diria onde mexer.
+                Os três fatores aparecem com o valor em reais de cada um ao abrir a linha; a pílula é o maior deles,
+                ou a primeira condição desta ordem que o item satisfaz:
+              </p>
+              <p className="mt-2">
                 A causa segue esta ordem: <strong>sem estoque</strong> (metade ou mais dos dias acompanhados zerado, e a
                 queda veio desse anúncio) → <strong>pausado</strong> → <strong>preço subiu</strong> (preço +4% ou mais
                 e conversão −10% ou mais; sem visita, unidades −10%) → <strong>parou de vender</strong> → o fator que
@@ -362,7 +368,7 @@ function Linha({
         type="button"
         onClick={alternar}
         aria-expanded={aberta}
-        className="grid w-full grid-cols-[1rem_minmax(0,1fr)] items-start gap-2 px-4 py-3 text-left hover:bg-panel-2 md:grid-cols-[1rem_minmax(0,2.2fr)_repeat(4,minmax(0,1fr))_9rem] md:items-center md:gap-3"
+        className="grid w-full grid-cols-[1rem_minmax(0,1fr)] items-start gap-2 px-4 py-3 text-left hover:bg-panel-2 md:grid-cols-[1rem_minmax(0,2fr)_repeat(5,minmax(0,1fr))_9rem] md:items-center md:gap-3"
       >
         <Seta className="mt-0.5 h-4 w-4 text-ink-3 md:mt-0" aria-hidden />
         <span className="min-w-0">
@@ -383,6 +389,8 @@ function Linha({
         <span className="col-start-2 num text-[12px] text-ink-2 md:hidden">
           {money(l.antes.receita)} → {money(l.agora.receita)} ·{" "}
           <span className={l.delta < 0 ? "text-down" : "text-up"}>{money(l.delta)}</span>
+          <span className="text-ink-3"> · estoque </span>
+          <Estoque l={l} />
         </span>
 
         <span className="hidden md:block text-right">
@@ -412,6 +420,7 @@ function Linha({
           rotulo={vitrine ? "preço vitrine" : "preço vendido"}
           valor={<Var v={varPct(precoAgora, precoAntes)} inverso />}
         />
+        <Coluna rotulo="estoque hoje" valor={<Estoque l={l} />} />
         <span className="hidden md:flex justify-end">
           <Badge tone={TOM[l.causa]}>{l.causa}</Badge>
         </span>
@@ -419,6 +428,23 @@ function Linha({
 
       {aberta && <Detalhe l={l} dados={dados} />}
     </li>
+  );
+}
+
+/**
+ * Estoque de hoje, não do período.
+ *
+ * Zerado em vermelho porque muda a ação: "caiu e ainda não tem produto" se
+ * resolve no abastecimento, "caiu e já reabasteceu" se resolve esperando ou
+ * olhando o posicionamento que o anúncio perdeu enquanto estava parado.
+ */
+function Estoque({ l }: { l: LinhaQueda }) {
+  if (l.sobEncomenda) return <span className="text-[12px] text-ink-3">sob encomenda</span>;
+  if (l.estoqueAtual == null) return <span className="text-ink-3">—</span>;
+  return (
+    <span className={cn("num text-[13px]", l.estoqueAtual === 0 ? "font-semibold text-down" : "text-ink-2")}>
+      {count(l.estoqueAtual)}
+    </span>
   );
 }
 
@@ -470,7 +496,7 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
         <Badge tone={TOM[l.causa]}>{l.causa}</Badge> <span className="ml-1">{l.explicacao}</span>
       </p>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
         <Numero rotulo="Receita" antes={money(l.antes.receita)} agora={money(l.agora.receita)} />
         <Numero rotulo="Unidades" antes={count(l.antes.unidades)} agora={count(l.agora.unidades)} />
         <Numero
@@ -489,6 +515,24 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
           rotulo="Preço vendido (médio)"
           antes={l.antes.precoVendido != null ? money(l.antes.precoVendido) : "sem venda"}
           agora={l.agora.precoVendido != null ? money(l.agora.precoVendido) : "sem venda"}
+        />
+        {/* Estoque é de AGORA, por isso a segunda linha diz os dias zerados
+            do período em vez de um "antes" que não existe. */}
+        <Numero
+          rotulo="Estoque hoje"
+          agora={
+            l.sobEncomenda
+              ? "sob encomenda"
+              : l.estoqueAtual != null
+                ? count(l.estoqueAtual)
+                : "nunca lido"
+          }
+          antes={
+            l.diasComEstoque + l.diasSemEstoque > 0
+              ? `${l.diasSemEstoque} de ${l.diasComEstoque + l.diasSemEstoque} dias zerado`
+              : "sem retrato diário"
+          }
+          rotuloAntes=""
         />
       </div>
 
@@ -615,12 +659,28 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
   );
 }
 
-function Numero({ rotulo, antes, agora, extra }: { rotulo: string; antes: string; agora: string; extra?: string }) {
+function Numero({
+  rotulo,
+  antes,
+  agora,
+  extra,
+  rotuloAntes = "antes ",
+}: {
+  rotulo: string;
+  antes: string;
+  agora: string;
+  extra?: string;
+  /** "" para a segunda linha que não é comparação com o período anterior. */
+  rotuloAntes?: string;
+}) {
   return (
     <div className="min-w-0 rounded-r1 border border-line bg-panel px-3 py-2">
       <p className="text-[11px] text-ink-3">{rotulo}</p>
       <p className="num truncate text-[13px] font-semibold text-ink">{agora}</p>
-      <p className="num truncate text-[11px] text-ink-3">antes {antes}</p>
+      <p className="num truncate text-[11px] text-ink-3" title={antes}>
+        {rotuloAntes}
+        {antes}
+      </p>
       {extra && <p className="num truncate text-[11px] font-medium text-ink-2">{extra}</p>}
     </div>
   );

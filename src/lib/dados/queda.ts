@@ -77,6 +77,16 @@ export type LinhaQueda = {
   diasComEstoque: number;
   status: string | null;
   precoAtual: number | null;
+  /**
+   * O estoque de hoje, somado nos anúncios da linha. Null = nunca lido.
+   *
+   * Vem de `anuncios.estoque`, que a sincronização sobrescreve, e não da
+   * série diária: a pergunta aqui é "ainda falta produto AGORA", e a série
+   * responde pelo período escolhido — que pode ser de duas semanas atrás.
+   */
+  estoqueAtual: number | null;
+  /** Anúncio sob encomenda (estoque declarado absurdo): o número não vale. */
+  sobEncomenda: boolean;
   causa: Causa;
   explicacao: string;
   /** No produto: os anúncios/contas que o compõem, do que mais caiu. */
@@ -193,6 +203,9 @@ export function diagnosticar(l: {
   /** Fração da queda que veio de anúncio com estoque acompanhado (0–1). */
   pesoAcompanhado: number;
   status: string | null;
+  /** Estoque de hoje, se lido. Diz se a ruptura continua ou já passou. */
+  estoqueAtual?: number | null;
+  sobEncomenda?: boolean;
 }): { causa: Causa; explicacao: string } {
   const { antes, agora, delta, efeito } = l;
   /*
@@ -226,9 +239,20 @@ export function diagnosticar(l: {
    * como fato, não como explicação.
    */
   if (l.diasSemEstoque >= 2 && l.diasSemEstoque >= l.diasObservados * 0.5 && l.pesoAcompanhado >= 0.5) {
+    /* Se já reabasteceu, a ação é outra: não é repor, é esperar a venda
+       voltar (ou cobrar o posicionamento que o anúncio perdeu parado). */
+    const hoje = l.sobEncomenda
+      ? " Hoje está sob encomenda."
+      : l.estoqueAtual == null
+        ? ""
+        : l.estoqueAtual > 0
+          ? ` Hoje já tem ${l.estoqueAtual.toLocaleString("pt-BR")} em estoque.`
+          : " Hoje ainda está zerado.";
     return {
       causa: "sem estoque",
-      explicacao: `Ficou sem estoque em ${l.diasSemEstoque} dos ${l.diasObservados} dias acompanhados. A queda é de disponibilidade, não de demanda.`,
+      explicacao:
+        `Ficou sem estoque em ${l.diasSemEstoque} dos ${l.diasObservados} dias acompanhados. ` +
+        `A queda é de disponibilidade, não de demanda.` + hoje,
     };
   }
   if (agora.unidades === 0 && l.status && l.status !== "active" && l.status !== "ativo") {
@@ -356,6 +380,7 @@ export async function carregarQueda(opcoes: {
     conta_canal_id: string | null;
     status: string | null;
     preco_atual: string | number | null;
+    estoque: number | null;
   };
   type Desempenho = { anuncio_id: string; data: string; visitas: number };
   type Retrato = { anuncio_id: string; data: string; estoque: number; preco?: string | number | null };
@@ -388,7 +413,7 @@ export async function carregarQueda(opcoes: {
     paginar(() =>
       sb
         .from("anuncios")
-        .select("id,codigo_externo,titulo,sku_canal,canal_id,conta_canal_id,status,preco_atual")
+        .select("id,codigo_externo,titulo,sku_canal,canal_id,conta_canal_id,status,preco_atual,estoque")
         .order("id")
     ) as unknown as Promise<Anuncio[]>,
     paginar(() =>
@@ -565,6 +590,23 @@ export async function carregarQueda(opcoes: {
       for (const [id, pt] of g.partes) if (acompanhados.has(id) && pt.agora < pt.antes) q += pt.antes - pt.agora;
       pesoAcompanhado = q / -quedaTotal;
     }
+    /*
+     * Estoque de hoje. Só soma o que foi lido: anúncio nunca sincronizado
+     * tem estoque nulo, e tratá-lo como zero diria "faltou produto" de um
+     * anúncio sobre o qual não se sabe nada.
+     *
+     * Acima de 40 mil é anúncio sob encomenda — o vendedor declara um
+     * número alto para não ficar sem anúncio, e somá-lo afogaria o estoque
+     * real dos irmãos.
+     */
+    let estoqueAtual: number | null = null;
+    let sobEncomenda = false;
+    for (const id of g.anuncios) {
+      const e = anuncioPorId.get(id)?.estoque;
+      if (e == null) continue;
+      if (e >= 40_000) sobEncomenda = true;
+      else estoqueAtual = (estoqueAtual ?? 0) + e;
+    }
     const antes = fechar(g.antes);
     const agora = fechar(g.agora);
     const delta = r2(agora.receita - antes.receita);
@@ -572,6 +614,7 @@ export async function carregarQueda(opcoes: {
     const { causa, explicacao } = diagnosticar({
       antes, agora, delta, efeito, diasSemEstoque: g.semEstoque.size,
       diasObservados: g.semEstoque.size + g.comEstoque.size, pesoAcompanhado, status: g.status,
+      estoqueAtual, sobEncomenda,
     });
     return {
       chave: g.chave,
@@ -590,6 +633,8 @@ export async function carregarQueda(opcoes: {
       diasComEstoque: g.comEstoque.size,
       status: g.status,
       precoAtual: g.precoAtual,
+      estoqueAtual,
+      sobEncomenda,
       causa,
       explicacao,
       partes: [...g.partes.values()]

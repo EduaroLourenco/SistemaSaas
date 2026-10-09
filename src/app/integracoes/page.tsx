@@ -10,6 +10,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "@/lib/dados/operacao";
 import { Disclosure } from "@/components/ui/disclosure";
 import { SaudeDados } from "@/components/painel/saude-dados";
+import { BotaoAtualizar } from "@/components/painel/botao-atualizar";
 import { carregarSaude } from "@/lib/dados/saude";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,7 @@ export default async function Integracoes() {
       <PageHeader
         title="Fontes de dados"
         description="De onde vem cada número, até quando vai, e se dá para confiar"
+        actions={<BotaoAtualizar />}
       />
 
       <PageBody>
