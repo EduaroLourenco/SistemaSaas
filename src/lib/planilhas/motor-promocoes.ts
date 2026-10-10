@@ -72,6 +72,17 @@ export interface RegraPreco {
    * vez de tabela de preço, que é como quase todo cliente começa.
    */
   comoUsar?: "alvo" | "piso";
+  /**
+   * Quanto a oferta do canal pode ficar abaixo da referência e ainda ser
+   * aceita, em pontos percentuais. Cadastro da empresa (db/36).
+   *
+   * Não é o desconto mínimo do canal: aquele é regra do Mercado Livre e
+   * fica em ConfigCanal. Este é decisão comercial — 5 reproduz o
+   * comportamento antigo, 0 é o certo quando a referência é piso de
+   * custo. Ausente cai no padrão de cada leitura: 5% em "alvo", 0 em
+   * "piso".
+   */
+  toleranciaPct?: number;
 }
 
 /**
@@ -248,6 +259,13 @@ export function precoDaMargem(data: FormulaBaseData, sku: string, comissao: numb
   const restante = 100 - comissao * 100 - c.impostoPct - data.regra.margemMinima;
   if (restante <= 0) return null;
   const precoMargem = ((c.mercadoria + c.embalagem + c.frete) * 100) / restante;
+  /*
+   * Usado como PISO, o número já é o mínimo: dividir pelo piso de novo o
+   * empurraria 5% para cima e recusaria oferta que cobre a margem pedida.
+   * A divisão existe só na leitura "alvo", para que a tolerância de 5% do
+   * canal caia exatamente em cima da margem e nunca abaixo dela.
+   */
+  if (data.regra.comoUsar === "piso") return Math.round(precoMargem * 100) / 100;
   return Math.round((precoMargem / PISO) * 100) / 100;
 }
 
@@ -257,6 +275,18 @@ function semPreco(data: FormulaBaseData): string {
   return data.regra?.comoUsar === "piso" ? "sem piso cadastrado para este SKU" : "sem preço de tabela";
 }
 
+/**
+ * A tolerância da empresa, em fração. O argumento `padrao` é o que vale
+ * sem cadastro: o desconto mínimo do canal na leitura "alvo"
+ * (comportamento antigo) e zero na leitura "piso".
+ */
+function tolerancia(data: FormulaBaseData, padrao: number): number {
+  const p = data.regra?.toleranciaPct;
+  if (p == null || !Number.isFinite(p)) return padrao;
+  return Math.min(0.5, Math.max(0, p / 100));
+}
+
+const r2 = (v: number) => Math.round(v * 100) / 100;
 const reais = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 
 function precoDaFormula(data: FormulaBaseData, sku: string, mlb: string, comissao: number): number | null {
@@ -340,14 +370,36 @@ export function processItem(
     const tabela = getPrecoTabela(data, sku, mlb, considerar);
     if (tabela === null) return { action: negativeAction, pendencia: `${semPreco(data)} para a comissão ${(considerar*100).toFixed(1)}%`, newPrice: null };
 
+    /*
+     * Piso não tem tolerância.
+     *
+     * Na leitura "alvo" os 5% são o desconto que o canal pode arrancar de
+     * um preço PRETENDIDO, e aceitá-los é negociação. Com piso, os mesmos
+     * 5% seriam aceitar vender abaixo do mínimo — o oposto do que o número
+     * existe para impedir. Num item de R$ 1.080 de piso, 5% é R$ 54 que
+     * ninguém decidiu abrir mão.
+     */
+    if (data.regra?.comoUsar === "piso") {
+      const minimo = tabela * (1 - tolerancia(data, 0));
+      if (finalPrice >= minimo - 0.01) {
+        return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: tabela };
+      }
+      return {
+        action: negativeAction,
+        pendencia: `proposta de ${reais(finalPrice)} abaixo do piso de ${reais(minimo)} na tarifa reduzida de ${(considerar * 100).toFixed(1)}%`,
+        newPrice: null,
+        tabelaCalculada: tabela,
+      };
+    }
+
     // Tolerância do canal: aceita a oferta que chega até o desconto mínimo
     // abaixo da tabela. No Meli são os 5% de sempre.
     const aprovado =
       tabela - finalPrice < 0 ||
-      finalPrice >= tabela * (1 - config.descontoMinimo);
-    return { 
-      action: aprovado ? positiveAction : negativeAction, 
-      pendencia: "", 
+      finalPrice >= tabela * (1 - tolerancia(data, config.descontoMinimo));
+    return {
+      action: aprovado ? positiveAction : negativeAction,
+      pendencia: "",
       newPrice: null, // Caso A não altera preço
       tabelaCalculada: tabela
     };
@@ -408,18 +460,22 @@ export function processItem(
      * ir para a lista de revisão com o motivo em reais.
      */
     if (data.regra?.comoUsar === "piso") {
+      const minimo = r2(p * (1 - tolerancia(data, 0)));
       if (!finalPrice) {
         return { action: negativeAction, pendencia: "o canal não propôs preço final", newPrice: null, tabelaCalculada: p };
       }
       // Um centésimo de folga: o canal arredonda o preço final que calcula.
-      if (finalPrice >= p - 0.01) {
-        return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: p };
+      if (finalPrice >= minimo - 0.01) {
+        return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: minimo };
       }
       return {
         action: negativeAction,
-        pendencia: `proposta de ${reais(finalPrice)} abaixo do piso de ${reais(p)}`,
+        pendencia: `proposta de ${reais(finalPrice)} abaixo do piso de ${reais(minimo)}`,
         newPrice: null,
-        tabelaCalculada: p,
+        /* O piso JÁ com a folga: é contra ele que a decisão foi tomada, e
+           divergir da frase mandaria a tela de revisão mostrar um número
+           que não decidiu nada. */
+        tabelaCalculada: minimo,
       };
     }
 

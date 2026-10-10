@@ -5,7 +5,7 @@ import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Button, Panel, PanelHeader, Badge, EmptyState } from "@/components/ui/primitives";
-import { FileDrop, SectionTitle, Segmented, Field, Input } from "@/components/ui/controls";
+import { FileDrop, SectionTitle, Segmented, Field, Input, Toggle } from "@/components/ui/controls";
 import { StatTile } from "@/components/ui/stat-tile";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { money, count, pct } from "@/lib/format";
@@ -59,11 +59,10 @@ type Linha = {
   tags: Tag[];
 };
 
-type Regra = "tabela" | "piso" | "margem" | "maior";
+type Regra = "tabela" | "margem" | "maior";
 
 const REGRAS: { value: Regra; label: string }[] = [
   { value: "tabela", label: "Tabela de preço" },
-  { value: "piso", label: "Tabela como piso" },
   { value: "margem", label: "Margem pelos custos" },
   { value: "maior", label: "As duas (mais seguro)" },
 ];
@@ -172,6 +171,34 @@ export default function ProcessarPromocoes() {
   const [base, setBase] = React.useState<File[]>([]);
   const [descontoExtra, setDescontoExtra] = React.useState("0");
   const [regra, setRegra] = React.useState<Regra>("tabela");
+  /* Separado da origem de propósito: as duas perguntas são independentes —
+     de ONDE vem o mínimo, e se ele é alvo a propor ou piso a respeitar. */
+  const [comoPiso, setComoPiso] = React.useState(false);
+  const [tolerancia, setTolerancia] = React.useState("5");
+  const [pisoSalvo, setPisoSalvo] = React.useState<"nada" | "salvando" | "ok" | "erro">("nada");
+
+  /* O piso é da EMPRESA: duas pessoas processando a mesma campanha têm de
+     chegar ao mesmo resultado, então o valor vem do banco (db/36). */
+  React.useEffect(() => {
+    let vivo = true;
+    fetch("/api/promocoes/piso")
+      .then((r) => r.json())
+      .then((j) => { if (!vivo || j.erro) return; setComoPiso(Boolean(j.usarComoPiso)); setTolerancia(String(j.toleranciaPct ?? 5)); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, []);
+
+  async function salvarPiso() {
+    setPisoSalvo("salvando");
+    try {
+      const r = await fetch("/api/promocoes/piso", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ usarComoPiso: comoPiso, toleranciaPct: parseFloat(tolerancia) || 0 }),
+      });
+      setPisoSalvo(r.ok ? "ok" : "erro");
+    } catch { setPisoSalvo("erro"); }
+  }
   const [margemMinima, setMargemMinima] = React.useState("8");
   const [processando, setProcessando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
@@ -238,6 +265,8 @@ export default function ProcessarPromocoes() {
     const d = parseFloat(descontoExtra.replace(",", ".")) || 0;
     fd.append("descontoExtra", String(d > 1 ? d / 100 : d));
     fd.append("regra", regra);
+    fd.append("comoUsar", comoPiso ? "piso" : "alvo");
+    fd.append("toleranciaPct", tolerancia);
     fd.append("margemMinima", String(parseFloat(margemMinima.replace(",", ".")) || 0));
 
     try {
@@ -564,7 +593,41 @@ export default function ProcessarPromocoes() {
               <PanelHeader title="Regra do preço mínimo" hint="abaixo dele, o item não entra na promoção" />
               <div className="flex flex-col gap-3 p-4">
                 <Segmented options={REGRAS} value={regra} onChange={setRegra} />
-                {regra !== "tabela" && regra !== "piso" && (
+                {/* Piso: cadastro da empresa, não escolha de quem processa.
+                    Fica aqui porque é onde o número age, mas grava na
+                    operação — duas pessoas na mesma campanha têm de chegar
+                    ao mesmo resultado (db/36). */}
+                <div className="flex flex-col gap-3 rounded-r1 border border-line bg-panel-2 px-3 py-3">
+                  <Toggle
+                    checked={comoPiso}
+                    onChange={(v) => { setComoPiso(v); setPisoSalvo("nada"); }}
+                    label="Esse número é piso, não preço a propor"
+                    hint="Ligado: o sistema não mexe no preço — compara o que o canal propôs com o mínimo e decide entrar ou não. Desligado: propõe o número como preço da campanha."
+                  />
+                  <Field
+                    label="Tolerância abaixo do piso (%)"
+                    hint={
+                      comoPiso
+                        ? "Quanto a oferta do canal pode furar o piso e ainda ser aceita. Zero recusa qualquer centavo abaixo."
+                        : "Quanto a oferta do canal pode ficar abaixo do preço de tabela e ainda ser aceita. 5% é o que o sistema sempre usou."
+                    }
+                  >
+                    <Input
+                      inputMode="decimal"
+                      value={tolerancia}
+                      onChange={(e) => { setTolerancia(e.target.value); setPisoSalvo("nada"); }}
+                      className="max-w-[120px] max-sm:h-11"
+                    />
+                  </Field>
+                  <div className="flex items-center gap-3">
+                    <Button size="sm" onClick={salvarPiso} disabled={pisoSalvo === "salvando"}>
+                      {pisoSalvo === "salvando" ? "Salvando…" : "Salvar para esta empresa"}
+                    </Button>
+                    {pisoSalvo === "ok" && <span className="text-[12px] text-up">Salvo.</span>}
+                    {pisoSalvo === "erro" && <span className="text-[12px] text-down">Não consegui salvar.</span>}
+                  </div>
+                </div>
+                {regra !== "tabela" && (
                   <Field
                     label="Margem mínima (%)"
                     hint="O que precisa sobrar depois de mercadoria, embalagem, frete, comissão e imposto."
@@ -579,9 +642,8 @@ export default function ProcessarPromocoes() {
                 )}
                 <p className="text-[12px] leading-relaxed text-ink-2">
                   {regra === "tabela" &&
-                    "O preço mínimo vem da Fórmula base, como sempre foi. O número dela é o preço que você QUER cobrar: o sistema o propõe na campanha e aceita contraproposta do canal até 5% abaixo."}
-                  {regra === "piso" &&
-                    "O número da Fórmula base é lido como MÍNIMO, não como preço a propor. O sistema não mexe no preço: compara o que o canal propôs com o piso e decide entrar ou não. Use quando a sua tabela é de preço mínimo calculado do custo — tratá-la como alvo faria o sistema propor o mínimo e jogar o preço do anúncio para baixo."}
+"O preço mínimo vem da Fórmula base, como sempre foi."}
+
                   {regra === "margem" &&
                     "O preço mínimo é calculado dos custos de cada SKU (Financeiro › Custos): o menor preço que ainda deixa a margem pedida, já com a comissão da campanha. Não precisa de Fórmula base. SKU sem custo completo fica de fora, como pendência."}
                   {regra === "maior" &&

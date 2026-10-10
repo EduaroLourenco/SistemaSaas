@@ -62,3 +62,22 @@ const comReducao = rodar("piso", 300, 399, 10);
 vale("Caso A segue sem escrever preço", comReducao.newPrice === null, comReducao);
 
 console.log(`${n} verificações, todas certas.`);
+
+/* ── 7. A tolerância é cadastro da empresa, não constante ──
+   db/36: o mesmo piso com folga diferente decide diferente. */
+const comFolga = (pct, proposta) =>
+  processItem("MLB1", "SK1", null, proposta, 399, {
+    ...base("piso"),
+    regra: { modo: "tabela", margemMinima: 0, comoUsar: "piso", toleranciaPct: pct },
+  });
+let m = 0;
+const diz = (nome, cond, r) => { m++; assert.ok(cond, `${nome} — veio ${JSON.stringify(r)}`); };
+// R$ 240 fura o piso de 251,13 em 4,4%.
+diz("sem folga, 240 é recusado", comFolga(0, 240).action === "Não participar", comFolga(0, 240));
+diz("com 5% de folga, 240 entra", comFolga(5, 240).action === "Participar", comFolga(5, 240));
+diz("com 5%, 238 (5,2% abaixo) ainda sai", comFolga(5, 238).action === "Não participar", comFolga(5, 238));
+// A pendência tem de citar o piso JÁ com a folga, não o piso cheio.
+const refusado = comFolga(5, 238);
+diz("a pendência mostra o piso JÁ com a folga", /238,57/.test(refusado.pendencia), refusado.pendencia);
+diz("e o campo do piso concorda com a frase", refusado.tabelaCalculada === 238.57, refusado);
+console.log(`${m} verificações da tolerância, todas certas.`);

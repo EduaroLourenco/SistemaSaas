@@ -56,7 +56,8 @@ export type LinhaPrecoAlvo = {
   impostoPct: number | null;
   /** Frete por unidade: o praticado quando existe, senão a faixa de peso. */
   frete: number | null;
-  freteOrigem: "praticado" | "tabela" | null;
+  /** De onde o frete veio. "produto" é o frete_unitario cadastrado (db/35). */
+  freteOrigem: "praticado" | "produto" | "tabela" | null;
 
   cenarios: CenarioSku[];
   /** Nomeia o que impede o cálculo. Vazio = dá para calcular. */
@@ -82,7 +83,7 @@ export async function carregarPrecoAlvo(
       paginar(() =>
         sb
           .from("produtos")
-          .select("id,sku,titulo,custo_unitario,embalagem,aliquota_impostos,peso_kg")
+          .select("id,sku,titulo,custo_unitario,embalagem,aliquota_impostos,peso_kg,frete_unitario")
           .order("sku")
       ),
       paginar(() =>
@@ -109,6 +110,7 @@ export async function carregarPrecoAlvo(
     embalagem: string | number | null;
     aliquota_impostos: string | number | null;
     peso_kg: string | number | null;
+    frete_unitario: string | number | null;
   };
 
   const produtos = produtosRaw as unknown as Prod[];
@@ -252,16 +254,25 @@ export async function carregarPrecoAlvo(
     const fretePraticado =
       ac && ac.unidadesComFrete > 0 ? r2(ac.frete / ac.unidadesComFrete) : null;
     const freteTabela = freteDeTabela(pesoKg);
-    const frete = fretePraticado ?? freteTabela;
-    const freteOrigem: "praticado" | "tabela" | null =
-      fretePraticado != null ? "praticado" : freteTabela != null ? "tabela" : null;
+    /*
+     * Praticado → cadastrado no produto → faixa de peso.
+     *
+     * O praticado segue na frente porque é medição do que o canal cobrou.
+     * O do produto vem antes da faixa porque o Meli cobra pelo peso
+     * CUBADO: produto comprido e leve paga mais que pesado e compacto, e
+     * nenhuma faixa de peso acerta os dois (ver db/35).
+     */
+    const freteProduto = prod.frete_unitario == null ? null : n(prod.frete_unitario);
+    const frete = fretePraticado ?? freteProduto ?? freteTabela;
+    const freteOrigem: "praticado" | "produto" | "tabela" | null =
+      fretePraticado != null ? "praticado" : freteProduto != null ? "produto" : freteTabela != null ? "tabela" : null;
 
     const faltando: string[] = [];
     if (mercadoria == null) faltando.push("custo de mercadoria");
     if (embalagem == null) faltando.push("embalagem");
     if (impostoPct == null) faltando.push("alíquota de impostos");
     if (frete == null) {
-      faltando.push(pesoKg == null ? "peso do produto" : "faixa de frete");
+      faltando.push(pesoKg == null ? "frete do produto ou o peso" : "faixa de frete para este peso");
     }
     if (!tipos.length) faltando.push("comissão do canal");
 

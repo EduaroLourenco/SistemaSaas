@@ -17,6 +17,7 @@ type Edicao = {
   produtoId: string;
   custoMercadoria?: number | null;
   embalagem?: number | null;
+  freteUnitario?: number | null;
   aliquotaImpostos?: number | null;
   pesoKg?: number | null;
 };
@@ -24,6 +25,7 @@ type Edicao = {
 const COLUNA = {
   custoMercadoria: "custo_unitario",
   embalagem: "embalagem",
+  freteUnitario: "frete_unitario",
   aliquotaImpostos: "aliquota_impostos",
   pesoKg: "peso_kg",
 } as const;
@@ -35,6 +37,7 @@ const CAMPOS = Object.keys(COLUNA) as Campo[];
 const TETO: Record<Campo, number> = {
   custoMercadoria: 1_000_000,
   embalagem: 100_000,
+  freteUnitario: 100_000,
   aliquotaImpostos: 100,
   pesoKg: 10_000,
 };

@@ -251,7 +251,7 @@ for (const [tabela, dados, conflito] of [
    por um número de planilha mudaria margem histórica sem aviso. */
 if (comCustos) {
   const produtos = await todos(() =>
-    sb.from("produtos").select("id,sku,custo_unitario,embalagem,aliquota_impostos").eq("operacao_id", OPERACAO).order("id")
+    sb.from("produtos").select("id,sku,custo_unitario,embalagem,aliquota_impostos,frete_unitario").eq("operacao_id", OPERACAO).order("id")
   );
   const porProd = new Map(produtos.map((p) => [nrm(p.sku), p]));
   let tocados = 0, pulados = 0, ausentes = [];

@@ -30,11 +30,18 @@ export async function POST(req: NextRequest) {
     const descontoExtra = parseFloat((formData.get("descontoExtra") as string) || "0");
     const pedida = String(formData.get("regra") ?? "tabela");
     /*
-     * "piso" não é uma origem de preço, é um jeito de usar a que já existe:
-     * a tabela guardada passa a ser lida como mínimo aceitável em vez de
-     * preço a propor. Por isso cai em modo "tabela" com comoUsar "piso".
+     * Duas perguntas independentes, dois campos: de ONDE vem o mínimo
+     * (regra) e se ele é alvo a propor ou piso a respeitar (comoUsar).
+     * Juntá-los num só seletor impediria a combinação que o cliente sem
+     * tabela de preço precisa: mínimo calculado do custo, usado como piso.
      */
-    const comoUsar: RegraPreco["comoUsar"] = pedida === "piso" ? "piso" : "alvo";
+    const comoUsar: RegraPreco["comoUsar"] =
+      String(formData.get("comoUsar") ?? "alvo") === "piso" ? "piso" : "alvo";
+    /* Vazio é diferente de zero: vazio cai no padrão de cada leitura (5%
+       em alvo, 0 em piso), zero é a empresa dizendo "nenhuma folga". */
+    const bruta = formData.get("toleranciaPct");
+    const toleranciaPct =
+      bruta == null || String(bruta).trim() === "" ? undefined : Math.min(50, Math.max(0, parseFloat(String(bruta)) || 0));
     const modo: RegraPreco["modo"] = pedida === "margem" || pedida === "maior" ? pedida : "tabela";
     const margemMinima = Math.min(60, Math.max(0, parseFloat((formData.get("margemMinima") as string) || "0") || 0));
 
@@ -95,10 +102,10 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      formulaData = { ...formulaData, custos, regra: { modo, margemMinima, comoUsar } };
+      formulaData = { ...formulaData, custos, regra: { modo, margemMinima, comoUsar, toleranciaPct } };
     } else if (comoUsar === "piso") {
       // Sem custo nenhum a carregar: o piso já está na tabela guardada.
-      formulaData = { ...formulaData, regra: { modo, margemMinima, comoUsar } };
+      formulaData = { ...formulaData, regra: { modo, margemMinima, comoUsar, toleranciaPct } };
     }
 
     const resumoBase = resumoFormulaBase(formulaData);
@@ -230,7 +237,7 @@ export async function POST(req: NextRequest) {
       // De onde veio a base — a tela mostra, para ninguém processar uma
       // semana inteira com a versão errada sem perceber.
       origemBase,
-      regra: { modo, margemMinima, comoUsar, custosUsados, custosIncompletos },
+      regra: { modo, margemMinima, comoUsar, toleranciaPct, custosUsados, custosIncompletos },
       arquivos,
       resumo: {
         lidos: todasLinhas.length,
