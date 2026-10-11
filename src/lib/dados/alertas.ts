@@ -311,18 +311,37 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
   try {
     const { carregarPrecoAlvo } = await import("./preco-alvo");
     const { linhas: alvo } = await carregarPrecoAlvo();
-    // Receita > 0 é a prova de que vendeu: SKU parado sem custo não atrapalha
-    // ninguém, e listá-lo afogaria o que importa.
-    const semCusto = alvo.filter((l) => l.faltando.length > 0 && l.receita > 0);
+    /*
+     * Receita > 0 é a prova de que vendeu: SKU parado sem custo não
+     * atrapalha ninguém, e listá-lo afogaria o que importa.
+     *
+     * ZERO conta como faltando, junto do nulo. Mercadoria a R$ 0,00 passa
+     * em qualquer checagem de "preenchido" e produz margem de 100% — é o
+     * tipo de número que ninguém desconfia, porque parece ótimo. Frete
+     * zero é o caso real hoje: a VTEX e os canais que vêm pelo Bling não
+     * trazem o frete do VENDEDOR, só o do pedido, que o comprador pagou.
+     */
+    const zerado = (v: number | null | undefined) => v != null && v === 0;
+    const semCusto = alvo.filter(
+      (l) =>
+        l.receita > 0 &&
+        (l.faltando.length > 0 || zerado(l.mercadoria) || zerado(l.frete) || zerado(l.impostoPct))
+    );
     if (semCusto.length) {
       const porFalta = new Map<string, number>();
-      for (const l of semCusto) for (const f of l.faltando) porFalta.set(f, (porFalta.get(f) ?? 0) + 1);
+      const conta = (k: string) => porFalta.set(k, (porFalta.get(k) ?? 0) + 1);
+      for (const l of semCusto) {
+        for (const f of l.faltando) conta(f);
+        if (zerado(l.mercadoria)) conta("custo zerado");
+        if (zerado(l.frete)) conta("frete zerado");
+        if (zerado(l.impostoPct)) conta("imposto zerado");
+      }
       const receitaCega = semCusto.reduce((acc, l) => acc + l.receita, 0);
       alertas.push({
         id: "custo-faltando",
         severidade: semCusto.length > 20 ? "critico" : "atencao",
         tipo: "custo",
-        titulo: `${semCusto.length} SKUs venderam sem custo cadastrado`,
+        titulo: `${semCusto.length} SKUs venderam sem custo completo`,
         leitura:
           `${moeda(receitaCega)} faturados por produtos cujo custo o sistema não conhece. ` +
           `Eles não entram em promoção — saem como "sem custo cadastrado" — e puxam para baixo ` +
