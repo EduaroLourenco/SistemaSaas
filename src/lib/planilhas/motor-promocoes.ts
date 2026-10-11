@@ -450,33 +450,37 @@ export function processItem(
     if (p === null) return { action: negativeAction, pendencia: semPreco(data), newPrice: null };
 
     /*
-     * Base de PISO: a decisão é sobre a proposta do canal, não sobre um
-     * preço nosso.
+     * Base de PISO, e aqui o preço PODE ser mudado: escreve o mínimo.
      *
-     * `newPrice: null` é o que mantém o preço da planilha intocado — o
-     * mesmo que o Caso A faz. Participar aqui significa aceitar o que o
-     * canal propôs, porque ele já está acima do mínimo; recusar significa
-     * que a proposta fura o piso, e aí o preço não é alterado para o item
-     * ir para a lista de revisão com o motivo em reais.
+     * É a diferença entre as duas planilhas do canal. Na de redução de
+     * tarifa (Caso A) a coluna de preço é travada, então só cabe aceitar
+     * ou recusar a proposta. Aqui a coluna é editável, e quem escolheu a
+     * régua "preço mínimo" quer participar NELE: é o menor preço que a
+     * operação aguenta, e descer até ele é a maior exposição possível sem
+     * vender no prejuízo.
+     *
+     * Não escrever era o que esta função fazia antes, e deixava a planilha
+     * voltar com a proposta do canal intacta — ou seja, com o desconto que
+     * o canal quis, não com o que a régua permite.
      */
     if (data.regra?.comoUsar === "piso") {
       const minimo = r2(p * (1 - tolerancia(data, 0)));
-      if (!finalPrice) {
-        return { action: negativeAction, pendencia: "o canal não propôs preço final", newPrice: null, tabelaCalculada: p };
+
+      /*
+       * Acima do preço publicado não há promoção a fazer: participar
+       * exigiria AUMENTAR o preço, e o canal recusa qualquer desconto
+       * abaixo do mínimo dele. O item vai para a revisão com o motivo.
+       */
+      if (originalPrice && minimo > originalPrice) {
+        return {
+          action: negativeAction,
+          pendencia: `preço mínimo de ${reais(minimo)} acima do preço publicado de ${reais(originalPrice)} — sem espaço para desconto`,
+          newPrice: null,
+          tabelaCalculada: minimo,
+        };
       }
-      // Um centésimo de folga: o canal arredonda o preço final que calcula.
-      if (finalPrice >= minimo - 0.01) {
-        return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: minimo };
-      }
-      return {
-        action: negativeAction,
-        pendencia: `proposta de ${reais(finalPrice)} abaixo do piso de ${reais(minimo)}`,
-        newPrice: null,
-        /* O piso JÁ com a folga: é contra ele que a decisão foi tomada, e
-           divergir da frase mandaria a tela de revisão mostrar um número
-           que não decidiu nada. */
-        tabelaCalculada: minimo,
-      };
+
+      return { action: positiveAction, pendencia: "", newPrice: minimo, tabelaCalculada: minimo };
     }
 
     /*

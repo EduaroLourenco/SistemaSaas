@@ -33,28 +33,32 @@ const vale = (nome, cond, r) => { n++; assert.ok(cond, `${nome} — veio ${JSON.
 const alvo = rodar("alvo", 379.05);
 vale("como ALVO o motor propõe o piso", alvo.action === "Participar" && alvo.newPrice === PISO, alvo);
 const piso = rodar("piso", 379.05);
-vale("como PISO aceita a proposta do canal", piso.action === "Participar", piso);
-vale("como PISO não escreve preço", piso.newPrice === null, piso);
+vale("como PISO participa", piso.action === "Participar", piso);
+/* Onde o preço é editável, a régua "preço mínimo" escreve o mínimo: é a
+   maior exposição possível sem vender no prejuízo. */
+vale("como PISO escreve o mínimo", piso.newPrice === PISO, piso);
 
-/* 2. Proposta que fura o piso: recusa, e diz em reais o quanto. */
-const fura = rodar("piso", 250);
-vale("proposta abaixo do piso é recusada", fura.action === "Não participar", fura);
-vale("a pendência diz os dois valores", /250,00/.test(fura.pendencia) && /251,13/.test(fura.pendencia), fura);
-vale("recusar não mexe no preço", fura.newPrice === null, fura);
+/* 2. A proposta do canal não decide nada quando o preço é editável: o
+      mínimo é escrito por cima, mais alto ou mais baixo que ela. */
+const abaixo = rodar("piso", 250);
+vale("proposta abaixo do piso vira o piso", abaixo.newPrice === PISO, abaixo);
+vale("e participa", abaixo.action === "Participar", abaixo);
 
-/* 3. Exatamente no piso entra — e um centavo de folga, porque o canal
-      arredonda o preço final que calcula. */
-vale("no piso, participa", rodar("piso", PISO).action === "Participar", rodar("piso", PISO));
-vale("um centavo abaixo ainda participa", rodar("piso", PISO - 0.01).action === "Participar", rodar("piso", PISO - 0.01));
-vale("dois centavos abaixo já recusa", rodar("piso", PISO - 0.02).action === "Não participar", rodar("piso", PISO - 0.02));
+/* 3. Piso ACIMA do preço publicado: participar exigiria aumentar o preço,
+      e promoção é desconto. Recusa, e não toca no preço. */
+const caro = rodar("piso", 379.05, 200);
+vale("piso acima do publicado recusa", caro.action === "Não participar", caro);
+vale("e não escreve preço", caro.newPrice === null, caro);
+vale("dizendo o porquê", /acima do preço publicado/.test(caro.pendencia), caro);
 
 /* 4. SKU sem piso: pendência que diz o que falta, não "sem preço de tabela". */
 const semPiso = processItem("MLB1", "OUTRO", null, 300, 399, base("piso"));
 vale("SKU sem piso tem pendência própria", /sem piso cadastrado/.test(semPiso.pendencia), semPiso);
 
-/* 5. Canal que não propôs preço: não há o que comparar. */
+/* 5. Sem proposta do canal, o mínimo vale do mesmo jeito: a régua é
+      nossa, não dele. */
 const semProposta = rodar("piso", null);
-vale("sem preço final, recusa dizendo isso", /não propôs preço final/.test(semProposta.pendencia), semProposta);
+vale("sem proposta, escreve o mínimo", semProposta.newPrice === PISO, semProposta);
 
 /* 6. Com redução de tarifa (Caso A) o motor já validava a proposta e nunca
       mexeu no preço — a regra nova não pode ter mudado isso. */
@@ -63,21 +67,21 @@ vale("Caso A segue sem escrever preço", comReducao.newPrice === null, comReduca
 
 console.log(`${n} verificações, todas certas.`);
 
-/* ── 7. A tolerância é cadastro da empresa, não constante ──
-   db/36: o mesmo piso com folga diferente decide diferente. */
-const comFolga = (pct, proposta) =>
-  processItem("MLB1", "SK1", null, proposta, 399, {
+/* ── 7. A tolerância é cadastro da empresa, e move o mínimo escrito ──
+   db/36: com o preço editável, a folga não decide entrar ou não — ela
+   decide QUAL número vai para a planilha. */
+const comFolga = (pct) =>
+  processItem("MLB1", "SK1", null, 379.05, 399, {
     ...base("piso"),
     regra: { modo: "tabela", margemMinima: 0, comoUsar: "piso", toleranciaPct: pct },
   });
 let m = 0;
-const diz = (nome, cond, r) => { m++; assert.ok(cond, `${nome} — veio ${JSON.stringify(r)}`); };
-// R$ 240 fura o piso de 251,13 em 4,4%.
-diz("sem folga, 240 é recusado", comFolga(0, 240).action === "Não participar", comFolga(0, 240));
-diz("com 5% de folga, 240 entra", comFolga(5, 240).action === "Participar", comFolga(5, 240));
-diz("com 5%, 238 (5,2% abaixo) ainda sai", comFolga(5, 238).action === "Não participar", comFolga(5, 238));
-// A pendência tem de citar o piso JÁ com a folga, não o piso cheio.
-const refusado = comFolga(5, 238);
-diz("a pendência mostra o piso JÁ com a folga", /238,57/.test(refusado.pendencia), refusado.pendencia);
-diz("e o campo do piso concorda com a frase", refusado.tabelaCalculada === 238.57, refusado);
+const diz = (nome, cond, r) => {
+  m++;
+  assert.ok(cond, `${nome} — veio ${JSON.stringify(r)}`);
+};
+diz("sem folga, escreve o piso cheio", comFolga(0).newPrice === PISO, comFolga(0));
+// 251,13 × 0,95 = 238,57
+diz("com 5% de folga, escreve 5% abaixo", comFolga(5).newPrice === 238.57, comFolga(5));
+diz("e o campo do piso acompanha o escrito", comFolga(5).tabelaCalculada === comFolga(5).newPrice, comFolga(5));
 console.log(`${m} verificações da tolerância, todas certas.`);
