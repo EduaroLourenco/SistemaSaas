@@ -39,7 +39,9 @@ export default async function Pagina({
           canais={canais}
           contas={contas}
           erp={erp}
-          abaInicial={aba === "erp" ? "erp" : aba === "canais" ? "canais" : "contas"}
+          abaInicial={
+            aba === "erp" ? "erp" : aba === "google" ? "google" : aba === "canais" ? "canais" : "contas"
+          }
           faltaMigracao={faltaMigracao}
         />
       </PageBody>

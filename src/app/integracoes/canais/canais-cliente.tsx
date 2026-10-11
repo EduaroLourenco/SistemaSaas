@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/primitives";
 import { Cadastro, type Coluna, type CampoForm } from "@/components/financeiro/cadastro";
 import type { Canal, ContaCanal, Erp } from "@/lib/dados/canais";
 import { ErpPainel } from "./erp-painel";
+import { GooglePainel } from "./google-painel";
 
 /** Canais que a plataforma lê por API. O resto entra por planilha. */
 const COM_API = new Set(["mercado_livre", "vtex"]);
@@ -27,10 +28,10 @@ export default function CanaisCliente({
   canais: Canal[];
   contas: ContaCanal[];
   erp: Erp | null;
-  abaInicial: "contas" | "canais" | "erp";
+  abaInicial: "contas" | "canais" | "erp" | "google";
   faltaMigracao: string | null;
 }) {
-  const [aba, setAba] = React.useState<"contas" | "canais" | "erp">(abaInicial);
+  const [aba, setAba] = React.useState<"contas" | "canais" | "erp" | "google">(abaInicial);
 
   const quando = (iso: string | null) =>
     iso
@@ -306,6 +307,7 @@ export default function CanaisCliente({
           ["contas", `Contas de venda (${contas.length})`],
           ["canais", `Canais (${canais.length})`],
           ["erp", "ERP"],
+          ["google", "Google Analytics"],
         ] as const
       ).map(([chave, rotulo]) => (
         <button
@@ -330,6 +332,15 @@ export default function CanaisCliente({
       <div className="flex flex-col gap-4">
         {abas}
         <ErpPainel erp={erp} contas={contas} quando={quando} />
+      </div>
+    );
+  }
+
+  if (aba === "google") {
+    return (
+      <div className="flex flex-col gap-4">
+        {abas}
+        <GooglePainel contas={contas} />
       </div>
     );
   }
