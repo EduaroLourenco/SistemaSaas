@@ -78,8 +78,11 @@ export const NAV: NavGroup[] = [
    * mortas pelo menu de quem só tem planilha.
    *
    * Fora da lista, por não estarem prontas: Performance de preço,
-   * Tráfego pago, Preço-alvo e Comparar ofertas. As rotas continuam de pé,
-   * só não são anunciadas — apagar obrigaria a reescrever depois.
+   * Preço-alvo e Comparar ofertas. As rotas continuam de pé, só não são
+   * anunciadas — apagar obrigaria a reescrever depois.
+   *
+   * Tráfego pago entrou: lê UM relatório do canal por vez, porque eles se
+   * sobrepõem (agosto aparece em sete janelas) e somá-los inflava o gasto.
    */
   {
     label: "Mercado Livre",
@@ -89,6 +92,7 @@ export const NAV: NavGroup[] = [
       { label: "Catálogo", href: "/anuncios/catalogo" },
       { label: "Clássico vs Premium", href: "/anuncios/tipo" },
       { label: "Lógica de promoção", href: "/anuncios/preco-ideal" },
+      { label: "Tráfego pago", href: "/anuncios/trafego-pago" },
       { label: "Campanhas", href: "/promocoes/campanhas" },
       { label: "Processar planilha", href: "/promocoes/processar" },
       { label: "Histórico", href: "/promocoes/historico" },

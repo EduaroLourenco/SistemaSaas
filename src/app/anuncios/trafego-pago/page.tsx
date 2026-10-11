@@ -11,8 +11,15 @@ export const dynamic = "force-dynamic";
  * Separada da análise de anúncios porque a pergunta é outra: lá é "este
  * anúncio vende?", aqui é "a mídia deste anúncio se paga?".
  */
-export default async function Pagina() {
-  const dados = await carregarTrafegoPago();
+export default async function Pagina({
+  searchParams,
+}: {
+  searchParams: Promise<{ janela?: string }>;
+}) {
+  /* A janela vem da URL para o seletor sobreviver a recarga e a link
+     compartilhado — e porque somar janelas sobrepostas inflava o gasto. */
+  const { janela } = await searchParams;
+  const dados = await carregarTrafegoPago(janela);
 
   if (dados.vazio) {
     return (

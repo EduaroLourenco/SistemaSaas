@@ -103,6 +103,8 @@ export type PeriodoResumo = {
 
 export type DadosTrafegoPago = {
   vazio: boolean;
+  /** A janela analisada, `inicio|fim`. As outras ficam em `periodos`. */
+  janela: string;
   periodos: PeriodoResumo[];
   linhas: LinhaAnuncioAds[];
   campanhas: LinhaCampanha[];
@@ -117,12 +119,28 @@ export type DadosTrafegoPago = {
     atribuicao: number | null;
     /** Quantos SKUs têm custo, para não ler margem parcial como total. */
     coberturaMargem: number;
+    /**
+     * TACoS: a mídia sobre o faturamento TOTAL da conta na janela, não só
+     * sobre o que o canal atribui a ela.
+     *
+     * É a métrica de decidir escalar ou parar, e a que o painel do canal
+     * não mostra. O ACoS responde "a campanha é eficiente"; o TACoS
+     * responde "quanto do meu faturamento está indo para mídia". ACoS bom
+     * com TACoS subindo e receita total parada é canibalização: a mídia
+     * está comprando a venda que já era orgânica.
+     */
+    tacos: number | null;
+    /** Faturamento real de TODOS os anúncios na janela, o denominador do TACoS. */
+    receitaTotalConta: number;
   };
   /** Investimento do relatório contra o lançado à mão, por mês. */
   conferencia: { mes: string; relatorio: number; lancado: number }[];
 };
 
-export async function carregarTrafegoPago(): Promise<DadosTrafegoPago> {
+export async function carregarTrafegoPago(
+  /** `inicio|fim` da janela a analisar. Sem isso, a mais recente. */
+  janela?: string
+): Promise<DadosTrafegoPago> {
   const sb = await clienteServidor();
 
   const [adsRaw, anunciosRaw, diariasRaw] = await Promise.all([
@@ -154,17 +172,50 @@ export async function carregarTrafegoPago(): Promise<DadosTrafegoPago> {
     receita_direta: string | number;
     receita_indireta: string | number;
   };
-  const ads = adsRaw as unknown as Ads[];
-  if (!ads.length) {
+  const todas = adsRaw as unknown as Ads[];
+  if (!todas.length) {
     return {
-      vazio: true, periodos: [], linhas: [], campanhas: [],
+      vazio: true, janela: "", periodos: [], linhas: [], campanhas: [],
       totais: {
         investimento: 0, receitaAtribuida: 0, receitaReal: 0, receitaIndireta: 0,
         margem: null, sobraAposMidia: null, atribuicao: null, coberturaMargem: 0,
+        tacos: null, receitaTotalConta: 0,
       },
       conferencia: [],
     };
   }
+
+  /*
+   * ── Uma janela por vez, e isto não é preferência de tela ──
+   *
+   * Cada linha de `anuncio_ads` é um RELATÓRIO do canal para um intervalo,
+   * e os intervalos se sobrepõem: nos dados da Probel são 17 janelas com
+   * 98 pares sobrepostos. Agosto aparece em sete delas — 08-01→08-31,
+   * 08-01→09-28, 08-01→09-30, 08-01→10-01, 08-01→10-02, 08-01→10-05 e
+   * 07-30→09-28 —, porque o canal reexporta o acumulado a cada pedido de
+   * relatório.
+   *
+   * Somar tudo contava o gasto de agosto sete vezes: a tela mostrava
+   * R$ 242 mil investidos onde o real é uma fração disso. Não dava erro
+   * nenhum, só um número inflado que ninguém tinha como desconfiar.
+   *
+   * Então o padrão é a janela mais recente, e trocar de janela é escolha
+   * explícita. Dentro de uma janela os números são do mesmo relatório e
+   * fecham entre si.
+   */
+  /*
+   * A mais recente é a de FIM mais recente, não de início mais recente.
+   * Ordenar pela chave crua (`inicio|fim`) escolheria 22/09→28/09 em vez
+   * de 11/09→11/10, porque "09-22" é maior que "09-11" como texto — um
+   * relatório de uma semana atrás ganharia do de ontem.
+   */
+  const janelas = [...new Set(todas.map((a) => `${a.inicio}|${a.fim}`))].sort((x, y) => {
+    const [ix, fx] = x.split("|");
+    const [iy, fy] = y.split("|");
+    return fx.localeCompare(fy) || ix.localeCompare(iy);
+  });
+  const escolhida = janela && janelas.includes(janela) ? janela : janelas[janelas.length - 1];
+  const ads = todas.filter((a) => `${a.inicio}|${a.fim}` === escolhida);
 
   type Anun = { codigo_externo: string; sku_canal: string | null; titulo: string; tipo: string };
   const info = new Map(
@@ -173,8 +224,7 @@ export async function carregarTrafegoPago(): Promise<DadosTrafegoPago> {
 
   /* ── O intervalo que a mídia cobre define a janela da margem ── */
 
-  const inicio = ads.reduce((m, a) => (a.inicio < m ? a.inicio : m), ads[0].inicio);
-  const fim = ads.reduce((m, a) => (a.fim > m ? a.fim : m), ads[0].fim);
+  const [inicio, fim] = escolhida.split("|");
 
   const base = await carregarBaseMargem({ inicio, fim });
   const margemPorMlb = new Map(agregar(base, "anuncio").map((l) => [l.chave, l]));
@@ -189,6 +239,22 @@ export async function carregarTrafegoPago(): Promise<DadosTrafegoPago> {
   const porMlb = new Map<string, Ac>();
   const porCampanha = new Map<string, Ac & { mlbs: Set<string> }>();
   const porPeriodo = new Map<string, PeriodoResumo>();
+
+  for (const a of todas) {
+    const chaveP = `${a.inicio}|${a.fim}`;
+    const pp =
+      porPeriodo.get(chaveP) ??
+      {
+        rotulo: rotuloPeriodo(a.inicio, a.fim),
+        inicio: a.inicio, fim: a.fim,
+        investimento: 0, receitaAtribuida: 0, cliques: 0,
+        acos: null, roas: null, cpc: null,
+      };
+    pp.investimento += n(a.investimento);
+    pp.receitaAtribuida += n(a.receita);
+    pp.cliques += a.cliques;
+    porPeriodo.set(chaveP, pp);
+  }
 
   for (const a of ads) {
     const at =
@@ -213,19 +279,6 @@ export async function carregarTrafegoPago(): Promise<DadosTrafegoPago> {
     c.mlbs.add(a.codigo_externo);
     porCampanha.set(a.campanha, c);
 
-    const chave = `${a.inicio}|${a.fim}`;
-    const p =
-      porPeriodo.get(chave) ??
-      {
-        rotulo: rotuloPeriodo(a.inicio, a.fim),
-        inicio: a.inicio, fim: a.fim,
-        investimento: 0, receitaAtribuida: 0, cliques: 0,
-        acos: null, roas: null, cpc: null,
-      };
-    p.investimento += n(a.investimento);
-    p.receitaAtribuida += n(a.receita);
-    p.cliques += a.cliques;
-    porPeriodo.set(chave, p);
   }
 
   /* ── Monta as linhas por anúncio ── */
@@ -350,8 +403,20 @@ export async function carregarTrafegoPago(): Promise<DadosTrafegoPago> {
     null
   );
 
+  /*
+   * O denominador do TACoS é o faturamento de TODOS os anúncios da conta
+   * na janela — não só dos que receberam mídia. Usar só os anunciados
+   * daria um TACoS baixo demais, porque esconderia justamente o orgânico
+   * que a pergunta quer medir.
+   */
+  const receitaTotalConta = r2(
+    [...margemPorMlb.values()].reduce((s, l) => s + (l.receita ?? 0), 0)
+  );
+  const tacos = receitaTotalConta > 0 ? r2((investimento * 100) / receitaTotalConta) : null;
+
   return {
     vazio: false,
+    janela: escolhida,
     periodos,
     linhas,
     campanhas,
@@ -364,6 +429,8 @@ export async function carregarTrafegoPago(): Promise<DadosTrafegoPago> {
       sobraAposMidia: margemTotal == null ? null : r2(margemTotal - investimento),
       atribuicao: receitaReal > 0 ? r2((receitaAtribuida * 100) / receitaReal) : null,
       coberturaMargem: linhas.length ? r2((comCusto * 100) / linhas.length) : 0,
+      tacos,
+      receitaTotalConta,
     },
     conferencia,
   };

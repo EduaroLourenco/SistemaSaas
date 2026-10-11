@@ -1,9 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, Button } from "@/components/ui/primitives";
 import { Tabs, Input } from "@/components/ui/controls";
+import { Disclosure } from "@/components/ui/disclosure";
+import { cn } from "@/lib/utils";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import { AlertCircle, TrendingDown } from "lucide-react";
 import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
@@ -71,38 +74,103 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         title="Tráfego pago"
         breadcrumb="Anúncios"
         description="A mídia contra a margem que ela produz"
-        badge={<Badge tone="warn">Em desenvolvimento</Badge>}
+        badge={<Badge tone="neutral">Mercado Livre</Badge>}
       />
 
       <PageBody>
-        {/* ── Períodos ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {periodos.map((p, i) => (
-            <Panel key={`${p.inicio}-${i}`} className="p-3">
-              <p className="text-[12px] text-ink-3 mb-1">{p.rotulo}</p>
-              <p className="num text-[17px] font-semibold text-ink leading-none">
-                {moneyShort(p.investimento)}
-              </p>
-              <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="num text-[12px] text-ink-2">
-                  ACOS {p.acos != null ? pct(p.acos, 1) : "—"}
-                </span>
-                <span className="num text-[12px] text-ink-3">
-                  ROAS {p.roas ?? "—"}
-                </span>
-              </div>
-            </Panel>
-          ))}
-          <Panel className="p-3">
-            <p className="text-[12px] text-ink-3 mb-1">Total investido</p>
-            <p className="num text-[17px] font-semibold text-ink leading-none">
-              {moneyShort(totais.investimento)}
-            </p>
-            <p className="num text-[12px] text-ink-3 mt-1.5">
-              {count(linhas.length)} anúncios
-            </p>
-          </Panel>
+        {/* ── Qual relatório está sendo lido ──
+            Um por vez, e não a soma: os relatórios do canal se sobrepõem
+            (agosto aparece em sete janelas), e somá-los contava o mesmo
+            gasto várias vezes. */}
+        <Panel className="p-4">
+          <p className="label mb-2">Relatório do canal</p>
+          <div className="flex flex-wrap gap-1.5">
+            {periodos.map((p) => {
+              const chave = `${p.inicio}|${p.fim}`;
+              const atual = chave === dados.janela;
+              return (
+                <Link
+                  key={chave}
+                  href={`/anuncios/trafego-pago?janela=${encodeURIComponent(chave)}`}
+                  scroll={false}
+                  className={cn(
+                    "rounded-r1 border px-2.5 py-1.5 text-[12px] transition-colors",
+                    atual
+                      ? "border-brand bg-brand text-brand-ink font-semibold"
+                      : "border-line-2 bg-panel text-ink-2 hover:bg-panel-3"
+                  )}
+                >
+                  {p.rotulo}
+                  <span className="num ml-1.5 opacity-70">{moneyShort(p.investimento)}</span>
+                </Link>
+              );
+            })}
+          </div>
+          <p className="mt-2.5 text-[12px] leading-relaxed text-ink-3">
+            Cada botão é um relatório que o canal exportou, com o seu próprio intervalo. Eles se
+            sobrepõem — o acumulado é reexportado a cada pedido —, então a tela lê{" "}
+            <strong>um por vez</strong>. Somar todos contaria o mesmo gasto duas, três, sete vezes.
+          </p>
+        </Panel>
+
+        {/* ── Os cinco números da janela escolhida ── */}
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+          <Numero rotulo="Investido" valor={money(totais.investimento)} ajuda={`${count(linhas.length)} anúncios`} />
+          <Numero
+            rotulo="TACoS"
+            valor={totais.tacos != null ? pct(totais.tacos, 1) : "—"}
+            ajuda="mídia ÷ faturamento total"
+            tom={totais.tacos != null && totais.tacos > 15 ? "down" : undefined}
+          />
+          <Numero
+            rotulo="ACoS"
+            valor={
+              totais.receitaAtribuida > 0
+                ? pct((totais.investimento * 100) / totais.receitaAtribuida, 1)
+                : "—"
+            }
+            ajuda="mídia ÷ receita atribuída"
+          />
+          <Numero
+            rotulo="ROAS"
+            valor={
+              totais.investimento > 0 && totais.receitaAtribuida > 0
+                ? (totais.receitaAtribuida / totais.investimento).toFixed(2)
+                : "—"
+            }
+            ajuda="o que o canal mostra"
+          />
+          <Numero
+            rotulo="Faturamento da conta"
+            valor={moneyShort(totais.receitaTotalConta)}
+            ajuda="base do TACoS"
+          />
         </div>
+
+        <Disclosure title="ACoS, TACoS e ROAS — qual decide o quê">
+          <p>
+            <strong>ACoS</strong> é mídia ÷ receita que o canal <em>atribui</em> à mídia. Mede se a
+            campanha é eficiente, e é o número que engana sozinho: 14% parece ótimo até se descobrir
+            que a margem daquele anúncio é 13,8%. O teto do ACoS é a margem bruta do produto — acima
+            dela, cada venda que a mídia traz custa dinheiro.
+          </p>
+          <p className="mt-2">
+            <strong>ROAS</strong> é o inverso do ACoS (ACoS de 10% = ROAS 10). É a métrica que o
+            painel do canal passou a destacar. Não traz informação nova.
+          </p>
+          <p className="mt-2">
+            <strong>TACoS</strong> é mídia ÷ faturamento <em>total</em> da conta, orgânico incluído.
+            É o número de decidir escalar ou parar, e o painel do canal não mostra. A leitura que
+            importa: TACoS subindo com faturamento total parado é{" "}
+            <strong>canibalização</strong> — a mídia está comprando a venda que já era orgânica.
+            TACoS caindo com faturamento subindo é o que se quer.
+          </p>
+          <p className="mt-2">
+            O que esta tela <strong>não</strong> tem: impressões perdidas por orçamento e por
+            classificação, que diriam se o caminho é subir verba ou melhorar o anúncio. O relatório
+            que o canal exporta não traz essas colunas.
+          </p>
+        </Disclosure>
 
         {/* ── O número que decide ── */}
         <Panel className="p-4">
@@ -456,5 +524,33 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         </Panel>
       </PageBody>
     </>
+  );
+}
+
+/* ── Um número do topo ── */
+function Numero({
+  rotulo,
+  valor,
+  ajuda,
+  tom,
+}: {
+  rotulo: string;
+  valor: string;
+  ajuda: string;
+  tom?: "down" | "up";
+}) {
+  return (
+    <Panel className="p-3">
+      <p className="text-[12px] text-ink-3">{rotulo}</p>
+      <p
+        className={cn(
+          "num mt-1 text-[19px] font-semibold leading-none",
+          tom === "down" ? "text-down" : tom === "up" ? "text-up" : "text-ink"
+        )}
+      >
+        {valor}
+      </p>
+      <p className="mt-1.5 text-[11px] leading-snug text-ink-3">{ajuda}</p>
+    </Panel>
   );
 }
