@@ -3,7 +3,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "@/lib/dados/operacao";
 import { contasMeli } from "@/lib/meli/rota";
 import { sincronizarMeli } from "@/lib/meli/sincronizar";
-import { appConfigurado as meliConfigurado } from "@/lib/meli/cliente";
+import { appConfigurado as meliConfigurado, contaConectada } from "@/lib/meli/cliente";
 import { lojasVtex, vtexConectada } from "@/lib/vtex/cliente";
 import { sincronizarVtex } from "@/lib/vtex/sincronizar";
 import { integracaoDaOperacao, integracoesDoProvedor } from "@/lib/integracoes/cofre";
@@ -81,9 +81,27 @@ export async function POST() {
     }
   };
 
-  // ── Mercado Livre: uma conta por vez ──
+  /*
+   * ── Mercado Livre: uma conta por vez ──
+   *
+   * O `conectada` de `contasMeli()` vem do cliente da SESSÃO, e é por isso
+   * que ele não serve de filtro aqui: basta o RLS não devolver a linha de
+   * `integracoes` daquela conta — o que acontece com quem entra como admin
+   * da plataforma na empresa de um cliente — para a conta ser considerada
+   * desconectada e sumir da varredura. O botão respondia "nenhuma API
+   * conectada" numa empresa com o Mercado Livre ligado.
+   *
+   * Quem responde de verdade é o cofre, com privilégio, exatamente como a
+   * rotina agendada faz. A autorização já foi resolvida acima, por
+   * `pode_editar_operacao`, e a lista de contas continua vindo da sessão —
+   * então nenhuma conta de outra empresa entra por aqui.
+   */
   if (meliConfigurado()) {
-    for (const c of (await contasMeli()).filter((c) => c.conectada)) {
+    const contas = [];
+    for (const c of await contasMeli()) {
+      if (await contaConectada(c.id)) contas.push(c);
+    }
+    for (const c of contas) {
       await tentar(`Mercado Livre · ${c.nome}`, async () => {
         const r = await sincronizarMeli({
           conta: c.id,

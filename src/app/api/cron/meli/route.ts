@@ -4,6 +4,7 @@ import { sincronizarMeli } from "@/lib/meli/sincronizar";
 import { contaConectada } from "@/lib/meli/cliente";
 import { integracoesMeli } from "@/lib/meli/tokens";
 import { sincronizarAds } from "@/lib/meli/ads";
+import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 
 export const runtime = "nodejs";
 /** Uma conta leva ~2 min: o freio de 4 chamadas/s × ~430 anúncios nas visitas. */
@@ -80,7 +81,47 @@ export async function GET(req: NextRequest) {
    * uma varredura que partisse de uma lista fixa atenderia só quem estivesse
    * nela. Privilegiado de propósito — não há usuário logado numa rotina.
    */
-  for (const c of await integracoesMeli()) {
+  const lista = await integracoesMeli();
+
+  /*
+   * ── A conta mais atrasada vai primeiro ──
+   *
+   * A ordem era a que o banco devolvesse, e isso deixou uma empresa sem
+   * sincronizar por dois dias: a primeira conta consumia 155s dos 300s da
+   * função, a segunda era cortada no meio (ficava "executando" para
+   * sempre) e a terceira nunca começava. Sempre as mesmas, porque a ordem
+   * não mudava.
+   *
+   * Ordenando por atraso, quem ficou de fora vira a primeira da próxima
+   * execução. Com os turnos escalonados do `vercel.json`, todas são
+   * atendidas sem que ninguém precise cadastrar nada por cliente novo.
+   */
+  const { data: marcas } = await clientePrivilegiado()
+    .from("integracoes")
+    .select("id,ultima_sincronizacao")
+    .in("id", lista.map((i) => i.id));
+  type Marca = { id: string; ultima_sincronizacao: string | null };
+  const quando = new Map<string, string>(
+    ((marcas ?? []) as Marca[]).map((m) => [m.id, m.ultima_sincronizacao ?? ""])
+  );
+  // Nunca sincronizada tem "" e entra na frente de todas, que é o certo.
+  lista.sort((a, b) => (quando.get(a.id) ?? "").localeCompare(quando.get(b.id) ?? ""));
+
+  /*
+   * O orçamento. `maxDuration` é 300s e uma conta leva ~155s, então não
+   * cabem duas: começar a segunda garante que ela morra no meio. Melhor
+   * deixá-la para a próxima execução, que a pegará primeiro por ser a mais
+   * atrasada, e devolver no corpo quem ficou — execução cortada no limite
+   * não aparece em log nenhum.
+   */
+  const RESERVA_MS = 170_000;
+  const prazo = Date.now() + (maxDuration - 15) * 1000;
+
+  for (const c of lista) {
+    if (Date.now() + RESERVA_MS > prazo) {
+      contas.push({ conta: c.nome, adiada: "sem tempo nesta execução; é a primeira da próxima" });
+      continue;
+    }
     if (!(await contaConectada(c.contaCanalId))) {
       contas.push({ conta: c.nome, pulada: "não conectada" });
       continue;
