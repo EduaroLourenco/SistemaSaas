@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
+import { SeletorCanais } from "@/components/ui/seletor-canais";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, Button } from "@/components/ui/primitives";
 import { Tabs, Input } from "@/components/ui/controls";
@@ -48,6 +51,18 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
   const [aba, setAba] = React.useState<Aba>("anuncios");
   const [busca, setBusca] = React.useState("");
   const { totais, periodos, campanhas, linhas, conferencia } = dados;
+  const router = useRouter();
+
+  /* Canal e janela andam juntos na URL: trocar de conta pode mudar quais
+     relatórios existem, e perder a janela escolhida é melhor que mostrar
+     uma que aquela conta não tem. */
+  const navegar = (mudar: { canais?: string; janela?: string }) => {
+    const q = new URLSearchParams();
+    const canais = mudar.canais ?? dados.recorte;
+    if (canais) q.set("canais", canais);
+    if (mudar.janela) q.set("janela", mudar.janela);
+    router.push(`/anuncios/trafego-pago?${q}`);
+  };
 
   const visiveis = React.useMemo(() => {
     const t = busca.trim().toLowerCase();
@@ -75,6 +90,17 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         breadcrumb="Anúncios"
         description="A mídia contra a margem que ela produz"
         badge={<Badge tone="neutral">Mercado Livre</Badge>}
+        filters={
+          <BarraFiltros>
+            <Filtro rotulo="Canais" composto>
+              <SeletorCanais
+                grupos={dados.opcoes}
+                selecionados={dados.recorte ? [dados.recorte] : []}
+                aoAplicar={(sel) => navegar({ canais: sel[0] ?? "", janela: undefined })}
+              />
+            </Filtro>
+          </BarraFiltros>
+        }
       />
 
       <PageBody>
@@ -91,7 +117,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
               return (
                 <Link
                   key={chave}
-                  href={`/anuncios/trafego-pago?janela=${encodeURIComponent(chave)}`}
+                  href={`/anuncios/trafego-pago?${new URLSearchParams({ ...(dados.recorte ? { canais: dados.recorte } : {}), janela: chave })}`}
                   scroll={false}
                   className={cn(
                     "rounded-r1 border px-2.5 py-1.5 text-[12px] transition-colors",

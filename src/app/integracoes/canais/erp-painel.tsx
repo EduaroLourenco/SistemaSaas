@@ -56,7 +56,11 @@ export function ErpPainel({
       <Panel>
         <PanelHeader
           title="Bling"
-          hint="Pedidos, produtos e estoque, por API. Acesso somente leitura: nada é alterado no Bling."
+          /* A promessa tem de bater com o que a leitura faz: hoje são
+             pedidos e itens, e o produto nasce do SKU vendido. Estoque o
+             Bling tem, e esta integração ainda não lê — dizer que lia
+             fazia procurar na tela um número que nunca chegou. */
+          hint="Pedidos e itens, por API. O produto é criado a partir do SKU vendido. Estoque ainda não é lido. Acesso somente leitura: nada é alterado no Bling."
           action={
             <a
               href="/api/bling/conectar"

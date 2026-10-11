@@ -14,6 +14,7 @@ import {
   BookMarked,
   Bell,
   MessagesSquare,
+  Megaphone,
   Upload,
   Settings,
   type LucideIcon,
@@ -44,6 +45,15 @@ export const NAV: NavGroup[] = [
       { label: "Resultados", href: "/planejamento/resultados" },
     ],
   },
+  /*
+   * Tráfego pago fica FORA do grupo do Mercado Livre, embora hoje só ele
+   * mande relatório de mídia. A mídia é comprada por conta — a Probel tem
+   * duas no Meli, com verba separada — e todo canal tem a sua: pendurar a
+   * tela num canal só obrigaria a movê-la no dia que o segundo chegasse,
+   * e a ensinar de novo onde ela está. O recorte por canal já está dentro
+   * dela.
+   */
+  { label: "Tráfego pago", icon: Megaphone, href: "/anuncios/trafego-pago" },
   { label: "Conversar", icon: MessagesSquare, href: "/conversa" },
   { label: "Alertas", icon: Bell, href: "/alertas" },
   { label: "Importar", icon: Upload, href: "/importar" },
@@ -92,7 +102,6 @@ export const NAV: NavGroup[] = [
       { label: "Catálogo", href: "/anuncios/catalogo" },
       { label: "Clássico vs Premium", href: "/anuncios/tipo" },
       { label: "Lógica de promoção", href: "/anuncios/preco-ideal" },
-      { label: "Tráfego pago", href: "/anuncios/trafego-pago" },
       { label: "Campanhas", href: "/promocoes/campanhas" },
       { label: "Processar planilha", href: "/promocoes/processar" },
       { label: "Histórico", href: "/promocoes/historico" },

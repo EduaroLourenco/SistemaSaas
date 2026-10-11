@@ -2,6 +2,8 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarBaseMargem, agregar } from "./margem";
+import { carregarContasRecorte } from "./contas-recorte";
+import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
 
 /**
  * Tráfego pago: a mídia contra a margem que ela produz.
@@ -105,6 +107,10 @@ export type DadosTrafegoPago = {
   vazio: boolean;
   /** A janela analisada, `inicio|fim`. As outras ficam em `periodos`. */
   janela: string;
+  /** O canal ou conta escolhido, no formato do seletor. */
+  recorte: string;
+  /** As opções do seletor de canais, com as contas de cada um. */
+  opcoes: GrupoRecorte[];
   periodos: PeriodoResumo[];
   linhas: LinhaAnuncioAds[];
   campanhas: LinhaCampanha[];
@@ -139,11 +145,21 @@ export type DadosTrafegoPago = {
 
 export async function carregarTrafegoPago(
   /** `inicio|fim` da janela a analisar. Sem isso, a mais recente. */
-  janela?: string
+  janela?: string,
+  /**
+   * Canal ou conta. A mídia é comprada POR CONTA — a Probel tem duas no
+   * Mercado Livre, com verba e resultado separados —, e somar as duas
+   * esconde qual está pagando caro pelo clique.
+   *
+   * Hoje só o Meli manda relatório de mídia, mas o recorte já é geral: o
+   * dia que outro canal entrar, a tela não muda.
+   */
+  recorte?: string
 ): Promise<DadosTrafegoPago> {
   const sb = await clienteServidor();
 
-  const [adsRaw, anunciosRaw, diariasRaw] = await Promise.all([
+  const r = lerRecorte(recorte);
+  const [adsRaw, anunciosRaw, diariasRaw, contasRecorte] = await Promise.all([
     paginar(() =>
       sb
         .from("anuncio_ads")
@@ -153,11 +169,12 @@ export async function carregarTrafegoPago(
         .order("inicio")
     ),
     paginar(() =>
-      sb.from("anuncios").select("codigo_externo,sku_canal,titulo,tipo").order("codigo_externo")
+      sb.from("anuncios").select("codigo_externo,sku_canal,titulo,tipo,canal_id,conta_canal_id").order("codigo_externo")
     ),
     paginar(() =>
       sb.from("vendas_diarias").select("data,investimento_ads").gt("investimento_ads", 0)
     ),
+    carregarContasRecorte(),
   ]);
 
   type Ads = {
@@ -176,6 +193,7 @@ export async function carregarTrafegoPago(
   if (!todas.length) {
     return {
       vazio: true, janela: "", periodos: [], linhas: [], campanhas: [],
+      recorte: recorte ?? "", opcoes: opcoesRecorte(contasRecorte),
       totais: {
         investimento: 0, receitaAtribuida: 0, receitaReal: 0, receitaIndireta: 0,
         margem: null, sobraAposMidia: null, atribuicao: null, coberturaMargem: 0,
@@ -209,18 +227,56 @@ export async function carregarTrafegoPago(
    * de 11/09→11/10, porque "09-22" é maior que "09-11" como texto — um
    * relatório de uma semana atrás ganharia do de ontem.
    */
-  const janelas = [...new Set(todas.map((a) => `${a.inicio}|${a.fim}`))].sort((x, y) => {
+  /* O catálogo vem primeiro: é ele que diz de qual conta é cada anúncio,
+     e o recorte abaixo depende disso. */
+  type Anun = {
+    codigo_externo: string;
+    sku_canal: string | null;
+    titulo: string;
+    tipo: string;
+    canal_id: string | null;
+    conta_canal_id: string | null;
+  };
+  const info = new Map(
+    (anunciosRaw as unknown as Anun[]).map((a) => [a.codigo_externo, a])
+  );
+
+  /*
+   * O recorte entra ANTES da escolha da janela: uma conta pode ter
+   * relatórios em janelas que a outra não tem, e listar janelas vazias no
+   * seletor faria a tela abrir sem número nenhum.
+   *
+   * Mídia de anúncio que o catálogo não conhece fica de fora quando há
+   * recorte: sem o anúncio não dá para saber de que conta é, e somá-la a
+   * um canal escolhido seria inventar.
+   */
+  const dentro = (codigo: string) => {
+    if (!r.canalId && !r.contaCanalId) return true;
+    const a = info.get(codigo);
+    return a ? noRecorte(r, { canalId: a.canal_id, contaCanalId: a.conta_canal_id }) : false;
+  };
+  const noCanal = todas.filter((a) => dentro(a.codigo_externo));
+
+  if (!noCanal.length) {
+    return {
+      vazio: true, janela: "", periodos: [], linhas: [], campanhas: [],
+      recorte: recorte ?? "", opcoes: opcoesRecorte(contasRecorte),
+      totais: {
+        investimento: 0, receitaAtribuida: 0, receitaReal: 0, receitaIndireta: 0,
+        margem: null, sobraAposMidia: null, atribuicao: null, coberturaMargem: 0,
+        tacos: null, receitaTotalConta: 0,
+      },
+      conferencia: [],
+    };
+  }
+
+  const janelas = [...new Set(noCanal.map((a) => `${a.inicio}|${a.fim}`))].sort((x, y) => {
     const [ix, fx] = x.split("|");
     const [iy, fy] = y.split("|");
     return fx.localeCompare(fy) || ix.localeCompare(iy);
   });
   const escolhida = janela && janelas.includes(janela) ? janela : janelas[janelas.length - 1];
-  const ads = todas.filter((a) => `${a.inicio}|${a.fim}` === escolhida);
-
-  type Anun = { codigo_externo: string; sku_canal: string | null; titulo: string; tipo: string };
-  const info = new Map(
-    (anunciosRaw as unknown as Anun[]).map((a) => [a.codigo_externo, a])
-  );
+  const ads = noCanal.filter((a) => `${a.inicio}|${a.fim}` === escolhida);
 
   /* ── O intervalo que a mídia cobre define a janela da margem ── */
 
@@ -240,7 +296,7 @@ export async function carregarTrafegoPago(
   const porCampanha = new Map<string, Ac & { mlbs: Set<string> }>();
   const porPeriodo = new Map<string, PeriodoResumo>();
 
-  for (const a of todas) {
+  for (const a of noCanal) {
     const chaveP = `${a.inicio}|${a.fim}`;
     const pp =
       porPeriodo.get(chaveP) ??
@@ -417,6 +473,8 @@ export async function carregarTrafegoPago(
   return {
     vazio: false,
     janela: escolhida,
+    recorte: recorte ?? "",
+    opcoes: opcoesRecorte(contasRecorte),
     periodos,
     linhas,
     campanhas,
