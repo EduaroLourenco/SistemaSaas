@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { SeletorCanais } from "@/components/ui/seletor-canais";
+import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AXIS, GRID } from "@/components/ui/chart";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, Button } from "@/components/ui/primitives";
 import { Tabs, Input } from "@/components/ui/controls";
@@ -47,6 +49,8 @@ const SITUACAO: Record<
   vendeu_sem_ads: { rotulo: "vendeu sem o ads", tom: "warn" },
 };
 
+const dataBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
 export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago }) {
   const [aba, setAba] = React.useState<Aba>("anuncios");
   const [busca, setBusca] = React.useState("");
@@ -56,11 +60,26 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
   /* Canal e janela andam juntos na URL: trocar de conta pode mudar quais
      relatórios existem, e perder a janela escolhida é melhor que mostrar
      uma que aquela conta não tem. */
-  const navegar = (mudar: { canais?: string; janela?: string }) => {
+  /* O total da série é da JANELA DO CALENDÁRIO, e não da janela de
+     relatório — por isso não sai de , que é do relatório. */
+  const serieTotais = React.useMemo(
+    () =>
+      dados.serie.reduce(
+        (a, d) => ({ investimento: a.investimento + d.investimento, receita: a.receita + d.receita }),
+        { investimento: 0, receita: 0 }
+      ),
+    [dados.serie]
+  );
+
+  const navegar = (mudar: { canais?: string; janela?: string; de?: string; ate?: string }) => {
     const q = new URLSearchParams();
     const canais = mudar.canais ?? dados.recorte;
     if (canais) q.set("canais", canais);
     if (mudar.janela) q.set("janela", mudar.janela);
+    const de = mudar.de ?? dados.periodo.de;
+    const ate = mudar.ate ?? dados.periodo.ate;
+    if (de) q.set("de", de);
+    if (ate) q.set("ate", ate);
     router.push(`/anuncios/trafego-pago?${q}`);
   };
 
@@ -99,11 +118,84 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                 aoAplicar={(sel) => navegar({ canais: sel[0] ?? "", janela: undefined })}
               />
             </Filtro>
+            <Filtro rotulo="De">
+              <input
+                type="date"
+                value={dados.periodo.de}
+                onChange={(e) => e.target.value && navegar({ de: e.target.value })}
+                className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink"
+              />
+            </Filtro>
+            <Filtro rotulo="Até">
+              <input
+                type="date"
+                value={dados.periodo.ate}
+                onChange={(e) => e.target.value && navegar({ ate: e.target.value })}
+                className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink"
+              />
+            </Filtro>
           </BarraFiltros>
         }
       />
 
       <PageBody>
+        {/* ── O gasto dia a dia, no período do calendário ──
+            Esta é a única parte que aceita qualquer intervalo: a rotina
+            noturna pergunta ao canal o número de CADA dia. A tabela por
+            anúncio, mais abaixo, segue presa aos relatórios. */}
+        {dados.serie.length > 0 && (
+          <Panel className="p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <p className="label">
+                Dia a dia · {dataBr(dados.periodo.de)} a {dataBr(dados.periodo.ate)}
+              </p>
+              <p className="num text-[12px] text-ink-2">
+                {money(serieTotais.investimento)} de mídia ·{" "}
+                {serieTotais.receita > 0
+                  ? `${pct((serieTotais.investimento * 100) / serieTotais.receita, 1)} do faturamento`
+                  : "sem faturamento no período"}
+              </p>
+            </div>
+            <div className="mt-3 h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dados.serie} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <CartesianGrid {...GRID} />
+                  <XAxis dataKey="data" {...AXIS} tickFormatter={dataBr} minTickGap={28} />
+                  <YAxis {...AXIS} width="auto" tickFormatter={(v) => moneyShort(Number(v))} />
+                  <Tooltip
+                    cursor={{ fill: "var(--panel-3)" }}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload as (typeof dados.serie)[number];
+                      const tacos = d.receita > 0 ? (d.investimento * 100) / d.receita : null;
+                      return (
+                        <div className="panel px-2.5 py-2 text-[12px]" style={{ boxShadow: "var(--sh-3)" }}>
+                          <p className="mb-1 font-semibold text-ink-2">{dataBr(String(label))}</p>
+                          <p className="num">mídia {money(d.investimento)}</p>
+                          <p className="num">faturamento {money(d.receita)}</p>
+                          {tacos != null && <p className="num">TACoS {pct(tacos, 1)}</p>}
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar dataKey="investimento" fill="var(--s1)" fillOpacity={0.6} isAnimationActive={false} />
+                  <Line
+                    dataKey="receita"
+                    stroke="var(--s3)"
+                    strokeWidth={1.5}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="mt-1 text-[11px] text-ink-3">
+              Barras = mídia do dia · linha = faturamento do dia. O calendário move só este bloco; a
+              tabela por anúncio depende do relatório escolhido abaixo.
+            </p>
+          </Panel>
+        )}
+
         {/* ── Qual relatório está sendo lido ──
             Um por vez, e não a soma: os relatórios do canal se sobrepõem
             (agosto aparece em sete janelas), e somá-los contava o mesmo

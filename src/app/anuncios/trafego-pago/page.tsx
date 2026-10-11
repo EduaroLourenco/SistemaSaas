@@ -14,12 +14,12 @@ export const dynamic = "force-dynamic";
 export default async function Pagina({
   searchParams,
 }: {
-  searchParams: Promise<{ janela?: string; canais?: string }>;
+  searchParams: Promise<{ janela?: string; canais?: string; de?: string; ate?: string }>;
 }) {
   /* A janela vem da URL para o seletor sobreviver a recarga e a link
      compartilhado — e porque somar janelas sobrepostas inflava o gasto. */
-  const { janela, canais } = await searchParams;
-  const dados = await carregarTrafegoPago(janela, canais);
+  const { janela, canais, de, ate } = await searchParams;
+  const dados = await carregarTrafegoPago(janela, canais, { de, ate });
 
   if (dados.vazio) {
     return (

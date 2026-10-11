@@ -44,6 +44,12 @@ import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/r
  * sistema sabe o que cada anúncio faturou de verdade.
  */
 
+function somarDias(iso: string, d: number) {
+  const t = new Date(iso + "T12:00:00Z");
+  t.setUTCDate(t.getUTCDate() + d);
+  return t.toISOString().slice(0, 10);
+}
+
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
 const r2 = (v: number) => Number(v.toFixed(2));
 
@@ -103,6 +109,16 @@ export type PeriodoResumo = {
   cpc: number | null;
 };
 
+/** Um dia da série de mídia, de `vendas_diarias`. */
+export type DiaTrafego = {
+  data: string;
+  investimento: number;
+  /** Receita que o canal atribuiu à mídia naquele dia. */
+  receitaAds: number;
+  /** Faturamento total do dia, de todos os canais do recorte. */
+  receita: number;
+};
+
 export type DadosTrafegoPago = {
   vazio: boolean;
   /** A janela analisada, `inicio|fim`. As outras ficam em `periodos`. */
@@ -111,6 +127,21 @@ export type DadosTrafegoPago = {
   recorte: string;
   /** As opções do seletor de canais, com as contas de cada um. */
   opcoes: GrupoRecorte[];
+  /**
+   * O gasto DIA A DIA, que é o que o calendário recorta.
+   *
+   * Vem de `vendas_diarias`, não de `anuncio_ads`: a tabela por anúncio
+   * guarda relatórios de intervalo fechado e sobreposto, e dentro de um
+   * relatório não há como saber o que foi gasto no dia 12. A rotina
+   * noturna pergunta o número de cada dia separadamente ao canal, e é
+   * essa série que permite escolher qualquer período.
+   *
+   * O que ela NÃO tem é a quebra por anúncio e campanha — isso só existe
+   * por janela. Por isso a tela tem as duas coisas: o calendário manda
+   * nos totais, e o seletor de relatório manda na tabela por anúncio.
+   */
+  serie: DiaTrafego[];
+  periodo: { de: string; ate: string };
   periodos: PeriodoResumo[];
   linhas: LinhaAnuncioAds[];
   campanhas: LinhaCampanha[];
@@ -154,7 +185,9 @@ export async function carregarTrafegoPago(
    * Hoje só o Meli manda relatório de mídia, mas o recorte já é geral: o
    * dia que outro canal entrar, a tela não muda.
    */
-  recorte?: string
+  recorte?: string,
+  /** Recorte de datas da SÉRIE diária. Sem isso, os últimos 30 dias. */
+  periodo?: { de?: string; ate?: string }
 ): Promise<DadosTrafegoPago> {
   const sb = await clienteServidor();
 
@@ -172,7 +205,10 @@ export async function carregarTrafegoPago(
       sb.from("anuncios").select("codigo_externo,sku_canal,titulo,tipo,canal_id,conta_canal_id").order("codigo_externo")
     ),
     paginar(() =>
-      sb.from("vendas_diarias").select("data,investimento_ads").gt("investimento_ads", 0)
+      sb
+        .from("vendas_diarias")
+        .select("data,investimento_ads,receita_ads,receita,canal_id,conta_canal_id")
+        .order("data")
     ),
     carregarContasRecorte(),
   ]);
@@ -194,6 +230,7 @@ export async function carregarTrafegoPago(
     return {
       vazio: true, janela: "", periodos: [], linhas: [], campanhas: [],
       recorte: recorte ?? "", opcoes: opcoesRecorte(contasRecorte),
+      serie: [], periodo: { de: "", ate: "" },
       totais: {
         investimento: 0, receitaAtribuida: 0, receitaReal: 0, receitaIndireta: 0,
         margem: null, sobraAposMidia: null, atribuicao: null, coberturaMargem: 0,
@@ -261,6 +298,7 @@ export async function carregarTrafegoPago(
     return {
       vazio: true, janela: "", periodos: [], linhas: [], campanhas: [],
       recorte: recorte ?? "", opcoes: opcoesRecorte(contasRecorte),
+      serie: [], periodo: { de: "", ate: "" },
       totais: {
         investimento: 0, receitaAtribuida: 0, receitaReal: 0, receitaIndireta: 0,
         margem: null, sobraAposMidia: null, atribuicao: null, coberturaMargem: 0,
@@ -428,6 +466,40 @@ export async function carregarTrafegoPago(
     }))
     .sort((a, b) => a.inicio.localeCompare(b.inicio));
 
+  /* ── A série diária, que é o que o calendário recorta ──
+     Vem de `vendas_diarias`: a rotina noturna pergunta ao canal o número
+     de CADA dia, separadamente, então aqui não há rateio nem estimativa.
+     É a única parte da tela que aceita qualquer intervalo. */
+  type Diaria = {
+    data: string;
+    investimento_ads: string | number | null;
+    receita_ads: string | number | null;
+    receita: string | number | null;
+    canal_id: string | null;
+    conta_canal_id: string | null;
+  };
+  const diarias = (diariasRaw as unknown as Diaria[]).filter((d) =>
+    noRecorte(r, { canalId: d.canal_id, contaCanalId: d.conta_canal_id })
+  );
+  const comGasto = diarias.filter((d) => n(d.investimento_ads) > 0).map((d) => String(d.data));
+  const ultimoDia = comGasto.length ? comGasto.sort().at(-1)! : fim;
+  const deSerie = periodo?.de || somarDias(ultimoDia, -29);
+  const ateSerie = periodo?.ate || ultimoDia;
+
+  const porDia = new Map<string, DiaTrafego>();
+  for (const d of diarias) {
+    const data = String(d.data).slice(0, 10);
+    if (data < deSerie || data > ateSerie) continue;
+    const x = porDia.get(data) ?? { data, investimento: 0, receitaAds: 0, receita: 0 };
+    x.investimento += n(d.investimento_ads);
+    x.receitaAds += n(d.receita_ads);
+    x.receita += n(d.receita);
+    porDia.set(data, x);
+  }
+  const serie = [...porDia.values()]
+    .map((d) => ({ ...d, investimento: r2(d.investimento), receitaAds: r2(d.receitaAds), receita: r2(d.receita) }))
+    .sort((a, b) => a.data.localeCompare(b.data));
+
   /* ── Conferência com o lançamento manual ── */
 
   const lancadoPorMes = new Map<string, number>();
@@ -475,6 +547,8 @@ export async function carregarTrafegoPago(
     janela: escolhida,
     recorte: recorte ?? "",
     opcoes: opcoesRecorte(contasRecorte),
+    serie,
+    periodo: { de: deSerie, ate: ateSerie },
     periodos,
     linhas,
     campanhas,
