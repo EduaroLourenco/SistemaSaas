@@ -25,7 +25,7 @@ import { carregarExclusoes, aplicar, type Exclusao } from "./exclusoes";
 export type Alerta = {
   id: string;
   severidade: "critico" | "atencao" | "info";
-  tipo: "cancelamento" | "conversao" | "estoque" | "preco" | "receita";
+  tipo: "cancelamento" | "conversao" | "estoque" | "preco" | "receita" | "custo";
   titulo: string;
   /** A frase que explica. Deve bastar sozinha. */
   leitura: string;
@@ -291,6 +291,57 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
           : undefined,
       });
     }
+  }
+
+  /*
+   * ── SKU que vende e não tem custo ──
+   *
+   * Sem custo não há margem, e sem margem a promoção não tem piso: o item
+   * sai como "sem custo cadastrado" e fica de fora da campanha. Pior, ele
+   * entra em toda média de margem do sistema como se fosse zero.
+   *
+   * O alerta só conta quem VENDEU no período. SKU cadastrado e parado sem
+   * custo não atrapalha ninguém, e listá-lo afogaria o que importa numa
+   * lista de centenas.
+   *
+   * O frete entra junto porque é por canal: ele vem do que aquele canal
+   * cobrou nas vendas reais do SKU e, sem venda com frete, da faixa de
+   * peso. Faltando os dois, o piso daquele canal não existe.
+   */
+  try {
+    const { carregarPrecoAlvo } = await import("./preco-alvo");
+    const { linhas: alvo } = await carregarPrecoAlvo();
+    // Receita > 0 é a prova de que vendeu: SKU parado sem custo não atrapalha
+    // ninguém, e listá-lo afogaria o que importa.
+    const semCusto = alvo.filter((l) => l.faltando.length > 0 && l.receita > 0);
+    if (semCusto.length) {
+      const porFalta = new Map<string, number>();
+      for (const l of semCusto) for (const f of l.faltando) porFalta.set(f, (porFalta.get(f) ?? 0) + 1);
+      const receitaCega = semCusto.reduce((acc, l) => acc + l.receita, 0);
+      alertas.push({
+        id: "custo-faltando",
+        severidade: semCusto.length > 20 ? "critico" : "atencao",
+        tipo: "custo",
+        titulo: `${semCusto.length} SKUs venderam sem custo cadastrado`,
+        leitura:
+          `${moeda(receitaCega)} faturados por produtos cujo custo o sistema não conhece. ` +
+          `Eles não entram em promoção — saem como "sem custo cadastrado" — e puxam para baixo ` +
+          `toda margem calculada, porque entram como se custassem zero. ` +
+          `Falta: ${[...porFalta.entries()].sort((a, b) => b[1] - a[1]).map(([f, q]) => `${f} (${q})`).join(", ")}.`,
+        numeros: [
+          { rotulo: "SKUs", valor: String(semCusto.length) },
+          { rotulo: "Receita sem margem", valor: moeda(receitaCega) },
+        ],
+        evidencia: semCusto
+          .sort((a, b) => (b.receita ?? 0) - (a.receita ?? 0))
+          .slice(0, 10)
+          .map((l) => ({ rotulo: l.sku, valor: l.receita })),
+        formato: "moeda",
+        destino: { href: "/financeiro/custos", texto: "Abrir Custos" },
+      });
+    }
+  } catch {
+    // Custos é uma tela à parte; se ela falhar, o resto dos alertas vale.
   }
 
   const ordem = { critico: 0, atencao: 1, info: 2 };

@@ -93,7 +93,16 @@ export async function POST(req: NextRequest) {
     let custosUsados = 0;
     let custosIncompletos = 0;
     if (modo !== "tabela") {
-      const { custos, incompletos } = await carregarCustosPromocao();
+      /*
+       * O canal da campanha, para o custo ser o DAQUELE canal.
+       *
+       * A planilha processada aqui é sempre da Central de Promoções do
+       * Mercado Livre, e o custo que importa é o praticado nele: o frete
+       * médio do Full não é o do Flex nem o da Shopee, e o piso calculado
+       * com o frete de outro canal não corresponde a nada.
+       */
+      const canalId = await canalDaCampanha();
+      const { custos, incompletos } = await carregarCustosPromocao(canalId ?? undefined);
       custosUsados = custos.size;
       custosIncompletos = incompletos;
       if (!custos.size && modo === "margem") {
@@ -276,4 +285,11 @@ export async function POST(req: NextRequest) {
     console.error("Falha ao processar promoções:", e);
     return NextResponse.json({ erro: msg }, { status: 400 });
   }
+}
+
+/** O id do canal Mercado Livre, que é de onde a planilha de promoção vem. */
+async function canalDaCampanha(): Promise<string | null> {
+  const sb = await clienteServidor();
+  const { data } = await sb.from("canais").select("id").eq("codigo", "mercado_livre").maybeSingle();
+  return (data?.id as string | undefined) ?? null;
 }

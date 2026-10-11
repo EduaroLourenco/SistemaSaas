@@ -36,6 +36,10 @@ const PUBLICAS = [
   "/api/relatorio/",
   // Manual de integração: o Bling exige o link, e quem lê ainda não é cliente.
   "/manual/",
+  // Política e termos: o Google exige os links para publicar o app OAuth,
+  // e a tela de consentimento os mostra a quem ainda não tem conta.
+  "/privacidade",
+  "/termos",
   // Manifesto do "adicionar à tela inicial": o celular o busca sem sessão.
   "/manifest.webmanifest",
 ];

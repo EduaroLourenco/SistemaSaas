@@ -14,8 +14,20 @@ import type { BaseMLBEntry, CustoSku, FormulaBaseData } from "@/lib/planilhas/mo
  * piso baixo demais, que é exatamente o prejuízo que a regra existe para
  * impedir.
  */
-export async function carregarCustosPromocao(): Promise<{ custos: Map<string, CustoSku>; incompletos: number }> {
-  const { linhas } = await carregarPrecoAlvo();
+export async function carregarCustosPromocao(
+  /**
+   * O canal da campanha. Sem ele, cai no canal com mais comissões
+   * cadastradas — o que é chute.
+   *
+   * O canal muda o custo de verdade, e por isso o piso: o FRETE PRATICADO
+   * é a média do que aquele canal cobrou nas vendas reais do SKU, e o Meli
+   * Full, o Flex e a Shopee cobram valores diferentes pelo mesmo produto.
+   * Calcular o piso de uma promoção do Mercado Livre com o frete médio de
+   * outro canal dá um mínimo que não corresponde a nada.
+   */
+  canalId?: string
+): Promise<{ custos: Map<string, CustoSku>; incompletos: number }> {
+  const { linhas } = await carregarPrecoAlvo(canalId);
   const custos = new Map<string, CustoSku>();
   let incompletos = 0;
   for (const l of linhas) {

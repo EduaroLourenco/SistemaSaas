@@ -276,6 +276,10 @@ function MobileTabBar({
  * leitura e sugere que falta acesso.
  */
 const SEM_MOLDURA = [
+  // Páginas públicas de política e termos: quem chega nelas vem da tela de
+  // consentimento do Google e não tem sessão, então não há menu a mostrar.
+  "/privacidade",
+  "/termos",
   "/entrar",
   "/auth",
   "/cadastro",
