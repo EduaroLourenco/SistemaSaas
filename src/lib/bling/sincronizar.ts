@@ -183,7 +183,7 @@ export async function sincronizarBling(integ: Integracao, de: string, ate: strin
       if (e) throw new Error(`Falha ao gravar itens do Bling: ${e.message}`);
     }
 
-    await consolidarDiarias({ operacaoId: integ.operacaoId, canalId: conta.canal_id, contaCanalId: contaId }, de, ate);
+    await consolidarDiarias({ operacaoId: integ.operacaoId, canalId: conta.canal_id, contaCanalId: contaId }, de, ate, { de, ate });
     gravados += cabecalhos.length;
     itensGravados += itens.length;
   }

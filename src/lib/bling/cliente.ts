@@ -94,10 +94,13 @@ async function freio() {
 export async function bling<T>(
   integ: Integracao,
   caminho: string,
-  params: Record<string, string | number> = {}
+  params: Record<string, string | number | (string | number)[]> = {}
 ): Promise<T> {
   const url = new URL(BASE + caminho);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+  for (const [k, v] of Object.entries(params)) {
+    if (Array.isArray(v)) for (const item of v) url.searchParams.append(k, String(item));
+    else url.searchParams.set(k, String(v));
+  }
   const tok = await acesso(integ);
   for (let tentativa = 0; ; tentativa++) {
     await freio();

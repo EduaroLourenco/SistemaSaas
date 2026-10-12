@@ -73,7 +73,7 @@ export function FontesDados({ dados }: { dados: DadosFontes }) {
                         className="w-3 h-3 text-ink-3 shrink-0"
                         strokeWidth={2}
                       />
-                    ) : f.origem === "api" ? (
+                    ) : f.origem === "api" || f.origem === "mista" ? (
                       <RefreshCw
                         className="w-3 h-3 text-ink-3 shrink-0"
                         strokeWidth={2}
@@ -124,10 +124,7 @@ export function FontesDados({ dados }: { dados: DadosFontes }) {
       </div>
 
       <p className="text-[12px] text-ink-3 leading-relaxed mt-3">
-        A data é até onde o <span className="font-medium text-ink-2">dado</span>{" "}
-        vai, não quando entrou. Subir hoje uma planilha que termina na semana
-        passada não deixa o painel atualizado, e uma fonte por API em dia não
-        cobre outra que ficou para trás.
+        Confira a cobertura de cada fonte antes de comparar períodos.
       </p>
     </Panel>
   );

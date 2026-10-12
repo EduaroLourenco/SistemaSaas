@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { carregarAutomacao } from "@/lib/dados/automacao";
+import { paginar } from "@/lib/dados/paginar";
 
 /**
  * Grava lançamentos diários.
@@ -61,8 +63,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ erro: "Corpo inválido" }, { status: 400 });
   }
 
-  const edicoes = corpo.edicoes ?? [];
-  if (!edicoes.length) {
+  const edicoes = corpo?.edicoes ?? [];
+  if (!Array.isArray(edicoes) || !edicoes.length || edicoes.some((e) => !e || typeof e.contaCanalId !== "string" || typeof e.data !== "string")) {
     return NextResponse.json({ erro: "Nada para gravar" }, { status: 400 });
   }
   if (edicoes.length > 500) {
@@ -70,6 +72,12 @@ export async function POST(req: Request) {
       { erro: "Envie no máximo 500 dias por vez" },
       { status: 400 }
     );
+  }
+  for (const e of edicoes) {
+    const data = new Date(`${e.data}T12:00:00Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e.data) || !Number.isFinite(data.getTime()) || data.toISOString().slice(0, 10) !== e.data) {
+      return NextResponse.json({ erro: "Data inválida." }, { status: 400 });
+    }
   }
 
   /*
@@ -93,6 +101,18 @@ export async function POST(req: Request) {
       { canal: c.canal_id as string, operacao: c.operacao_id as string },
     ])
   );
+  const automacao = await carregarAutomacao();
+  // Protege também métricas já medidas por API em conexões não listadas acima.
+  const datas = edicoes.map((e) => e.data).sort();
+  let origemDias;
+  try {
+    origemDias = await paginar(() => sb.from("vendas_diarias")
+      .select("conta_canal_id,data,origem_vendas,origem_visitas,origem_ads")
+      .in("conta_canal_id", contas).gte("data", datas[0]).lte("data", datas.at(-1)!).order("id"));
+  } catch {
+    return NextResponse.json({ erro: "Não foi possível conferir a origem dos dados. Tente novamente." }, { status: 503 });
+  }
+  const origens = new Map((origemDias ?? []).map((d) => [`${d.conta_canal_id}|${d.data}`, d]));
 
   const linhas = [];
   for (const e of edicoes) {
@@ -119,6 +139,10 @@ export async function POST(req: Request) {
     for (const campo of CAMPOS) {
       const v = e[campo];
       if (v == null) continue;
+      const grupo = campo === "visitas" ? "visitas" : campo === "investimentoAds" ? "ads" : "vendas";
+      const dia = origens.get(`${e.contaCanalId}|${e.data}`);
+      const origemApi = automacao[e.contaCanalId]?.[grupo] || (["api", "mista"].includes(String(dia?.[`origem_${grupo}`])) ? "API" : null);
+      if (origemApi) return NextResponse.json({ erro: `${campo} é atualizado por ${origemApi}. Use Atualizar para buscar o valor do canal.`, codigo: "metrica_automatica" }, { status: 409 });
       if (!Number.isFinite(v) || v < 0) {
         return NextResponse.json(
           { erro: `Valor inválido em ${campo} de ${e.data}` },
@@ -126,13 +150,30 @@ export async function POST(req: Request) {
         );
       }
       linha[COLUNA[campo]] = v;
+      linha[`origem_${grupo}`] = "manual";
     }
-    linhas.push(linha);
+    if (Object.keys(linha).length > 5) linhas.push(linha);
   }
 
-  const { error } = await sb
-    .from("vendas_diarias")
-    .upsert(linhas, { onConflict: "conta_canal_id,data" });
+  // Não mistura payloads: omissão de campo em uma edição não pode zerar outra.
+  const porDia = new Map<string, Record<string, unknown>>();
+  for (const linha of linhas) {
+    const chave = `${linha.conta_canal_id}|${linha.data}`;
+    porDia.set(chave, { ...porDia.get(chave), ...linha });
+  }
+  const grupos = new Map<string, Record<string, unknown>[]>();
+  for (const linha of porDia.values()) {
+    const chave = Object.keys(linha).sort().join(",");
+    const grupo = grupos.get(chave) ?? [];
+    grupo.push(linha);
+    grupos.set(chave, grupo);
+  }
+  let error: { code?: string; message: string } | null = null;
+  for (const grupo of grupos.values()) {
+    const r = await sb.from("vendas_diarias").upsert(grupo, { onConflict: "conta_canal_id,data" });
+    error = r.error;
+    if (error) break;
+  }
 
   if (error) {
     // 42501 é recusa do RLS: papel sem permissão de escrita.
@@ -147,5 +188,5 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json({ gravados: linhas.length });
+  return NextResponse.json({ gravados: porDia.size });
 }

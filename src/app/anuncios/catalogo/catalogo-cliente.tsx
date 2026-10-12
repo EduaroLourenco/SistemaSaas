@@ -150,7 +150,7 @@ function BarraComposicao({
    Página
    ══════════════════════════════════════════════════════════════ */
 
-export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
+export default function CatalogoAnuncios({ dados, buscaInicial = "" }: { dados: DadosCatalogo; buscaInicial?: string }) {
   const {
     itens: CATALOGO,
     categorias: CATEGORIAS_CATALOGO,
@@ -194,7 +194,7 @@ export default function CatalogoAnuncios({ dados }: { dados: DadosCatalogo }) {
     }
   }
 
-  const [busca, setBusca] = React.useState("");
+  const [busca, setBusca] = React.useState(buscaInicial);
   const [tipo, setTipo] = React.useState<(typeof TIPOS)[number]>("Todos");
   const [status, setStatus] = React.useState<(typeof STATUS)[number]>("Todos");
   const [categoria, setCategoria] = React.useState("Todas");

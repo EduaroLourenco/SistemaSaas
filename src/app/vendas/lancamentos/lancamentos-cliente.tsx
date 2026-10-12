@@ -12,6 +12,7 @@ import {
   type CampoLancamento,
 } from "@/mock/lancamentos";
 import type { DadosLancamentos, LancamentoDia } from "@/lib/dados/vendas";
+import type { CamposAutomaticos } from "@/lib/dados/automacao";
 
 /** O canal é o id vindo do banco, ou "todos". */
 type CanalLancamentoId = string;
@@ -223,7 +224,7 @@ function Confirmacao({
 
 /* ══ Tela ════════════════════════════════════════════════════ */
 
-export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }) {
+export default function VendasLancamentos({ dados, automacao = {} }: { dados: DadosLancamentos; automacao?: Record<string, CamposAutomaticos> }) {
   const {
     ano: ANO,
     mesAtual: MES_ATUAL,
@@ -255,7 +256,7 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
   );
 
   const [mes, setMes] = React.useState(MES_ATUAL);
-  const [canal, setCanal] = React.useState<CanalLancamentoId>("ml");
+  const [canal, setCanal] = React.useState<CanalLancamentoId>(dados.canais.find((c) => c.contaCanalId)?.id ?? "todos");
 
   /** Já gravado no servidor — a linha de base depois de salvar. */
   const [salvos, setSalvos] = React.useState<Record<string, number>>({});
@@ -285,6 +286,8 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
    * recusar no Salvar.
    */
   const semConta = !CANAIS_LANCAMENTO.find((c) => c.id === canal)?.contaCanalId;
+  const fontesAutomaticas = automacao[CANAIS_LANCAMENTO.find((c) => c.id === canal)?.contaCanalId ?? ""];
+  const automatico = (campo: CampoLancamento) => fontesAutomaticas?.[campo === "visitas" ? "visitas" : campo === "ads" ? "ads" : "vendas"];
 
   /* ── linhas com valor efetivo e estado de cada célula ────── */
 
@@ -594,6 +597,7 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
       />
 
       <PageBody>
+        {fontesAutomaticas && Object.values(fontesAutomaticas).some(Boolean) && <Panel className="mb-3 p-3.5"><p className="text-xs text-ink-2"><Lock className="mr-1 inline h-3.5 w-3.5" /> Campos da API são apenas leitura. {fontesAutomaticas.vendas ? `Vendas: ${fontesAutomaticas.vendas}. ` : ""}{fontesAutomaticas.visitas ? `Visitas: ${fontesAutomaticas.visitas}. ` : ""}{fontesAutomaticas.ads ? `Mídia: ${fontesAutomaticas.ads}.` : ""}</p></Panel>}
         {/* Antes de tudo: sem isso a pessoa preenche o mês e descobre no
             Salvar que não dava. */}
         {semConta && (
@@ -760,13 +764,13 @@ export default function VendasLancamentos({ dados }: { dados: DadosLancamentos }
                           <CelulaNumerica
                             valor={l.valores[c.campo]}
                             tipo={c.tipo}
-                            rotulo={`${c.titulo} em ${l.base.dia}/${mes + 1}`}
+                            rotulo={`${c.titulo} em ${l.base.dia}/${mes + 1}${automatico(c.campo) ? ` · automático por ${automatico(c.campo)}` : ""}`}
                             registrar={(el) => {
                               const k = `${l.base.dia}|${c.campo}`;
                               if (el) inputs.current.set(k, el);
                               else inputs.current.delete(k);
                             }}
-                            bloqueada={semConta}
+                            bloqueada={semConta || Boolean(automatico(c.campo))}
                             aoConfirmar={(v) => editar(l.base.dia, c.campo, v)}
                             aoMover={(passo) => mover(l.base.dia, c.campo, passo)}
                           />

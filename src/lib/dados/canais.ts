@@ -1,6 +1,8 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { vtexConectada } from "@/lib/vtex/cliente";
+import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
+import { operacaoPadrao } from "./operacao";
 
 /**
  * Os canais e as contas de venda da empresa.
@@ -73,6 +75,8 @@ export async function carregarCanais(): Promise<{
   faltaMigracao: string | null;
 }> {
   const sb = await clienteServidor();
+  const op = await operacaoPadrao();
+  if (!op) return { canais: [], contas: [], erp: null, faltaMigracao: null };
 
   const [{ data: canais, error: eCanais }, { data: contas }, { data: integs }] =
     await Promise.all([
@@ -82,9 +86,9 @@ export async function carregarCanais(): Promise<{
         .select(
           "id,canal_id,nome,identificador,fulfillment,reputacao,padrao,ativa,apelidos"
         ),
-      sb
+      clientePrivilegiado()
         .from("integracoes")
-        .select("provedor,conta_canal_id,credencial_ref,ultima_sincronizacao,ultimo_erro,config"),
+        .select("provedor,conta_canal_id,credencial_ref,ultima_sincronizacao,ultimo_erro,config").eq("operacao_id", op.id),
     ]);
 
   if (eCanais && faltando(eCanais.code)) {

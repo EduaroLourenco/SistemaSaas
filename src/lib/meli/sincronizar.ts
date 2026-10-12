@@ -289,10 +289,9 @@ async function gravarPedidos(
     }
   });
 
-  const { data: anunciosDb } = await sb
-    .from("anuncios")
-    .select("id,codigo_externo")
-    .eq("conta_canal_id", ctx.contaCanalId);
+  const anunciosDb = await paginar(() => sb
+    .from("anuncios").select("id,codigo_externo")
+    .eq("operacao_id", ctx.operacaoId).eq("conta_canal_id", ctx.contaCanalId).order("id"));
   const anuncioPorMlb = new Map(
     (anunciosDb ?? []).map((a) => [String(a.codigo_externo).toUpperCase(), a.id as string])
   );
@@ -370,6 +369,7 @@ async function gravarVisitas(
         anuncio_id: anuncioId,
         data: l.data,
         visitas: l.visitas,
+        importacao_id: null,
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
@@ -715,11 +715,9 @@ async function executar(
   if (etapas.visitas) {
     if (!mlbs.length) {
       const sb = clientePrivilegiado();
-      const { data } = await sb
-        .from("anuncios")
-        .select("codigo_externo")
-        .eq("conta_canal_id", ctx.contaCanalId);
-      mlbs = (data ?? []).map((a) => String(a.codigo_externo));
+      const data = await paginar(() => sb.from("anuncios").select("codigo_externo")
+        .eq("operacao_id", ctx.operacaoId).eq("conta_canal_id", ctx.contaCanalId).order("id"));
+      mlbs = data.map((a) => String(a.codigo_externo));
     }
     await gravarVisitas(ctx, mlbs, diasVisitas, resumo);
   }
@@ -727,7 +725,7 @@ async function executar(
   if (etapas.diarias) {
     // A janela das diárias cobre a maior das duas: pedidos e visitas.
     const inicio = [de, diasAtras(diasVisitas)].sort()[0];
-    resumo.diarias = { dias: await consolidarDiarias(ctx, inicio, ate) };
+    resumo.diarias = { dias: await consolidarDiarias(ctx, inicio, ate, etapas.pedidos ? { de, ate } : undefined) };
 
     /*
      * A semanal sai da diária que acabou de ser gravada.

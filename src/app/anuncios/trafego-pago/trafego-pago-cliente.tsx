@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
-import { SeletorCanais } from "@/components/ui/seletor-canais";
+import { SemFonte } from "@/components/ui/sem-fonte";
+import { atualizarFiltrosTrafego, urlTrafego } from "@/lib/trafego-pago-filtros";
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AXIS, GRID } from "@/components/ui/chart";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -46,7 +46,7 @@ const SITUACAO: Record<
   ok: null,
   prejuizo: { rotulo: "mídia > margem", tom: "down" },
   sem_retorno: { rotulo: "sem venda nenhuma", tom: "down" },
-  vendeu_sem_ads: { rotulo: "vendeu sem o ads", tom: "warn" },
+  vendeu_sem_ads: { rotulo: "venda sem atribuição", tom: "warn" },
 };
 
 const dataBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
@@ -61,7 +61,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
      relatórios existem, e perder a janela escolhida é melhor que mostrar
      uma que aquela conta não tem. */
   /* O total da série é da JANELA DO CALENDÁRIO, e não da janela de
-     relatório — por isso não sai de , que é do relatório. */
+     relatório — por isso não sai de `totais`, que é do relatório. */
   const serieTotais = React.useMemo(
     () =>
       dados.serie.reduce(
@@ -71,16 +71,24 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
     [dados.serie]
   );
 
-  const navegar = (mudar: { canais?: string; janela?: string; de?: string; ate?: string }) => {
-    const q = new URLSearchParams();
-    const canais = mudar.canais ?? dados.recorte;
-    if (canais) q.set("canais", canais);
-    if (mudar.janela) q.set("janela", mudar.janela);
-    const de = mudar.de ?? dados.periodo.de;
-    const ate = mudar.ate ?? dados.periodo.ate;
-    if (de) q.set("de", de);
-    if (ate) q.set("ate", ate);
-    router.push(`/anuncios/trafego-pago?${q}`);
+  const [pendente, iniciarNavegacao] = React.useTransition();
+  const desejados = React.useRef({ canais: dados.recorte, janela: dados.janela, ...dados.periodo });
+  const [filtros, atualizarFiltros] = React.useOptimistic(
+    { canais: dados.recorte, janela: dados.janela, ...dados.periodo },
+    atualizarFiltrosTrafego
+  );
+  React.useEffect(() => {
+    if (!pendente) desejados.current = { canais: dados.recorte, janela: dados.janela, ...dados.periodo };
+  }, [pendente, dados.recorte, dados.janela, dados.periodo]);
+  const navegar = (mudar: Parameters<typeof urlTrafego>[1]) => {
+    const anterior = desejados.current;
+    const proximo = atualizarFiltrosTrafego(anterior, mudar);
+    if (urlTrafego(anterior, {}) === urlTrafego(proximo, {})) return;
+    desejados.current = proximo;
+    iniciarNavegacao(() => {
+      atualizarFiltros(mudar);
+      router.push(urlTrafego(proximo, {}), { scroll: false });
+    });
   };
 
   const visiveis = React.useMemo(() => {
@@ -107,30 +115,35 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       <PageHeader
         title="Tráfego pago"
         breadcrumb="Anúncios"
-        description="A mídia contra a margem que ela produz"
-        badge={<Badge tone="neutral">Mercado Livre</Badge>}
+        description="Investimento, vendas atribuídas e margem por anúncio."
         filters={
           <BarraFiltros>
             <Filtro rotulo="Canais" composto>
-              <SeletorCanais
-                grupos={dados.opcoes}
-                selecionados={dados.recorte ? [dados.recorte] : []}
-                aoAplicar={(sel) => navegar({ canais: sel[0] ?? "", janela: undefined })}
-              />
+              <select aria-label="Canal ou conta" value={filtros.canais} onChange={(e) => navegar({ canais: e.target.value })} className="h-10 w-[260px] max-w-full rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink">
+                {dados.opcoes.map((g, i) => g.rotulo
+                  ? <optgroup key={g.rotulo} label={g.rotulo}>{g.opcoes.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}</optgroup>
+                  : g.opcoes.map((o) => <option key={`${i}-${o.valor}`} value={o.valor}>{o.rotulo}</option>))}
+              </select>
             </Filtro>
             <Filtro rotulo="De">
               <input
                 type="date"
-                value={dados.periodo.de}
+                aria-label="Data inicial do gráfico"
+                max={filtros.ate}
+                value={filtros.de}
                 onChange={(e) => e.target.value && navegar({ de: e.target.value })}
+                onBlur={(e) => e.target.value && navegar({ de: e.target.value })}
                 className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink"
               />
             </Filtro>
             <Filtro rotulo="Até">
               <input
                 type="date"
-                value={dados.periodo.ate}
+                aria-label="Data final do gráfico"
+                min={filtros.de}
+                value={filtros.ate}
                 onChange={(e) => e.target.value && navegar({ ate: e.target.value })}
+                onBlur={(e) => e.target.value && navegar({ ate: e.target.value })}
                 className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink"
               />
             </Filtro>
@@ -139,11 +152,12 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       />
 
       <PageBody>
+        {pendente && <p role="status" className="text-[12px] text-ink-3">Atualizando seleção…</p>}
         {/* ── O gasto dia a dia, no período do calendário ──
             Esta é a única parte que aceita qualquer intervalo: a rotina
             noturna pergunta ao canal o número de CADA dia. A tabela por
             anúncio, mais abaixo, segue presa aos relatórios. */}
-        {dados.serie.length > 0 && (
+        {dados.serie.length > 0 ? (
           <Panel className="p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <p className="label">
@@ -190,11 +204,12 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
               </ResponsiveContainer>
             </div>
             <p className="mt-1 text-[11px] text-ink-3">
-              Barras = mídia do dia · linha = faturamento do dia. O calendário move só este bloco; a
-              tabela por anúncio depende do relatório escolhido abaixo.
+              Barras: mídia · linha: faturamento. Datas deste gráfico independem do relatório abaixo.
             </p>
           </Panel>
-        )}
+        ) : <Panel className="p-4 text-[13px] text-ink-2">Sem dados diários neste intervalo. Escolha outro período ou atualize as fontes da empresa.</Panel>}
+
+        {dados.vazio ? <SemFonte titulo="Sem relatório de publicidade neste canal" origem="Escolha outro canal acima. No Mercado Livre, use Atualizar agora para buscar a publicidade ou importe um relatório. O gráfico diário continua disponível quando houver dados." /> : <>
 
         {/* ── Qual relatório está sendo lido ──
             Um por vez, e não a soma: os relatórios do canal se sobrepõem
@@ -202,32 +217,9 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
             gasto várias vezes. */}
         <Panel className="p-4">
           <p className="label mb-2">Relatório do canal</p>
-          <div className="flex flex-wrap gap-1.5">
-            {periodos.map((p) => {
-              const chave = `${p.inicio}|${p.fim}`;
-              const atual = chave === dados.janela;
-              return (
-                <Link
-                  key={chave}
-                  href={`/anuncios/trafego-pago?${new URLSearchParams({ ...(dados.recorte ? { canais: dados.recorte } : {}), janela: chave })}`}
-                  scroll={false}
-                  className={cn(
-                    "rounded-r1 border px-2.5 py-1.5 text-[12px] transition-colors",
-                    atual
-                      ? "border-brand bg-brand text-brand-ink font-semibold"
-                      : "border-line-2 bg-panel text-ink-2 hover:bg-panel-3"
-                  )}
-                >
-                  {p.rotulo}
-                  <span className="num ml-1.5 opacity-70">{moneyShort(p.investimento)}</span>
-                </Link>
-              );
-            })}
-          </div>
+          <select aria-label="Relatório por anúncio" value={filtros.janela} onChange={(e) => navegar({ janela: e.target.value })} className="min-h-11 w-full max-w-xl rounded-r1 border border-line bg-panel px-3 text-sm text-ink">{periodos.map((p) => <option key={`${p.inicio}|${p.fim}`} value={`${p.inicio}|${p.fim}`}>{p.rotulo} · {money(p.investimento)}</option>)}</select>
           <p className="mt-2.5 text-[12px] leading-relaxed text-ink-3">
-            Cada botão é um relatório que o canal exportou, com o seu próprio intervalo. Eles se
-            sobrepõem — o acumulado é reexportado a cada pedido —, então a tela lê{" "}
-            <strong>um por vez</strong>. Somar todos contaria o mesmo gasto duas, três, sete vezes.
+            Tabelas e indicadores abaixo usam este intervalo, na conta selecionada.
           </p>
         </Panel>
 
@@ -256,7 +248,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                 ? (totais.receitaAtribuida / totais.investimento).toFixed(2)
                 : "—"
             }
-            ajuda="o que o canal mostra"
+            ajuda="receita atribuída ÷ mídia"
           />
           <Numero
             rotulo="Faturamento da conta"
@@ -267,10 +259,8 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
 
         <Disclosure title="ACoS, TACoS e ROAS — qual decide o quê">
           <p>
-            <strong>ACoS</strong> é mídia ÷ receita que o canal <em>atribui</em> à mídia. Mede se a
-            campanha é eficiente, e é o número que engana sozinho: 14% parece ótimo até se descobrir
-            que a margem daquele anúncio é 13,8%. O teto do ACoS é a margem bruta do produto — acima
-            dela, cada venda que a mídia traz custa dinheiro.
+            <strong>ACoS</strong> é mídia ÷ receita que o canal <em>atribui</em> à mídia.
+            Compare com a margem de contribuição e confira a cobertura dos custos.
           </p>
           <p className="mt-2">
             <strong>ROAS</strong> é o inverso do ACoS (ACoS de 10% = ROAS 10). É a métrica que o
@@ -278,10 +268,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           </p>
           <p className="mt-2">
             <strong>TACoS</strong> é mídia ÷ faturamento <em>total</em> da conta, orgânico incluído.
-            É o número de decidir escalar ou parar, e o painel do canal não mostra. A leitura que
-            importa: TACoS subindo com faturamento total parado é{" "}
-            <strong>canibalização</strong> — a mídia está comprando a venda que já era orgânica.
-            TACoS caindo com faturamento subindo é o que se quer.
+            Se subir, a mídia consome uma parcela maior das vendas. Isso, sozinho, não comprova canibalização nem decide se vale aumentar a verba.
           </p>
           <p className="mt-2">
             O que esta tela <strong>não</strong> tem: impressões perdidas por orçamento e por
@@ -327,8 +314,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
               </p>
               <p className="text-[12px] text-ink-3 mt-1.5 leading-relaxed">
                 {moneyShort(totais.receitaAtribuida)} atribuídos sobre{" "}
-                {moneyShort(totais.receitaReal)} que esses anúncios faturaram de
-                verdade.
+                {moneyShort(totais.receitaReal)} nos pedidos desses anúncios. São medidas diferentes.
               </p>
             </div>
 
@@ -349,34 +335,15 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           </div>
         </Panel>
 
-        {/* ── Conferência do lançamento manual ── */}
-        {conferencia.some((c) => Math.abs(c.relatorio - c.lancado) > 1) && (
-          <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-warn/30">
-            <AlertCircle className="w-4 h-4 text-warn shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <p className="text-[13px] text-ink mb-1">
-                O investimento lançado à mão não bate com o relatório
+        {conferencia && (conferencia.diario == null || Math.abs(conferencia.relatorio - conferencia.diario) > 1) && (
+          <Panel className="flex items-start gap-2.5 border-warn/30 px-4 py-3">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
+            <div className="min-w-0 text-[12px] text-ink-2">
+              <p className="mb-1 text-[13px] font-medium text-ink">Conferência do investimento · {dataBr(conferencia.inicio)} a {dataBr(conferencia.fim)}</p>
+              <p>Relatório: {money(conferencia.relatorio)} · Série diária: {conferencia.diario == null ? "sem registro" : money(conferencia.diario)}</p>
+              <p className="mt-1 text-ink-3">Mesma seleção de canal e conta. A série pode conter valores importados ou recebidos pela API.
+                {conferencia.diasRegistrados < conferencia.diasEsperados && <> Há registros de mídia em {conferencia.diasRegistrados} de {conferencia.diasEsperados} dias; a comparação pode estar incompleta.</>}
               </p>
-              <div className="flex flex-wrap gap-x-5 gap-y-1">
-                {conferencia.map((c) => {
-                  const dif = c.relatorio - c.lancado;
-                  return (
-                    <span key={c.mes} className="text-[12px] text-ink-2">
-                      <span className="num">{c.mes}</span>{" "}
-                      <span className="num">{moneyShort(c.relatorio)}</span> vs{" "}
-                      <span className="num">{moneyShort(c.lancado)}</span>
-                      {Math.abs(dif) > 1 && (
-                        <span
-                          className={`num ml-1 ${dif < 0 ? "text-down" : "text-up"}`}
-                        >
-                          ({dif > 0 ? "+" : ""}
-                          {moneyShort(dif)})
-                        </span>
-                      )}
-                    </span>
-                  );
-                })}
-              </div>
             </div>
           </Panel>
         )}
@@ -436,6 +403,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                               )}
                               {s && <Badge tone={s.tom}>{s.rotulo}</Badge>}
                             </div>
+                            <p className="text-[11px] text-ink-3">{l.conta}</p>
                             <p className="text-[12px] text-ink-3 truncate max-w-[260px]">
                               {l.campanhas.join(" · ")}
                             </p>
@@ -529,7 +497,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                 <tbody>
                   {campanhas.map((c, i) => (
                     <tr key={`${c.campanha}-${i}`} className="hover:bg-panel-2/50">
-                      <td className={`${td} text-[12.5px] text-ink`}>{c.campanha}</td>
+                      <td className={`${td} text-[12.5px] text-ink`}>{c.campanha}<p className="mt-0.5 text-[11px] text-ink-3">{c.conta}</p></td>
                       <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
                         {count(c.anuncios)}
                       </td>
@@ -585,19 +553,19 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                   chave: "sem_retorno" as const,
                   lista: semRetorno,
                   titulo: "Não vendeu nem com ads, nem sozinho",
-                  nota: "Nenhuma venda no período inteiro. É o candidato natural a desligar.",
+                  nota: "Confira gasto, cliques, oferta e tempo de campanha antes de decidir pela pausa.",
                 },
                 {
                   chave: "vendeu_sem_ads" as const,
                   lista: semAds,
-                  titulo: "Vendeu bem, mas nada foi atribuído ao ads",
-                  nota: "O anúncio faturou; a mídia não recebeu crédito por isso. Vale testar sem ela.",
+                  titulo: "Vendas sem atribuição à mídia",
+                  nota: "Há pedidos, mas o canal não os atribuiu à campanha. Confira o intervalo e a atribuição.",
                 },
                 {
                   chave: "prejuizo" as const,
                   lista: prejuizo,
                   titulo: "A mídia custou mais que a margem",
-                  nota: "Cada venda que o ads traz aqui sai no vermelho.",
+                  nota: "O investimento superou a margem registrada no período. Confira se os custos estão completos.",
                 },
               ].map(({ chave, lista, titulo, nota }) => (
                 <div key={chave}>
@@ -640,6 +608,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
             </div>
           )}
         </Panel>
+        </>}
       </PageBody>
     </>
   );

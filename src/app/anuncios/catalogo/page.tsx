@@ -3,7 +3,8 @@ import CatalogoAnuncios from "./catalogo-cliente";
 
 export const dynamic = "force-dynamic";
 
-export default async function Pagina() {
+export default async function Pagina({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q } = await searchParams;
   const dados = await carregarCatalogo();
-  return <CatalogoAnuncios dados={dados} />;
+  return <CatalogoAnuncios key={q ?? ""} dados={dados} buscaInicial={q ?? ""} />;
 }

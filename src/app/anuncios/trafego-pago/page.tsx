@@ -1,7 +1,5 @@
 import { carregarTrafegoPago } from "@/lib/dados/trafego-pago";
 import TrafegoPagoCliente from "./trafego-pago-cliente";
-import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { SemFonte } from "@/components/ui/sem-fonte";
 
 export const dynamic = "force-dynamic";
 
@@ -20,20 +18,6 @@ export default async function Pagina({
      compartilhado — e porque somar janelas sobrepostas inflava o gasto. */
   const { janela, canais, de, ate } = await searchParams;
   const dados = await carregarTrafegoPago(janela, canais, { de, ate });
-
-  if (dados.vazio) {
-    return (
-      <>
-        <PageHeader title="Tráfego pago" breadcrumb="Anúncios" />
-        <PageBody>
-          <SemFonte
-            titulo="Nenhum relatório de mídia importado"
-            origem="Exporte o relatório de anúncios patrocinados no Mercado Livre e suba na tela de Importar. Ele traz investimento, cliques e receita atribuída por anúncio e por campanha."
-          />
-        </PageBody>
-      </>
-    );
-  }
 
   return <TrafegoPagoCliente dados={dados} />;
 }

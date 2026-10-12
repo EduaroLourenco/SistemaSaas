@@ -1,5 +1,6 @@
 import "server-only";
 import type { clienteServidor } from "@/lib/supabase/servidor";
+import { paginar } from "./paginar";
 
 /**
  * Deriva os KPIs diários a partir dos pedidos importados.
@@ -46,6 +47,17 @@ export async function derivarKpisDiarios(
   operacaoId: string,
   pedidos: PedidoDerivavel[]
 ): Promise<Derivacao> {
+  if (!pedidos.length) return { dias: 0, contas: 0 };
+  // Recalcula a partir da base completa de cada dia afetado, não só do arquivo.
+  // Assim, um arquivo parcial não apaga vendas anteriores ou vindas da API.
+  const chavesAfetadas = new Set(pedidos.map((p) => `${p.contaCanalId}|${p.data}`));
+  const contas = [...new Set(pedidos.map((p) => p.contaCanalId))];
+  const datas = pedidos.map((p) => p.data).sort();
+  const base = await paginar(() => sb.from("pedidos")
+    .select("conta_canal_id,canal_id,data,total,cancelado,origem")
+    .eq("operacao_id", operacaoId).in("conta_canal_id", contas)
+    .gte("data", datas[0]).lte("data", datas.at(-1)!).order("id"));
+  const origens = new Map<string, Set<string>>();
   type Acumulado = {
     operacao_id: string;
     canal_id: string;
@@ -60,8 +72,13 @@ export async function derivarKpisDiarios(
 
   const porChave = new Map<string, Acumulado>();
 
-  for (const p of pedidos) {
+  for (const linha of base) {
+    const p = { contaCanalId: String(linha.conta_canal_id), canalId: String(linha.canal_id), data: String(linha.data), total: Number(linha.total) || 0, cancelado: Boolean(linha.cancelado) };
     const chave = `${p.contaCanalId}|${p.data}`;
+    if (!chavesAfetadas.has(chave)) continue;
+    const fontes = origens.get(chave) ?? new Set<string>();
+    fontes.add(String(linha.origem || "desconhecida"));
+    origens.set(chave, fontes);
     const at =
       porChave.get(chave) ??
       {
@@ -98,6 +115,8 @@ export async function derivarKpisDiarios(
     ...a,
     receita: Number(a.receita.toFixed(2)),
     valor_cancelado: Number(a.valor_cancelado.toFixed(2)),
+    origem_vendas: origens.get(`${a.conta_canal_id}|${a.data}`)!.size > 1 ? "mista" : [...origens.get(`${a.conta_canal_id}|${a.data}`)!][0],
+    vendas_atualizadas_em: new Date().toISOString(),
   }));
 
   for (let i = 0; i < linhas.length; i += LOTE) {

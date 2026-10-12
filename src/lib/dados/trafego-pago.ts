@@ -4,6 +4,7 @@ import { paginar } from "./paginar";
 import { carregarBaseMargem, agregar } from "./margem";
 import { carregarContasRecorte } from "./contas-recorte";
 import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
+import { conferirInvestimento, periodoTrafego } from "@/lib/trafego-pago-filtros";
 
 /**
  * Tráfego pago: a mídia contra a margem que ela produz.
@@ -44,12 +45,6 @@ import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/r
  * sistema sabe o que cada anúncio faturou de verdade.
  */
 
-function somarDias(iso: string, d: number) {
-  const t = new Date(iso + "T12:00:00Z");
-  t.setUTCDate(t.getUTCDate() + d);
-  return t.toISOString().slice(0, 10);
-}
-
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
 const r2 = (v: number) => Number(v.toFixed(2));
 
@@ -57,6 +52,7 @@ export type Periodo = { inicio: string; fim: string; rotulo: string };
 
 export type LinhaAnuncioAds = {
   mlb: string;
+  conta: string;
   sku: string;
   titulo: string;
   tipo: string;
@@ -87,6 +83,7 @@ export type LinhaAnuncioAds = {
 
 export type LinhaCampanha = {
   campanha: string;
+  conta: string;
   anuncios: number;
   investimento: number;
   receitaAtribuida: number;
@@ -170,8 +167,8 @@ export type DadosTrafegoPago = {
     /** Faturamento real de TODOS os anúncios na janela, o denominador do TACoS. */
     receitaTotalConta: number;
   };
-  /** Investimento do relatório contra o lançado à mão, por mês. */
-  conferencia: { mes: string; relatorio: number; lancado: number }[];
+  /** Relatório e série diária do mesmo recorte e intervalo. */
+  conferencia: ReturnType<typeof conferirInvestimento> | null;
 };
 
 export async function carregarTrafegoPago(
@@ -197,7 +194,7 @@ export async function carregarTrafegoPago(
       sb
         .from("anuncio_ads")
         .select(
-          "codigo_externo,campanha,inicio,fim,impressoes,cliques,investimento,receita,receita_direta,receita_indireta"
+          "codigo_externo,conta_canal_id,campanha,inicio,fim,impressoes,cliques,investimento,receita,receita_direta,receita_indireta"
         )
         .order("inicio")
     ),
@@ -213,8 +210,33 @@ export async function carregarTrafegoPago(
     carregarContasRecorte(),
   ]);
 
+  type Diaria = {
+    data: string; investimento_ads: string | number | null; receita_ads: string | number | null;
+    receita: string | number | null; canal_id: string | null; conta_canal_id: string | null;
+  };
+  const diarias = (diariasRaw as unknown as Diaria[]).filter((d) =>
+    noRecorte(r, { canalId: d.canal_id, contaCanalId: d.conta_canal_id })
+  );
+  const ultimoDia = diarias.map((d) => String(d.data).slice(0, 10)).sort().at(-1)
+    ?? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const { de: deSerie, ate: ateSerie } = periodoTrafego(periodo, ultimoDia);
+  const porDia = new Map<string, DiaTrafego>();
+  for (const d of diarias) {
+    const data = String(d.data).slice(0, 10);
+    if (data < deSerie || data > ateSerie) continue;
+    const x = porDia.get(data) ?? { data, investimento: 0, receitaAds: 0, receita: 0 };
+    x.investimento += n(d.investimento_ads);
+    x.receitaAds += n(d.receita_ads);
+    x.receita += n(d.receita);
+    porDia.set(data, x);
+  }
+  const serie = [...porDia.values()]
+    .map((d) => ({ ...d, investimento: r2(d.investimento), receitaAds: r2(d.receitaAds), receita: r2(d.receita) }))
+    .sort((a, b) => a.data.localeCompare(b.data));
+
   type Ads = {
     codigo_externo: string;
+    conta_canal_id: string | null;
     campanha: string;
     inicio: string;
     fim: string;
@@ -230,13 +252,13 @@ export async function carregarTrafegoPago(
     return {
       vazio: true, janela: "", periodos: [], linhas: [], campanhas: [],
       recorte: recorte ?? "", opcoes: opcoesRecorte(contasRecorte),
-      serie: [], periodo: { de: "", ate: "" },
+      serie, periodo: { de: deSerie, ate: ateSerie },
       totais: {
         investimento: 0, receitaAtribuida: 0, receitaReal: 0, receitaIndireta: 0,
         margem: null, sobraAposMidia: null, atribuicao: null, coberturaMargem: 0,
         tacos: null, receitaTotalConta: 0,
       },
-      conferencia: [],
+      conferencia: null,
     };
   }
 
@@ -277,6 +299,16 @@ export async function carregarTrafegoPago(
   const info = new Map(
     (anunciosRaw as unknown as Anun[]).map((a) => [a.codigo_externo, a])
   );
+  const contas = new Map(contasRecorte.map((c) => [c.contaId, c]));
+  const contaDoAnuncio = new Map<string, string>();
+  for (const a of todas) {
+    const conta = a.conta_canal_id || info.get(a.codigo_externo)?.conta_canal_id;
+    if (conta) contaDoAnuncio.set(a.codigo_externo, conta);
+  }
+  const nomeConta = (mlb: string) => {
+    const c = contas.get(contaDoAnuncio.get(mlb) ?? "");
+    return c ? `${c.canalNome} · ${c.contaNome}` : "Conta não identificada";
+  };
 
   /*
    * O recorte entra ANTES da escolha da janela: uma conta pode ter
@@ -290,7 +322,8 @@ export async function carregarTrafegoPago(
   const dentro = (codigo: string) => {
     if (!r.canalId && !r.contaCanalId) return true;
     const a = info.get(codigo);
-    return a ? noRecorte(r, { canalId: a.canal_id, contaCanalId: a.conta_canal_id }) : false;
+    const contaId = contaDoAnuncio.get(codigo);
+    return noRecorte(r, { canalId: a?.canal_id ?? contas.get(contaId ?? "")?.canalId, contaCanalId: contaId });
   };
   const noCanal = todas.filter((a) => dentro(a.codigo_externo));
 
@@ -298,13 +331,13 @@ export async function carregarTrafegoPago(
     return {
       vazio: true, janela: "", periodos: [], linhas: [], campanhas: [],
       recorte: recorte ?? "", opcoes: opcoesRecorte(contasRecorte),
-      serie: [], periodo: { de: "", ate: "" },
+      serie, periodo: { de: deSerie, ate: ateSerie },
       totais: {
         investimento: 0, receitaAtribuida: 0, receitaReal: 0, receitaIndireta: 0,
         margem: null, sobraAposMidia: null, atribuicao: null, coberturaMargem: 0,
         tacos: null, receitaTotalConta: 0,
       },
-      conferencia: [],
+      conferencia: null,
     };
   }
 
@@ -314,13 +347,13 @@ export async function carregarTrafegoPago(
     return fx.localeCompare(fy) || ix.localeCompare(iy);
   });
   const escolhida = janela && janelas.includes(janela) ? janela : janelas[janelas.length - 1];
-  const ads = noCanal.filter((a) => `${a.inicio}|${a.fim}` === escolhida);
+  const ads = noCanal.filter((a) => `${a.inicio}|${a.fim}` === escolhida && [a.impressoes, a.cliques, a.investimento, a.receita].some((v) => n(v) !== 0));
 
   /* ── O intervalo que a mídia cobre define a janela da margem ── */
 
   const [inicio, fim] = escolhida.split("|");
 
-  const base = await carregarBaseMargem({ inicio, fim });
+  const base = await carregarBaseMargem({ inicio, fim, canalId: recorte });
   const margemPorMlb = new Map(agregar(base, "anuncio").map((l) => [l.chave, l]));
 
   /* ── Agrega a mídia por anúncio ── */
@@ -331,7 +364,7 @@ export async function carregarTrafegoPago(
     campanhas: Set<string>;
   };
   const porMlb = new Map<string, Ac>();
-  const porCampanha = new Map<string, Ac & { mlbs: Set<string> }>();
+  const porCampanha = new Map<string, Ac & { nome: string; conta: string; mlbs: Set<string> }>();
   const porPeriodo = new Map<string, PeriodoResumo>();
 
   for (const a of noCanal) {
@@ -363,15 +396,16 @@ export async function carregarTrafegoPago(
     at.campanhas.add(a.campanha);
     porMlb.set(a.codigo_externo, at);
 
+    const chaveCampanha = `${contaDoAnuncio.get(a.codigo_externo) ?? a.codigo_externo}|${a.campanha}`;
     const c =
-      porCampanha.get(a.campanha) ??
-      { imp: 0, cli: 0, inv: 0, rec: 0, recD: 0, recI: 0, campanhas: new Set<string>(), mlbs: new Set<string>() };
+      porCampanha.get(chaveCampanha) ??
+      { nome: a.campanha, conta: nomeConta(a.codigo_externo), imp: 0, cli: 0, inv: 0, rec: 0, recD: 0, recI: 0, campanhas: new Set<string>(), mlbs: new Set<string>() };
     c.imp += a.impressoes;
     c.cli += a.cliques;
     c.inv += n(a.investimento);
     c.rec += n(a.receita);
     c.mlbs.add(a.codigo_externo);
-    porCampanha.set(a.campanha, c);
+    porCampanha.set(chaveCampanha, c);
 
   }
 
@@ -406,6 +440,7 @@ export async function carregarTrafegoPago(
 
     linhas.push({
       mlb,
+      conta: nomeConta(mlb),
       sku: i?.sku_canal ?? "",
       titulo: i?.titulo ?? "",
       tipo: i?.tipo ?? "—",
@@ -433,14 +468,18 @@ export async function carregarTrafegoPago(
 
   const margemPorMlbMap = margemPorMlb;
   const campanhas: LinhaCampanha[] = [...porCampanha.entries()]
-    .map(([nome, c]) => {
+    .map(([, c]) => {
       let margem: number | null = null;
+      let completa = true;
       for (const mlb of c.mlbs) {
         const m = margemPorMlbMap.get(mlb)?.margem;
+        if (m == null || (porMlb.get(mlb)?.campanhas.size ?? 0) > 1) completa = false;
         if (m != null) margem = (margem ?? 0) + m;
       }
+      if (!completa) margem = null;
       return {
-        campanha: nome,
+        campanha: c.nome,
+        conta: c.conta,
         anuncios: c.mlbs.size,
         investimento: r2(c.inv),
         receitaAtribuida: r2(c.rec),
@@ -466,59 +505,7 @@ export async function carregarTrafegoPago(
     }))
     .sort((a, b) => a.inicio.localeCompare(b.inicio));
 
-  /* ── A série diária, que é o que o calendário recorta ──
-     Vem de `vendas_diarias`: a rotina noturna pergunta ao canal o número
-     de CADA dia, separadamente, então aqui não há rateio nem estimativa.
-     É a única parte da tela que aceita qualquer intervalo. */
-  type Diaria = {
-    data: string;
-    investimento_ads: string | number | null;
-    receita_ads: string | number | null;
-    receita: string | number | null;
-    canal_id: string | null;
-    conta_canal_id: string | null;
-  };
-  const diarias = (diariasRaw as unknown as Diaria[]).filter((d) =>
-    noRecorte(r, { canalId: d.canal_id, contaCanalId: d.conta_canal_id })
-  );
-  const comGasto = diarias.filter((d) => n(d.investimento_ads) > 0).map((d) => String(d.data));
-  const ultimoDia = comGasto.length ? comGasto.sort().at(-1)! : fim;
-  const deSerie = periodo?.de || somarDias(ultimoDia, -29);
-  const ateSerie = periodo?.ate || ultimoDia;
-
-  const porDia = new Map<string, DiaTrafego>();
-  for (const d of diarias) {
-    const data = String(d.data).slice(0, 10);
-    if (data < deSerie || data > ateSerie) continue;
-    const x = porDia.get(data) ?? { data, investimento: 0, receitaAds: 0, receita: 0 };
-    x.investimento += n(d.investimento_ads);
-    x.receitaAds += n(d.receita_ads);
-    x.receita += n(d.receita);
-    porDia.set(data, x);
-  }
-  const serie = [...porDia.values()]
-    .map((d) => ({ ...d, investimento: r2(d.investimento), receitaAds: r2(d.receitaAds), receita: r2(d.receita) }))
-    .sort((a, b) => a.data.localeCompare(b.data));
-
-  /* ── Conferência com o lançamento manual ── */
-
-  const lancadoPorMes = new Map<string, number>();
-  for (const d of diariasRaw as unknown as { data: string; investimento_ads: string | number }[]) {
-    const mes = String(d.data).slice(0, 7);
-    lancadoPorMes.set(mes, (lancadoPorMes.get(mes) ?? 0) + n(d.investimento_ads));
-  }
-  const relatorioPorMes = new Map<string, number>();
-  for (const a of ads) {
-    const mes = a.inicio.slice(0, 7);
-    relatorioPorMes.set(mes, (relatorioPorMes.get(mes) ?? 0) + n(a.investimento));
-  }
-  const conferencia = [...relatorioPorMes.entries()]
-    .map(([mes, relatorio]) => ({
-      mes,
-      relatorio: r2(relatorio),
-      lancado: r2(lancadoPorMes.get(mes) ?? 0),
-    }))
-    .sort((a, b) => a.mes.localeCompare(b.mes));
+  const conferencia = conferirInvestimento(diarias, inicio, fim, r2(ads.reduce((s, a) => s + n(a.investimento), 0)));
 
   /* ── Totais ── */
 
@@ -534,7 +521,7 @@ export async function carregarTrafegoPago(
   /*
    * O denominador do TACoS é o faturamento de TODOS os anúncios da conta
    * na janela — não só dos que receberam mídia. Usar só os anunciados
-   * daria um TACoS baixo demais, porque esconderia justamente o orgânico
+   * daria um TACoS alto demais, porque esconderia justamente o orgânico
    * que a pergunta quer medir.
    */
   const receitaTotalConta = r2(
@@ -575,9 +562,10 @@ const MESES = [
 
 function rotuloPeriodo(inicio: string, fim: string): string {
   const mi = Number(inicio.slice(5, 7)) - 1;
-  const mf = Number(fim.slice(5, 7)) - 1;
-  // Período que cabe num mês só se lê melhor pelo nome do mês do que por
-  // duas datas — e é o caso de todos os relatórios mensais do canal.
-  if (mi === mf) return `${MESES[mi]}/${inicio.slice(2, 4)}`;
-  return `${inicio.slice(8, 10)}/${inicio.slice(5, 7)} a ${fim.slice(8, 10)}/${fim.slice(5, 7)}`;
+  const ultimoDia = new Date(Date.UTC(Number(inicio.slice(0, 4)), mi + 1, 0)).getUTCDate();
+  if (inicio.slice(0, 7) === fim.slice(0, 7) && inicio.endsWith("-01") && Number(fim.slice(8, 10)) === ultimoDia) {
+    return `${MESES[mi]}/${inicio.slice(2, 4)}`;
+  }
+  const data = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(2, 4)}`;
+  return `${data(inicio)} a ${data(fim)}`;
 }

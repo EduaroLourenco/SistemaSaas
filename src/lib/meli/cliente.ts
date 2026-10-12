@@ -746,7 +746,8 @@ async function buscarJanela(
 
   // Um único dia com mais de 1000 pedidos não tem como partir mais.
   // Devolve o que veio — melhor um dado marcado do que travar.
-  if (!r.encostou || de === ate || profundidade > 8) return r.linhas;
+  if (!r.encostou) return r.linhas;
+  if (de === ate || profundidade > 8) throw new Error(`A API limitou os pedidos de ${de} a ${ate}. O período não foi consolidado para evitar totais incompletos.`);
 
   const dias = diferencaDias(de, ate);
   const meio = somarDias(de, Math.floor(dias / 2));
@@ -783,11 +784,7 @@ export async function pedidos({
   for (let inicio = de; inicio <= ate; inicio = somarDias(inicio, janelaDias)) {
     const fim = somarDias(inicio, janelaDias - 1);
     const ateJanela = fim > ate ? ate : fim;
-    try {
-      brutos.push(...(await buscarJanela("/orders/search", v.id, inicio, ateJanela, conta)));
-    } catch {
-      brutos.push(...(await buscarJanela("/orders/search/recent", v.id, inicio, ateJanela, conta)));
-    }
+    brutos.push(...(await buscarJanela("/orders/search", v.id, inicio, ateJanela, conta)));
   }
 
   // O mesmo pedido pode vir em duas janelas na fronteira; tira repetido.

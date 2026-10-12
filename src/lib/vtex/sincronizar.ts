@@ -191,7 +191,7 @@ export async function sincronizarVtex(
   const todos = await buscarPedidos({ de, ate, conta: ctx.contaCanalId, nome: ctx.nome });
   const lista = todos.filter(virouVenda);
   const { gravados, itens } = await gravar(ctx, lista);
-  const dias = await consolidarDiarias(ctx, de, ate);
+  const dias = await consolidarDiarias(ctx, de, ate, { de, ate });
 
   return {
     conta: ctx.nome,

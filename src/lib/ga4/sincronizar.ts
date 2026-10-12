@@ -3,6 +3,7 @@ import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { emLotes, r2 } from "@/lib/sync/diarias";
 import type { Integracao } from "@/lib/integracoes/cofre";
 import { nomesAceitos, relatorio, tokenDeAcesso } from "./cliente";
+import { gravarDiariasComOrigem } from "@/lib/sync/origem";
 
 /**
  * GA4 → `vendas_diarias` da conta da loja própria.
@@ -107,11 +108,15 @@ export async function sincronizarGa4(
       conta_canal_id: integ.contaCanalId,
       data: dataIso(dia),
       visitas: Math.round(l.metricas[0]),
+      origem_visitas: "api",
+      visitas_atualizadas_em: new Date().toISOString(),
     };
     if (comAds) {
       const [custo = 0, cliques = 0] = adsDoDia.get(dia) ?? [];
       linha.investimento_ads = r2(custo);
       linha.cliques_ads = Math.round(cliques);
+      linha.origem_ads = "api";
+      linha.ads_atualizados_em = new Date().toISOString();
     }
     if (comReceitaAds) linha.receita_ads = r2(receitaDoDia.get(dia) ?? 0);
     return linha;
@@ -119,8 +124,7 @@ export async function sincronizarGa4(
 
   const sb = clientePrivilegiado();
   await emLotes(linhas, 500, async (lote) => {
-    const { error } = await sb.from("vendas_diarias").upsert(lote, { onConflict: "conta_canal_id,data" });
-    if (error) throw new Error(`Falha ao gravar o GA4 em vendas diárias: ${error.message}`);
+    await gravarDiariasComOrigem(lote);
   });
 
   await sb

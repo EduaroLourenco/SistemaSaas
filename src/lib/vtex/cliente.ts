@@ -74,17 +74,19 @@ export async function credencialDaConta(contaCanalId: string): Promise<Credencia
 }
 
 /** As lojas VTEX cadastradas, de todas as operações. Para a rotina agendada. */
-export async function lojasVtex(): Promise<{ id: string; operacaoId: string; nome: string }[]> {
+export async function lojasVtex(operacaoId?: string): Promise<{ id: string; operacaoId: string; nome: string }[]> {
   const sb = clientePrivilegiado();
   const { data: canais } = await sb.from("canais").select("id").eq("codigo", PROVEDOR_VTEX);
   const ids = (canais ?? []).map((c) => c.id as string);
   if (!ids.length) return [];
 
-  const { data } = await sb
+  let consulta = sb
     .from("contas_canal")
     .select("id,operacao_id,nome")
     .in("canal_id", ids)
     .eq("ativa", true);
+  if (operacaoId) consulta = consulta.eq("operacao_id", operacaoId);
+  const { data } = await consulta;
   return (data ?? []).map((c) => ({
     id: c.id as string,
     operacaoId: c.operacao_id as string,
@@ -210,7 +212,10 @@ export async function pedidos({
   if (!credencial) throw new VtexNaoConfigurada(nome);
   const acesso = montarAcesso(credencial);
 
-  const janela = `creationDate:[${de}T00:00:00.000Z TO ${ate}T23:59:59.999Z]`;
+  // Os painéis usam o dia de São Paulo. A criação da VTEX vem em UTC.
+  const inicioUtc = new Date(`${de}T00:00:00-03:00`).toISOString();
+  const fimUtc = new Date(`${ate}T23:59:59.999-03:00`).toISOString();
+  const janela = `creationDate:[${inicioUtc} TO ${fimUtc}]`;
   const ids: string[] = [];
 
   for (let pagina = 1; pagina <= 30; pagina++) {
@@ -218,12 +223,13 @@ export async function pedidos({
       acesso,
       `/api/oms/pvt/orders?f_creationDate=${encodeURIComponent(janela)}&per_page=100&page=${pagina}`
     );
+    if (l.paging && l.paging.pages > 30) throw new Error("A janela da VTEX excede 30 páginas. Consulte intervalos menores para não perder pedidos.");
     ids.push(...(l.list ?? []).map((o) => o.orderId));
     if (!l.paging || pagina >= l.paging.pages) break;
   }
 
   const detalhes = await comLimite(ids, 4, (id) =>
-    api<DetalheOms>(acesso, `/api/oms/pvt/orders/${id}`).catch(() => null)
+    api<DetalheOms>(acesso, `/api/oms/pvt/orders/${id}`)
   );
 
   const saida: PedidoVtex[] = [];
@@ -232,7 +238,7 @@ export async function pedidos({
     const frete = d.totals?.find((t) => t.id === "Shipping")?.value ?? 0;
     saida.push({
       id: d.orderId,
-      data: d.creationDate.slice(0, 10),
+      data: new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(d.creationDate)),
       fechadoEm: d.creationDate,
       status: d.status,
       cancelado: d.status === "canceled",

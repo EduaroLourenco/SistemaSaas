@@ -40,7 +40,7 @@ export type Fonte = {
    */
   atrasoDias: number | null;
   /** Como esta fonte entra no sistema. */
-  origem: "api" | "planilha" | "manual";
+  origem: "api" | "planilha" | "manual" | "mista";
 };
 
 export type DadosFontes = {
@@ -102,7 +102,7 @@ export async function carregarFontes(): Promise<DadosFontes> {
     sb
       .from("vendas_diarias")
       .select("data")
-      .eq("origem", "manual")
+      .or("origem_vendas.eq.manual,origem_visitas.eq.manual,origem_ads.eq.manual")
       .order("data", { ascending: false })
       .limit(1),
     sb.from("formula_base_itens").select("id", { count: "exact", head: true }),
@@ -165,7 +165,7 @@ export async function carregarFontes(): Promise<DadosFontes> {
     {
       id: "pedidos",
       nome: "Planilha de pedidos",
-      alimenta: "Magalu, Casas Bahia, Madeira e os demais canais",
+      alimenta: "Histórico importado e canais sem integração",
       cobertura: coberturaPlanilha,
       importadoEm: ultima("pedidos") ?? ultima("consolidado"),
       registros: qtdPedidosPlanilha,
@@ -184,13 +184,13 @@ export async function carregarFontes(): Promise<DadosFontes> {
     },
     {
       id: "desempenho",
-      nome: "Desempenho por planilha",
-      alimenta: "A série semanal, anterior à API",
+      nome: "Desempenho semanal",
+      alimenta: "Consolidado diário da API e histórico importado",
       cobertura: coberturaSemanal,
       importadoEm: ultima("desempenho_anuncios"),
       registros: qtdSemanal,
       atrasoDias: atrasoDe(coberturaSemanal),
-      origem: "planilha",
+      origem: "mista",
     },
     {
       id: "catalogo",
@@ -206,7 +206,7 @@ export async function carregarFontes(): Promise<DadosFontes> {
     {
       id: "lancamentos",
       nome: "Lançamentos manuais",
-      alimenta: "Visitas e investimento em ADS — o que a planilha não traz",
+      alimenta: "Somente métricas sem alimentação automática",
       cobertura: coberturaManual,
       importadoEm: null,
       registros: 0,

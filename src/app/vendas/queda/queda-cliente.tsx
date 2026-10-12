@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Bar,
   CartesianGrid,
@@ -210,14 +211,14 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                   </span>
                 </p>
                 <p className="mt-3 text-[12px] leading-relaxed text-ink-3">
-                  O total pode subir e ainda haver itens caindo: a tela separa um do outro. Abaixo, só o que caiu.
+                  Abra um produto para conferir seus canais e anúncios.
                 </p>
               </Panel>
               <Panel className="p-4 lg:col-span-2">
                 <p className="label">Para onde foi a queda</p>
                 <p className="num mt-1 text-[13px] text-ink-2">
                   {money(Math.abs(quedaTotal))} perdidos em {count(porCausa.reduce((s, [, x]) => s + x.itens, 0))}{" "}
-                  {dados.nivel === "produto" ? "produtos" : "anúncios"} que caíram, pela causa principal de cada um
+                  {dados.nivel === "produto" ? "produtos" : "anúncios"} · agrupados pelo principal sinal observado
                 </p>
                 <ul className="mt-3 flex flex-col gap-1.5">
                   {porCausa.map(([c, x]) => (
@@ -250,40 +251,9 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
               </Panel>
             </div>
 
-            <Disclosure title="Como a causa é escolhida">
-              <p>
-                Receita = <strong>visitas × conversão × preço</strong>. A variação de cada fator entre o período
-                anterior e o atual diz quanto da diferença em reais ele explica, e a soma dos três fecha exatamente na
-                diferença. Canal sem visita registrada (loja própria, marketplaces sem API de visita) é lido como{" "}
-                <strong>unidades × preço</strong>.
-              </p>
-              <p className="mt-2">
-                Cada item recebe <strong>uma causa só</strong> — a pílula não é etiqueta, é o diagnóstico principal.
-                Preço que sobe quase sempre derruba conversão e visita junto, e marcar os três não diria onde mexer.
-                Os três fatores aparecem com o valor em reais de cada um ao abrir a linha; a pílula é o maior deles,
-                ou a primeira condição desta ordem que o item satisfaz:
-              </p>
-              <p className="mt-2">
-                A causa segue esta ordem: <strong>sem estoque</strong> (metade ou mais dos dias acompanhados zerado, e a
-                queda veio desse anúncio) → <strong>pausado</strong> → <strong>preço subiu</strong> (preço +4% ou mais
-                e conversão −10% ou mais, OU visitas −10% com a conversão de pé; sem visita, unidades −10%) → <strong>parou de vender</strong> → o fator que
-                mais tirou receita.
-              </p>
-              <p className="mt-2">
-                Visita caindo <strong>também</strong> pode ser preço: no Mercado Livre o preço aparece na busca, antes
-                do clique, e quem acha caro não entra no anúncio — a conversão pode até subir, porque sobra só quem já
-                ia pagar. Quem separa os dois casos é a <strong>disputa do catálogo</strong>: perder o primeiro lugar
-                depois de subir o preço é prova de que foi preço; manter o primeiro lugar é contraprova, e aí a causa
-                volta a ser exposição (verba de anúncio, busca, sazonalidade). Sem esse registro — anúncio fora do
-                catálogo, ou período antes de 30/09 — a frase diz a dúvida em vez de afirmar.
-              </p>
-              <p className="mt-2">
-                Preço de <strong>vitrine</strong> é o anunciado no dia, lido da API do Mercado Livre na sincronização
-                diária
-                {dados.vitrineDesde ? ` (desde ${dataBr(dados.vitrineDesde)})` : " (começa a ser gravado após a migração 33)"}.
-                Preço <strong>vendido</strong> é receita ÷ unidades dos pedidos, e vale para todos os canais. A causa
-                usa a vitrine quando os dois períodos têm, e o vendido quando não.
-              </p>
+            <Disclosure title="Como ler esta análise">
+              <p>Compare períodos de igual duração. A etiqueta destaca um sinal a investigar; não comprova a causa da queda.</p>
+              <p className="mt-2">Abra um SKU para separar os canais e, depois, cada anúncio. Sem visitas medidas, a análise usa unidades e preço. Estoque é disponibilidade declarada ao canal; confira os depósitos na tela de estoques.</p>
             </Disclosure>
 
             {/* ── A lista ── */}
@@ -447,8 +417,7 @@ function Linha({
  * olhando o posicionamento que o anúncio perdeu enquanto estava parado.
  */
 function Estoque({ l }: { l: LinhaQueda }) {
-  if (l.sobEncomenda) return <span className="text-[12px] text-ink-3">sob encomenda</span>;
-  if (l.estoqueAtual == null) return <span className="text-ink-3">—</span>;
+  if (l.estoqueAtual == null) return <span className="text-[11px] text-ink-3">ver por origem</span>;
   return (
     <span className={cn("num text-[13px]", l.estoqueAtual === 0 ? "font-semibold text-down" : "text-ink-2")}>
       {count(l.estoqueAtual)}
@@ -468,25 +437,31 @@ function Coluna({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 /* ══ O detalhe: a frase, a conta e o dia a dia ═══════════════ */
 
 function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
+  const [aba, setAba] = React.useState("resumo");
+  const [anuncios, setAnuncios] = React.useState<LinhaQueda[] | null>(null);
+  const [anuncioAberto, setAnuncioAberto] = React.useState<string | null>(null);
   const [serie, setSerie] = React.useState<DiaQueda[] | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let vivo = true;
-    const q = new URLSearchParams({ chave: l.chave, de: dados.deAnterior, ate: dados.ate });
+    setSerie(null);
+    setAnuncios(null);
+    setErro(null);
+    const q = new URLSearchParams({ chave: l.chave, de: dados.deAnterior, ate: dados.ate, inicioAtual: dados.de });
     if (dados.recorte.length) q.set("canais", dados.recorte.join(","));
     fetch(`/api/queda?${q}`)
       .then(async (r) => {
         const j = await r.json();
         if (!vivo) return;
-        if (r.ok) setSerie(j.dias);
+        if (r.ok) { setSerie(j.dias); setAnuncios(j.anuncios ?? []); }
         else setErro(j.erro ?? "Não consegui carregar o dia a dia.");
       })
       .catch((e) => vivo && setErro(String(e)));
     return () => {
       vivo = false;
     };
-  }, [l.chave, dados.deAnterior, dados.ate, dados.recorte]);
+  }, [l.chave, dados.de, dados.deAnterior, dados.ate, dados.recorte]);
 
   const fatores = [
     { nome: "visitas", valor: l.efeito.visitas },
@@ -500,9 +475,18 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
 
   return (
     <div className="flex flex-col gap-4 bg-panel-2 px-4 pb-4 pt-1 md:pl-10">
-      <p className="text-[13px] leading-relaxed text-ink">
-        <Badge tone={TOM[l.causa]}>{l.causa}</Badge> <span className="ml-1">{l.explicacao}</span>
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
+        <div className="flex flex-wrap gap-1" role="group" aria-label={`Análise de ${l.codigo}`}>
+          {[{ id: "resumo", nome: "Resumo" }, ...(l.nivel === "produto" ? [{ id: "anuncios", nome: `Canais e anúncios${anuncios ? ` (${anuncios.length})` : ""}` }] : []), { id: "evolucao", nome: "Evolução" }].map((a) => <button key={a.id} type="button" aria-pressed={aba === a.id} onClick={() => setAba(a.id)} className={cn("rounded-lg px-3 py-2 text-xs font-medium", aba === a.id ? "bg-brand text-white" : "text-ink-2 hover:bg-panel-3")}>{a.nome}</button>)}
+        </div>
+        <Link className="text-xs font-medium text-brand" href={`/integracoes/estoques?sku=${encodeURIComponent(l.sku)}`}>Ver estoques por origem →</Link>
+      </div>
+      {aba === "resumo" && <>
+      <div className="rounded-xl border border-line bg-panel p-4">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Leitura dos dados · {l.onde}</p>
+        <p className="text-[13px] leading-relaxed text-ink"><Badge tone={TOM[l.causa]}>{l.causa}</Badge> <span className="ml-1">{l.explicacao}</span></p>
+        <p className="mt-3 text-xs text-ink-2"><strong>Conferir agora: </strong>{l.causa === "sem estoque" ? "saldos e disponibilidade em cada origem." : l.causa === "preço subiu" || l.causa === "vendeu mais barato" ? "preço, promoções e margem do anúncio." : l.causa === "perdeu visitas" ? "investimento, exposição e posição do anúncio no canal." : l.causa === "conversão caiu" || l.causa === "parou de vender" ? "oferta, frete, prazo e disponibilidade." : "quais canais e anúncios concentraram a mudança."}</p>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         <Numero rotulo="Receita" antes={money(l.antes.receita)} agora={money(l.agora.receita)} />
@@ -536,13 +520,11 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
         {/* Estoque é de AGORA, por isso a segunda linha diz os dias zerados
             do período em vez de um "antes" que não existe. */}
         <Numero
-          rotulo="Estoque hoje"
+          rotulo="Disponível no anúncio"
           agora={
-            l.sobEncomenda
-              ? "sob encomenda"
-              : l.estoqueAtual != null
+            l.estoqueAtual != null
                 ? count(l.estoqueAtual)
-                : "nunca lido"
+                : "ver por origem"
           }
           antes={
             l.diasComEstoque + l.diasSemEstoque > 0
@@ -555,7 +537,7 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
 
       {fatores.length > 0 && l.delta < 0 && (
         <div>
-          <p className="label mb-1.5">De onde veio a diferença de {money(l.delta)}</p>
+          <p className="label mb-1.5">Variação estimada por fator</p>
           <div className="flex flex-wrap gap-2">
             {fatores.map((f) => (
               <span key={f.nome} className="rounded-r1 border border-line bg-panel px-2.5 py-1 text-[12px] text-ink-2">
@@ -569,33 +551,23 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
           </div>
         </div>
       )}
+      <Disclosure title="Entender as métricas"><p>Receita e unidades vêm dos pedidos não cancelados. Visitas só aparecem quando o canal as fornece. Preço anunciado é a média dos registros disponíveis; preço vendido é receita dividida por unidades. A comparação indica hipóteses, não comprova a causa. Os fatores repartem a diferença matematicamente.</p></Disclosure>
+      </>}
 
-      {l.partes.length > 1 && (
+      {aba === "anuncios" && (
         <div>
-          <p className="label mb-1.5">Onde caiu</p>
-          <ul className="flex flex-col gap-1">
-            {l.partes.slice(0, 8).map((p) => (
-              <li key={p.codigo + p.onde} className="flex items-baseline justify-between gap-3 text-[12px]">
-                <span className="min-w-0 truncate text-ink-2">
-                  {p.onde}
-                  {p.codigo !== p.onde && <span className="num text-ink-3"> · {p.codigo}</span>}
-                </span>
-                <span className="num shrink-0">
-                  <span className="text-ink-3">
-                    {moneyShort(p.antes)} → {moneyShort(p.agora)}
-                  </span>{" "}
-                  <span className={p.delta < 0 ? "text-down" : "text-up"}>
-                    {p.delta > 0 ? "+" : ""}
-                    {moneyShort(p.delta)}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <p className="mb-3 text-xs text-ink-3">Cada análise usa apenas os dados daquele canal e daquela conta.</p>
+          {erro ? <p role="alert" className="text-xs text-down">{erro}</p> : !anuncios ? <p className="text-xs text-ink-3" aria-busy="true">Carregando anúncios…</p> : !anuncios.length ? <p className="text-xs text-ink-3">Nenhum anúncio com vendas vinculado a este SKU no recorte.</p> : <ul className="space-y-2">{anuncios.map((a) => <li key={a.chave} className="overflow-hidden rounded-xl border border-line bg-panel">
+            <button type="button" aria-expanded={anuncioAberto === a.chave} onClick={() => setAnuncioAberto(anuncioAberto === a.chave ? null : a.chave)} className="flex w-full flex-wrap items-center justify-between gap-3 p-3 text-left hover:bg-panel-3">
+              <div className="min-w-0"><p className="text-xs font-semibold text-brand">{a.onde}</p><p className="num mt-1 text-xs text-ink">{a.codigo}</p><p className="mt-1 text-[11px] text-ink-3">{a.agora.visitas == null ? "Pedidos e preços vendidos" : "Pedidos, visitas e dados do anúncio"}</p></div>
+              <div className="text-right"><Badge tone={TOM[a.causa]}>{a.causa}</Badge><p className={cn("num mt-2 text-sm font-semibold", a.delta < 0 ? "text-down" : "text-up")}>{a.delta > 0 ? "+" : ""}{money(a.delta)}</p><p className="text-[11px] text-ink-3">Abrir análise {anuncioAberto === a.chave ? "−" : "+"}</p></div>
+            </button>
+            {anuncioAberto === a.chave && <Detalhe key={a.chave} l={a} dados={dados} />}
+          </li>)}</ul>}
         </div>
       )}
 
-      <div>
+      {aba === "evolucao" && <div>
         <p className="label mb-1.5">
           Dia a dia · barras = receita · {temVitrine ? "laranja = preço anunciado · " : ""}roxo = preço vendido no dia
           {temVisita ? " · pontilhado = visitas" : ""}
@@ -671,7 +643,7 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
           </div>
         )}
         <p className="mt-1 text-[11px] text-ink-3">A faixa cinza é o período anterior.</p>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -693,12 +665,12 @@ function Numero({
   return (
     <div className="min-w-0 rounded-r1 border border-line bg-panel px-3 py-2">
       <p className="text-[11px] text-ink-3">{rotulo}</p>
-      <p className="num truncate text-[13px] font-semibold text-ink">{agora}</p>
-      <p className="num truncate text-[11px] text-ink-3" title={antes}>
+      <p className="num break-words text-[13px] font-semibold text-ink">{agora}</p>
+      <p className="num break-words text-[11px] text-ink-3" title={antes}>
         {rotuloAntes}
         {antes}
       </p>
-      {extra && <p className="num truncate text-[11px] font-medium text-ink-2">{extra}</p>}
+      {extra && <p className="num break-words text-[11px] font-medium text-ink-2">{extra}</p>}
     </div>
   );
 }

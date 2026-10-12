@@ -2,6 +2,8 @@ import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { emLotes, r2 } from "@/lib/sync/diarias";
 import { meliGet, type Conta } from "./cliente";
+import { paginar } from "@/lib/dados/paginar";
+import { gravarDiariasComOrigem } from "@/lib/sync/origem";
 
 /**
  * Publicidade do Mercado Livre (Mercado Ads) por API.
@@ -226,15 +228,16 @@ const DIAS_DIARIOS = 8;
  * de uma vez, então não há rateio nem estimativa aqui: cada dia recebe o
  * número daquele dia.
  */
-async function gravarGastoDiario(
+export async function gravarGastoDiario(
   conta: Conta,
   adv: Anunciante,
   de: string,
   ate: string,
-  ctx: { operacaoId: string; contaCanalId: string }
+  ctx: { operacaoId: string; contaCanalId: string },
+  limiteDias = DIAS_DIARIOS
 ) {
   const dias: string[] = [];
-  for (let d = new Date(`${ate}T00:00:00Z`); dias.length < DIAS_DIARIOS; d.setUTCDate(d.getUTCDate() - 1)) {
+  for (let d = new Date(`${ate}T00:00:00Z`); dias.length < Math.min(90, limiteDias); d.setUTCDate(d.getUTCDate() - 1)) {
     const iso = d.toISOString().slice(0, 10);
     if (iso < de) break;
     dias.push(iso);
@@ -263,19 +266,19 @@ async function gravarGastoDiario(
       data,
       investimento_ads: r2(camps.reduce((t, c) => t + c.metricas.investimento, 0)),
       receita_ads: r2(camps.reduce((t, c) => t + c.metricas.receita, 0)),
+      cliques_ads: Math.round(camps.reduce((t, c) => t + c.metricas.cliques, 0)),
+      origem_ads: "api",
+      ads_atualizados_em: new Date().toISOString(),
     });
   }
 
-  const { error } = await sb
-    .from("vendas_diarias")
-    .upsert(linhas, { onConflict: "conta_canal_id,data" });
-  if (error) throw new Error(`Falha ao gravar gasto diário: ${error.message}`);
+  await gravarDiariasComOrigem(linhas);
   return linhas.length;
 }
 
 export async function sincronizarAds(
   conta: Conta,
-  opcoes: { de: string; ate: string; operacaoId: string; contaCanalId: string }
+  opcoes: { de: string; ate: string; operacaoId: string; contaCanalId: string; diasDiarios?: number }
 ): Promise<ResultadoAds | null> {
   const adv = await anunciante(conta);
   if (!adv) return null;
@@ -288,15 +291,17 @@ export async function sincronizarAds(
   const nomeCampanha = new Map(camps.map((c) => [c.id, c.nome]));
 
   const sb = clientePrivilegiado();
-  const { data: anunciosDb } = await sb
+  const anunciosDb = await paginar(() => sb
     .from("anuncios")
     .select("id,codigo_externo")
-    .eq("conta_canal_id", contaCanalId);
+    .eq("conta_canal_id", contaCanalId));
   const idPorMlb = new Map((anunciosDb ?? []).map((a) => [String(a.codigo_externo).toUpperCase(), a.id as string]));
 
   const comMovimento = ads.filter((a) => a.metricas.investimento > 0 || a.metricas.cliques > 0 || a.metricas.impressoes > 0);
   const linhas = comMovimento.map((a) => ({
     operacao_id: operacaoId,
+    conta_canal_id: contaCanalId,
+    origem: "api",
     anuncio_id: idPorMlb.get(a.mlb.toUpperCase()) ?? null,
     codigo_externo: a.mlb,
     campanha: nomeCampanha.get(a.campanhaId) ?? `Campanha ${a.campanhaId}`,
@@ -313,14 +318,29 @@ export async function sincronizarAds(
     receita_indireta: Number(a.metricas.receitaIndireta.toFixed(2)),
   }));
 
+  // Releitura do MESMO intervalo substitui a apuração anterior. Campanhas
+  // renomeadas/retiradas não podem deixar gasto fantasma na soma do relatório.
+  const anteriores = await paginar(() => sb.from("anuncio_ads")
+    .select("codigo_externo,campanha,anuncio_id")
+    .eq("operacao_id", operacaoId).eq("conta_canal_id", contaCanalId).eq("inicio", de).eq("fim", ate).order("id"));
+  const chaves = new Set(linhas.map((l) => `${l.codigo_externo}|${l.campanha}`));
+  for (const a of anteriores) {
+    if (chaves.has(`${a.codigo_externo}|${a.campanha}`)) continue;
+    linhas.push({ operacao_id: operacaoId, conta_canal_id: contaCanalId, origem: "api", anuncio_id: a.anuncio_id, codigo_externo: a.codigo_externo,
+      campanha: a.campanha, inicio: de, fim: ate, status: null, impressoes: 0, cliques: 0, investimento: 0, receita: 0,
+      vendas_diretas: 0, vendas_indiretas: 0, receita_direta: 0, receita_indireta: 0 });
+  }
   await emLotes(linhas, 300, async (lote) => {
-    const { error } = await sb
+    let { error } = await sb
       .from("anuncio_ads")
       .upsert(lote, { onConflict: "operacao_id,codigo_externo,campanha,inicio,fim" });
+    if (error && ["42703", "PGRST204"].includes(error.code) && /origem|conta_canal_id/.test(error.message)) {
+      ({ error } = await sb.from("anuncio_ads").upsert(lote.map(({ origem, conta_canal_id, ...l }) => { void origem; void conta_canal_id; return l; }), { onConflict: "operacao_id,codigo_externo,campanha,inicio,fim" }));
+    }
     if (error) throw new Error(`Falha ao gravar publicidade: ${error.message}`);
   });
 
-  const diasGravados = await gravarGastoDiario(conta, adv, de, ate, { operacaoId, contaCanalId });
+  const diasGravados = await gravarGastoDiario(conta, adv, de, ate, { operacaoId, contaCanalId }, opcoes.diasDiarios);
 
   const investimento = camps.reduce((s, c) => s + c.metricas.investimento, 0);
   const receita = camps.reduce((s, c) => s + c.metricas.receita, 0);

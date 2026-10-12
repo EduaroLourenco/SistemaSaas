@@ -1,6 +1,7 @@
 import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { paginar } from "@/lib/dados/paginar";
+import { gravarDiariasComOrigem } from "./origem";
 
 /**
  * Consolida `vendas_diarias` a partir do que já está gravado em `pedidos`
@@ -30,7 +31,8 @@ export type ContextoCanal = {
 export async function consolidarDiarias(
   ctx: ContextoCanal,
   de: string,
-  ate: string
+  ate: string,
+  pedidosConfirmados?: { de: string; ate: string }
 ): Promise<number> {
   const sb = clientePrivilegiado();
 
@@ -47,7 +49,7 @@ export async function consolidarDiarias(
   const peds = await paginar(() =>
     sb
       .from("pedidos")
-      .select("data,total,cancelado")
+      .select("data,total,cancelado,origem")
       .eq("conta_canal_id", ctx.contaCanalId)
       .gte("data", de)
       .lte("data", ate)
@@ -59,7 +61,7 @@ export async function consolidarDiarias(
   const vis = await paginar(() =>
     sb
       .from("anuncio_desempenho_diario")
-      .select("data,visitas,anuncios!inner(conta_canal_id)")
+      .select("data,visitas,importacao_id,anuncios!inner(conta_canal_id)")
       .eq("anuncios.conta_canal_id", ctx.contaCanalId)
       .gte("data", de)
       .lte("data", ate)
@@ -72,13 +74,20 @@ export async function consolidarDiarias(
     cancelados: number;
     valorCancelado: number;
     visitas: number;
+    origens: Set<string>;
+    origensVisitas: Set<string>;
   };
   const porDia = new Map<string, Acum>();
   const novo = (): Acum => ({
-    receita: 0, pedidos: 0, cancelados: 0, valorCancelado: 0, visitas: 0,
+    receita: 0, pedidos: 0, cancelados: 0, valorCancelado: 0, visitas: 0, origens: new Set(), origensVisitas: new Set(),
   });
+  if (pedidosConfirmados) {
+    for (let d = pedidosConfirmados.de; d <= pedidosConfirmados.ate; d = new Date(Date.parse(d + "T12:00:00Z") + 86400000).toISOString().slice(0, 10)) {
+      porDia.set(d, novo());
+    }
+  }
 
-  for (const p of peds as unknown as { data: string; total: number; cancelado: boolean }[]) {
+  for (const p of peds as unknown as { data: string; total: number; cancelado: boolean; origem?: string }[]) {
     const d = String(p.data).slice(0, 10);
     const a = porDia.get(d) ?? novo();
     const total = Number(p.total) || 0;
@@ -86,6 +95,7 @@ export async function consolidarDiarias(
     // plataforma já usa e que o ticket médio divide depois.
     a.pedidos += 1;
     a.receita += total;
+    a.origens.add(p.origem || "desconhecida");
     if (p.cancelado) {
       a.cancelados += 1;
       a.valorCancelado += total;
@@ -96,10 +106,11 @@ export async function consolidarDiarias(
   // Guarda QUAIS dias têm visita medida. Um dia pode ter linha de visita
   // somando zero, e isso é diferente de não ter linha nenhuma.
   const diasComVisita = new Set<string>();
-  for (const v of vis as unknown as { data: string; visitas: number }[]) {
+  for (const v of vis as unknown as { data: string; visitas: number; importacao_id: string | null }[]) {
     const d = String(v.data).slice(0, 10);
     const a = porDia.get(d) ?? novo();
     a.visitas += Number(v.visitas) || 0;
+    a.origensVisitas.add(v.importacao_id ? "planilha" : "api");
     porDia.set(d, a);
     diasComVisita.add(d);
   }
@@ -121,25 +132,23 @@ export async function consolidarDiarias(
     canal_id: ctx.canalId,
     conta_canal_id: ctx.contaCanalId,
     data,
-    pedidos: a.pedidos,
-    receita: r2(a.receita),
-    pedidos_cancelados: a.cancelados,
-    valor_cancelado: r2(a.valorCancelado),
+    ...(a.pedidos > 0 || (pedidosConfirmados && data >= pedidosConfirmados.de && data <= pedidosConfirmados.ate) ? {
+      pedidos: a.pedidos, receita: r2(a.receita), pedidos_cancelados: a.cancelados, valor_cancelado: r2(a.valorCancelado),
+      origem_vendas: a.origens.size > 1 ? "mista" : [...a.origens][0] ?? "api",
+      vendas_atualizadas_em: new Date().toISOString(),
+    } : {}),
   });
 
   const comVisita: Record<string, unknown>[] = [];
   const semVisita: Record<string, unknown>[] = [];
   for (const [data, a] of porDia) {
-    if (diasComVisita.has(data)) comVisita.push({ ...comum(data, a), visitas: a.visitas });
+    if (diasComVisita.has(data)) comVisita.push({ ...comum(data, a), visitas: a.visitas, origem_visitas: a.origensVisitas.size > 1 ? "mista" : [...a.origensVisitas][0], visitas_atualizadas_em: new Date().toISOString() });
     else semVisita.push(comum(data, a));
   }
 
   for (const grupo of [comVisita, semVisita]) {
     await emLotes(grupo, 500, async (lote) => {
-      const { error: e } = await sb
-        .from("vendas_diarias")
-        .upsert(lote, { onConflict: "conta_canal_id,data" });
-      if (e) throw new Error(`Falha ao consolidar vendas diárias: ${e.message}`);
+      await gravarDiariasComOrigem(lote);
     });
   }
 

@@ -79,14 +79,15 @@ export type LinhaQueda = {
   status: string | null;
   precoAtual: number | null;
   /**
-   * O estoque de hoje, somado nos anúncios da linha. Null = nunca lido.
+   * Disponibilidade informada para uma linha com um único anúncio.
+   * Vários anúncios podem compartilhar unidades: não somar seus saldos.
    *
    * Vem de `anuncios.estoque`, que a sincronização sobrescreve, e não da
    * série diária: a pergunta aqui é "ainda falta produto AGORA", e a série
    * responde pelo período escolhido — que pode ser de duas semanas atrás.
    */
   estoqueAtual: number | null;
-  /** Anúncio sob encomenda (estoque declarado absurdo): o número não vale. */
+  /** Reservado para uma condição explícita do canal, nunca inferida da quantidade. */
   sobEncomenda: boolean;
   /**
    * Dias ganhando o catálogo, em cada período. Null = anúncio que não
@@ -248,6 +249,7 @@ export async function carregarQueda(opcoes: {
   ate?: string;
   nivel?: Nivel;
   canais?: string;
+  sku?: string;
 }): Promise<DadosQueda> {
   const sb = await clienteServidor();
   const nivel: Nivel = opcoes.nivel === "anuncio" ? "anuncio" : "produto";
@@ -392,6 +394,7 @@ export async function carregarQueda(opcoes: {
       (it.anuncio_id && anuncioPorId.get(it.anuncio_id)) ||
       (it.codigo_externo ? anuncioPorCodigo.get(`${p.conta_canal_id}|${it.codigo_externo.toUpperCase()}`) : undefined);
     const sku = normSku(it.sku) || normSku(an?.sku_canal);
+    if (opcoes.sku && sku !== normSku(opcoes.sku) && an?.codigo_externo.toUpperCase() !== normSku(opcoes.sku)) continue;
     const onde = nomeConta.get(p.conta_canal_id) ?? "Outros";
     let chave: string;
     let codigo: string;
@@ -423,12 +426,12 @@ export async function carregarQueda(opcoes: {
   }
 
   // ── Anúncios no recorte: entram mesmo sem venda (o que parou de vender) ──
-  const anunciosNoRecorte = anuncios.filter((a) => dentro(a.canal_id, a.conta_canal_id));
+  const anunciosNoRecorte = anuncios.filter((a) => dentro(a.canal_id, a.conta_canal_id) && (!opcoes.sku || normSku(a.sku_canal) === normSku(opcoes.sku) || a.codigo_externo.toUpperCase() === normSku(opcoes.sku)));
   const chavePorAnuncio = new Map<string, string>();
   for (const a of anunciosNoRecorte) {
     const chave = chaveDoAnuncio(a);
     chavePorAnuncio.set(a.id, chave);
-    const g = grupos.get(chave);
+    const g = grupos.get(chave) ?? (opcoes.sku ? grupo(chave, { codigo: a.codigo_externo, sku: normSku(a.sku_canal), titulo: a.titulo }) : undefined);
     if (!g) continue; // sem venda nos dois períodos: não há queda para explicar
     g.anuncios.add(a.id);
     g.onde.add(nomeConta.get(a.conta_canal_id ?? "") ?? "Outros");
@@ -518,14 +521,11 @@ export async function carregarQueda(opcoes: {
      * número alto para não ficar sem anúncio, e somá-lo afogaria o estoque
      * real dos irmãos.
      */
-    let estoqueAtual: number | null = null;
-    let sobEncomenda = false;
-    for (const id of g.anuncios) {
-      const e = anuncioPorId.get(id)?.estoque;
-      if (e == null) continue;
-      if (e >= 40_000) sobEncomenda = true;
-      else estoqueAtual = (estoqueAtual ?? 0) + e;
-    }
+    // Anúncios podem compartilhar o mesmo User Product. Sem uma identificação
+    // de depósito, somá-los produziria um total duplicado. O detalhe por origem
+    // fica em Estoques; aqui só um anúncio isolado tem quantidade comparável.
+    const estoqueAtual = g.anuncios.size === 1 ? anuncioPorId.get([...g.anuncios][0])?.estoque ?? null : null;
+    const sobEncomenda = false;
     /* Sem registro nos DOIS lados não há comparação: um período sem dado é
        "não sei", e dizer "perdeu o catálogo" por isso seria inventar. */
     const catalogo =
@@ -660,9 +660,8 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
     if (!anuncioIds.length) return [] as { anuncio_id: string; data: string; estoque: number; preco?: number | null }[];
     const q = (cols: string) =>
       sb.from("anuncio_estoque_diario").select(cols).in("anuncio_id", anuncioIds).gte("data", de).lte("data", ate);
-    const r = await q("anuncio_id,data,estoque,preco");
-    if (!r.error) return r.data as unknown as { anuncio_id: string; data: string; estoque: number; preco: number | null }[];
-    return ((await q("anuncio_id,data,estoque")).data ?? []) as unknown as { anuncio_id: string; data: string; estoque: number }[];
+    try { return await paginar(() => q("anuncio_id,data,estoque,preco")) as unknown as { anuncio_id: string; data: string; estoque: number; preco: number | null }[]; }
+    catch { return await paginar(() => q("anuncio_id,data,estoque")) as unknown as { anuncio_id: string; data: string; estoque: number }[]; }
   };
 
   const [itens, desempenho, retratos] = await Promise.all([
@@ -703,12 +702,10 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
     const x = dia(v.data);
     x.visitas = (x.visitas ?? 0) + v.visitas;
   }
-  const semControle = new Set<string>();
   for (const r of retratos) {
     const x = dia(r.data);
     // Marcador de sem controle (sob encomenda): disponível, mas não é quantidade.
-    if (r.estoque >= 40_000) semControle.add(r.data);
-    else x.estoque = (x.estoque ?? 0) + r.estoque;
+    if (anuncioIds.length === 1) x.estoque = r.estoque;
     const preco = "preco" in r ? r.preco : null;
     if (preco != null && n(preco) > 0) precos.set(`${r.anuncio_id}|${r.data}`, n(preco));
   }
@@ -726,6 +723,6 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
       precoVendido: x.unidades ? r2(x.receita / x.unidades) : null,
       // Vários anúncios: o menor preço do dia é o que o comprador vê primeiro.
       precoVitrine: x.vit.length ? Math.min(...x.vit) : null,
-      estoque: semControle.has(data) ? null : x.estoque,
+      estoque: x.estoque,
     }));
 }

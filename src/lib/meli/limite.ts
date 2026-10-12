@@ -78,6 +78,7 @@ const PERMITIDOS = [
   /^\/users\/me$/,
   // /users/{id}/items/search e /users/{id}/items_visits
   /^\/users\/\d+\/items(_visits|\/search)$/,
+  /^\/users\/\d+\/stores\/search$/,
   // multiget de anúncios e detalhe de um anúncio
   /^\/items$/,
   /^\/items\/[A-Z]{3}\d+(\/shipping_options)?$/i,
@@ -100,6 +101,9 @@ const PERMITIDOS = [
    * das campanhas da Central de Promoções só aparece aqui.
    */
   /^\/items\/[A-Z]{3}\d+\/(sale_price|prices)$/i,
+  // Estoque por localização e Full. Somente consulta: nunca altera saldo no canal.
+  /^\/user-products\/[A-Z]{3}U\d+\/stock$/i,
+  /^\/inventories\/[A-Z0-9]+\/stock\/fulfillment$/i,
   // perguntas sem resposta — só a contagem interessa
   /^\/questions\/search$/,
   // custo real do envio: `senders[].cost` é o que o vendedor paga

@@ -6,12 +6,13 @@ import { FontesDados } from "@/components/painel/fontes-dados";
 import { carregarFontes } from "@/lib/dados/fontes";
 import { contasMeli } from "@/lib/meli/rota";
 import { lojasVtex, vtexConectada } from "@/lib/vtex/cliente";
-import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "@/lib/dados/operacao";
 import { Disclosure } from "@/components/ui/disclosure";
 import { SaudeDados } from "@/components/painel/saude-dados";
 import { BotaoAtualizar } from "@/components/painel/botao-atualizar";
 import { carregarSaude } from "@/lib/dados/saude";
+import { MapaFontes } from "@/components/painel/mapa-fontes";
+import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 
 export const dynamic = "force-dynamic";
 
@@ -28,23 +29,23 @@ export const dynamic = "force-dynamic";
  * planilha, com até que dia cada uma vai.
  */
 export default async function Integracoes() {
-  const sb = await clienteServidor();
+  const op = await operacaoPadrao();
+  if (!op) return null;
   const [fontes, contas, integracoes, vtex, saude, bling] = await Promise.all([
     carregarFontes(),
-    contasMeli(),
-    sb
+    contasMeli(op.id),
+    clientePrivilegiado()
       .from("integracoes")
       .select("status,ultima_sincronizacao,ultimo_erro,conta_canal_id")
-      .eq("provedor", "mercado_livre"),
-    lojasVtex(),
+      .eq("provedor", "mercado_livre").eq("operacao_id", op.id),
+    lojasVtex(op.id),
     carregarSaude(),
-    sb.from("integracoes").select("status,ultima_sincronizacao,ultimo_erro,config").eq("provedor", "bling").maybeSingle(),
+    clientePrivilegiado().from("integracoes").select("status,ultima_sincronizacao,ultimo_erro,config").eq("provedor", "bling").eq("operacao_id", op.id).maybeSingle(),
   ]);
 
   // A VTEX não tem apelido nem token rotativo; "conectada" é ter credencial.
   /* lojasVtex() lê com o cliente privilegiado (serve à rotina noturna, que
      passa por todas as empresas). Aqui, só as desta empresa. */
-  const op = await operacaoPadrao();
   const lojas = await Promise.all(
     vtex.filter((l) => l.operacaoId === op?.id).map(async (l) => ({ ...l, conectada: await vtexConectada(l.id) }))
   );
@@ -74,11 +75,13 @@ export default async function Integracoes() {
     <>
       <PageHeader
         title="Fontes de dados"
-        description="De onde vem cada número, até quando vai, e se dá para confiar"
+        description="Origem, cobertura e estado das conexões."
         actions={<BotaoAtualizar />}
       />
 
       <PageBody>
+        <div className="flex flex-wrap gap-4 text-xs text-brand"><Link href="/integracoes/estoques">Estoques por origem →</Link><Link href="/guia">Como usar cada aba →</Link></div>
+        <MapaFontes />
         <SaudeDados verificacoes={saude} />
 
         <div className="space-y-3">
@@ -192,12 +195,12 @@ export default async function Integracoes() {
         </div>
 
         <div className="space-y-3">
-          <SectionTitle title="Planilhas" hint="Fontes que entram pela tela de Importar" />
+          <SectionTitle title="Histórico das fontes" />
           <FontesDados dados={fontes} />
           <Disclosure title="Como as fontes convivem">
             <p>
               Canais sem API entram por arquivo na tela <Link href="/importar" className="font-medium text-brand hover:underline">Importar</Link>.
-              A sincronização da API não apaga o que foi importado: preenche os dias seguintes da conta conectada.
+              Nos períodos relidos, a API atualiza os registros correspondentes. O histórico fora da cobertura da API continua preservado.
             </p>
             <p className="mt-2">
               Pedido da VTEX criado e nunca pago não entra: a VTEX abre o pedido antes de o cartão responder, e contá-lo

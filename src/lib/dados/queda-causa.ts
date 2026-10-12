@@ -100,13 +100,13 @@ export function diagnosticar(l: {
       : l.estoqueAtual == null
         ? ""
         : l.estoqueAtual > 0
-          ? ` Hoje já tem ${l.estoqueAtual.toLocaleString("pt-BR")} em estoque.`
+          ? ` O anúncio informa ${l.estoqueAtual.toLocaleString("pt-BR")} disponíveis hoje.`
           : " Hoje ainda está zerado.";
     return {
       causa: "sem estoque",
       explicacao:
         `Ficou sem estoque em ${l.diasSemEstoque} dos ${l.diasObservados} dias acompanhados. ` +
-        `A queda é de disponibilidade, não de demanda.` + hoje,
+        `A disponibilidade pode ter limitado as vendas.` + hoje,
     };
   }
   if (agora.unidades === 0 && l.status && l.status !== "active" && l.status !== "ativo") {
@@ -164,10 +164,10 @@ export function diagnosticar(l: {
         ? `as visitas caíram ${abs(varVis!)} com a conversão mantida`
         : `as unidades caíram ${abs(varUn ?? 0)}`;
     const prova = perdeuCatalogo
-      ? ` O anúncio deixou de ganhar o catálogo (${cat!.antes.ganhando} de ${cat!.antes.dias} dias antes, ${cat!.agora.ganhando} de ${cat!.agora.dias} agora): a visita caiu porque o preço perdeu a posição.`
+      ? ` Também ganhou menos dias no catálogo: ${cat!.antes.ganhando}/${cat!.antes.dias} antes e ${cat!.agora.ganhando}/${cat!.agora.dias} agora. Confira a oferta concorrente.`
       : cliquePerdido && !convCaiu
-        ? " No Mercado Livre o preço aparece na busca: quem achou caro não clicou. Vale conferir se também perdeu posição."
-        : " Indício forte de que foi preço.";
+        ? " Confira preço, exposição e mídia antes de atribuir a queda a uma causa."
+        : " O preço é uma hipótese a conferir, não uma causa comprovada.";
     return {
       causa: "preço subiu",
       explicacao: `O preço ${qualPreco} subiu ${pc(varPreco)} e ${comoCaiu}.${prova}`,
@@ -202,11 +202,11 @@ export function diagnosticar(l: {
     "perdeu visitas":
       `As visitas caíram ${abs(varVis ?? 0)}${varConv != null && varConv > -10 ? " e a conversão se manteve" : ""}: ` +
       (manteveCatalogo
-        ? `o anúncio seguiu ganhando o catálogo (${cat!.agora.ganhando} de ${cat!.agora.dias} dias), então não foi a posição — olhe verba de anúncio, busca e sazonalidade.`
-        : "o anúncio perdeu exposição (posição, catálogo, mídia)."),
-    "conversão caiu": `A conversão caiu ${abs(varConv ?? 0)} com o preço ${varPreco != null ? `${qualPreco} ${pc(varPreco)}` : "estável"}: concorrente, frete, prazo ou reputação.`,
+        ? `ganhou o catálogo em ${cat!.agora.ganhando}/${cat!.agora.dias} dias. Confira mídia, busca e sazonalidade.`
+        : "confira exposição, posição e investimento em mídia."),
+    "conversão caiu": `A conversão caiu ${abs(varConv ?? 0)}${varPreco != null ? ` e o preço ${qualPreco} variou ${pc(varPreco)}` : "; preço sem comparação disponível"}. Confira oferta, frete e prazo.`,
     "vendeu menos": `Vendeu ${abs(varUn ?? -100)} menos unidades${varPreco != null ? `, com preço ${qualPreco} ${pc(varPreco)}` : ""}. Sem visita registrada, não dá para separar exposição de conversão.`,
-    "vendeu mais barato": `O preço ${qualPreco} caiu ${abs(varPreco ?? 0)} e o volume não compensou: desconto ou promoção que não trouxe venda.`,
+    "vendeu mais barato": `O valor médio vendido caiu e o volume não compensou. Confira descontos e mudança no mix de vendas.`,
   };
   return { causa, explicacao: texto[causa] };
 }

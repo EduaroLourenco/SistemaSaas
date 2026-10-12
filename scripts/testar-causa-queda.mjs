@@ -73,7 +73,7 @@ vale(
     lado({ receita: 5250, unidades: 5, visitas: 400, preco: 1050 })
   ),
   "preço subiu",
-  "não clicou"
+  "antes de atribuir a queda a uma causa"
 );
 
 /* ── 3. A prova: perdeu o primeiro lugar do catálogo depois de subir ── */
@@ -85,7 +85,7 @@ vale(
     catalogo(7, 1)
   ),
   "preço subiu",
-  "deixou de ganhar o catálogo"
+  "ganhou menos dias no catálogo"
 );
 
 /* ── 4. A contraprova: subiu o preço, mas segue ganhando o catálogo ──
@@ -96,7 +96,7 @@ const mantido = caso(
   lado({ receita: 5250, unidades: 5, visitas: 400, preco: 1050 }),
   catalogo(7, 7)
 );
-vale("preço sobe mas mantém o catálogo", mantido, "perdeu visitas", "seguiu ganhando o catálogo");
+vale("preço sobe mas mantém o catálogo", mantido, "perdeu visitas", "ganhou o catálogo");
 
 /* ── 5. Sem mexer no preço, visita cai: exposição, como sempre foi ── */
 vale(
@@ -129,7 +129,7 @@ vale(
     { diasSemEstoque: 5, diasObservados: 7, estoqueAtual: 48 }
   ),
   "sem estoque",
-  "já tem 48 em estoque"
+  "48 disponíveis hoje"
 );
 
 /* ── 8. Canal sem visita (loja própria): só unidades × preço ── */

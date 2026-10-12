@@ -92,14 +92,17 @@ export async function integracaoDaConta(
  * atender todas as empresas numa passada.
  */
 export async function integracoesDoProvedor(
-  provedor: string
+  provedor: string,
+  operacaoId?: string
 ): Promise<(Integracao & { nome: string })[]> {
   const sb = clientePrivilegiado();
-  const { data, error } = await sb
+  let consulta = sb
     .from("integracoes")
     .select(COLUNAS)
     .eq("provedor", provedor)
     .not("conta_canal_id", "is", null);
+  if (operacaoId) consulta = consulta.eq("operacao_id", operacaoId);
+  const { data, error } = await consulta;
   if (error) {
     if (semMigracao(error.code)) return [];
     throw new Error(`Não consegui listar as integrações: ${error.message}`);

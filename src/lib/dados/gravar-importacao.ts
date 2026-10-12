@@ -15,6 +15,7 @@ import {
 } from "./importar";
 import { resolver, type LinhaCanal } from "./resolver-canal";
 import { derivarKpisDiarios, type PedidoDerivavel } from "./derivar-kpis";
+import { carregarAutomacao } from "./automacao";
 
 /**
  * Grava no banco o que a prévia mostrou.
@@ -135,6 +136,8 @@ async function catalogo(
 ): Promise<Gravacao> {
   const conta = canais.find((c) => c.conta_id === contaCanalId);
   if (!conta) throw new Error("Conta de canal não encontrada.");
+  const automacao = await carregarAutomacao();
+  if (automacao[contaCanalId]?.vendas === "Mercado Livre") throw new Error("Este catálogo está conectado ao Mercado Livre. Use Atualizar para buscar os dados da conta.");
 
   const { itens } = await lerCatalogo(buffer);
   const importacaoId = await registrar(
@@ -202,18 +205,29 @@ async function ads(
 
   const mlbs = [...new Set(r.linhas.map((l) => l.mlb))];
   const idPorMlb = new Map<string, string>();
+  const contaPorMlb = new Map<string, string>();
   for (let i = 0; i < mlbs.length; i += 200) {
     const { data, error } = await sb
       .from("anuncios")
-      .select("id,codigo_externo")
+      .select("id,codigo_externo,conta_canal_id")
+      .eq("operacao_id", operacaoId)
       .in("codigo_externo", mlbs.slice(i, i + 200));
     if (error) throw new Error(`Falha ao localizar anúncios: ${error.message}`);
-    for (const a of data ?? []) idPorMlb.set(a.codigo_externo as string, a.id as string);
+    for (const a of data ?? []) {
+      idPorMlb.set(a.codigo_externo as string, a.id as string);
+      contaPorMlb.set(a.codigo_externo as string, a.conta_canal_id as string);
+    }
   }
 
-  const linhas = r.linhas.map((l) => ({
+  const api = await paginar(() => sb.from("anuncio_ads").select("codigo_externo")
+    .eq("operacao_id", operacaoId).eq("inicio", r.inicio).eq("fim", r.fim).eq("origem", "api").order("id"));
+  const protegidos = new Set(api.map((a) => a.codigo_externo));
+
+  const linhas = r.linhas.filter((l) => !protegidos.has(l.mlb)).map((l) => ({
     operacao_id: operacaoId,
     anuncio_id: idPorMlb.get(l.mlb) ?? null,
+    conta_canal_id: contaPorMlb.get(l.mlb) ?? null,
+    origem: "planilha",
     codigo_externo: l.mlb,
     campanha: l.campanha,
     inicio: l.inicio,
@@ -245,6 +259,7 @@ async function ads(
     `R$ ${r.investimentoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} ` +
       `em ${mlbs.length} anúncios e ${r.campanhas.length} campanhas.`,
   ];
+  if (linhas.length < r.linhas.length) avisos.push(`${r.linhas.length - linhas.length} linhas mantiveram o relatório da API para o mesmo anúncio e período.`);
   if (semCatalogo) {
     avisos.push(
       `${semCatalogo} linhas são de anúncios fora do catálogo — guardadas pelo ` +
@@ -256,7 +271,7 @@ async function ads(
     importacaoId,
     criadas: linhas.length,
     atualizadas: 0,
-    ignoradas: r.ignoradas,
+    ignoradas: r.ignoradas + r.linhas.length - linhas.length,
     avisos,
   };
 }
@@ -355,22 +370,24 @@ async function vendasMeli(
     conta_canal_id: string;
     codigo_externo: string;
     codigo_secundario: string | null;
+    origem: string;
     data: string;
     status: string;
   };
   const CAMPOS_IDENTIDADE =
-    "id,operacao_id,canal_id,conta_canal_id,codigo_externo,codigo_secundario,data,status";
+    "id,operacao_id,canal_id,conta_canal_id,codigo_externo,codigo_secundario,data,status,origem";
 
   const pedidoPorCodigo = new Map<string, Identidade>();
   for (let i = 0; i < codigos.length; i += 200) {
     const lote = codigos.slice(i, i + 200);
     const [porPrimeiro, porSegundo] = await Promise.all([
-      sb.from("pedidos").select(CAMPOS_IDENTIDADE).in("codigo_externo", lote),
-      sb.from("pedidos").select(CAMPOS_IDENTIDADE).in("codigo_secundario", lote),
+      sb.from("pedidos").select(CAMPOS_IDENTIDADE).eq("operacao_id", operacaoId).in("codigo_externo", lote),
+      sb.from("pedidos").select(CAMPOS_IDENTIDADE).eq("operacao_id", operacaoId).in("codigo_secundario", lote),
     ]);
     if (porPrimeiro.error) {
       throw new Error(`Falha ao localizar pedidos: ${porPrimeiro.error.message}`);
     }
+    if (porSegundo.error) throw new Error(`Falha ao localizar pedidos: ${porSegundo.error.message}`);
     for (const p of (porPrimeiro.data ?? []) as unknown as Identidade[]) {
       pedidoPorCodigo.set(p.codigo_externo, p);
     }
@@ -381,10 +398,12 @@ async function vendasMeli(
 
   const linhas: Record<string, unknown>[] = [];
   let semPedido = 0;
+  let comApi = 0;
 
   for (const [codigo, a] of porPedido) {
     const pedido = pedidoPorCodigo.get(codigo);
     if (!pedido) { semPedido += 1; continue; }
+    if (pedido.origem === "api") { comApi += 1; continue; }
     if (!a.temTarifa) continue;
 
     linhas.push({
@@ -417,6 +436,7 @@ async function vendasMeli(
   }
 
   const avisos: string[] = [];
+  if (comApi) avisos.push(`${comApi} pedidos mantiveram as tarifas recebidas pela API.`);
   if (semPedido) {
     avisos.push(
       `${semPedido} vendas não têm pedido na base e foram ignoradas. ` +
@@ -432,7 +452,7 @@ async function vendasMeli(
     importacaoId,
     criadas: 0,
     atualizadas: linhas.length,
-    ignoradas: semPedido,
+    ignoradas: semPedido + comApi,
     avisos,
   };
 }
@@ -456,6 +476,17 @@ async function pedidos(
   const avisos: string[] = [];
   let ignoradas = 0;
 
+  // Uma reimportação não pode substituir pedido nem seus itens já lidos na API.
+  const pedidosApi = new Set<string>();
+  const codigosImportados = [...new Set(r.pedidos.map((p) => p.codigoExterno))];
+  for (let i = 0; i < codigosImportados.length; i += 200) {
+    const { data, error } = await sb.from("pedidos").select("canal_id,codigo_externo")
+      .eq("operacao_id", operacaoId).eq("origem", "api").in("codigo_externo", codigosImportados.slice(i, i + 200));
+    if (error) throw new Error(`Falha ao proteger pedidos automáticos: ${error.message}`);
+    for (const p of data ?? []) pedidosApi.add(`${p.canal_id}|${p.codigo_externo}`);
+  }
+  let preservadosApi = 0;
+
   const cabecas: Record<string, unknown>[] = [];
   const itensPorChave = new Map<string, (typeof r.pedidos)[number]["itens"]>();
   const derivaveis: PedidoDerivavel[] = [];
@@ -464,6 +495,10 @@ async function pedidos(
     const res = resolver(canais, p.marketplace, p.conta);
     if (!res) {
       ignoradas += 1;
+      continue;
+    }
+    if (pedidosApi.has(`${res.canalId}|${p.codigoExterno}`)) {
+      preservadosApi += 1;
       continue;
     }
     /*
@@ -697,18 +732,19 @@ async function pedidos(
   const kpis = await derivarKpisDiarios(sb, operacaoId, derivaveis);
   avisos.push(
     `KPIs diários atualizados: ${kpis.dias} dias em ${kpis.contas} contas de canal. ` +
-      "Visitas e investimento em ADS continuam vindo de Lançamentos."
+      "Visitas e investimento em ADS mantiveram seus valores."
   );
 
   if (ignoradas) {
     avisos.push(`${ignoradas} pedidos ficaram de fora por canal não resolvido.`);
   }
+  if (preservadosApi) avisos.push(`${preservadosApi} pedidos e seus itens mantiveram os dados da API.`);
 
   return {
     importacaoId,
     criadas: Math.max(0, previa.novas),
     atualizadas: previa.atualizadas,
-    ignoradas,
+    ignoradas: ignoradas + preservadosApi,
     avisos,
   };
 }
@@ -775,15 +811,28 @@ async function desempenho(
    */
   const fim = rel.fim ?? rel.inicio;
   const ehSemanal = fim !== rel.inicio;
+  const tabela = ehSemanal ? "anuncio_desempenho_semanal" : "anuncio_desempenho_diario";
+  const ids = [...idPorMlb.values()];
+  const porApi = new Set<string>();
+  for (let i = 0; i < ids.length; i += 200) {
+    let q = sb.from(tabela).select("anuncio_id").eq("operacao_id", operacaoId)
+      .in("anuncio_id", ids.slice(i, i + 200)).is("importacao_id", null);
+    q = ehSemanal ? q.eq("ano_iso", rel.anoIso).eq("semana_iso", rel.semanaIso) : q.eq("data", rel.inicio);
+    const { data, error } = await q;
+    if (error) throw new Error(`Falha ao proteger desempenho automático: ${error.message}`);
+    for (const l of data ?? []) porApi.add(l.anuncio_id as string);
+  }
 
   const registros: Record<string, unknown>[] = [];
   let orfaos = 0;
+  let automaticos = 0;
   for (const l of linhas) {
     const anuncioId = idPorMlb.get(l.mlb);
     if (!anuncioId) {
       orfaos += 1;
       continue;
     }
+    if (porApi.has(anuncioId)) { automaticos += 1; continue; }
 
     const comum = {
       operacao_id: operacaoId,
@@ -812,9 +861,6 @@ async function desempenho(
     );
   }
 
-  const tabela = ehSemanal
-    ? "anuncio_desempenho_semanal"
-    : "anuncio_desempenho_diario";
   const chave = ehSemanal ? "anuncio_id,ano_iso,semana_iso" : "anuncio_id,data";
 
   for (let i = 0; i < registros.length; i += LOTE) {
@@ -825,6 +871,7 @@ async function desempenho(
   }
 
   const avisos: string[] = [];
+  if (automaticos) avisos.push(`${automaticos} anúncios mantiveram os dados coletados automaticamente para este período.`);
   if (orfaos) {
     avisos.push(
       `${orfaos} anúncios do relatório não estão no cadastro e ficaram de fora. ` +
@@ -836,7 +883,7 @@ async function desempenho(
     importacaoId,
     criadas: registros.length,
     atualizadas: 0,
-    ignoradas: orfaos,
+    ignoradas: orfaos + automaticos,
     avisos,
   };
 }

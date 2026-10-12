@@ -22,20 +22,22 @@ export type ContaMeli = {
 const CANAL = "mercado_livre";
 
 /** Contas de Mercado Livre que o usuário logado pode ver. */
-export async function contasMeli(): Promise<ContaMeli[]> {
+export async function contasMeli(operacaoId?: string): Promise<ContaMeli[]> {
   const sb = await clienteServidor();
 
   const { data: canais } = await sb.from("canais").select("id").eq("codigo", CANAL);
   const ids = (canais ?? []).map((c) => c.id as string);
   if (ids.length === 0) return [];
 
-  const { data: contas } = await sb
+  let consulta = sb
     .from("contas_canal")
     .select("id,nome,padrao")
     .in("canal_id", ids)
     .eq("ativa", true)
     .order("padrao", { ascending: false })
     .order("nome");
+  if (operacaoId) consulta = consulta.eq("operacao_id", operacaoId);
+  const { data: contas } = await consulta;
   if (!contas?.length) return [];
 
   /*

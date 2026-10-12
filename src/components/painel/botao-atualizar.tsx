@@ -2,104 +2,86 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { AlertCircle, Check, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/primitives";
+import { Sheet } from "@/components/ui/controls";
+import { atualizador, estadoInicial, type EstadoAtualizacao } from "@/lib/atualizacao-cliente";
 import { cn } from "@/lib/utils";
 
-/**
- * "Atualizar agora": relê as APIs conectadas sem esperar o agendamento.
- *
- * Duas formas do mesmo botão, porque os dois lugares pedem coisas
- * diferentes:
- *   · `compacto` — só o ícone, na barra de cima, visível em toda tela.
- *     Quem está olhando um número e quer o de agora não deve ter de
- *     navegar até Fontes de dados para pedir.
- *   · cheio — em Fontes de dados, com o resultado fonte por fonte: é a
- *     tela de quem quer saber O QUE veio, não só que veio algo.
- *
- * Ao terminar, `router.refresh()` relê os componentes de servidor da tela
- * aberta — sem isso o banco atualizaria e a tela continuaria mostrando o
- * número antigo até alguém recarregar à mão.
- */
-
-type Fonte = { fonte: string; ok: boolean; detalhe?: string; erro?: string };
-type Resposta = { fontes?: Fonte[]; segundos?: number; nenhuma?: boolean; erro?: string };
+const lerServidor = () => estadoInicial;
 
 export function BotaoAtualizar({ compacto = false }: { compacto?: boolean }) {
   const router = useRouter();
-  const [rodando, setRodando] = React.useState(false);
-  const [r, setR] = React.useState<Resposta | null>(null);
+  const estado = React.useSyncExternalStore(atualizador.assinar, atualizador.ler, lerServidor);
+  const [aberto, setAberto] = React.useState(false);
+  const { rodando, iniciou, etapas } = estado;
+  const falhas = Boolean(estado.erro || etapas.some((e) => e.estado === "falhou" || e.avisos?.length));
 
   async function atualizar() {
-    setRodando(true);
-    setR(null);
-    try {
-      const resp = await fetch("/api/atualizar", { method: "POST" });
-      const corpo: Resposta = await resp.json().catch(() => ({}));
-      setR(resp.ok ? corpo : { erro: corpo.erro ?? `Não deu para atualizar (HTTP ${resp.status}).` });
-      if (resp.ok) router.refresh();
-    } catch {
-      setR({ erro: "Não consegui falar com o servidor." });
-    } finally {
-      setRodando(false);
-    }
+    setAberto(true);
+    await atualizador.executar();
+    router.refresh();
+  }
+  function abrir() {
+    if (iniciou) setAberto(true);
+    else void atualizar();
   }
 
-  const falhas = r?.fontes?.filter((f) => !f.ok) ?? [];
-  const ok = r?.fontes?.filter((f) => f.ok) ?? [];
-
-  if (compacto) {
-    /* Sem painel de resultado aqui: a barra de cima acompanha toda tela, e
-       um relatório pendurado nela atrapalharia em todas. O estado vira o
-       `title` e a cor do ícone; o detalhe fica em Fontes de dados. */
-    const titulo = rodando
-      ? "Atualizando…"
-      : r?.erro
-        ? r.erro
-        : r
-          ? `Atualizado: ${ok.length} ${ok.length === 1 ? "fonte" : "fontes"}${falhas.length ? `, ${falhas.length} com erro` : ""}`
-          : "Atualizar agora — relê as APIs conectadas";
-    return (
-      <button
-        type="button"
-        onClick={atualizar}
-        disabled={rodando}
-        aria-label={titulo}
-        title={titulo}
-        className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-r1 transition-colors hover:bg-panel-3 disabled:opacity-60",
-          r?.erro || falhas.length ? "text-down" : r ? "text-up" : "text-ink-2 hover:text-ink"
-        )}
-      >
+  return <>
+    {compacto ? <button
+      type="button"
+      onClick={abrir}
+      aria-label={rodando ? "Ver andamento da atualização" : iniciou ? "Ver resultado da atualização" : "Atualizar agora"}
+      title={rodando ? "Atualizando fontes…" : iniciou ? "Ver atualização" : "Atualizar agora"}
+      className={cn("flex h-9 w-9 items-center justify-center rounded-r1 transition-colors hover:bg-panel-3", falhas ? "text-warn" : iniciou && !rodando ? "text-up" : "text-ink-2 hover:text-ink")}
+    >
+      <RefreshCw className={cn("h-4 w-4", rodando && "animate-spin")} aria-hidden />
+    </button> : <div className="flex flex-col items-end gap-1.5">
+      <Button onClick={rodando ? abrir : atualizar} variant="primary" size="sm">
         <RefreshCw className={cn("h-4 w-4", rodando && "animate-spin")} aria-hidden />
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-end gap-1.5">
-      <Button onClick={atualizar} disabled={rodando} variant="primary" size="sm">
-        <RefreshCw className={cn("h-4 w-4", rodando && "animate-spin")} aria-hidden />
-        {rodando ? "Atualizando…" : "Atualizar agora"}
+        {rodando ? "Ver andamento" : "Atualizar agora"}
       </Button>
-      {rodando && (
-        <p className="text-[11px] text-ink-3">Pode levar alguns minutos.</p>
-      )}
-      {r?.erro && <p className="max-w-[18rem] text-right text-[11px] text-down">{r.erro}</p>}
-      {r?.nenhuma && (
-        <p className="max-w-[18rem] text-right text-[11px] text-ink-3">
-          Nenhuma API conectada nesta empresa — os números entram por planilha.
-        </p>
-      )}
-      {r?.fontes && r.fontes.length > 0 && (
-        <ul className="flex flex-col items-end gap-0.5 text-[11px]">
-          {r.fontes.map((f) => (
-            <li key={f.fonte} className={f.ok ? "text-ink-3" : "text-down"}>
-              <span className="font-medium">{f.fonte}</span>: {f.ok ? f.detalhe : f.erro}
-            </li>
-          ))}
-        </ul>
-      )}
+      {iniciou && <button type="button" onClick={abrir} className="max-w-full text-right text-[12px] text-ink-2 underline underline-offset-2">
+        {rodando ? "Atualização em andamento" : falhas ? "Concluído com pendências · ver detalhes" : "Ver última atualização"}
+      </button>}
+    </div>}
+    {aberto && <Sheet title={rodando ? "Atualizando fontes" : "Atualização das fontes"} subtitle={estado.empresa} onClose={() => setAberto(false)} footer={
+      rodando
+        ? <p className="text-[12px] text-ink-2">Mantenha esta aba aberta até concluir. Você pode fechar este painel.</p>
+        : <Button onClick={atualizar} variant="primary" size="sm"><RefreshCw className="h-4 w-4" aria-hidden />Atualizar novamente</Button>
+    }>
+      <Resultado estado={estado} />
+    </Sheet>}
+  </>;
+}
+
+function Resultado({ estado }: { estado: EstadoAtualizacao }) {
+  const { rodando, etapas, erro } = estado;
+  const feitas = etapas.filter((e) => e.estado === "concluida" || e.estado === "falhou").length;
+  const ativa = etapas.find((e) => e.estado === "atualizando");
+  return <div className="space-y-5 p-5">
+    <div role="status" aria-live="polite" className="space-y-2 text-[13px] text-ink-2">
+      <p>{rodando ? ativa ? ativa.fonte : "Consultando conexões…" : erro ? "Atualização interrompida" : etapas.some((e) => e.estado === "falhou" || e.avisos?.length) ? "Concluído com pendências" : etapas.length ? "Atualização concluída" : "Nenhuma API conectada nesta empresa."}</p>
+      {etapas.length > 0 && <>
+        <progress aria-label="Etapas concluídas" value={feitas} max={etapas.length} className="h-2 w-full accent-brand" />
+        <p className="num text-[12px] text-ink-3">{feitas} de {etapas.length} etapas</p>
+      </>}
     </div>
-  );
+    {erro && <p role="alert" className="rounded-r1 border border-line bg-panel-2 p-3 text-[13px] text-down">{erro}</p>}
+    <ul className="divide-y divide-line">
+      {etapas.map((e) => {
+        const aviso = e.estado === "falhou" || Boolean(e.avisos?.length);
+        const Icone = e.estado === "atualizando" ? RefreshCw : aviso ? AlertCircle : e.estado === "concluida" ? Check : Clock;
+        const status = e.estado === "atualizando" ? e.detalhe ? `${e.detalhe} · continuando…` : "Atualizando…" : e.estado === "aguardando" ? "Aguardando" : e.estado === "interrompida" ? "Não iniciada" : e.detalhe;
+        return <li key={e.id} className="flex items-start gap-3 py-3 first:pt-0">
+          <Icone aria-hidden className={cn("mt-0.5 h-4 w-4 shrink-0", e.estado === "atualizando" && "animate-spin", aviso ? "text-warn" : e.estado === "concluida" ? "text-up" : "text-ink-3")} />
+          <div className="min-w-0 break-words text-[13px]">
+            <p className="font-medium">{e.fonte}</p>
+            <p className={cn("mt-0.5 text-[12px]", aviso ? "text-warn" : "text-ink-3")}>{status}</p>
+            {e.avisos?.map((a, i) => <p key={i} className="mt-1 text-[12px] text-warn">{a}</p>)}
+          </div>
+        </li>;
+      })}
+    </ul>
+  </div>;
 }
