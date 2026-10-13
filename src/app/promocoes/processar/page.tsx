@@ -608,8 +608,8 @@ export default function ProcessarPromocoes() {
                   <Toggle
                     checked={comoPiso}
                     onChange={(v) => { setComoPiso(v); setPisoSalvo("nada"); }}
-                    label="Esse número é piso, não preço a propor"
-                    hint="Ligado: o sistema não mexe no preço — compara o que o canal propôs com o mínimo e decide entrar ou não. Desligado: propõe o número como preço da campanha."
+                    label="Usar como preço mínimo"
+                    hint="Ligado: em ofertas fixas, aceita ou recusa o preço do canal; em campanhas editáveis, propõe o mínimo calculado. Desligado: usa o preço-alvo. O processamento gera a planilha; não altera o canal."
                   />
                   <Field
                     label="Tolerância abaixo do piso (%)"

@@ -13,3 +13,4 @@ Corrigir o salvamento das regras por empresa e a persistência de planilhas proc
 - Testes de persistência entre duas empresas, falha parcial, permissões e motor de preços passaram; TypeScript passou.
 - Recuperação: planilha original da última tentativa da Bom de Compras localizada. Reprocessamento local reproduziu as 186 linhas do relatório já entregue, sem divergência em nenhum campo. Arquivos de conferência/backup permanecem em `output/`, fora do GitHub público.
 - Recuperação executada: uma campanha, 186 registros de histórico e 186 ofertas, todos vinculados a anúncios da Bom de Compras. Nenhuma mudança enviada ao Mercado Livre. Tentativas anteriores sem registro foram identificadas como falhas após backup.
+- 13/10/2026: texto da opção de piso agora descreve o comportamento real: campanha editável propõe o mínimo, oferta fixa é aceita/recusada. Geração de arquivo não altera o canal.
