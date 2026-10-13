@@ -58,6 +58,7 @@ export default async function Pagina({
       linhas={custos.linhas}
       faixas={custos.faixas}
       completos={custos.completos}
+      margemConfiguravel={custos.margemConfiguravel}
       despesas={canal.despesas}
       canais={custos.canais}
       opcoes={opcoesRecorte(contas)}

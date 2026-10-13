@@ -133,7 +133,8 @@ export default function CategoriasCliente({ linhas }: { linhas: Categoria[] }) {
           "Cadastre as categorias antes das contas — é por elas que a DRE agrupa o custo.",
       }}
       resumo={
-        <div className="flex items-center gap-4 px-3.5 py-2.5 rounded-r2 border border-line bg-panel">
+        <div className="flex flex-wrap items-center gap-4 px-3.5 py-2.5 rounded-r2 border border-line bg-panel">
+          <p className="w-full text-[12px] text-ink-2"><Badge>Cadastro manual</Badge> Categorias organizam os lançamentos que você cadastra. Receita, comissão, frete e Ads são lidos dos pedidos e integrações no Financeiro, sem depender destas categorias.</p>
           <span className="text-[12px] text-ink-2">
             <b className="num text-ink">{variaveis}</b> variáveis
           </span>

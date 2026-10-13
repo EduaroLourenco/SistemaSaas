@@ -34,6 +34,7 @@ export interface FormulaBaseData {
 
 /** O que compõe o custo de uma unidade, fora a comissão (que é a variável). */
 export interface CustoSku {
+  margemMinimaPct?: number | null;
   mercadoria: number;
   embalagem: number;
   frete: number;
@@ -256,7 +257,7 @@ export function getPrecoTabela(data: FormulaBaseData, sku: string, mlb: string, 
 export function precoDaMargem(data: FormulaBaseData, sku: string, comissao: number): number | null {
   const c = data.custos?.get(sku.trim().toUpperCase());
   if (!c || !data.regra) return null;
-  const restante = 100 - comissao * 100 - c.impostoPct - data.regra.margemMinima;
+  const restante = 100 - comissao * 100 - c.impostoPct - (c.margemMinimaPct ?? data.regra.margemMinima);
   if (restante <= 0) return null;
   const precoMargem = ((c.mercadoria + c.embalagem + c.frete) * 100) / restante;
   /*

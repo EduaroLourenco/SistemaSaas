@@ -13,6 +13,7 @@ import { money, moneyShort, pct, count } from "@/lib/format";
 import { AlertCircle, ArrowRight } from "lucide-react";
 import { DreMensal, ResumoDre } from "@/components/financeiro/dre-mensal";
 import type { Resultado, LinhaMargem, Dimensao } from "@/lib/dados/margem";
+import type { CampoCusto } from "@/lib/financeiro-resumo";
 
 /**
  * O resultado, do bruto ao que sobra.
@@ -56,7 +57,7 @@ function Linha({
   nota,
 }: {
   rotulo: string;
-  valor: number;
+  valor: number | null;
   tipo?: "receita" | "custo" | "subtotal" | "final";
   indent?: boolean;
   nota?: string;
@@ -83,7 +84,7 @@ function Linha({
       <span
         className={`num shrink-0 ${
           tipo === "final"
-            ? `text-[16px] font-semibold ${valor >= 0 ? "text-up" : "text-down"}`
+            ? `text-[16px] font-semibold ${valor != null && valor >= 0 ? "text-up" : "text-down"}`
             : forte
               ? "text-[14px] font-semibold text-ink"
               : tipo === "custo"
@@ -91,7 +92,7 @@ function Linha({
                 : "text-[13px] text-ink"
         }`}
       >
-        {tipo === "custo" && valor > 0 ? `− ${money(valor)}` : money(valor)}
+        {valor == null ? "—" : tipo === "custo" && valor > 0 ? `− ${money(valor)}` : money(valor)}
       </span>
     </div>
   );
@@ -155,6 +156,11 @@ export default function FinanceiroCliente({
 
   const linhas = visoes[dim] ?? [];
   const semCusto = r.cobertura < 99.5;
+  const custo = (campo: CampoCusto) => r.custosConhecidos ? r.custosConhecidos[campo].valor : r[campo];
+  const coberturaCusto = (campo: CampoCusto) => {
+    const c = r.custosConhecidos?.[campo];
+    return !c ? undefined : c.valor == null ? "Ainda não informado" : c.cobertura < 99.5 ? `Conhecido em ${pct(c.cobertura, 0)} da receita` : undefined;
+  };
 
   const th = "px-3 py-2 text-[12px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-3 py-2 border-b border-line";
@@ -219,13 +225,12 @@ export default function FinanceiroCliente({
             <div className="min-w-0 flex-1">
               <p className="text-[13px] text-ink">
                 <span className="font-semibold">
-                  Tudo abaixo é a margem de {pct(r.cobertura, 1)} da receita
+                  Custos completos em {pct(r.cobertura, 1)} da receita
                 </span>{" "}
-                — não da operação inteira.
+                · lucro ainda parcial.
               </p>
               <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
-                <span className="num font-medium">{money(r.receitaSemCusto)}</span> em vendas de produtos sem custo
-                ficam de fora (não entram como zero).
+                Receita, comissão e frete disponíveis continuam visíveis. Faltam custos em <span className="num font-medium">{money(r.receitaSemCusto)}</span> de vendas.
               </p>
               <Link
                 href="/financeiro/custos"
@@ -257,27 +262,27 @@ export default function FinanceiroCliente({
 
             <GrupoDre
               titulo="Custos da venda"
-              explicacao="só existem porque houve venda"
+              explicacao="valores disponíveis · cobertura por componente"
             />
-            <Linha rotulo="Comissão do canal" valor={r.comissao} indent />
-            <Linha rotulo="Frete" valor={r.frete} indent />
+            <Linha rotulo="Comissão do canal" valor={custo("comissao")} nota={coberturaCusto("comissao")} indent />
+            <Linha rotulo="Frete" valor={custo("frete")} nota={coberturaCusto("frete")} indent />
             <Linha
               rotulo="Juros de parcelamento"
-              valor={r.juros}
+              valor={custo("juros")}
               indent
               nota={
                 r.cadaCoberturaDe.jurosInformado === 0
-                  ? "nenhum pedido trouxe juros — reimporte para preencher"
+                  ? "Sem juros informados nos pedidos; confira a cobertura da fonte."
                   : undefined
               }
             />
-            <Linha rotulo="Impostos" valor={r.impostos} indent />
-            <Linha rotulo="Embalagem" valor={r.embalagem} indent />
-            <Linha rotulo="Mercadoria" valor={r.mercadoria} indent />
+            <Linha rotulo="Impostos" valor={custo("impostos")} nota={coberturaCusto("impostos")} indent />
+            <Linha rotulo="Embalagem" valor={custo("embalagem")} nota={coberturaCusto("embalagem")} indent />
+            <Linha rotulo="Mercadoria" valor={custo("mercadoria")} nota={coberturaCusto("mercadoria")} indent />
 
             <Linha
-              rotulo="Margem de contribuição"
-              valor={r.margemContribuicao}
+              rotulo={semCusto ? "Margem dos SKUs completos" : "Margem de contribuição"}
+              valor={r.cobertura > 0 ? r.margemContribuicao : null}
               tipo="subtotal"
               nota={
                 r.margemPct != null
@@ -320,8 +325,7 @@ export default function FinanceiroCliente({
                   <span className="num text-[13px] text-ink-3">—</span>
                 </div>
                 <p className="text-[12px] text-ink-3 leading-relaxed mt-1">
-                  Aparece quando os custos cobrirem a receita (hoje, {pct(r.cobertura, 1)}). Antes disso, daria um
-                  prejuízo que não existe.
+                  Complete os custos dos produtos para apurar o resultado da operação.
                 </p>
               </div>
             )}

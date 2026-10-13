@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarPrecoAlvo } from "./preco-alvo";
+import { carregarMargensProduto } from "./margens-produto";
 import type { BaseMLBEntry, CustoSku, FormulaBaseData } from "@/lib/planilhas/motor-promocoes";
 
 /**
@@ -27,7 +28,7 @@ export async function carregarCustosPromocao(
    */
   canalId?: string
 ): Promise<{ custos: Map<string, CustoSku>; incompletos: number }> {
-  const { linhas } = await carregarPrecoAlvo(canalId);
+  const [{ linhas }, margens] = await Promise.all([carregarPrecoAlvo(canalId), carregarMargensProduto()]);
   const custos = new Map<string, CustoSku>();
   let incompletos = 0;
   for (const l of linhas) {
@@ -40,6 +41,7 @@ export async function carregarCustosPromocao(
       embalagem: l.embalagem,
       frete: l.frete,
       impostoPct: l.impostoPct,
+      margemMinimaPct: margens.porProduto.get(l.produtoId) ?? null,
     });
   }
   return { custos, incompletos };

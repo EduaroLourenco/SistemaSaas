@@ -5,6 +5,7 @@ import { carregarExclusoes, aplicar } from "./exclusoes";
 import { comissaoUtilizavel } from "./comissao-plausivel";
 import { lerRecorte, noRecorte, recorteParcial, canalDoRecorte } from "@/lib/recorte";
 import { carregarContasRecorte } from "./contas-recorte";
+import { resumirCustosConhecidos, receitasFinanceiras, type CustosConhecidos } from "@/lib/financeiro-resumo";
 
 /**
  * Margem, calculada no item do pedido.
@@ -227,7 +228,8 @@ export async function carregarBaseMargem(
   const contas = (contasRaw.data ?? []) as unknown as Conta[];
 
   const produtoPorId = new Map(produtos.map((p) => [p.id, p]));
-  const anuncioPorMlb = new Map(anuncios.map((a) => [a.codigo_externo, a]));
+  const produtoPorSku = new Map(produtos.map((p) => [p.sku.trim().toUpperCase(), p]));
+  const anuncioPorMlb = new Map(anuncios.map((a) => [`${a.canal_id}:${a.codigo_externo.toUpperCase()}`, a]));
   const canalDaConta = new Map(contas.map((c) => [c.id, c.canal_id]));
 
   const nomeCanal = new Map<string, string>();
@@ -261,7 +263,7 @@ export async function carregarBaseMargem(
   ): number | null {
     if (pesoKg == null) return null;
     const validas = faixas.filter(
-      (f) => pesoKg >= f.min && pesoKg <= f.max && f.vigencia <= data
+      (f) => (f.canalId == null || f.canalId === canalId) && pesoKg >= f.min && pesoKg <= f.max && f.vigencia <= data
     );
     if (!validas.length) return null;
     const especifica = validas.filter((f) => f.canalId === canalId);
@@ -301,11 +303,12 @@ export async function carregarBaseMargem(
   const itensRaw = await paginar(() =>
     sb
       .from("pedido_itens")
-      .select("pedido_id,codigo_externo,quantidade,total")
+      .select("pedido_id,sku,codigo_externo,quantidade,total")
       .order("pedido_id")
   );
   type ItemBruto = {
     pedido_id: string;
+    sku: string | null;
     codigo_externo: string;
     quantidade: number;
     total: string | number;
@@ -335,11 +338,13 @@ export async function carregarBaseMargem(
     if (!p) continue;
 
     const mlb = String(it.codigo_externo ?? "");
-    const a = anuncioPorMlb.get(mlb);
+    const a = anuncioPorMlb.get(`${p.canalId}:${mlb.toUpperCase()}`);
     if (filtro.mlb && mlb !== filtro.mlb) continue;
 
-    const prod = a?.produto_id ? produtoPorId.get(a.produto_id) : undefined;
-    if (filtro.sku && prod?.sku !== filtro.sku) continue;
+    const prod = (a?.produto_id ? produtoPorId.get(a.produto_id) : undefined)
+      ?? produtoPorSku.get((it.sku ?? "").trim().toUpperCase());
+    const sku = prod?.sku || it.sku || "";
+    if (filtro.sku && sku.toUpperCase() !== filtro.sku.toUpperCase()) continue;
 
     const qtd = it.quantidade ?? 0;
     const receita = n(it.total);
@@ -349,7 +354,7 @@ export async function carregarBaseMargem(
     if (!pedidosVistos.has(p.id)) {
       pedidosVistos.add(p.id);
       if (comissaoUtilizavel(p.comissao, p.total, a?.comissao_atual, p.comissao_origem)) comComissaoPraticada += 1;
-      if (n(p.frete_vendedor) > 0) comFretePraticado += 1;
+      if (p.frete_vendedor != null && n(p.frete_vendedor) >= 0) comFretePraticado += 1;
       if (n(p.juros) > 0) comJuros += 1;
     }
 
@@ -369,7 +374,7 @@ export async function carregarBaseMargem(
     /* Frete: o do vendedor quando informado, senão a faixa de peso. */
     let frete: number | null = null;
     let freteOrigem: OrigemCusto | null = null;
-    if (n(p.frete_vendedor) > 0) {
+    if (p.frete_vendedor != null && n(p.frete_vendedor) >= 0) {
       frete = r2(n(p.frete_vendedor) * fatia);
       freteOrigem = "praticado";
     } else {
@@ -415,8 +420,8 @@ export async function carregarBaseMargem(
       pedidoId: p.id,
       data: String(p.data).slice(0, 10),
       mlb,
-      sku: prod?.sku ?? "",
-      produtoId: a?.produto_id ?? null,
+      sku,
+      produtoId: prod?.id ?? null,
       anuncioTipo: a?.tipo ?? "outro",
       canalId: p.canalId,
       contaCanalId: p.contaCanalId,
@@ -627,6 +632,7 @@ export type Resultado = {
   cobertura: number;
   receitaSemCusto: number;
   cadaCoberturaDe: BaseMargem["cobertura"];
+  custosConhecidos?: CustosConhecidos;
 };
 
 /**
@@ -800,9 +806,9 @@ export async function carregarResultado(
   return {
     inicio,
     fim,
-    receitaBruta: r2(total.receita),
+    ...receitasFinanceiras(total.receita, cancelamentos),
     cancelamentos: r2(cancelamentos),
-    receitaLiquida: r2(total.receita - cancelamentos),
+    custosConhecidos: resumirCustosConhecidos(base.itens),
     comissao: r2(total.comissao),
     frete: r2(total.frete),
     juros: r2(total.juros),

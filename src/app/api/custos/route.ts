@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { operacaoPadrao } from "@/lib/dados/operacao";
 
 /**
  * Grava os custos que só o usuário sabe.
@@ -20,6 +21,7 @@ type Edicao = {
   freteUnitario?: number | null;
   aliquotaImpostos?: number | null;
   pesoKg?: number | null;
+  margemMinimaPct?: number | null;
 };
 
 const COLUNA = {
@@ -28,6 +30,7 @@ const COLUNA = {
   freteUnitario: "frete_unitario",
   aliquotaImpostos: "aliquota_impostos",
   pesoKg: "peso_kg",
+  margemMinimaPct: "margem_minima_pct",
 } as const;
 
 type Campo = keyof typeof COLUNA;
@@ -40,6 +43,7 @@ const TETO: Record<Campo, number> = {
   freteUnitario: 100_000,
   aliquotaImpostos: 100,
   pesoKg: 10_000,
+  margemMinimaPct: 60,
 };
 
 export async function POST(req: Request) {
@@ -60,7 +64,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ erro: "Corpo inválido" }, { status: 400 });
   }
 
-  const edicoes = corpo.edicoes ?? [];
+  const edicoes = corpo?.edicoes ?? [];
+  if (!Array.isArray(edicoes) || edicoes.some((e) => !e || typeof e.produtoId !== "string")) {
+    return NextResponse.json({ erro: "Edições inválidas" }, { status: 400 });
+  }
   if (!edicoes.length) {
     return NextResponse.json({ erro: "Nada para gravar" }, { status: 400 });
   }
@@ -77,10 +84,14 @@ export async function POST(req: Request) {
    * outra pessoa.
    */
   const ids = [...new Set(edicoes.map((e) => e.produtoId))];
+  const op = await operacaoPadrao();
+  if (!op) return NextResponse.json({ erro: "Escolha uma empresa." }, { status: 409 });
+  const { data: pode, error: erroAcesso } = await sb.rpc("pode_editar_operacao", { op: op.id });
+  if (erroAcesso || !pode) return NextResponse.json({ erro: "Seu acesso não permite editar custos." }, { status: 403 });
   const { data: existentes, error: erroBusca } = await sb
     .from("produtos")
     .select("id,operacao_id")
-    .in("id", ids);
+    .in("id", ids).eq("operacao_id", op.id);
 
   if (erroBusca) {
     return NextResponse.json({ erro: erroBusca.message }, { status: 400 });
@@ -148,23 +159,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ erro: "Nada para gravar" }, { status: 400 });
   }
 
-  /*
-   * Upsert pelo id. As colunas ausentes do payload não entram no
-   * `DO UPDATE`, então preencher só a embalagem não zera o custo que já
-   * estava lá.
-   */
-  const { error } = await sb.from("produtos").upsert(linhas, { onConflict: "id" });
-
-  if (error) {
-    const semPermissao = error.code === "42501";
-    return NextResponse.json(
-      {
-        erro: semPermissao
-          ? "Seu papel não permite gravar custos."
-          : error.message,
-      },
-      { status: semPermissao ? 403 : 400 }
-    );
+  // Atualiza somente campos enviados. Upsert exigia SKU/título e podia
+  // limpar campos de outros produtos em lotes com edições diferentes.
+  let gravados = 0;
+  for (let i = 0; i < linhas.length; i += 10) {
+    const resultados = await Promise.all(linhas.slice(i, i + 10).map(async ({ id, operacao_id: operacaoId, ...campos }) =>
+      sb.from("produtos").update(campos).eq("id", id).eq("operacao_id", operacaoId).select("id").single()
+    ));
+    gravados += resultados.filter((r) => !r.error && r.data).length;
+    const falha = resultados.find((r) => r.error || !r.data);
+    if (falha) return NextResponse.json({ erro: `Não foi possível salvar todos os custos. ${gravados} produto(s) gravado(s). Verifique seu acesso e a migração db/38 se editou margem mínima.`, gravados }, { status: 400 });
   }
 
   return NextResponse.json({ gravados: linhas.length });

@@ -71,10 +71,14 @@ function Celula({
   valor,
   onChange,
   sufixo,
+  disabled,
+  rotulo,
 }: {
   valor: number | null;
   onChange: (v: number | null) => void;
   sufixo?: string;
+  disabled?: boolean;
+  rotulo?: string;
 }) {
   const [rascunho, setRascunho] = React.useState<string | null>(null);
   const mostrado = rascunho ?? texto(valor);
@@ -82,6 +86,8 @@ function Celula({
   return (
     <div className="relative">
       <input
+        disabled={disabled}
+        aria-label={rotulo}
         value={mostrado}
         inputMode="decimal"
         placeholder="—"
@@ -144,6 +150,7 @@ type CampoEditavel =
   | "custoMercadoria"
   | "embalagem"
   | "aliquotaImpostos"
+  | "margemMinimaPct"
   | "pesoKg";
 
 const ROTULO_CAMPO: Record<CampoEditavel, string> = {
@@ -151,6 +158,7 @@ const ROTULO_CAMPO: Record<CampoEditavel, string> = {
   embalagem: "Embalagem",
   aliquotaImpostos: "Impostos %",
   pesoKg: "Peso (kg)",
+  margemMinimaPct: "Margem mínima %",
 };
 
 export default function CustosCliente({
@@ -164,6 +172,7 @@ export default function CustosCliente({
   inicio,
   fim,
   canalId,
+  margemConfiguravel = false,
 }: {
   linhas: CustoSku[];
   faixas: FaixaFrete[];
@@ -175,6 +184,7 @@ export default function CustosCliente({
   inicio: string;
   fim: string;
   canalId: string;
+  margemConfiguravel?: boolean;
 }) {
   const router = useRouter();
 
@@ -218,14 +228,14 @@ export default function CustosCliente({
   /* ── SKU ── */
 
   const [edicoes, setEdicoes] = React.useState<
-    Map<string, Partial<Record<"custoMercadoria" | "embalagem" | "aliquotaImpostos" | "pesoKg", number | null>>>
+    Map<string, Partial<Record<CampoEditavel, number | null>>>
   >(new Map());
   const [busca, setBusca] = React.useState("");
   const [soIncompletos, setSoIncompletos] = React.useState(false);
 
   function editar(
     id: string,
-    campo: "custoMercadoria" | "embalagem" | "aliquotaImpostos" | "pesoKg",
+    campo: CampoEditavel,
     v: number | null
   ) {
     setEdicoes((m) => {
@@ -236,9 +246,9 @@ export default function CustosCliente({
     setSalvo(false);
   }
 
-  const valorDe = (l: CustoSku, campo: "custoMercadoria" | "embalagem" | "aliquotaImpostos" | "pesoKg") => {
+  const valorDe = (l: CustoSku, campo: CampoEditavel) => {
     const e = edicoes.get(l.produtoId);
-    return e && campo in e ? e[campo]! : l[campo];
+    return e && campo in e ? e[campo]! : l[campo] ?? null;
   };
 
   const visiveis = React.useMemo(() => {
@@ -554,7 +564,7 @@ export default function CustosCliente({
                     className="w-[150px]"
                   >
                     {(Object.keys(ROTULO_CAMPO) as CampoEditavel[]).map((c) => (
-                      <option key={c} value={c}>
+                      <option key={c} value={c} disabled={c === "margemMinimaPct" && !margemConfiguravel}>
                         {ROTULO_CAMPO[c]}
                       </option>
                     ))}
@@ -627,7 +637,8 @@ export default function CustosCliente({
                       <th className={`${th} text-right w-[86px]`}>Embalagem</th>
                       <th className={`${th} text-right w-[80px]`}>Impostos</th>
                       <th className={`${th} text-right w-[80px]`}>Peso</th>
-                      <th className={`${th} text-right`}>Margem</th>
+                      <th className={`${th} text-right w-[110px]`} title="Opcional: usada nas promoções por margem. Vazio herda a regra da campanha.">Mínima desejada</th>
+                      <th className={`${th} text-right`}>Margem realizada</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -726,6 +737,9 @@ export default function CustosCliente({
                           />
                         </td>
                         <td className={`${td} text-right`}>
+                          <Celula valor={valorDe(l, "margemMinimaPct")} sufixo="%" disabled={!margemConfiguravel} rotulo={`Margem mínima de ${l.sku}`} onChange={(v) => editar(l.produtoId, "margemMinimaPct", v)} />
+                        </td>
+                        <td className={`${td} text-right`}>
                           {l.margemUnidade != null ? (
                             <div className="flex flex-col items-end leading-tight">
                               <span
@@ -754,6 +768,7 @@ export default function CustosCliente({
                 </table>
               </div>
               <Pagination {...paginacaoSkus} />
+              <p className="px-4 py-3 text-xs text-ink-3">{margemConfiguravel ? "Margem mínima é opcional (0 a 60%). Vazio usa a regra da campanha nas promoções por margem." : "Margem mínima por produto: disponível após a atualização do banco (db/38)."}</p>
             </>
           )}
 
@@ -1022,9 +1037,7 @@ export default function CustosCliente({
                     Mídia (Ads)
                   </p>
                   <p className="text-[12px] text-ink-3 mb-2 max-w-2xl">
-                    Vem da tela de Lançamentos, onde o gasto do dia anterior é
-                    preenchido. Não se digita aqui para não existirem duas
-                    versões do mesmo número.
+                    API quando conectada; nos demais canais, importação ou lançamento diário. Não cadastre o mesmo gasto novamente como despesa.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {adsPorMes.slice(0, 12).map((a, i) => (

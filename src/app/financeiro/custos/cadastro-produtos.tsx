@@ -62,8 +62,8 @@ export function CadastroProdutos({ aoMudar }: { aoMudar: (msg: string) => void }
 
   return (
     <>
-      <Button size="sm" onClick={trazer} disabled={!!ocupado} title="Cria produto para todo SKU anunciado ou vendido">
-        <RefreshCw className="h-3.5 w-3.5" /> {ocupado === "trazer" ? "Trazendo…" : "Trazer produtos"}
+      <Button size="sm" onClick={trazer} disabled={!!ocupado} title="Usa os SKUs dos anúncios e pedidos já registrados nesta empresa, por API ou planilha. Não preenche custos.">
+        <RefreshCw className="h-3.5 w-3.5" /> {ocupado === "trazer" ? "Trazendo…" : "Trazer dos pedidos e anúncios"}
       </Button>
       <a
         href="/api/custos/planilha"

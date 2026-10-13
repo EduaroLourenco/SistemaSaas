@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { AXIS, GRID, ChartTooltip } from "@/components/ui/chart";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Resultado } from "@/lib/dados/margem";
+import type { CampoCusto } from "@/lib/financeiro-resumo";
 import { Wallet, Percent, TrendingUp, ShieldCheck } from "lucide-react";
 
 /**
@@ -159,7 +160,8 @@ export function DreMensal({
                       // `resultado` é nulo quando a cobertura de custo não
                       // fecha. Cair para zero mostraria "R$ 0" na linha de
                       // RESULTADO, que se lê como "empatou" — e não é isso.
-                      const bruto = r[l.campo];
+                      const conhecido = r.custosConhecidos?.[l.campo as CampoCusto];
+                      const bruto = conhecido ? conhecido.valor : l.campo === "margemContribuicao" && r.cobertura === 0 ? null : r[l.campo];
                       if (bruto == null) {
                         return (
                           <td
@@ -201,6 +203,8 @@ export function DreMensal({
                               {pct(p)}
                             </span>
                           )}
+                          {conhecido && conhecido.cobertura < 99.5 && <span className="block text-[11px] text-warn">cobre {pct(conhecido.cobertura, 0)}</span>}
+                          {l.campo === "margemContribuicao" && r.cobertura < 99.5 && <span className="block text-[11px] text-warn">parcial · {pct(r.cobertura, 0)}</span>}
                         </td>
                       );
                     })}

@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarBaseMargem, agregar } from "./margem";
+import { carregarMargensProduto } from "./margens-produto";
 
 /**
  * O cadastro de custo por SKU: o que preencher, e o que a venda revelou.
@@ -97,6 +98,7 @@ export type CustoSku = {
   embalagem: number | null;
   aliquotaImpostos: number | null;
   pesoKg: number | null;
+  margemMinimaPct?: number | null;
 
   /* Vindos de margem.ts. */
   margemUnidade: number | null;
@@ -115,6 +117,7 @@ export type FaixaFrete = {
 };
 
 export type DadosCustos = {
+  margemConfiguravel?: boolean;
   linhas: CustoSku[];
   faixas: FaixaFrete[];
   /** Quantos SKUs já têm margem calculável. */
@@ -144,7 +147,7 @@ export async function carregarCustos(
 ): Promise<DadosCustos> {
   const sb = await clienteServidor();
 
-  const [produtosRaw, anunciosRaw, faixasRaw, base, comissoesRaw, canaisRaw] =
+  const [produtosRaw, anunciosRaw, faixasRaw, base, comissoesRaw, canaisRaw, margens] =
     await Promise.all([
       paginar(() =>
         sb
@@ -170,6 +173,7 @@ export async function carregarCustos(
         .select("canal_id,tipo,comissao,vigencia_inicio")
         .order("vigencia_inicio", { ascending: false }),
       sb.from("canais").select("id,nome").eq("ativo", true).order("nome"),
+      carregarMargensProduto(),
     ]);
 
   /*
@@ -443,6 +447,7 @@ export async function carregarCustos(
       embalagem,
       aliquotaImpostos: aliquota,
       pesoKg,
+      margemMinimaPct: margens.porProduto.get(prod.id) ?? null,
       margemUnidade,
       margemPct: agregada?.margemPct ?? null,
       faltando,
@@ -455,6 +460,7 @@ export async function carregarCustos(
   return {
     linhas,
     faixas,
+    margemConfiguravel: margens.disponivel,
     completos: linhas.filter((l) => l.margemUnidade != null).length,
     vazio: !linhas.length,
     periodo: { inicio: filtro.inicio ?? null, fim: filtro.fim ?? null },
