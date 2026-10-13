@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { NAV, NAV_FOOTER } from "@/lib/nav";
+import { NAV, NAV_FOOTER, AREAS } from "@/lib/nav";
 import { Search, CornerDownLeft, X } from "lucide-react";
 
 /**
@@ -48,6 +48,14 @@ function montarIndice(): Achado[] {
     })),
   ];
 
+  // A redução do menu não remove as páginas da busca por nome.
+  const existentes = new Set(telas.map((t) => t.href));
+  for (const area of AREAS) for (const item of area.items) {
+    if (!existentes.has(item.href)) {
+      telas.push({ tipo: "tela", rotulo: item.label, detalhe: area.label, href: item.href });
+      existentes.add(item.href);
+    }
+  }
   return telas;
 }
 

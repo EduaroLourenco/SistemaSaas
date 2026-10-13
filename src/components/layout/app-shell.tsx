@@ -27,6 +27,7 @@ import { Sheet, FilterSheet } from "@/components/ui/controls";
 import { Disclosure } from "@/components/ui/disclosure";
 import { TelaGerizo } from "./carregando-gerizo";
 import { BotaoAtualizar } from "@/components/painel/botao-atualizar";
+import { NavegacaoArea } from "./navegacao-area";
 
 /* ══ Marca — monograma neutro, sem nome definido ══════════════ */
 
@@ -101,7 +102,7 @@ function NavLink({
           : "text-ink-2 hover:bg-panel-3 hover:text-ink"
       )}
     >
-      <span className="truncate">{label}</span>
+      <span className="min-w-0 leading-snug">{label}</span>
       {soon && (
         <span className="text-[12px] font-semibold text-ink-3 shrink-0">
           em breve
@@ -122,7 +123,7 @@ function NavSection({
 }) {
   const Icon = group.icon;
   const sectionId = React.useId();
-  const hasActive = group.items?.some((i) => i.href === pathname) ?? false;
+  const hasActive = group.items?.some((i) => i.href === pathname || i.rotas?.includes(pathname)) ?? false;
   const [open, setOpen] = React.useState(hasActive);
 
   React.useEffect(() => {
@@ -176,7 +177,7 @@ function NavSection({
             <NavLink
               key={it.href}
               {...it}
-              active={pathname === it.href}
+              active={pathname === it.href || Boolean(it.rotas?.includes(pathname))}
               onNavigate={onNavigate}
             />
           ))}
@@ -610,6 +611,7 @@ export function PageHeader({ title, breadcrumb, description, badge, actions, fil
       {!inlineFilters && filters && (!mobile || !mobileFilters) && <div className="mt-4 min-w-0">{filters}</div>}
       {inlineFilters && filters && mobile && !mobileFilters && <div className="mt-4 min-w-0">{filters}</div>}
       {filters && mobile && mobileFilters && openFilters && <FilterSheet onClose={() => setOpenFilters(false)} applyLabel="Ver resultados">{filters}</FilterSheet>}
+      <React.Suspense fallback={null}><NavegacaoArea /></React.Suspense>
     </header>
   );
 }

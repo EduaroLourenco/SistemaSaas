@@ -25,6 +25,7 @@ export type NavItem = {
   label: string;
   href: string;
   soon?: boolean;
+  rotas?: string[];
 };
 
 export type NavGroup = {
@@ -33,6 +34,39 @@ export type NavGroup = {
   href?: string;
   items?: NavItem[];
 };
+
+/** Áreas com navegação interna. Endereços antigos continuam válidos. */
+export const AREAS: { label: string; items: NavItem[] }[] = [
+  { label: "Resultados de vendas", items: [
+    { label: "Por canal", href: "/vendas/canais" },
+    { label: "Anual", href: "/vendas/anual" },
+    { label: "Comparativos", href: "/vendas/comparativos" },
+    { label: "Cancelamentos", href: "/vendas/cancelamentos" },
+  ] },
+  { label: "Acompanhamento", items: [
+    { label: "Dia", href: "/vendas/dia" },
+    { label: "Mês até aqui", href: "/vendas/mtd" },
+    { label: "Semanal", href: "/vendas/semanal" },
+    { label: "Comparar período", href: "/vendas/diario" },
+    { label: "Produtos / SKU", href: "/vendas/skus" },
+    { label: "Por que caiu", href: "/vendas/queda" },
+  ] },
+  { label: "Lançamentos e metas", items: [
+    { label: "Lançamentos", href: "/vendas/lancamentos" },
+    { label: "Metas", href: "/vendas/metas" },
+  ] },
+  { label: "Anúncios", items: [
+    { label: "Desempenho", href: "/anuncios/analise" },
+    { label: "Clássico vs Premium", href: "/anuncios/tipo" },
+    { label: "Disputa de catálogo", href: "/anuncios/catalogo" },
+  ] },
+  { label: "Regras e histórico", items: [
+    { label: "Lógica de promoção", href: "/anuncios/preco-ideal" },
+    { label: "Histórico", href: "/promocoes/historico" },
+    { label: "Comparar ofertas", href: "/promocoes/comparar" },
+  ] },
+];
+const area = (i: number): NavItem => ({ label: AREAS[i].label, href: AREAS[i].items[0].href, rotas: AREAS[i].items.map((t) => t.href) });
 
 /** Estrutura de no máximo 2 níveis. */
 export const NAV: NavGroup[] = [
@@ -62,18 +96,7 @@ export const NAV: NavGroup[] = [
     label: "Vendas",
     icon: TrendingUp,
     items: [
-      { label: "Por canal", href: "/vendas/canais" },
-      { label: "Anual", href: "/vendas/anual" },
-      { label: "Dia", href: "/vendas/dia" },
-      { label: "Mês até aqui", href: "/vendas/mtd" },
-      { label: "Semanal", href: "/vendas/semanal" },
-      { label: "Comparar período", href: "/vendas/diario" },
-      { label: "Comparativos", href: "/vendas/comparativos" },
-      { label: "Análise de SKU", href: "/vendas/skus" },
-      { label: "Por que caiu", href: "/vendas/queda" },
-      { label: "Cancelamentos", href: "/vendas/cancelamentos" },
-      { label: "Metas", href: "/vendas/metas" },
-      { label: "Lançamentos", href: "/vendas/lancamentos" },
+      area(0), area(1), area(2),
     ],
   },
   /*
@@ -99,13 +122,10 @@ export const NAV: NavGroup[] = [
     label: "Mercado Livre",
     icon: Tags,
     items: [
-      { label: "Análise de anúncios", href: "/anuncios/analise" },
-      { label: "Catálogo", href: "/anuncios/catalogo" },
-      { label: "Clássico vs Premium", href: "/anuncios/tipo" },
-      { label: "Lógica de promoção", href: "/anuncios/preco-ideal" },
+      area(3),
       { label: "Campanhas", href: "/promocoes/campanhas" },
       { label: "Processar planilha", href: "/promocoes/processar" },
-      { label: "Histórico", href: "/promocoes/historico" },
+      area(4),
     ],
   },
   /*

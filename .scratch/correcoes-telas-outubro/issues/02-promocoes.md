@@ -1,6 +1,6 @@
 # 02 — Promoções
 
-Status: correção implementada e testada; recuperação em conferência
+Status: concluído no código e recuperação de dados confirmada; publicação pendente
 
 Corrigir o salvamento das regras por empresa e a persistência de planilhas processadas em histórico/campanhas. Melhorar mensagens de erro e a leitura das campanhas, sem enviar alterações ao marketplace.
 
@@ -12,3 +12,4 @@ Corrigir o salvamento das regras por empresa e a persistência de planilhas proc
 - Rodadas só ficam concluídas após gravar os itens; falhas preservam ofertas anteriores. Histórico mostra tentativas incompletas. Campanhas contam apenas a última rodada e abrem as ofertas por SKU/anúncio.
 - Testes de persistência entre duas empresas, falha parcial, permissões e motor de preços passaram; TypeScript passou.
 - Recuperação: planilha original da última tentativa da Bom de Compras localizada. Reprocessamento local reproduziu as 186 linhas do relatório já entregue, sem divergência em nenhum campo. Arquivos de conferência/backup permanecem em `output/`, fora do GitHub público.
+- Recuperação executada: uma campanha, 186 registros de histórico e 186 ofertas, todos vinculados a anúncios da Bom de Compras. Nenhuma mudança enviada ao Mercado Livre. Tentativas anteriores sem registro foram identificadas como falhas após backup.
