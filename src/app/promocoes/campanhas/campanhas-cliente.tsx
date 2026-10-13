@@ -8,7 +8,7 @@ import { SemFonte } from "@/components/ui/sem-fonte";
 import { money, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DadosPromocoes, CampanhaResumo } from "@/lib/dados/promocoes";
-import { Search, Trash2, Loader2 } from "lucide-react";
+import { Search, Trash2, Loader2, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 /**
@@ -28,6 +28,15 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
   const [reducao, setReducao] = React.useState("todas");
   const [de, setDe] = React.useState("");
   const [ate, setAte] = React.useState("");
+  const [expandida, setExpandida] = React.useState<string | null>(null);
+  const ultimas = React.useMemo(() => {
+    const rodada = new Map<string, string>();
+    return dados.historico.filter((h) => {
+      const id = h.processamentoId ?? h.data;
+      if (!rodada.has(h.campanha)) rodada.set(h.campanha, id);
+      return rodada.get(h.campanha) === id;
+    });
+  }, [dados.historico]);
 
   /*
    * A confirmação é um passo separado, e não um `confirm()` do navegador,
@@ -113,7 +122,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
       <PageHeader
         title="Campanhas"
         breadcrumb="Promoções"
-        description="Adesão por campanha, do que foi processado"
+        description="Decisões da última rodada de cada campanha"
         filters={
           <>
             <Segmented
@@ -158,7 +167,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
         <Panel className="overflow-hidden">
           <PanelHeader
             title="Adesão por campanha"
-            hint="participam sobre itens lidos"
+            hint="aprovadas pelo sistema · confirme a participação no canal"
             action={
               <span className="num text-[12px] text-ink-2">
                 {count(totais.participam)} de {count(totais.itens)}
@@ -192,16 +201,18 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                 {linhas.map((c) => {
                   const adesao = c.itens ? (c.participam / c.itens) * 100 : 0;
                   return (
-                    <tr key={c.id} className="border-b border-line hover:bg-panel-2">
+                    <React.Fragment key={c.id}>
+                    <tr className="border-b border-line hover:bg-panel-2">
                       <td className="px-3 py-2">
-                        <span className="flex items-center gap-2 min-w-0">
-                          <span className="text-[12.5px] font-medium text-ink truncate">
+                        <button aria-expanded={expandida === c.id} onClick={() => setExpandida(expandida === c.id ? null : c.id)} className="flex min-h-10 items-center gap-2 min-w-0 text-left">
+                          <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", expandida === c.id && "rotate-180")} />
+                          <span className="text-[12.5px] font-medium text-ink">
                             {c.nome}
                           </span>
                           <Badge tone={c.temReducao ? "brand" : "neutral"}>
                             {c.temReducao ? "com redução" : "sem redução"}
                           </Badge>
-                        </span>
+                        </button>
                       </td>
                       <td className="px-3 py-2 text-right num text-ink-2">{count(c.itens)}</td>
                       <td className="px-3 py-2 text-right num text-up font-medium">
@@ -249,6 +260,19 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                         </button>
                       </td>
                     </tr>
+                    {expandida === c.id && <tr><td colSpan={7} className="bg-panel-2 p-3">
+                      <div className="max-h-96 overflow-auto rounded-r1 border border-line">
+                        <table className="w-full text-[12px]">
+                          <thead className="sticky top-0 bg-panel"><tr>{["SKU / anúncio", "Oferta do canal", "Referência", "Piso", "Decisão"].map((t) => <th key={t} className="px-3 py-2 text-left font-medium whitespace-nowrap">{t}</th>)}</tr></thead>
+                          <tbody>{ultimas.filter((h) => h.campanha === c.nome).map((h) => <tr key={h.id} className="border-t border-line">
+                            <td className="p-3"><span className="block font-medium">{h.sku}</span><span className="text-ink-3">{h.mlb}</span></td>
+                            {[h.precoOfertadoML, h.precoTabela, h.precoPiso].map((v, i) => <td key={i} className="p-3 num whitespace-nowrap">{v == null ? "—" : money(v)}</td>)}
+                            <td className="p-3"><Badge tone={h.aprovado ? "up" : "neutral"}>{h.aprovado ? "Aprovada" : "Fora"}</Badge>{h.motivo && <span className="mt-1 block max-w-80 text-ink-3">{h.motivo}</span>}</td>
+                          </tr>)}</tbody>
+                        </table>
+                      </div>
+                    </td></tr>}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -277,7 +301,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
             hint="itens marcados como quase no piso, do menor para o maior"
           />
           <ul className="divide-y divide-line">
-            {dados.historico
+            {ultimas
               .filter((h) => !h.aprovado && h.tags.includes("quase"))
               .slice(0, 12)
               .map((h) => (

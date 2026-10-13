@@ -13,7 +13,7 @@ import { operacaoPadrao } from "@/lib/dados/operacao";
 
 // exceljs e jszip precisam do runtime Node, não do Edge.
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * Processa as planilhas da Central de Promoções.
@@ -24,6 +24,13 @@ export const maxDuration = 60;
  */
 export async function POST(req: NextRequest) {
   try {
+    const sb = await clienteServidor();
+    const { data: sessao } = await sb.auth.getUser();
+    if (!sessao.user) return NextResponse.json({ erro: "Entre novamente para processar." }, { status: 401 });
+    const operacao = await operacaoPadrao();
+    if (!operacao) return NextResponse.json({ erro: "Escolha uma empresa." }, { status: 409 });
+    const { data: podeEditar, error: erroAcesso } = await sb.rpc("pode_editar_operacao", { op: operacao.id });
+    if (erroAcesso || !podeEditar) return NextResponse.json({ erro: "Um editor da empresa pode processar promoções." }, { status: 403 });
     const formData = await req.formData();
     const planilhas = formData.getAll("planilha") as File[];
     const base = formData.get("formulaBase") as File | null;
@@ -101,7 +108,7 @@ export async function POST(req: NextRequest) {
        * médio do Full não é o do Flex nem o da Shopee, e o piso calculado
        * com o frete de outro canal não corresponde a nada.
        */
-      const canalId = await canalDaCampanha();
+      const canalId = await canalDaCampanha(operacao.id);
       const { custos, incompletos } = await carregarCustosPromocao(canalId ?? undefined);
       custosUsados = custos.size;
       custosIncompletos = incompletos;
@@ -112,10 +119,9 @@ export async function POST(req: NextRequest) {
         );
       }
       formulaData = { ...formulaData, custos, regra: { modo, margemMinima, comoUsar, toleranciaPct } };
-    } else if (comoUsar === "piso") {
-      // Sem custo nenhum a carregar: o piso já está na tabela guardada.
-      formulaData = { ...formulaData, regra: { modo, margemMinima, comoUsar, toleranciaPct } };
     }
+    // A tolerância salva também deve valer para tabela usada como alvo.
+    formulaData = { ...formulaData, regra: { modo, margemMinima, comoUsar, toleranciaPct } };
 
     const resumoBase = resumoFormulaBase(formulaData);
 
@@ -173,16 +179,12 @@ export async function POST(req: NextRequest) {
     let gravacao = null;
     let erroGravacao: string | null = null;
     try {
-      const sb = await clienteServidor();
-      const { data: sessao } = await sb.auth.getUser();
-      const operacao = await operacaoPadrao();
-      if (!operacao) throw new Error("Nenhuma operação acessível para gravar o processamento.");
       gravacao = await gravarProcessamento({
         operacaoId: operacao.id,
         linhas: todasLinhas,
         arquivos: arquivos.map((a) => a.nome),
         descontoExtra,
-        usuarioId: sessao.user?.id,
+        usuarioId: sessao.user.id,
       });
     } catch (e) {
       erroGravacao = e instanceof Error ? e.message : "falha ao gravar";
@@ -288,8 +290,8 @@ export async function POST(req: NextRequest) {
 }
 
 /** O id do canal Mercado Livre, que é de onde a planilha de promoção vem. */
-async function canalDaCampanha(): Promise<string | null> {
+async function canalDaCampanha(operacaoId: string): Promise<string | null> {
   const sb = await clienteServidor();
-  const { data } = await sb.from("canais").select("id").eq("codigo", "mercado_livre").maybeSingle();
+  const { data } = await sb.from("canais").select("id").eq("operacao_id", operacaoId).eq("codigo", "mercado_livre").maybeSingle();
   return (data?.id as string | undefined) ?? null;
 }

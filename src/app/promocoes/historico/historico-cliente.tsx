@@ -359,7 +359,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
                   </p>
                 </span>
                 <span className="num text-[12px] text-ink-2 shrink-0">
-                  {count(p.aprovados)} de {count(p.lidos)}
+                  {p.status === "falhou" || p.status === "sem_registro" ? <Badge tone="down">Não gravado · reprocessar</Badge> : p.status === "executando" ? <Badge>Em processamento</Badge> : `${count(p.aprovados)} de ${count(p.lidos)}`}
                 </span>
               </li>
             ))}

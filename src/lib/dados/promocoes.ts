@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { operacaoPadrao } from "./operacao";
 
 /**
  * Campanhas e histórico de promoções, lidos do banco.
@@ -17,6 +18,7 @@ import { paginar } from "./paginar";
 
 export type ItemHistorico = {
   id: string;
+  processamentoId?: string | null;
   mlb: string;
   sku: string;
   titulo: string;
@@ -62,6 +64,7 @@ export type DadosPromocoes = {
     reprovados: number;
     descontoExtra: number;
     arquivos: string[];
+    status?: string;
   }[];
   vazio: boolean;
 };
@@ -70,6 +73,8 @@ const n = (v: unknown) => (v == null ? null : Number(v));
 
 export async function carregarPromocoes(): Promise<DadosPromocoes> {
   const sb = await clienteServidor();
+  const op = await operacaoPadrao();
+  if (!op) return { campanhas: [], historico: [], processamentos: [], vazio: true };
 
   const [historicoBruto, campanhasBrutas, procs, itensPedido, anuncios] =
     await Promise.all([
@@ -77,32 +82,35 @@ export async function carregarPromocoes(): Promise<DadosPromocoes> {
         sb
           .from("historico_promocoes")
           .select(
-            "id,mlb,sku,campanha,tipo_anuncio,tipo_campanha,preco_tabela,preco_oferta," +
+            "id,processamento_id,mlb,sku,campanha,tipo_anuncio,tipo_campanha,preco_tabela,preco_oferta," +
               "preco_piso,preco_com_extra,reducao_tarifa,status_aprovacao,motivo,tags,data_processamento"
           )
+          .eq("operacao_id", op.id)
           .order("data_processamento", { ascending: false })
       ),
       sb
         .from("campanhas")
         .select("id,nome,tem_reducao_tarifa,ativa,inicio,fim,atualizado_em")
+        .eq("operacao_id", op.id)
         .order("atualizado_em", { ascending: false })
         .limit(200),
       sb
         .from("processamentos_promocao")
-        .select("id,executado_em,itens_lidos,itens_aprovados,itens_reprovados,desconto_extra,arquivos")
+        .select("id,status,executado_em,itens_lidos,itens_aprovados,itens_reprovados,desconto_extra,arquivos")
+        .eq("operacao_id", op.id)
         .order("executado_em", { ascending: false })
         .limit(50),
       paginar(() =>
         sb
           .from("pedido_itens")
           .select("sku,quantidade,preco_unitario,pedidos(data,cancelado)")
+          .eq("operacao_id", op.id)
       ),
-      paginar(() => sb.from("anuncios").select("codigo_externo,titulo")),
+      paginar(() => sb.from("anuncios").select("codigo_externo,titulo").eq("operacao_id", op.id)),
     ]);
 
-  if (!historicoBruto.length) {
-    return { campanhas: [], historico: [], processamentos: [], vazio: true };
-  }
+  if (campanhasBrutas.error) throw new Error(campanhasBrutas.error.message);
+  if (procs.error) throw new Error(procs.error.message);
 
   /* ── Curva ABC e preço praticado, por SKU ─────────────── */
 
@@ -144,7 +152,7 @@ export async function carregarPromocoes(): Promise<DadosPromocoes> {
   );
 
   type LinhaHist = {
-    id: string; mlb: string; sku: string | null; campanha: string;
+    id: string; processamento_id: string | null; mlb: string; sku: string | null; campanha: string;
     tipo_anuncio: string; tipo_campanha: string | null;
     preco_tabela: string | null; preco_oferta: string | null;
     preco_piso: string | null; preco_com_extra: string | null;
@@ -157,6 +165,7 @@ export async function carregarPromocoes(): Promise<DadosPromocoes> {
     const doSku = porSku.get(sku);
     return {
       id: h.id,
+      processamentoId: h.processamento_id,
       mlb: h.mlb,
       sku: sku || "—",
       titulo: tituloPorMlb.get(h.mlb.toUpperCase()) ?? h.mlb,
@@ -182,7 +191,11 @@ export async function carregarPromocoes(): Promise<DadosPromocoes> {
   /* ── Campanhas, com contagem vinda do histórico ────────── */
 
   const porCampanha = new Map<string, { itens: number; sim: number; quando: string }>();
+  const ultimaRodada = new Map<string, string>();
   for (const h of historico) {
+    const rodada = h.processamentoId ?? h.data;
+    if (!ultimaRodada.has(h.campanha)) ultimaRodada.set(h.campanha, rodada);
+    if (ultimaRodada.get(h.campanha) !== rodada) continue;
     const g = porCampanha.get(h.campanha) ?? { itens: 0, sim: 0, quando: h.data };
     g.itens++;
     if (h.aprovado) g.sim++;
@@ -220,7 +233,8 @@ export async function carregarPromocoes(): Promise<DadosPromocoes> {
     reprovados: (p.itens_reprovados as number) ?? 0,
     descontoExtra: Number(p.desconto_extra ?? 0),
     arquivos: (p.arquivos as string[]) ?? [],
+    status: p.status === "concluida" && !historico.some((h) => h.processamentoId === p.id) ? "sem_registro" : String(p.status),
   }));
 
-  return { campanhas, historico, processamentos, vazio: false };
+  return { campanhas, historico, processamentos, vazio: !historico.length && !processamentos.length };
 }

@@ -24,6 +24,7 @@ export type ResumoGravacao = {
   /** Ofertas gravadas — várias por anúncio quando o canal propõe faixas. */
   ofertas: number;
   semAnuncio: number;
+  avisos?: string[];
 };
 
 
@@ -69,6 +70,12 @@ export async function gravarProcessamento({
    */
   const sb = clientePrivilegiado();
 
+  // Canais pertencem à operação. Buscar só pelo nome devolvia duas linhas
+  // quando uma segunda empresa entrava, impedindo criar qualquer campanha.
+  const { data: canal, error: erroCanal } = await sb.from("canais")
+    .select("id").eq("operacao_id", operacaoId).eq("codigo", "mercado_livre").single();
+  if (erroCanal || !canal) throw erroDeVerdade(erroCanal, "ao localizar Mercado Livre nesta empresa");
+
   const aprovados = linhas.filter((l) => l.aprovado).length;
 
   const { data: proc, error: erroProc } = await sb
@@ -82,13 +89,16 @@ export async function gravarProcessamento({
       desconto_extra: descontoExtra,
       arquivos,
       executado_por: usuarioId ?? null,
-      status: "concluida",
+      status: "executando",
     })
-    .select("id")
+    .select("id,executado_em")
     .single();
 
   if (erroProc) throw erroDeVerdade(erroProc, "ao registrar o processamento");
   const processamentoId = proc.id as string;
+  let concluido = false;
+
+  try {
 
   /* ── Campanhas ─────────────────────────────────────────────
    *
@@ -96,12 +106,6 @@ export async function gravarProcessamento({
    * o canal não exporta um id estável. Duas rodadas da mesma campanha
    * reaproveitam a linha em vez de criar uma nova.
    */
-  const { data: canal } = await sb
-    .from("canais")
-    .select("id")
-    .eq("nome", "Mercado Livre")
-    .single();
-
   const nomes = [...new Set(linhas.map((l) => l.campanha).filter(Boolean))];
   const porNome = new Map<string, string>();
 
@@ -113,6 +117,7 @@ export async function gravarProcessamento({
       .from("campanhas")
       .select("id")
       .eq("operacao_id", operacaoId)
+      .eq("canal_id", canal.id)
       .eq("nome", nome)
       .maybeSingle();
 
@@ -125,7 +130,7 @@ export async function gravarProcessamento({
       .from("campanhas")
       .insert({
         operacao_id: operacaoId,
-        canal_id: canal?.id,
+        canal_id: canal.id,
         nome,
         tem_reducao_tarifa: comReducao,
         ativa: true,
@@ -153,10 +158,13 @@ export async function gravarProcessamento({
       sb
         .from("anuncios")
         .select("id,codigo_externo")
+        .eq("operacao_id", operacaoId)
+        .eq("canal_id", canal.id)
         .in("codigo_externo", codigos.slice(i * 200, (i + 1) * 200))
     )
   );
-  for (const { data } of lotes) {
+  for (const { data, error } of lotes) {
+    if (error) throw erroDeVerdade(error, "ao vincular anúncios da empresa");
     for (const a of data ?? []) {
       anunciosPorCodigo.set(String(a.codigo_externo).toUpperCase(), a.id as string);
     }
@@ -223,26 +231,6 @@ export async function gravarProcessamento({
     });
   }
 
-  /*
-   * Apaga as ofertas anteriores das campanhas desta rodada antes de
-   * gravar as novas.
-   *
-   * Sem chave única não há nada impedindo duplicar, e a planilha nova é a
-   * verdade corrente sobre o que o canal oferece — não um acréscimo. Sem
-   * isto, reprocessar o mesmo arquivo dobraria a lista de ofertas e a
-   * tela de comparação mostraria cada faixa duas vezes.
-   */
-  const idsCampanha = [...porNome.values()];
-  if (idsCampanha.length) {
-    const { error: erroLimpeza } = await sb
-      .from("campanha_itens")
-      .delete()
-      .in("campanha_id", idsCampanha);
-    if (erroLimpeza) {
-      throw erroDeVerdade(erroLimpeza, "ao limpar as ofertas anteriores");
-    }
-  }
-
   // As duas tabelas não dependem uma da outra: gravar em paralelo corta o
   // tempo pela metade sem risco de ordem.
   const gravacoes = [
@@ -257,11 +245,37 @@ export async function gravarProcessamento({
     if (error) throw erroDeVerdade(error, "ao gravar histórico e itens");
   }
 
+  // Só substitui ofertas antigas depois de TODAS as novas terem sido
+  // gravadas. Um erro na inserção não pode apagar a última rodada válida.
+  const { error: erroFim } = await sb.from("processamentos_promocao")
+    .update({ status: "concluida" }).eq("operacao_id", operacaoId).eq("id", processamentoId);
+  if (erroFim) throw erroDeVerdade(erroFim, "ao concluir processamento");
+  concluido = true;
+  const avisos: string[] = [];
+  const idsCampanha = [...porNome.values()];
+  if (idsCampanha.length) {
+    const { error } = await sb.from("campanha_itens").delete()
+      .eq("operacao_id", operacaoId).in("campanha_id", idsCampanha)
+      .lt("criado_em", proc.executado_em);
+    if (error) avisos.push("A rodada foi salva, mas as ofertas anteriores não puderam ser removidas. Consulte o histórico pela rodada mais recente.");
+  }
+
   return {
     processamentoId,
     campanhas: nomes.length,
     itens: historico.length,
     ofertas: itens.length,
     semAnuncio,
+    avisos,
   };
+  } catch (e) {
+    if (concluido) throw e;
+    // Desfaz apenas os registros da tentativa; preserva a rodada anterior.
+    await Promise.all([
+      sb.from("campanha_itens").delete().eq("operacao_id", operacaoId).eq("processamento_id", processamentoId),
+      sb.from("historico_promocoes").delete().eq("operacao_id", operacaoId).eq("processamento_id", processamentoId),
+    ]);
+    await sb.from("processamentos_promocao").update({ status: "falhou" }).eq("operacao_id", operacaoId).eq("id", processamentoId);
+    throw e;
+  }
 }

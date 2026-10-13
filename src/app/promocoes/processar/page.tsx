@@ -89,6 +89,7 @@ type Resultado = {
     itens: number;
     ofertas: number;
     semAnuncio: number;
+    avisos?: string[];
   } | null;
   /** Por que não gravou. O arquivo sai mesmo assim. */
   erroGravacao?: string | null;
@@ -176,6 +177,7 @@ export default function ProcessarPromocoes() {
   const [comoPiso, setComoPiso] = React.useState(false);
   const [tolerancia, setTolerancia] = React.useState("5");
   const [pisoSalvo, setPisoSalvo] = React.useState<"nada" | "salvando" | "ok" | "erro">("nada");
+  const [erroPiso, setErroPiso] = React.useState<string | null>(null);
 
   /* O piso é da EMPRESA: duas pessoas processando a mesma campanha têm de
      chegar ao mesmo resultado, então o valor vem do banco (db/36). */
@@ -183,21 +185,26 @@ export default function ProcessarPromocoes() {
     let vivo = true;
     fetch("/api/promocoes/piso")
       .then((r) => r.json())
-      .then((j) => { if (!vivo || j.erro) return; setComoPiso(Boolean(j.usarComoPiso)); setTolerancia(String(j.toleranciaPct ?? 5)); })
-      .catch(() => {});
+      .then((j) => { if (!vivo) return; if (j.erro) { setErroPiso(j.erro); return; } setComoPiso(Boolean(j.usarComoPiso)); setTolerancia(String(j.toleranciaPct ?? 5)); })
+      .catch(() => { if (vivo) setErroPiso("Não foi possível carregar a regra salva."); });
     return () => { vivo = false; };
   }, []);
 
   async function salvarPiso() {
     setPisoSalvo("salvando");
+    setErroPiso(null);
     try {
+      const pct = Number(tolerancia.trim().replace(",", "."));
+      if (!tolerancia.trim() || !Number.isFinite(pct) || pct < 0 || pct > 50) throw new Error("Informe uma tolerância de 0 a 50%.");
       const r = await fetch("/api/promocoes/piso", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ usarComoPiso: comoPiso, toleranciaPct: parseFloat(tolerancia) || 0 }),
+        body: JSON.stringify({ usarComoPiso: comoPiso, toleranciaPct: pct }),
       });
-      setPisoSalvo(r.ok ? "ok" : "erro");
-    } catch { setPisoSalvo("erro"); }
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.erro ?? `Não foi possível salvar (resposta ${r.status}).`);
+      setPisoSalvo("ok");
+    } catch (e) { setPisoSalvo("erro"); setErroPiso(e instanceof Error ? e.message : "Não foi possível salvar. Tente novamente."); }
   }
   const [margemMinima, setMargemMinima] = React.useState("8");
   const [processando, setProcessando] = React.useState(false);
@@ -619,12 +626,12 @@ export default function ProcessarPromocoes() {
                       className="max-w-[120px] max-sm:h-11"
                     />
                   </Field>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <Button size="sm" onClick={salvarPiso} disabled={pisoSalvo === "salvando"}>
                       {pisoSalvo === "salvando" ? "Salvando…" : "Salvar para esta empresa"}
                     </Button>
                     {pisoSalvo === "ok" && <span className="text-[12px] text-up">Salvo.</span>}
-                    {pisoSalvo === "erro" && <span className="text-[12px] text-down">Não consegui salvar.</span>}
+                    {erroPiso && <span role="alert" className="text-[12px] text-down">{erroPiso}</span>}
                   </div>
                 </div>
                 {regra !== "tabela" && (
@@ -784,6 +791,7 @@ export default function ProcessarPromocoes() {
                       linhas de anúncios fora do catálogo ficaram só no histórico
                     </>
                   )}
+                  {resultado.gravacao.avisos?.map((aviso) => <span key={aviso} className="block text-warn">{aviso}</span>)}
                 </p>
               </Panel>
             )}
