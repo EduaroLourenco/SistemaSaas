@@ -6,7 +6,7 @@ import type { LocalEstoque, SaldoEstoque } from "@/lib/estoques/tipos";
 
 export type LinhaEstoque = SaldoEstoque & { id: string; integracao_id: string; origem: "canal" | "erp"; provedor: string; conta_canal_id: string | null; consultado_em: string };
 export type FonteEstoque = { id: string; nome: string; provedor: string; conectada: boolean; estado: string; locais: LocalEstoque[]; atualizadaEm: string | null; iniciadaEm: string | null; erro: string | null };
-export async function carregarEstoques(filtros: { sku?: string; origem?: string; fonte?: string; local?: string; zeros?: boolean; pagina?: number } = {}) {
+export async function carregarEstoques(filtros: { sku?: string; skuExato?: boolean; anuncio?: string; origem?: string; fonte?: string; local?: string; zeros?: boolean; pagina?: number } = {}) {
   const op = await operacaoPadrao();
   const vazio = { fontes: [] as FonteEstoque[], saldos: [] as LinhaEstoque[], total: 0, pagina: 0, instalada: true, erro: null as string | null };
   if (!op) return vazio;
@@ -28,7 +28,8 @@ export async function carregarEstoques(filtros: { sku?: string; origem?: string;
   if (!instalada || fontes.error || integs.error || contas.error) return { ...vazio, fontes: lista, instalada, erro: instalada ? "Não foi possível conferir todas as fontes de estoque." : null };
   const pagina = Math.max(0, Math.min(10000, Math.trunc(filtros.pagina || 0)));
   let q = sb.from("estoque_saldos").select("*", { count: "exact" }).eq("operacao_id", op.id);
-  if (filtros.sku) q = q.ilike("sku", `%${filtros.sku.replace(/[%_]/g, "")}%`);
+  if (filtros.sku) q = q.ilike("sku", filtros.skuExato ? filtros.sku.replace(/[\\%_]/g, "\\$&") : `%${filtros.sku.replace(/[%_]/g, "")}%`);
+  if (filtros.anuncio) q = q.contains("anuncios", [filtros.anuncio]);
   if (["canal", "erp"].includes(filtros.origem ?? "")) q = q.eq("origem", filtros.origem!);
   if (filtros.fonte && lista.some((f) => f.id === filtros.fonte)) q = q.eq("integracao_id", filtros.fonte);
   if (filtros.local) q = q.eq("local_id", filtros.local);
