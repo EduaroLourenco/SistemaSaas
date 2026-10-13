@@ -12,8 +12,10 @@ async function autorizar() {
   if (!sessao.user) return { erro: "Entre novamente para atualizar.", status: 401 } as const;
   const op = await operacaoPadrao();
   if (!op) return { erro: "Nenhuma empresa escolhida.", status: 409 } as const;
-  const { data: podeEditar } = await sb.rpc("pode_editar_operacao", { op: op.id });
-  if (!podeEditar) return { erro: "Seu acesso é de leitura.", status: 403 } as const;
+  // Atualizar relê as fontes conectadas, sem editar os anúncios ou regras
+  // comerciais. Qualquer membro que possa consultar a empresa pode fazê-lo.
+  const { data: podeVer, error } = await sb.rpc("pode_ver_operacao", { op: op.id });
+  if (error || !podeVer) return { erro: "Você não tem acesso a esta empresa.", status: 403 } as const;
   return { op } as const;
 }
 

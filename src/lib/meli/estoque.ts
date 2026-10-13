@@ -31,7 +31,8 @@ export function normalizarLocaisMeli(up: string, itens: { mlb: string; sku: stri
     const id = `${l.type}:${l.store_id ?? "geral"}:${l.availability_type ?? "in_stock"}`;
     const nome = full ? "Full · Mercado Livre" : l.store_id
       ? lojas.get(String(l.store_id)) ?? `Depósito ${l.store_id}`
-      : l.type === "selling_address" ? "Depósito do vendedor" : l.type;
+      : l.type === "selling_address" ? "Depósito do vendedor"
+        : l.type === "seller_warehouse" ? "Depósito do vendedor · nome não informado" : "Local não identificado pelo canal";
     const disponivel = l.availability_type && l.availability_type !== "in_stock" ? null : quantidade(l.quantity);
     saida.set(id, {
       produto_externo: up, sku: skus.length === 1 ? skus[0]! : null, titulo: itens[0]?.titulo ?? up,

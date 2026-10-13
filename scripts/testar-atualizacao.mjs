@@ -15,9 +15,9 @@ async function stub(nome, codigo) {
   return arquivo;
 }
 try {
-  globalThis.__atualizacao = { usuario: true, edita: true, op: "a", chamadas: [], falhar: null };
+  globalThis.__atualizacao = { usuario: true, edita: true, ve: true, op: "a", chamadas: [], falhar: null };
   const vazio = await stub("vazio", "module.exports={}");
-  const banco = await stub("banco", `exports.clienteServidor=async()=>({auth:{getUser:async()=>({data:{user:globalThis.__atualizacao.usuario?{id:'teste'}:null}})},rpc:async()=>({data:globalThis.__atualizacao.edita})});`);
+  const banco = await stub("banco", `exports.clienteServidor=async()=>({auth:{getUser:async()=>({data:{user:globalThis.__atualizacao.usuario?{id:'teste'}:null}})},rpc:async(nome)=>({data:nome==='pode_ver_operacao'?globalThis.__atualizacao.ve:globalThis.__atualizacao.edita})});`);
   const operacao = await stub("operacao", `exports.operacaoPadrao=async()=>({id:globalThis.__atualizacao.op,nome:globalThis.__atualizacao.op});`);
   const catalogo = await stub("catalogo", `
     const lista=['a','b'];
@@ -57,8 +57,13 @@ try {
   assert.equal((await post({ operacaoId: "a", etapa: "meli-estoque:meli-a", pagina: -1 })).status, 400);
   assert.equal(globalThis.__atualizacao.chamadas.length, 0, "Conta alheia nunca dispara API");
   globalThis.__atualizacao.edita = false;
+  assert.equal((await GET()).status, 200, "Membro leitor também pode iniciar atualização");
+  assert.equal((await post({ operacaoId: "a", etapa: "meli-dados:meli-a" })).status, 200);
+  globalThis.__atualizacao.chamadas = [];
+  globalThis.__atualizacao.ve = false;
   assert.equal((await GET()).status, 403);
   assert.equal((await post({ operacaoId: "a", etapa: "meli-dados:meli-a" })).status, 403);
+  globalThis.__atualizacao.ve = true;
   globalThis.__atualizacao.edita = true;
   globalThis.__atualizacao.usuario = false;
   assert.equal((await GET()).status, 401);

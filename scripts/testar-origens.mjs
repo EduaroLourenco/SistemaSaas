@@ -6,7 +6,7 @@ import {createJiti} from '../node_modules/jiti/lib/jiti.mjs';
 
 const pasta=await mkdtemp(path.join(tmpdir(),'gerizo-origens-'));
 let base={},gravacoes=[];
-const sb={from(tabela){
+const sb={auth:{getUser:async()=>({data:{user:globalThis.__sessaoOrigem===false?null:{id:'usuario'}}})},from(tabela){
  const filtros=[];let carga;
  const q={select(){return q},order(){return q},eq(k,v){filtros.push(r=>r[k]===v);return q},in(k,v){filtros.push(r=>v.includes(r[k]));return q},gte(k,v){filtros.push(r=>r[k]>=v);return q},lte(k,v){filtros.push(r=>r[k]<=v);return q},upsert(rows){carga=Array.isArray(rows)?rows:[rows];return q},range(a,b){return Promise.resolve(resultado(a,b))},then(ok,no){return Promise.resolve(resultado()).then(ok,no)}};
  function resultado(a=0,b=1e9){
@@ -28,9 +28,9 @@ const sb={from(tabela){
 globalThis.__origensSb=sb;
 try{
  const stub=path.join(pasta,'sb.cjs'),vazio=path.join(pasta,'vazio.cjs');
- await writeFile(stub,'module.exports={clientePrivilegiado:()=>globalThis.__origensSb};');
+ await writeFile(stub,'module.exports={clientePrivilegiado:()=>globalThis.__origensSb,clienteServidor:async()=>globalThis.__origensSb,carregarAutomacao:async()=>globalThis.__automacaoOrigem||{}};');
  await writeFile(vazio,'module.exports={};');
- const jiti=createJiti(import.meta.url,{moduleCache:false,alias:{'@':path.join(process.cwd(),'src'),'server-only':vazio,'@/lib/supabase/privilegiado':stub}});
+ const jiti=createJiti(import.meta.url,{moduleCache:false,alias:{'@':path.join(process.cwd(),'src'),'server-only':vazio,'@/lib/supabase/privilegiado':stub,'@/lib/supabase/servidor':stub,'@/lib/dados/automacao':stub}});
  const {gravarDiariasComOrigem}=await jiti.import(path.join(process.cwd(),'src/lib/sync/origem.ts'));
  base.vendas_diarias=[{conta_canal_id:'a',data:'2026-10-01',receita:500,visitas:70,investimento_ads:30},{conta_canal_id:'a',data:'2026-10-02',receita:400,visitas:40,investimento_ads:20}];
  await gravarDiariasComOrigem([{conta_canal_id:'a',data:'2026-10-01',visitas:90,origem_visitas:'api'},{conta_canal_id:'a',data:'2026-10-02',investimento_ads:25,origem_ads:'api'}]);
@@ -57,8 +57,25 @@ try{
  assert.equal(base.vendas_diarias[0].receita,300,'arquivo parcial preserva pedidos anteriores da API');
  assert.equal(base.vendas_diarias[0].origem_vendas,'mista');
  assert.equal(base.vendas_diarias[0].investimento_ads,30);
+ const {POST}=await jiti.import(path.join(process.cwd(),'src/app/api/lancamentos/route.ts'));
+ const enviar=edicoes=>POST(new Request('http://localhost/api/lancamentos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({edicoes})}));
+ base.contas_canal=[{id:'a',canal_id:'ml',operacao_id:'op'}];
+ globalThis.__automacaoOrigem={a:{vendas:'Mercado Livre',visitas:'Mercado Livre',ads:'Mercado Ads'}};
+ let resposta=await enviar([{contaCanalId:'a',data:'2026-10-01',receita:999}]);
+ assert.equal(resposta.status,409);assert.equal(base.vendas_diarias[0].receita,300);
+ globalThis.__automacaoOrigem={};
+ resposta=await enviar([{contaCanalId:'a',data:'2026-10-01',receita:999}]);
+ assert.equal(resposta.status,409,'origem mista também contém API e permanece protegida');
+ resposta=await enviar([{contaCanalId:'outra-empresa',data:'2026-10-01',receita:999}]);
+ assert.equal(resposta.status,403);
+ resposta=await enviar([{contaCanalId:'a',data:'2026-02-31',visitas:5}]);
+ assert.equal(resposta.status,400);
+ globalThis.__sessaoOrigem=false;
+ resposta=await enviar([{contaCanalId:'a',data:'2026-10-01',visitas:5}]);
+ assert.equal(resposta.status,401);
  console.log('OK: métricas independentes, dia sem coleta versus zero confirmado, origem mista, cancelamento e importação parcial sem apagar pedidos da API.');
 }finally{
  delete globalThis.__origensSb;
+ delete globalThis.__sessaoOrigem;delete globalThis.__automacaoOrigem;
  if(path.dirname(pasta)===path.resolve(tmpdir())&&path.basename(pasta).startsWith('gerizo-origens-'))await rm(pasta,{recursive:true,force:true});
 }

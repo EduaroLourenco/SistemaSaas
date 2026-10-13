@@ -66,7 +66,9 @@ export async function consolidarDiarias(
       .gte("data", de)
       .lte("data", ate)
       .order("data")
-  ).catch(() => [] as unknown[]);
+  ).catch((e: Error) => {
+    throw new Error(`Falha ao ler visitas para consolidar: ${e.message}`);
+  });
 
   type Acum = {
     receita: number;
