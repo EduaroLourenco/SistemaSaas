@@ -4,6 +4,7 @@ import { paginar } from "./paginar";
 import { carregarContasRecorte } from "./contas-recorte";
 import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
 import { diagnosticar, repartir } from "./queda-causa";
+import { carregarVitrineAtual, type PrecoVitrineAtual } from "./vitrine-atual";
 
 /**
  * Por que caiu — produto ou anúncio, período contra o anterior.
@@ -78,6 +79,8 @@ export type LinhaQueda = {
   diasComEstoque: number;
   status: string | null;
   precoAtual: number | null;
+  precoAtualData?: string | null;
+  precoAtualOrigem?: PrecoVitrineAtual["origem"];
   /**
    * Disponibilidade informada para uma linha com um único anúncio.
    * Vários anúncios podem compartilhar unidades: não somar seus saldos.
@@ -101,6 +104,7 @@ export type LinhaQueda = {
 };
 
 export type DadosQueda = {
+  skuFiltro?: string;
   de: string;
   ate: string;
   deAnterior: string;
@@ -250,6 +254,7 @@ export async function carregarQueda(opcoes: {
   nivel?: Nivel;
   canais?: string;
   sku?: string;
+  incluirSemVenda?: boolean;
 }): Promise<DadosQueda> {
   const sb = await clienteServidor();
   const nivel: Nivel = opcoes.nivel === "anuncio" ? "anuncio" : "produto";
@@ -271,6 +276,7 @@ export async function carregarQueda(opcoes: {
     titulo: string | null;
     quantidade: number;
     preco_unitario: string | number;
+    total: string | number | null;
     anuncio_id: string | null;
     codigo_externo: string | null;
     pedido_id: string;
@@ -285,6 +291,7 @@ export async function carregarQueda(opcoes: {
     conta_canal_id: string | null;
     status: string | null;
     preco_atual: string | number | null;
+    sincronizado_em: string | null;
     estoque: number | null;
   };
   type Desempenho = { anuncio_id: string; data: string; visitas: number };
@@ -303,12 +310,12 @@ export async function carregarQueda(opcoes: {
     }
   };
 
-  const [itens, anuncios, desempenho, retratos, contas, vitrineOutras, disputa] = await Promise.all([
+  const [itens, anuncios, desempenho, retratos, contas, vitrineOutras, disputa, vitrineAtual] = await Promise.all([
     paginar(() =>
       sb
         .from("pedido_itens")
         .select(
-          "sku,titulo,quantidade,preco_unitario,anuncio_id,codigo_externo,pedido_id,pedidos!inner(data,canal_id,conta_canal_id,cancelado)"
+          "sku,titulo,quantidade,preco_unitario,total,anuncio_id,codigo_externo,pedido_id,pedidos!inner(data,canal_id,conta_canal_id,cancelado)"
         )
         .gte("pedidos.data", deAnterior)
         .lte("pedidos.data", ate)
@@ -318,13 +325,14 @@ export async function carregarQueda(opcoes: {
     paginar(() =>
       sb
         .from("anuncios")
-        .select("id,codigo_externo,titulo,sku_canal,canal_id,conta_canal_id,status,preco_atual,estoque")
+        .select("id,codigo_externo,titulo,sku_canal,canal_id,conta_canal_id,status,preco_atual,estoque,sincronizado_em")
         .order("id")
     ) as unknown as Promise<Anuncio[]>,
     paginar(() =>
       sb
         .from("anuncio_desempenho_diario")
         .select("anuncio_id,data,visitas")
+        .not("visitas", "is", null)
         .gte("data", deAnterior)
         .lte("data", ate)
         .order("id")
@@ -333,6 +341,7 @@ export async function carregarQueda(opcoes: {
     carregarContasRecorte(),
     precosDeVitrine(sb, deAnterior, ate),
     disputaPorDia(sb, deAnterior, ate),
+    carregarVitrineAtual(),
   ]);
 
   const nomeConta = new Map(
@@ -359,6 +368,7 @@ export async function carregarQueda(opcoes: {
     comEstoque: Set<string>;
     status: string | null;
     precoAtual: number | null;
+    precoAtualMeta?: PrecoVitrineAtual;
     /* Dias-anúncio, não dias: produto com dois anúncios de catálogo tem dois
        registros no mesmo dia, e a proporção ganhando/total segue honesta. */
     catAntes: { ganhando: number; dias: number };
@@ -384,7 +394,7 @@ export async function carregarQueda(opcoes: {
   const chaveDoAnuncio = (a: Anuncio) =>
     nivel === "anuncio" ? `a:${a.id}` : `p:${normSku(a.sku_canal) || a.codigo_externo.toUpperCase()}`;
 
-  const comVisita = new Set(desempenho.map((d) => d.anuncio_id));
+  const comVisita = new Set(desempenho.map((d) => `${d.anuncio_id}|${d.data}`));
 
   // ── Vendas ──
   for (const it of itens) {
@@ -393,7 +403,7 @@ export async function carregarQueda(opcoes: {
     const an =
       (it.anuncio_id && anuncioPorId.get(it.anuncio_id)) ||
       (it.codigo_externo ? anuncioPorCodigo.get(`${p.conta_canal_id}|${it.codigo_externo.toUpperCase()}`) : undefined);
-    const sku = normSku(it.sku) || normSku(an?.sku_canal);
+    const sku = normSku(an?.sku_canal) || normSku(it.sku);
     if (opcoes.sku && sku !== normSku(opcoes.sku) && an?.codigo_externo.toUpperCase() !== normSku(opcoes.sku)) continue;
     const onde = nomeConta.get(p.conta_canal_id) ?? "Outros";
     let chave: string;
@@ -410,10 +420,10 @@ export async function carregarQueda(opcoes: {
     if (an) g.anuncios.add(an.id);
     const lado = p.data >= de ? g.agora : g.antes;
     const qtd = Number(it.quantidade) || 0;
-    const valor = qtd * n(it.preco_unitario);
+    const valor = it.total == null ? qtd * n(it.preco_unitario) : n(it.total);
     lado.receita += valor;
     lado.unidades += qtd;
-    if (an && comVisita.has(an.id)) lado.unidadesComVisita += qtd;
+    if (an && comVisita.has(`${an.id}|${p.data}`)) lado.unidadesComVisita += qtd;
     lado.pedidos.add(it.pedido_id);
 
     if (nivel === "produto") {
@@ -431,11 +441,15 @@ export async function carregarQueda(opcoes: {
   for (const a of anunciosNoRecorte) {
     const chave = chaveDoAnuncio(a);
     chavePorAnuncio.set(a.id, chave);
-    const g = grupos.get(chave) ?? (opcoes.sku ? grupo(chave, { codigo: a.codigo_externo, sku: normSku(a.sku_canal), titulo: a.titulo }) : undefined);
+    const g = grupos.get(chave) ?? (opcoes.sku || opcoes.incluirSemVenda ? grupo(chave, { codigo: nivel === "produto" ? normSku(a.sku_canal) || a.codigo_externo : a.codigo_externo, sku: normSku(a.sku_canal), titulo: a.titulo }) : undefined);
     if (!g) continue; // sem venda nos dois períodos: não há queda para explicar
     g.anuncios.add(a.id);
     g.onde.add(nomeConta.get(a.conta_canal_id ?? "") ?? "Outros");
     if (nivel === "anuncio") g.status = a.status;
+    const preco: PrecoVitrineAtual | undefined = vitrineAtual.get(a.id) ?? (n(a.preco_atual) > 0 ? { preco: n(a.preco_atual), data: a.sincronizado_em?.slice(0,10) ?? null, origem: "cadastro" } : undefined);
+    if (preco && (!g.precoAtualMeta || (preco.origem === "oferta" && g.precoAtualMeta.origem !== "oferta") || (preco.origem === g.precoAtualMeta.origem && preco.preco < g.precoAtualMeta.preco))) {
+      g.precoAtual = preco.preco; g.precoAtualMeta = preco;
+    }
   }
 
   // ── Visitas ──
@@ -473,21 +487,6 @@ export async function carregarQueda(opcoes: {
       } else if (!g.comEstoque.has(r.data)) g.semEstoque.add(r.data);
     }
     if (r.preco != null && n(r.preco) > 0) vitrineOutras.set(`${r.anuncio_id}|${r.data}`, n(r.preco));
-  }
-  /*
-   * Preço de hoje: o último preço de venda registrado de cada anúncio (não
-   * o do cadastro, que é o cheio). No produto, o menor entre os anúncios,
-   * que é o que o comprador vê primeiro.
-   */
-  const ultimo = new Map<string, { data: string; preco: number }>();
-  for (const [k, preco] of vitrineOutras) {
-    const [anuncioId, data] = k.split("|");
-    const u = ultimo.get(anuncioId);
-    if (!u || data > u.data) ultimo.set(anuncioId, { data, preco });
-  }
-  for (const [anuncioId, u] of ultimo) {
-    const g = grupos.get(chavePorAnuncio.get(anuncioId) ?? "");
-    if (g) g.precoAtual = g.precoAtual == null ? u.preco : Math.min(g.precoAtual, u.preco);
   }
   for (const [k, preco] of vitrineOutras) {
     const [anuncioId, data] = k.split("|");
@@ -556,6 +555,8 @@ export async function carregarQueda(opcoes: {
       diasComEstoque: g.comEstoque.size,
       status: g.status,
       precoAtual: g.precoAtual,
+      precoAtualData: g.precoAtualMeta?.data,
+      precoAtualOrigem: g.precoAtualMeta?.origem,
       estoqueAtual,
       sobEncomenda,
       catalogo,
@@ -580,6 +581,7 @@ export async function carregarQueda(opcoes: {
 
   lista.sort((a, b) => a.delta - b.delta);
   return {
+    skuFiltro: opcoes.sku,
     de,
     ate,
     deAnterior,
@@ -639,22 +641,22 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
     [conta, sku] = resto.split("|");
   } else return [];
 
-  const itensQ = sb
+  const itensQ = () => sb
     .from("pedido_itens")
-    .select("quantidade,preco_unitario,anuncio_id,sku,pedidos!inner(data,canal_id,conta_canal_id,cancelado)")
+    .select("quantidade,preco_unitario,total,anuncio_id,sku,pedidos!inner(data,canal_id,conta_canal_id,cancelado)")
     .gte("pedidos.data", de)
     .lte("pedidos.data", ate)
     .eq("pedidos.cancelado", false)
     .order("id");
   const filtroItens =
     tipo === "a:"
-      ? () => itensQ.eq("anuncio_id", resto)
+      ? () => itensQ().eq("anuncio_id", resto)
       : tipo === "s:"
-        ? () => itensQ.eq("pedidos.conta_canal_id", conta!).ilike("sku", sku!)
+        ? () => itensQ().eq("pedidos.conta_canal_id", conta!).ilike("sku", sku!)
         : () =>
             anuncioIds.length
-              ? itensQ.or(`sku.ilike."${sku}",anuncio_id.in.(${anuncioIds.join(",")})`)
-              : itensQ.ilike("sku", sku!);
+              ? itensQ().or(`sku.ilike.${JSON.stringify(sku)},anuncio_id.in.(${anuncioIds.join(",")})`)
+              : itensQ().ilike("sku", sku!);
 
   const lerRetratos = async () => {
     if (!anuncioIds.length) return [] as { anuncio_id: string; data: string; estoque: number; preco?: number | null }[];
@@ -666,7 +668,7 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
 
   const [itens, desempenho, retratos] = await Promise.all([
     paginar(filtroItens) as unknown as Promise<
-      { quantidade: number; preco_unitario: number | string; pedidos: { data: string; canal_id: string; conta_canal_id: string } | null }[]
+      { quantidade: number; preco_unitario: number | string; total: number | string | null; pedidos: { data: string; canal_id: string; conta_canal_id: string } | null }[]
     >,
     anuncioIds.length
       ? paginar(() =>
@@ -696,7 +698,7 @@ export async function serieDaQueda(chave: string, de: string, ate: string, canai
     const x = dia(p.data);
     const q = Number(it.quantidade) || 0;
     x.unidades += q;
-    x.receita += q * n(it.preco_unitario);
+    x.receita += it.total == null ? q * n(it.preco_unitario) : n(it.total);
   }
   for (const v of desempenho as { data: string; visitas: number }[]) {
     const x = dia(v.data);

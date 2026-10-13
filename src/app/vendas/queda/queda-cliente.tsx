@@ -25,6 +25,8 @@ import { Pagination, usePagination } from "@/components/ui/pagination";
 import { AXIS, GRID } from "@/components/ui/chart";
 import { money, moneyShort, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { COLUNAS_QUEDA, colunaTexto, ordenarFiltrarQueda, type ColunaQueda } from "@/lib/queda-filtros";
+import { EstoqueProduto } from "@/components/painel/estoque-produto";
 import type { Causa, DadosQueda, DiaQueda, LinhaQueda, Nivel } from "@/lib/dados/queda";
 
 /**
@@ -85,10 +87,10 @@ function Var({ v, inverso }: { v: number | null; inverso?: boolean }) {
 export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
   const router = useRouter();
   const [busca, setBusca] = React.useState("");
-  const [mostrar, setMostrar] = React.useState<Mostrar>("quedas");
+  const [mostrar, setMostrar] = React.useState<Mostrar>(dados.skuFiltro ? "todos" : "quedas");
   const [causa, setCausa] = React.useState<string>("");
-  const [ordem, setOrdem] = React.useState<"reais" | "pct">("reais");
-  const [aberta, setAberta] = React.useState<string | null>(null);
+  const [colunas, setColunas] = React.useState({ coluna: "delta" as ColunaQueda, crescente: true, minimo: "", maximo: "", texto: "", presenca: "todos" });
+  const [aberta, setAberta] = React.useState<string | null>(dados.skuFiltro ? dados.linhas[0]?.chave ?? null : null);
 
   const navegar = (mudar: Partial<{ de: string; ate: string; nivel: Nivel; canais: string[] }>) => {
     const q = new URLSearchParams();
@@ -99,6 +101,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
     q.set("nivel", mudar.nivel ?? dados.nivel);
     const canais = mudar.canais ?? dados.recorte;
     if (canais.length) q.set("canais", canais.join(","));
+    if (dados.skuFiltro) q.set("sku", dados.skuFiltro);
     router.push(`/vendas/queda?${q}`);
   };
 
@@ -106,7 +109,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
 
   const linhas = React.useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    return dados.linhas
+    const filtradas = dados.linhas
       .filter((l) => (mostrar === "quedas" ? l.delta < 0 : mostrar === "altas" ? l.delta > 0 : true))
       .filter((l) => !causa || l.causa === causa)
       .filter(
@@ -115,15 +118,9 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
           l.codigo.toLowerCase().includes(termo) ||
           l.sku.toLowerCase().includes(termo) ||
           l.titulo.toLowerCase().includes(termo)
-      )
-      .sort((a, b) =>
-        ordem === "pct"
-          ? (a.deltaPct ?? (a.delta < 0 ? -100 : 100)) - (b.deltaPct ?? (b.delta < 0 ? -100 : 100)) || a.delta - b.delta
-          : mostrar === "altas"
-            ? b.delta - a.delta
-            : a.delta - b.delta
       );
-  }, [dados.linhas, busca, mostrar, causa, ordem]);
+    return ordenarFiltrarQueda(filtradas, colunas);
+  }, [dados.linhas, busca, mostrar, causa, colunas]);
 
   const { visible, pagination } = usePagination(linhas, 25);
 
@@ -276,7 +273,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                     { value: "todos" as Mostrar, label: "Todos" },
                   ]}
                   value={mostrar}
-                  onChange={setMostrar}
+                  onChange={(v) => { setMostrar(v); setColunas((f) => ({ ...f, crescente: v !== "altas" })); }}
                 />
                 <div className="w-[180px]">
                   <Select value={causa} onChange={(e) => setCausa(e.target.value)} aria-label="Causa">
@@ -288,15 +285,17 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                     ))}
                   </Select>
                 </div>
-                <Segmented
-                  options={[
-                    { value: "reais" as const, label: "Maior em R$" },
-                    { value: "pct" as const, label: "Maior em %" },
-                  ]}
-                  value={ordem}
-                  onChange={setOrdem}
-                />
+                <Link className="text-xs text-brand" href={`/produtos?de=${dados.de}&ate=${dados.ate}&canais=${encodeURIComponent(dados.recorte.join(","))}`}>Ver preços por canal →</Link>
               </div>
+              <details className="border-b border-line px-4 py-2"><summary className="min-h-9 cursor-pointer text-xs font-medium text-ink-2">Ordenar e filtrar qualquer coluna · {COLUNAS_QUEDA.find(([c]) => c === colunas.coluna)?.[1]}</summary>
+                <div className="flex flex-wrap items-end gap-2 py-2">
+                  <label className="text-xs text-ink-3">Coluna<Select aria-label="Coluna para ordenar e filtrar" value={colunas.coluna} onChange={(e) => setColunas({ ...colunas, coluna:e.target.value as ColunaQueda, minimo:"",maximo:"",texto:"" })}>{COLUNAS_QUEDA.map(([c,n]) => <option key={c} value={c}>{n}</option>)}</Select></label>
+                  <Select aria-label="Sentido da ordenação" value={colunas.crescente ? "asc" : "desc"} onChange={(e) => setColunas({ ...colunas, crescente:e.target.value === "asc" })}><option value="asc">Crescente</option><option value="desc">Decrescente</option></Select>
+                  <Select aria-label="Presença de dados" value={colunas.presenca} onChange={(e) => setColunas({ ...colunas,presenca:e.target.value })}><option value="todos">Todos os registros</option><option value="com">Com informação</option><option value="sem">Sem informação</option></Select>
+                  {colunaTexto(colunas.coluna) ? <input aria-label="Filtrar texto da coluna" placeholder="Contém…" value={colunas.texto} onChange={(e) => setColunas({ ...colunas,texto:e.target.value })} className="h-10 max-w-full rounded-r1 border border-line bg-panel px-3 text-sm" /> : (["minimo","maximo"] as const).map((k) => <input key={k} aria-label={k === "minimo" ? "Valor mínimo" : "Valor máximo"} placeholder={k === "minimo" ? "Mínimo" : "Máximo"} inputMode="decimal" value={colunas[k]} onChange={(e) => setColunas({ ...colunas,[k]:e.target.value })} className="h-10 w-28 rounded-r1 border border-line bg-panel px-3 text-sm" />)}
+                  <button type="button" className="min-h-10 px-2 text-xs text-brand" onClick={() => setColunas({coluna:"delta",crescente:true,minimo:"",maximo:"",texto:"",presenca:"todos"})}>Limpar</button>
+                </div>
+              </details>
 
               {linhas.length === 0 ? (
                 <p className="px-4 py-6 text-[13px] text-ink-3">Nada neste filtro.</p>
@@ -436,12 +435,13 @@ function Coluna({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 
 /* ══ O detalhe: a frase, a conta e o dia a dia ═══════════════ */
 
-function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
+export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
   const [aba, setAba] = React.useState("resumo");
   const [anuncios, setAnuncios] = React.useState<LinhaQueda[] | null>(null);
   const [anuncioAberto, setAnuncioAberto] = React.useState<string | null>(null);
   const [serie, setSerie] = React.useState<DiaQueda[] | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
+  const [diaEscolhido, setDiaEscolhido] = React.useState("");
 
   React.useEffect(() => {
     let vivo = true;
@@ -477,31 +477,32 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
     <div className="flex flex-col gap-4 bg-panel-2 px-4 pb-4 pt-1 md:pl-10">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
         <div className="flex flex-wrap gap-1" role="group" aria-label={`Análise de ${l.codigo}`}>
-          {[{ id: "resumo", nome: "Resumo" }, ...(l.nivel === "produto" ? [{ id: "anuncios", nome: `Canais e anúncios${anuncios ? ` (${anuncios.length})` : ""}` }] : []), { id: "evolucao", nome: "Evolução" }].map((a) => <button key={a.id} type="button" aria-pressed={aba === a.id} onClick={() => setAba(a.id)} className={cn("rounded-lg px-3 py-2 text-xs font-medium", aba === a.id ? "bg-brand text-white" : "text-ink-2 hover:bg-panel-3")}>{a.nome}</button>)}
+          {[{ id: "resumo", nome: "Resumo" }, ...(l.nivel === "produto" ? [{ id: "anuncios", nome: `Canais e anúncios${anuncios ? ` (${anuncios.length})` : ""}` }] : []), { id: "evolucao", nome: "Evolução" }, { id: "estoques", nome: "Estoques" }].map((a) => <button key={a.id} type="button" aria-pressed={aba === a.id} onClick={() => setAba(a.id)} className={cn("min-h-11 rounded-lg px-3 py-2 text-xs font-medium", aba === a.id ? "bg-brand text-white" : "text-ink-2 hover:bg-panel-3")}>{a.nome}</button>)}
         </div>
-        <Link className="text-xs font-medium text-brand" href={`/integracoes/estoques?sku=${encodeURIComponent(l.sku)}`}>Ver estoques por origem →</Link>
       </div>
       {aba === "resumo" && <>
-      <div className="rounded-xl border border-line bg-panel p-4">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Leitura dos dados · {l.onde}</p>
+      <Disclosure title={`Leitura dos dados · ${l.causa}`}>
         <p className="text-[13px] leading-relaxed text-ink"><Badge tone={TOM[l.causa]}>{l.causa}</Badge> <span className="ml-1">{l.explicacao}</span></p>
         <p className="mt-3 text-xs text-ink-2"><strong>Conferir agora: </strong>{l.causa === "sem estoque" ? "saldos e disponibilidade em cada origem." : l.causa === "preço subiu" || l.causa === "vendeu mais barato" ? "preço, promoções e margem do anúncio." : l.causa === "perdeu visitas" ? "investimento, exposição e posição do anúncio no canal." : l.causa === "conversão caiu" || l.causa === "parou de vender" ? "oferta, frete, prazo e disponibilidade." : "quais canais e anúncios concentraram a mudança."}</p>
-      </div>
+      </Disclosure>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         <Numero rotulo="Receita" antes={money(l.antes.receita)} agora={money(l.agora.receita)} />
         <Numero rotulo="Unidades" antes={count(l.antes.unidades)} agora={count(l.agora.unidades)} />
+        <Numero rotulo="Unidades por dia" antes={(l.antes.unidades/dados.dias).toLocaleString("pt-BR", { maximumFractionDigits:2 })} agora={(l.agora.unidades/dados.dias).toLocaleString("pt-BR", { maximumFractionDigits:2 })} />
+        <Numero rotulo="Conversão (unidades / visitas)" antes={l.antes.conversao == null ? "sem medição" : pct(l.antes.conversao,2)} agora={l.agora.conversao == null ? "sem medição" : pct(l.agora.conversao,2)} extra={`Base: ${pct(l.agora.cobertura * 100,0)} das unidades com visitas no dia`} />
         <Numero
           rotulo="Visitas"
           antes={l.antes.visitas != null ? count(l.antes.visitas) : "—"}
           agora={l.agora.visitas != null ? count(l.agora.visitas) : "—"}
+          extra={varPct(l.agora.visitas,l.antes.visitas) == null ? undefined : `Variação ${pct(varPct(l.agora.visitas,l.antes.visitas)!,1)}`}
         />
         {/* Preço: o anunciado existe mesmo sem venda; o vendido, só com venda. */}
         <Numero
           rotulo="Preço anunciado (médio)"
           antes={l.antes.precoVitrine != null ? money(l.antes.precoVitrine) : "sem registro"}
           agora={l.agora.precoVitrine != null ? money(l.agora.precoVitrine) : "sem registro"}
-          extra={l.precoAtual != null ? `hoje ${money(l.precoAtual)}` : undefined}
+          extra={l.precoAtual != null ? `${l.precoAtualOrigem === "cadastro" ? "Cadastro (cheio)" : "Última oferta"}: ${money(l.precoAtual)}${l.precoAtualData ? ` · ${dataBr(l.precoAtualData)}` : ""}` : undefined}
         />
         <Numero
           rotulo="Preço vendido (médio)"
@@ -551,8 +552,9 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
           </div>
         </div>
       )}
-      <Disclosure title="Entender as métricas"><p>Receita e unidades vêm dos pedidos não cancelados. Visitas só aparecem quando o canal as fornece. Preço anunciado é a média dos registros disponíveis; preço vendido é receita dividida por unidades. A comparação indica hipóteses, não comprova a causa. Os fatores repartem a diferença matematicamente.</p></Disclosure>
+      <Disclosure title="Como os fatores explicam a diferença em reais"><p>Receita = unidades × preço médio vendido. Quando todas as vendas têm visitas registradas, também vale visitas × conversão × preço. A conta distribui {money(l.delta)} conforme a variação proporcional de cada fator; parcelas positivas compensam as negativas. Não é dinheiro perdido medido separadamente nem prova de causa.</p><p className="mt-2">Sem cobertura completa de visitas, usamos unidades e preço. Conversão usa apenas unidades nos anúncios e dias com visitas medidas. O preço médio anunciado pertence ao período; a última oferta exibe a data da consulta.</p></Disclosure>
       </>}
+      {aba === "estoques" && <EstoqueProduto sku={l.sku} anuncio={l.nivel === "anuncio" ? l.codigo : undefined} />}
 
       {aba === "anuncios" && (
         <div>
@@ -581,7 +583,7 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
         ) : (
           <div className="h-[220px] rounded-r1 border border-line bg-panel p-2">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={serie} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
+              <ComposedChart data={serie} margin={{ top: 6, right: 4, left: 0, bottom: 0 }} onClick={(e) => { if (e.activeLabel) setDiaEscolhido(String(e.activeLabel)); }}>
                 <CartesianGrid {...GRID} />
                 <ReferenceArea yAxisId="r" x1={dados.deAnterior} x2={dados.ateAnterior} fill="var(--panel-3)" fillOpacity={0.6} />
                 <XAxis dataKey="data" {...AXIS} tickFormatter={dataBr} minTickGap={24} />
@@ -642,7 +644,13 @@ function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
             </ResponsiveContainer>
           </div>
         )}
-        <p className="mt-1 text-[11px] text-ink-3">A faixa cinza é o período anterior.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2"><p className="text-[11px] text-ink-3">Clique em um pico ou escolha o dia. Cinza: período anterior.</p><input type="date" aria-label="Dia do detalhe" min={dados.deAnterior} max={dados.ate} value={diaEscolhido} onChange={(e) => setDiaEscolhido(e.target.value)} onBlur={(e) => setDiaEscolhido(e.target.value)} className="min-h-10 rounded-r1 border border-line bg-panel px-2 text-xs" /></div>
+        {serie?.filter((d) => d.data === diaEscolhido).map((d) => <div key={d.data} className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4" aria-live="polite">
+          <Numero rotulo={`Vendas · ${dataBr(d.data)}`} agora={money(d.receita)} antes={`${count(d.unidades)} unidades`} rotuloAntes="" />
+          <Numero rotulo="Preço vendido" agora={d.precoVendido == null ? "sem venda" : money(d.precoVendido)} antes="média do dia" rotuloAntes="" />
+          <Numero rotulo="Preço anunciado" agora={d.precoVitrine == null ? "sem registro" : money(d.precoVitrine)} antes="menor registro do dia" rotuloAntes="" />
+          <Numero rotulo="Visitas" agora={d.visitas == null ? "sem medição" : count(d.visitas)} antes={l.onde} rotuloAntes="" />
+        </div>)}
       </div>}
     </div>
   );

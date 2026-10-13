@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {ordenarFiltrarQueda,COLUNAS_QUEDA,valorQueda} from '../src/lib/queda-filtros.ts';
+import {repartir} from '../src/lib/dados/queda-causa.ts';
+const lado={receita:100,unidades:10,visitas:100,conversao:10,precoVendido:10,precoVitrine:11,cobertura:1};
+const a={codigo:'SKU1',sku:'SKU1',titulo:'Produto 1',onde:'Meli',curva:'A',causa:'cresceu',delta:10,deltaPct:10,antes:lado,agora:{...lado,visitas:0},precoAtual:11,estoqueAtual:0};
+const b={...a,codigo:'SKU2',titulo:'Produto 2',onde:'Shopee',delta:-20,agora:{...lado,visitas:null},precoAtual:null,estoqueAtual:null};
+const filtro={coluna:'delta',crescente:true,minimo:'',maximo:'',texto:'',presenca:'todos'};
+assert.equal(ordenarFiltrarQueda([a,b],filtro)[0],b);
+assert.deepEqual(ordenarFiltrarQueda([a,b],{...filtro,coluna:'estoqueAtual',minimo:'0',maximo:'0'}),[a]);
+assert.deepEqual(ordenarFiltrarQueda([a,b],{...filtro,coluna:'visitas',presenca:'sem'}),[b]);
+assert.deepEqual(ordenarFiltrarQueda([a,b],{...filtro,coluna:'onde',texto:'shopee'}),[b]);
+assert.equal(ordenarFiltrarQueda([b,a],{...filtro,coluna:'precoAtual',crescente:false})[1],b);
+for(const [c] of COLUNAS_QUEDA)assert.notEqual(valorQueda(a,c),undefined);
+const efeito=repartir(lado,{...lado,receita:50,unidades:5,visitas:50,cobertura:0.9},-50);
+assert.equal(efeito.visitas,null,'Não atribui queda a visitas quando faltam canais ou dias');
+assert.equal(efeito.unidades+efeito.preco,-50);
+console.log('OK: filtros em todas as colunas, texto, limites, nulos por último, estoque zero e decomposição com cobertura parcial.');

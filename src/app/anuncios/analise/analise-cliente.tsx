@@ -2,6 +2,7 @@
 
 import { linkDoAnuncio } from "@/lib/links";
 import * as React from "react";
+import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import {
   BarraFiltros,
@@ -851,6 +852,7 @@ function RaioX({
       width="640px"
       footer={
         <>
+          <Link className="inline-flex min-h-11 flex-1 items-center justify-center rounded-r1 border border-line px-3 text-xs text-brand" href={`/produtos?sku=${encodeURIComponent(item.sku || item.mlb)}`}>Preços, histórico e estoque</Link>
           {linkDoAnuncio(item.mlb) ? (
             <a
               href={linkDoAnuncio(item.mlb)!}

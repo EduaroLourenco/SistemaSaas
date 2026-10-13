@@ -29,7 +29,7 @@ export function repartir(antes: Lado, agora: Lado, delta: number): LinhaQueda["e
    * que mistura as duas; aí a leitura honesta é unidades × preço. A
    * conversão aqui é unidades TOTAIS ÷ visitas, para a soma fechar.
    */
-  if (antes.visitas && agora.visitas && antes.cobertura >= 0.8 && agora.cobertura >= 0.8) {
+  if (antes.visitas && agora.visitas && antes.cobertura >= 0.9999 && agora.cobertura >= 0.9999) {
     const lnV = Math.log(agora.visitas / antes.visitas);
     const lnC = Math.log(agora.unidades / agora.visitas / (antes.unidades / antes.visitas));
     return { visitas: parte(lnV), conversao: parte(lnC), unidades: null, preco: parte(lnP) };

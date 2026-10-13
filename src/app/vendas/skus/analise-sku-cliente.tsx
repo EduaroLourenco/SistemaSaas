@@ -2,6 +2,7 @@
 
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
@@ -455,6 +456,8 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                     SKU
                   </th>
                   <th className={`${th} text-right`}>Total</th>
+                  <th className={`${th} text-right`}>Un./dia</th>
+                  {aba !== "curva" && <th className={`${th} text-right`}>Preço vendido</th>}
                   {aba !== "curva" &&
                     colunas.map((c) => (
                       <th key={c.chave} className={`${th} text-right`}>
@@ -483,9 +486,9 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                     <td className={`${td} sticky left-0 bg-panel z-10`}>
                       <div className="flex items-center gap-1.5">
                         <Badge tone={TOM_CURVA[l.curva]}>{l.curva}</Badge>
-                        <span className="num text-[12.5px] text-ink font-medium">
+                        <Link className="num text-[12.5px] text-brand font-medium hover:underline" href={`/vendas/queda?sku=${encodeURIComponent(l.sku)}&de=${periodo.inicio}&ate=${periodo.fim}&canais=${encodeURIComponent(dados.canalId || "")}`} title="Abrir análise, anúncios e estoque do produto">
                           {l.sku}
-                        </span>
+                        </Link>
                       </div>
                       <p className="text-[12px] text-ink-3 truncate max-w-[230px]">
                         {l.titulo}
@@ -494,6 +497,8 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                     <td className={`${td} text-right num text-[12.5px] text-ink font-medium`}>
                       {formatar(metrica === "receita" ? l.receita : l.unidades)}
                     </td>
+                    <td className={`${td} text-right num text-xs text-ink-2`}>{(l.unidades / Math.max(1,(Date.parse(periodo.fim)-Date.parse(periodo.inicio))/86400000+1)).toLocaleString("pt-BR",{maximumFractionDigits:2})}</td>
+                    {aba !== "curva" && <td className={`${td} text-right num text-xs text-ink-2`}>{l.precoMedio == null ? "—" : money(l.precoMedio)}</td>}
 
                     {aba !== "curva" &&
                       colunas.map((c) => {

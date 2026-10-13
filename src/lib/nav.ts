@@ -89,6 +89,7 @@ export const NAV: NavGroup[] = [
    * dela.
    */
   { label: "Tráfego pago", icon: Megaphone, href: "/anuncios/trafego-pago" },
+  { label: "Produtos e preços", icon: Tags, href: "/produtos" },
   { label: "Conversar", icon: MessagesSquare, href: "/conversa" },
   { label: "Alertas", icon: Bell, href: "/alertas" },
   { label: "Importar", icon: Upload, href: "/importar" },
