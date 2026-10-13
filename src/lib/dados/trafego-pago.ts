@@ -108,6 +108,7 @@ export type PeriodoResumo = {
 
 /** Um dia da série de mídia, de `vendas_diarias`. */
 export type DiaTrafego = {
+  midiaInformada?: boolean;
   data: string;
   investimento: number;
   /** Receita que o canal atribuiu à mídia naquele dia. */
@@ -117,6 +118,8 @@ export type DiaTrafego = {
 };
 
 export type DadosTrafegoPago = {
+  contasDoRelatorio?: string[];
+  contaNaoIdentificada?: boolean;
   vazio: boolean;
   /** A janela analisada, `inicio|fim`. As outras ficam em `periodos`. */
   janela: string;
@@ -224,7 +227,8 @@ export async function carregarTrafegoPago(
   for (const d of diarias) {
     const data = String(d.data).slice(0, 10);
     if (data < deSerie || data > ateSerie) continue;
-    const x = porDia.get(data) ?? { data, investimento: 0, receitaAds: 0, receita: 0 };
+    const x = porDia.get(data) ?? { data, investimento: 0, receitaAds: 0, receita: 0, midiaInformada: false };
+    x.midiaInformada = x.midiaInformada || d.investimento_ads != null;
     x.investimento += n(d.investimento_ads);
     x.receitaAds += n(d.receita_ads);
     x.receita += n(d.receita);
@@ -353,7 +357,12 @@ export async function carregarTrafegoPago(
 
   const [inicio, fim] = escolhida.split("|");
 
-  const base = await carregarBaseMargem({ inicio, fim, canalId: recorte });
+  const idsContasRelatorio = new Set(noCanal.filter((a) => `${a.inicio}|${a.fim}` === escolhida).map((a) => contaDoAnuncio.get(a.codigo_externo)).filter((v): v is string => Boolean(v)));
+  const contaNaoIdentificada = ads.some((a) => !contaDoAnuncio.has(a.codigo_externo));
+  const baseCompleta = await carregarBaseMargem({ inicio, fim, canalId: recorte });
+  // Mesmo sem filtro, o relatório não pode usar vendas de canais sem mídia
+  // ou de contas que não têm relatório nesta janela como base do TACoS.
+  const base = { ...baseCompleta, itens: baseCompleta.itens.filter((it) => idsContasRelatorio.has(it.contaCanalId)) };
   const margemPorMlb = new Map(agregar(base, "anuncio").map((l) => [l.chave, l]));
 
   /* ── Agrega a mídia por anúncio ── */
@@ -418,7 +427,7 @@ export async function carregarTrafegoPago(
     const i = info.get(mlb);
     const m = margemPorMlb.get(mlb);
     const receitaReal = m?.receita ?? 0;
-    const margem = m?.margem ?? null;
+    const margem = m && m.cobertura >= 99.5 ? m.margem : null;
     if (margem != null) comCusto += 1;
 
     const sobra = margem == null ? null : r2(margem - a.inv);
@@ -453,7 +462,7 @@ export async function carregarTrafegoPago(
       receitaIndireta: r2(a.recI),
       receitaReal: r2(receitaReal),
       margem,
-      margemPct: m?.margemPct ?? null,
+      margemPct: margem != null ? m?.margemPct ?? null : null,
       cpc: a.cli > 0 ? r2(a.inv / a.cli) : null,
       acos: a.rec > 0 ? r2((a.inv * 100) / a.rec) : null,
       roas: a.inv > 0 && a.rec > 0 ? r2(a.rec / a.inv) : null,
@@ -472,7 +481,8 @@ export async function carregarTrafegoPago(
       let margem: number | null = null;
       let completa = true;
       for (const mlb of c.mlbs) {
-        const m = margemPorMlbMap.get(mlb)?.margem;
+        const linha = margemPorMlbMap.get(mlb);
+        const m = linha && linha.cobertura >= 99.5 ? linha.margem : null;
         if (m == null || (porMlb.get(mlb)?.campanhas.size ?? 0) > 1) completa = false;
         if (m != null) margem = (margem ?? 0) + m;
       }
@@ -505,7 +515,7 @@ export async function carregarTrafegoPago(
     }))
     .sort((a, b) => a.inicio.localeCompare(b.inicio));
 
-  const conferencia = conferirInvestimento(diarias, inicio, fim, r2(ads.reduce((s, a) => s + n(a.investimento), 0)));
+  const conferencia = conferirInvestimento(diarias.filter((d) => idsContasRelatorio.has(d.conta_canal_id ?? "")), inicio, fim, r2(ads.reduce((s, a) => s + n(a.investimento), 0)), idsContasRelatorio.size);
 
   /* ── Totais ── */
 
@@ -513,10 +523,10 @@ export async function carregarTrafegoPago(
   const receitaAtribuida = r2(linhas.reduce((s, l) => s + l.receitaAtribuida, 0));
   const receitaReal = r2(linhas.reduce((s, l) => s + l.receitaReal, 0));
   const receitaIndireta = r2(linhas.reduce((s, l) => s + l.receitaIndireta, 0));
-  const margemTotal = linhas.reduce<number | null>(
+  const margemTotal = linhas.every((l) => l.margem != null) ? linhas.reduce<number | null>(
     (s, l) => (l.margem == null ? s : (s ?? 0) + l.margem),
     null
-  );
+  ) : null;
 
   /*
    * O denominador do TACoS é o faturamento de TODOS os anúncios da conta
@@ -527,10 +537,12 @@ export async function carregarTrafegoPago(
   const receitaTotalConta = r2(
     [...margemPorMlb.values()].reduce((s, l) => s + (l.receita ?? 0), 0)
   );
-  const tacos = receitaTotalConta > 0 ? r2((investimento * 100) / receitaTotalConta) : null;
+  const tacos = !contaNaoIdentificada && receitaTotalConta > 0 ? r2((investimento * 100) / receitaTotalConta) : null;
 
   return {
     vazio: false,
+    contasDoRelatorio: [...idsContasRelatorio].map((id) => { const c = contas.get(id); return c ? `${c.canalNome} · ${c.contaNome}` : "Conta não identificada"; }),
+    contaNaoIdentificada,
     janela: escolhida,
     recorte: recorte ?? "",
     opcoes: opcoesRecorte(contasRecorte),

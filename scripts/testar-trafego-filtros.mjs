@@ -28,7 +28,7 @@ try {
 
   const vazio = await stub("vazio", "module.exports={}");
   const banco = await stub("banco", `exports.clienteServidor=async()=>({from(t){return {select(){return this},order(){return this},range:async(a,b)=>({data:globalThis.__trafego.tabelas[t].slice(a,b+1),error:null})}}});`);
-  const margem = await stub("margem", `exports.carregarBaseMargem=async(f)=>{globalThis.__trafego.filtro=f;return globalThis.__trafego.margens[f.canalId??'todos']};exports.agregar=b=>b;`);
+  const margem = await stub("margem", `exports.carregarBaseMargem=async(f)=>{globalThis.__trafego.filtro=f;return {itens:globalThis.__trafego.margens[f.canalId??'todos']}};exports.agregar=b=>b.itens;`);
   const contas = await stub("contas", `exports.carregarContasRecorte=async()=>globalThis.__trafego.contas;`);
   const jiti = createJiti(import.meta.url, { moduleCache: false, alias: {
     "@/lib/supabase/servidor": banco,
@@ -48,7 +48,7 @@ try {
       anuncios: ["a", "b"].map((c) => ({ codigo_externo: "ML" + c.toUpperCase(), sku_canal: c, titulo: c, tipo: "classico", canal_id: "meli", conta_canal_id: c })),
       vendas_diarias: [diaria("2026-09-30", "a", 10), diaria("2026-10-01", "a", 20), diaria("2026-10-02", "a", 60), diaria("2026-10-01", "b", 900), diaria("2026-10-01", "loja", 2000)],
     },
-    margens: { "conta:a": [{ chave: "MLA", receita: 300, margem: 60, margemPct: 20 }], todos: [{ chave: "MLA", receita: 300 }, { chave: "MLB", receita: 2700 }] },
+    margens: { "conta:a": [{ chave: "MLA", contaCanalId:'a', receita: 300, margem: 60, margemPct: 20, cobertura:100 }], todos: [{ chave: "MLA", contaCanalId:'a', receita: 300 }, { chave: "MLB", contaCanalId:'b', receita: 2700 }, {chave:'LOJA',contaCanalId:'loja',receita:90000}] },
   };
   const r = await carregarTrafegoPago(atual.janela, atual.canais, { de: "2026-09-30", ate: "2026-10-02" });
   assert.equal(r.totais.investimento, 30, "Não soma janelas sobrepostas nem outra conta");
@@ -58,6 +58,11 @@ try {
   assert.equal(r.conferencia.diasRegistrados, 2);
   assert.equal(r.serie.reduce((s, d) => s + d.investimento, 0), 90, "Calendário é independente da janela do relatório");
   assert.equal((await carregarTrafegoPago(undefined, "conta:a")).janela, "2026-09-30|2026-10-02");
+  const geral = await carregarTrafegoPago('2026-09-30|2026-10-02');
+  assert.equal(geral.totais.receitaTotalConta,300,'Sem filtro exclui canais e contas ausentes do relatório');
+  assert.equal(geral.conferencia.diario,90,'Conferência exclui gasto de outras contas');
+  globalThis.__trafego.margens['conta:a'][0].cobertura=50;
+  assert.equal((await carregarTrafegoPago(atual.janela,atual.canais)).totais.sobraAposMidia,null,'Margem parcial não vira lucro depois da mídia');
   const semRelatorio = await carregarTrafegoPago(undefined, "vtex", { de: "2026-10-01", ate: "2026-10-01" });
   assert.equal(semRelatorio.vazio, true);
   assert.equal(semRelatorio.serie[0].investimento, 2000, "Canal sem relatório preserva série diária");

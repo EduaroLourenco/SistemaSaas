@@ -54,6 +54,8 @@ const dataBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago }) {
   const [aba, setAba] = React.useState<Aba>("anuncios");
   const [busca, setBusca] = React.useState("");
+  const [situacao, setSituacao] = React.useState("");
+  const [ordem, setOrdem] = React.useState<"investimento" | "acos" | "receitaReal" | "cliques">("investimento");
   const { totais, periodos, campanhas, linhas, conferencia } = dados;
   const router = useRouter();
 
@@ -93,15 +95,14 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
 
   const visiveis = React.useMemo(() => {
     const t = busca.trim().toLowerCase();
-    if (!t) return linhas;
-    return linhas.filter(
+    return linhas.filter((l) => !situacao || l.situacao === situacao).filter(
       (l) =>
         l.mlb.toLowerCase().includes(t) ||
         l.sku.toLowerCase().includes(t) ||
         l.titulo.toLowerCase().includes(t) ||
         l.campanhas.some((c) => c.toLowerCase().includes(t))
-    );
-  }, [linhas, busca]);
+    ).sort((a,b) => (b[ordem] ?? -Infinity) - (a[ordem] ?? -Infinity));
+  }, [linhas, busca, situacao, ordem]);
 
   const semRetorno = linhas.filter((l) => l.situacao === "sem_retorno");
   const semAds = linhas.filter((l) => l.situacao === "vendeu_sem_ads");
@@ -185,9 +186,9 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                       return (
                         <div className="panel px-2.5 py-2 text-[12px]" style={{ boxShadow: "var(--sh-3)" }}>
                           <p className="mb-1 font-semibold text-ink-2">{dataBr(String(label))}</p>
-                          <p className="num">mídia {money(d.investimento)}</p>
+                          <p className="num">mídia {d.midiaInformada === false ? "sem registro" : money(d.investimento)}</p>
                           <p className="num">faturamento {money(d.receita)}</p>
-                          {tacos != null && <p className="num">TACoS {pct(tacos, 1)}</p>}
+                          {tacos != null && d.midiaInformada !== false && <p className="num">TACoS {pct(tacos, 1)}</p>}
                         </div>
                       );
                     }}
@@ -219,8 +220,9 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           <p className="label mb-2">Relatório do canal</p>
           <select aria-label="Relatório por anúncio" value={filtros.janela} onChange={(e) => navegar({ janela: e.target.value })} className="min-h-11 w-full max-w-xl rounded-r1 border border-line bg-panel px-3 text-sm text-ink">{periodos.map((p) => <option key={`${p.inicio}|${p.fim}`} value={`${p.inicio}|${p.fim}`}>{p.rotulo} · {money(p.investimento)}</option>)}</select>
           <p className="mt-2.5 text-[12px] leading-relaxed text-ink-3">
-            Tabelas e indicadores abaixo usam este intervalo, na conta selecionada.
+            {dados.contasDoRelatorio?.join(" · ") || "Conta selecionada"} · Indicadores e tabelas usam este intervalo.
           </p>
+          {dados.contaNaoIdentificada && <p className="mt-2 text-xs text-warn">Há anúncios sem conta identificada. TACoS indisponível até conferir o vínculo.</p>}
         </Panel>
 
         {/* ── Os cinco números da janela escolhida ── */}
@@ -252,10 +254,15 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           />
           <Numero
             rotulo="Faturamento da conta"
-            valor={moneyShort(totais.receitaTotalConta)}
+            valor={money(totais.receitaTotalConta)}
             ajuda="base do TACoS"
           />
         </div>
+
+        <Disclosure title="Conferir os valores da conta">
+          <p>TACoS: {money(totais.investimento)} ÷ {money(totais.receitaTotalConta)}. Faturamento de pedidos válidos das contas listadas no relatório, incluindo vendas sem mídia.</p>
+          <p className="mt-2">ACoS: {money(totais.investimento)} ÷ {money(totais.receitaAtribuida)} atribuídos pelo canal. ROAS usa a divisão inversa.</p>
+        </Disclosure>
 
         <Disclosure title="ACoS, TACoS e ROAS — qual decide o quê">
           <p>
@@ -335,7 +342,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           </div>
         </Panel>
 
-        {conferencia && (conferencia.diario == null || Math.abs(conferencia.relatorio - conferencia.diario) > 1) && (
+        {conferencia && (conferencia.diario == null || Math.abs(conferencia.relatorio - conferencia.diario) > 1 || conferencia.registrosRegistrados < conferencia.registrosEsperados) && (
           <Panel className="flex items-start gap-2.5 border-warn/30 px-4 py-3">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
             <div className="min-w-0 text-[12px] text-ink-2">
@@ -343,6 +350,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
               <p>Relatório: {money(conferencia.relatorio)} · Série diária: {conferencia.diario == null ? "sem registro" : money(conferencia.diario)}</p>
               <p className="mt-1 text-ink-3">Mesma seleção de canal e conta. A série pode conter valores importados ou recebidos pela API.
                 {conferencia.diasRegistrados < conferencia.diasEsperados && <> Há registros de mídia em {conferencia.diasRegistrados} de {conferencia.diasEsperados} dias; a comparação pode estar incompleta.</>}
+                {conferencia.registrosRegistrados < conferencia.registrosEsperados && <> Cobertura: {conferencia.registrosRegistrados}/{conferencia.registrosEsperados} combinações de conta e dia.</>}
               </p>
             </div>
           </Panel>
@@ -365,13 +373,15 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
 
           {aba === "anuncios" && (
             <>
-              <div className="p-3 border-b border-line">
+              <div className="flex flex-wrap gap-2 p-3 border-b border-line">
                 <Input
                   placeholder="Buscar MLB, SKU, título ou campanha"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   className="max-w-sm"
                 />
+                <select aria-label="Situação dos anúncios" value={situacao} onChange={(e)=>setSituacao(e.target.value)} className="min-h-10 max-w-full rounded-r1 border border-line bg-panel px-2 text-sm"><option value="">Todas as situações</option><option value="sem_retorno">Gasto sem venda</option><option value="vendeu_sem_ads">Vendas sem atribuição</option><option value="prejuizo">Mídia maior que a margem</option></select>
+                <select aria-label="Ordenar anúncios" value={ordem} onChange={(e)=>setOrdem(e.target.value as typeof ordem)} className="min-h-10 max-w-full rounded-r1 border border-line bg-panel px-2 text-sm"><option value="investimento">Maior investimento</option><option value="acos">Maior ACoS</option><option value="receitaReal">Maior faturamento</option><option value="cliques">Mais cliques</option></select>
               </div>
               <div className="overflow-x-auto max-h-[620px]">
                 <table className="w-full border-collapse min-w-[980px]">

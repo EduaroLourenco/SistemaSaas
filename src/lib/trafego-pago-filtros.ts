@@ -34,10 +34,11 @@ export function periodoTrafego(pedido: { de?: string; ate?: string } | undefined
 
 /** O relatório é indivisível: comparar sua janela exata, nunca rateá-lo por mês. */
 export function conferirInvestimento(
-  diariasDoRecorte: { data: string; investimento_ads: string | number | null }[],
+  diariasDoRecorte: { data: string; investimento_ads: string | number | null; conta_canal_id?: string | null }[],
   inicio: string,
   fim: string,
-  relatorio: number
+  relatorio: number,
+  contasEsperadas = 1
 ) {
   const dias = diariasDoRecorte.filter((d) => d.data.slice(0, 10) >= inicio && d.data.slice(0, 10) <= fim && d.investimento_ads != null);
   const diasRegistrados = new Set(dias.map((d) => d.data.slice(0, 10))).size;
@@ -46,5 +47,7 @@ export function conferirInvestimento(
     inicio, fim, relatorio,
     diario: dias.length ? Number(dias.reduce((s, d) => s + (Number(d.investimento_ads) || 0), 0).toFixed(2)) : null,
     diasRegistrados, diasEsperados,
+    registrosRegistrados: new Set(dias.map((d) => `${d.conta_canal_id ?? ""}|${d.data.slice(0, 10)}`)).size,
+    registrosEsperados: diasEsperados * contasEsperadas,
   };
 }
