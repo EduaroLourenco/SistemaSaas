@@ -11,3 +11,4 @@ Auditar investimento, TACoS, ACoS, ROAS e faturamento da conta no mesmo período
 - 13/10/2026: regressões passaram para mistura de contas/canais, intervalos sobrepostos, atravessar mês, zero versus ausência e margem parcial. O exemplo numérico do PDF não informa datas: não se concluiu erro apenas comparando com outra janela.
 
 - 12/10/2026: valores do PDF não têm intervalo explícito; comparar cálculos e cobertura reais, sem presumir que uma divergência entre métricas diferentes é erro.
+- 13/10/2026: leitura real separada de Probel e Bom de Compras confirmou relatório = soma diária no período 12/09–11/10, com cobertura por conta. Corrigida base geral que antes misturava outros canais no TACoS do Mercado Livre.

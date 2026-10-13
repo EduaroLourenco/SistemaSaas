@@ -62,7 +62,7 @@ export default async function Pagina({
   ]);
 
   const visoes = Object.fromEntries(
-    DIMENSOES.map((d) => [d, agregar(base, d)])
+    DIMENSOES.map((d) => [d, agregar(base, d, { incluirCustosConhecidos: true })])
   ) as Record<Dimensao, ReturnType<typeof agregar>>;
 
   return (

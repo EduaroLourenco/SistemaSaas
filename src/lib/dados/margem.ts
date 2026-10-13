@@ -105,6 +105,8 @@ export type LinhaMargem = {
   cobertura: number;
   /** Receita com custo praticado, não estimado por tabela. */
   receitaMedida: number;
+  /** Custos conhecidos por componente, mesmo onde a margem está incompleta. */
+  custosConhecidos?: CustosConhecidos;
 };
 
 /* ── Datas ─────────────────────────────────────────────────────────── */
@@ -464,8 +466,9 @@ export async function carregarBaseMargem(
  * conta são a mesma conta somada em ordem diferente — escrever uma
  * consulta por tela é o caminho para elas discordarem entre si.
  */
-export function agregar(base: BaseMargem, dimensao: Dimensao): LinhaMargem[] {
+export function agregar(base: BaseMargem, dimensao: Dimensao, opcoes: { incluirCustosConhecidos?: boolean } = {}): LinhaMargem[] {
   const grupos = new Map<string, LinhaMargem>();
+  const itensPorGrupo = new Map<string, ItemMargem[]>();
 
   for (const it of base.itens) {
     let chave: string;
@@ -521,6 +524,11 @@ export function agregar(base: BaseMargem, dimensao: Dimensao): LinhaMargem[] {
 
     at.unidades += it.quantidade;
     at.receita += it.receita;
+    if (opcoes.incluirCustosConhecidos) {
+      const itens = itensPorGrupo.get(chave) ?? [];
+      itens.push(it);
+      itensPorGrupo.set(chave, itens);
+    }
 
     // Só o item completo entra nos custos: somar o que se sabe de um item
     // incompleto produziria um custo parcial sobre uma receita inteira, e
@@ -545,6 +553,7 @@ export function agregar(base: BaseMargem, dimensao: Dimensao): LinhaMargem[] {
   return [...grupos.values()]
     .map((g) => ({
       ...g,
+      ...(opcoes.incluirCustosConhecidos ? { custosConhecidos: resumirCustosConhecidos(itensPorGrupo.get(g.chave) ?? []) } : {}),
       receita: r2(g.receita),
       receitaApurada: r2(g.receitaApurada),
       comissao: r2(g.comissao),

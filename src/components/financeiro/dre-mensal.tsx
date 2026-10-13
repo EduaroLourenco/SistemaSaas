@@ -374,7 +374,7 @@ export function ResumoDre({ r }: { r: Resultado }) {
        * Com 30% de cobertura, "margem de 18%" significa 18% de 30% da
        * receita — e sem esta linha alguém lê 18% da operação.
        */
-      sub: parcial
+      sub: r.cobertura === 0 ? "aguardando custos dos produtos" : parcial
         ? `${money(r.margemContribuicao)} · só da parte apurada`
         : money(r.margemContribuicao),
     },

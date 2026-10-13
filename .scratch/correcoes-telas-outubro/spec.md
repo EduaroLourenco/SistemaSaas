@@ -1,6 +1,6 @@
 # Correções das telas — outubro de 2026
 
-Status: em andamento
+Status: código entregue no GitHub; migração 38, publicação e validação do Bling pendentes
 
 ## Pedido
 
@@ -37,3 +37,16 @@ Cada entrega tem seu próprio arquivo em `issues/`. O estado e as verificações
 ## Publicação
 
 O pedido atual autoriza commits e push por entrega. GitHub e aplicação publicada são estados diferentes: o acesso Vercel desta sessão recusou o projeto anteriormente e o envio ao GitHub não comprovou implantação automática. Registrar essa limitação se persistir, sem afirmar que as mudanças estão online.
+
+## Pendências para liberar tudo
+
+- Executar `db/38_margem_por_produto.sql` no Supabase e confirmar. Até lá, apenas a edição da margem opcional por produto fica desativada; os demais custos continuam funcionando.
+- Publicar os commits no projeto Vercel e conferir a aplicação com uma sessão autenticada. O acesso disponível nesta sessão não administra o projeto.
+- Depois da publicação, sincronizar e conferir o Bling com as credenciais disponíveis em produção. Não declarar estoque do Bling atualizado antes dessa leitura.
+
+## Comments
+
+- 13/10/2026: oito entregas organizadas e enviadas por etapas ao GitHub. Relatório e afiliados permanecem em espera.
+- 13/10/2026: build de produção e verificação de tipos aprovados. Regressões cobrem permissões de atualização, regras e gravação de promoções, custos parciais, margem por produto, contas/períodos de publicidade, filtros e causas de queda, estoque zero e origem.
+- 13/10/2026: leituras reais separadas de Probel e Bom de Compras validaram financeiro, publicidade, catálogo, detalhe diário e consulta de estoque por SKU. Nenhuma alteração foi enviada aos anúncios ou preços dos canais.
+- 13/10/2026: prévia isolada com dados fictícios conferiu desktop e celular, seleção de dia no gráfico, produto sem vendas e Full separado do depósito. Isso não substitui a conferência da aplicação publicada com login.

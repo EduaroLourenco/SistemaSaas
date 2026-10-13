@@ -120,6 +120,19 @@ function GrupoDre({ titulo, explicacao }: { titulo: string; explicacao: string }
   );
 }
 
+function CustoConhecido({ linha, campo }: { linha: LinhaMargem; campo: CampoCusto }) {
+  const custo = linha.custosConhecidos?.[campo];
+  const valor = custo ? custo.valor : linha.cobertura > 0 ? linha[campo] : null;
+  return (
+    <>
+      <span title={valor == null ? "Custo ainda não informado" : money(valor)}>{valor == null ? "—" : moneyShort(valor)}</span>
+      {custo && valor != null && custo.cobertura < 99.5 && (
+        <span className="block text-[11px] text-ink-3">cobre {pct(custo.cobertura, 0)}</span>
+      )}
+    </>
+  );
+}
+
 export default function FinanceiroCliente({
   resultado: r,
   mensal,
@@ -227,7 +240,7 @@ export default function FinanceiroCliente({
                 <span className="font-semibold">
                   Custos completos em {pct(r.cobertura, 1)} da receita
                 </span>{" "}
-                · lucro ainda parcial.
+                · {r.cobertura > 0 ? "margem parcial." : "margem ainda indisponível."}
               </p>
               <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
                 Receita, comissão e frete disponíveis continuam visíveis. Faltam custos em <span className="num font-medium">{money(r.receitaSemCusto)}</span> de vendas.
@@ -334,7 +347,7 @@ export default function FinanceiroCliente({
             <div className="mt-4 pt-3 border-t border-line">
               <p className="num text-[12px] text-ink-3 leading-relaxed">
                 Comissão real em {count(r.cadaCoberturaDe.comissaoPraticada)} de {count(r.cadaCoberturaDe.pedidos)} pedidos,
-                frete real em {count(r.cadaCoberturaDe.fretePraticado)}. O resto é estimado pela tabela do canal.
+                frete real em {count(r.cadaCoberturaDe.fretePraticado)}. Sem valor real, usa a tabela do canal quando disponível.
               </p>
             </div>
           </Panel>
@@ -349,11 +362,10 @@ export default function FinanceiroCliente({
             */}
             <div className="px-4 py-3 border-b border-line">
               <p className="text-[13px] font-semibold text-ink">
-                A mesma conta, aberta por
+                Receita, custos e margem por
               </p>
               <p className="text-[12px] text-ink-3 mt-0.5">
-                cada linha soma a margem da esquerda dentro de um recorte — a
-                coluna de cobertura diz o quanto daquela linha foi apurado
+                Custos conhecidos por componente. A cobertura indica a parte com margem apurada.
               </p>
             </div>
             <Tabs
@@ -393,13 +405,13 @@ export default function FinanceiroCliente({
                         {moneyShort(l.receita)}
                       </td>
                       <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
-                        {l.comissao ? moneyShort(l.comissao) : "—"}
+                        <CustoConhecido linha={l} campo="comissao" />
                       </td>
                       <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
-                        {l.frete ? moneyShort(l.frete) : "—"}
+                        <CustoConhecido linha={l} campo="frete" />
                       </td>
                       <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
-                        {l.mercadoria ? moneyShort(l.mercadoria) : "—"}
+                        <CustoConhecido linha={l} campo="mercadoria" />
                       </td>
                       <td className={`${td} text-right`}>
                         {l.margem != null ? (
