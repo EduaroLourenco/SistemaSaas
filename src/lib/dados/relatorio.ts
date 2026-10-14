@@ -1368,7 +1368,7 @@ export async function montarRelatorio(
     estado("Pedidos do Mercado Livre", ultimoPedido, "API, as duas contas"),
     estado("Visitas por anúncio", ultimaVisita, "API do Mercado Livre; começou em 06/08/2026"),
     estado("Estoque e catálogo", instantaneo.geradoEm.slice(0, 10), `instantâneo de ${new Date(instantaneo.geradoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`),
-    estado("Loja própria (VTEX)", pedidos.filter((p) => contaDe.get(p.conta_canal_id)?.codigo === "vtex").at(-1)?.data ?? null, "API da VTEX, só pedido pago"),
+    estado("Loja própria", pedidos.filter((p) => contaDe.get(p.conta_canal_id)?.codigo === "vtex").at(-1)?.data ?? null, "API da VTEX, só pedido pago"),
     {
       fonte: "Sincronização do catálogo",
       ate: ultimaSincronizacao ? ultimaSincronizacao.slice(0, 10) : null,

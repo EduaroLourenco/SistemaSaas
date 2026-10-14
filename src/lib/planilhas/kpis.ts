@@ -50,7 +50,7 @@ const BLOCOS: { padrao: RegExp; canal: string; conta: string }[] = [
   { padrao: /madeira/i,          canal: "Madeira Madeira",    conta: "Conta principal" },
   { padrao: /^zema/i,            canal: "Zema",               conta: "Conta principal" },
   { padrao: /casas\s*bahia/i,    canal: "Casas Bahia",        conta: "Conta principal" },
-  { padrao: /^vtex/i,            canal: "Loja própria (VTEX)", conta: "Conta principal" },
+  { padrao: /^vtex/i,            canal: "Loja própria",       conta: "Conta principal" },
   { padrao: /^outros/i,          canal: "Outros",             conta: "Conta principal" },
 ];
 
