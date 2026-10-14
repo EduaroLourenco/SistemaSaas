@@ -137,6 +137,64 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
 
   const { visible, pagination } = usePagination(linhas, 25);
 
+  const [exportando, setExportando] = React.useState(false);
+  const [erroExport, setErroExport] = React.useState<string | null>(null);
+
+  /*
+   * Exporta o que está FILTRADO, não a página visível nem a consulta
+   * inteira: filtrar "preço subiu" e receber as 400 linhas de volta
+   * desfaria o filtro na planilha, e exportar só os 25 da página
+   * esconderia o resto sem avisar.
+   *
+   * As linhas vão no corpo porque os filtros desta tela são estado de
+   * React, não URL: refazer a consulta no servidor obrigaria a duplicar
+   * cada filtro lá, e qualquer divergência faria o total da planilha
+   * não bater com o da tela.
+   */
+  async function exportar() {
+    setExportando(true);
+    setErroExport(null);
+    try {
+      const filtro = [
+        mostrar === "quedas" ? "só quedas" : mostrar === "altas" ? "só altas" : null,
+        causa || null,
+        busca.trim() || null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      const r = await fetch("/api/exportar/queda", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          periodo: {
+            de: dados.de,
+            ate: dados.ate,
+            deAnterior: dados.deAnterior,
+            ateAnterior: dados.ateAnterior,
+            dias: dados.dias,
+            diasAnterior: dados.diasAnterior,
+          },
+          filtro,
+          linhas,
+        }),
+      });
+      if (!r.ok) {
+        const j = (await r.json().catch(() => ({}))) as { erro?: string };
+        setErroExport(j.erro ?? "Não consegui gerar a planilha.");
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `por-que-caiu-${dados.de}-a-${dados.ate}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportando(false);
+    }
+  }
+
   /* Para onde foi a queda: a soma das quedas por causa. */
   const porCausa = React.useMemo(() => {
     const m = new Map<Causa, { valor: number; itens: number }>();
@@ -371,6 +429,15 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                     ))}
                   </Select>
                 </div>
+                <button
+                  type="button"
+                  onClick={exportar}
+                  disabled={exportando || !linhas.length}
+                  className="min-h-10 rounded-r1 border border-line-2 bg-panel px-3 text-xs font-medium text-ink hover:bg-panel-3 disabled:opacity-60"
+                >
+                  {exportando ? "Gerando…" : `Exportar ${linhas.length} em planilha`}
+                </button>
+                {erroExport && <span className="text-xs text-down">{erroExport}</span>}
                 <Link className="text-xs text-brand" href={`/produtos?de=${dados.de}&ate=${dados.ate}&canais=${encodeURIComponent(dados.recorte.join(","))}`}>Ver preços por canal →</Link>
               </div>
               <details className="border-b border-line px-4 py-2"><summary className="min-h-9 cursor-pointer text-xs font-medium text-ink-2">Ordenar e filtrar qualquer coluna · {COLUNAS_QUEDA.find(([c]) => c === colunas.coluna)?.[1]}</summary>
