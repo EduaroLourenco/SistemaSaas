@@ -42,7 +42,7 @@ Em 14/10/2026, a integração Vercel confirmou a publicação de `1dc1d41` em Pr
 ## Pendências para liberar tudo
 
 - Conferir as telas publicadas com uma sessão autenticada.
-- Sincronizar e conferir o Bling com as credenciais disponíveis em produção. Não declarar estoque do Bling atualizado antes dessa leitura.
+- Revisar a permissão de leitura de depósitos no aplicativo do Bling, reconectar as empresas afetadas e sincronizar. A produção retornou `403 /depositos` por autorização insuficiente. Não declarar estoque do Bling atualizado antes dessa leitura.
 
 ## Comments
 
@@ -53,3 +53,4 @@ Em 14/10/2026, a integração Vercel confirmou a publicação de `1dc1d41` em Pr
 - 13/10/2026: usuário executou a migração 38. Leitura da coluna pela API e execução de `carregarMargensProduto` confirmaram disponibilidade nas operações Probel e Bom de Compras. Nenhuma margem individual foi alterada; o campo vazio continua herdando a regra da campanha.
 - 14/10/2026: GitHub confirmou recebimento de `ab8fdc3`, mas a Vercel rejeitou o agendamento de estoque a cada meia hora. Ajustado para uma execução diária, mantendo atualização manual; acompanhar a nova publicação no ticket 09.
 - 14/10/2026: após a correção, a publicação `HZWsmPJ3PmvqeFSfPa851U46KvcF` do commit `1dc1d41` concluiu em produção. Resposta HTTP e presença das novidades no pacote público do domínio confirmadas; nenhum acesso autenticado ou sincronização Bling foi declarado como testado.
+- 14/10/2026: diagnóstico do `403 /depositos` registrado no ticket 08. Mensagem de permissão insuficiente e ajuda no ERP ajustadas. A correção de interface não libera permissões no provedor: administrador/integrador precisa revisar o aplicativo no Bling e autorizar novamente.

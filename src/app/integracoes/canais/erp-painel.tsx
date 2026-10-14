@@ -56,11 +56,7 @@ export function ErpPainel({
       <Panel>
         <PanelHeader
           title="Bling"
-          /* A promessa tem de bater com o que a leitura faz: hoje são
-             pedidos e itens, e o produto nasce do SKU vendido. Estoque o
-             Bling tem, e esta integração ainda não lê — dizer que lia
-             fazia procurar na tela um número que nunca chegou. */
-          hint="Pedidos e itens, por API. O produto é criado a partir do SKU vendido. Estoque ainda não é lido. Acesso somente leitura: nada é alterado no Bling."
+          hint="Pedidos, produtos e estoque por depósito, conforme as permissões autorizadas no Bling. Somente leitura."
           action={
             <a
               href="/api/bling/conectar"
@@ -96,6 +92,9 @@ export function ErpPainel({
               Quem conecta precisa ser administrador da conta no Bling. A autorização vale para a empresa inteira.
             </p>
           )}
+          <Link href="/manual/bling#permissoes-estoque" className="self-start text-[12.5px] font-medium text-brand hover:underline">
+            Ajuda com permissões e estoque
+          </Link>
         </div>
       </Panel>
 

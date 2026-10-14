@@ -109,9 +109,25 @@ export async function bling<T>(
       await new Promise((x) => setTimeout(x, 1000 * (tentativa + 1)));
       continue;
     }
-    const j = (await r.json().catch(() => ({}))) as T & { error?: { description?: string; message?: string } };
+    const j = (await r.json().catch(() => ({}))) as T & { error?: { type?: string; description?: string; message?: string } };
     if (!r.ok) {
-      throw new Error(`Bling respondeu ${r.status} em ${caminho}: ${j.error?.description ?? j.error?.message ?? "sem detalhe"}`);
+      const detalhe = j.error?.description ?? j.error?.message ?? "sem detalhe";
+      const semPermissao = r.status === 403 && (
+        j.error?.type === "insufficient_scope" || j.error?.message === "insufficient_scope" ||
+        detalhe.toLowerCase().includes("the request requires higher privileges than provided by the access token")
+      );
+      if (semPermissao) {
+        const recurso = caminho === "/depositos" ? "depósitos"
+          : caminho === "/produtos" ? "produtos"
+          : caminho.startsWith("/estoques/") ? "estoques" : "este recurso";
+        // Renovar o token não amplia permissões: elas vêm do cadastro do app.
+        throw new Error(
+          `Bling sem permissão para consultar ${recurso} (403 em ${caminho}). ` +
+          `Confira a permissão de leitura no aplicativo do Bling e depois reconecte em Canais e contas → ERP. ` +
+          `Veja o passo a passo no link de ajuda dessa aba.`
+        );
+      }
+      throw new Error(`Bling respondeu ${r.status} em ${caminho}: ${detalhe}`);
     }
     return j;
   }
