@@ -1,58 +1,128 @@
 "use client";
+
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Download, ArrowRight } from "lucide-react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { Panel, Button, Badge } from "@/components/ui/primitives";
+import { Panel, Button } from "@/components/ui/primitives";
 import { SeletorCanais } from "@/components/ui/seletor-canais";
 import { Pagination, usePagination } from "@/components/ui/pagination";
-import { Detalhe } from "@/app/vendas/queda/queda-cliente";
-import type { DadosQueda } from "@/lib/dados/queda";
+import { csvProdutosPrecos, type DadosProdutosPrecos, type LinhaPrecos, type CelulaPrecos } from "@/lib/produtos-precos";
 import { count, money } from "@/lib/format";
 
-const controle = "min-h-11 rounded-r1 border border-line bg-panel px-3 text-sm text-ink max-w-full";
-export default function ProdutosCliente({ dados }: { dados: DadosQueda }) {
+const controle = "min-h-11 max-w-full rounded-r1 border border-line bg-panel px-3 text-sm text-ink";
+const dataBr = (v: string) => v.split("-").reverse().join("/");
+const semDado = <span className="whitespace-nowrap text-xs font-normal text-ink-3">Sem dado</span>;
+
+function Vitrine({ valor }: { valor?: CelulaPrecos["vitrine"] }) {
+  if (!valor) return semDado;
+  const data = valor.de === valor.ate ? dataBr(valor.ate) : `${dataBr(valor.de)} a ${dataBr(valor.ate)}`;
+  return <div title={`Última leitura da API · ${data} · ${valor.anuncios} anúncio(s) ativo(s)`}>
+    <span className="num block whitespace-nowrap">{money(valor.min)}</span>
+    {valor.max !== valor.min && <span className="num block whitespace-nowrap text-xs text-ink-2">a {money(valor.max)}</span>}
+    <span className="mt-0.5 block text-[10px] font-normal text-ink-3">{valor.de === valor.ate ? dataBr(valor.ate) : "leituras em datas diferentes"}</span>
+  </div>;
+}
+
+export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos }) {
   const router = useRouter();
+  const parametros = useSearchParams();
   const [busca, setBusca] = React.useState("");
   const [semVenda, setSemVenda] = React.useState(false);
   const [ordem, setOrdem] = React.useState("sku");
-  const [aberto, setAberto] = React.useState<string | null>(null);
   const [datas, setDatas] = React.useState({ de: dados.de, ate: dados.ate });
   const [pendente, transicao] = React.useTransition();
-  function navegar(canais = dados.recorte) {
-    const q = new URLSearchParams(datas); if (canais.length) q.set("canais", canais.join(","));
-    if (dados.skuFiltro) q.set("sku",dados.skuFiltro);
-    transicao(() => router.push(`/produtos?${q}`, {scroll:false}));
+  const recorteUrl = parametros.get("canais") ?? "";
+  const selecionados = React.useMemo(() => [...new Set(recorteUrl.split(",").filter(id => dados.colunas.some(c => c.id === id)))], [recorteUrl, dados.colunas]);
+  const colunas = React.useMemo(() => dados.colunas.filter(c => selecionados.length ? selecionados.includes(c.id) : !c.contaId), [dados.colunas, selecionados]);
+
+  function mudarCanais(canais: string[]) {
+    const q = new URLSearchParams(parametros.toString());
+    if (canais.length) q.set("canais", canais.join(",")); else q.delete("canais");
+    // Os canais já vieram no recorte: trocar colunas é imediato e conserva a URL.
+    window.history.pushState(null, "", `/produtos${q.size ? `?${q}` : ""}`);
   }
-  const linhas = React.useMemo(() => dados.linhas.filter((l) => (!semVenda || l.agora.unidades === 0) && `${l.sku} ${l.codigo} ${l.titulo} ${l.onde}`.toLocaleLowerCase("pt-BR").includes(busca.toLocaleLowerCase("pt-BR"))).sort((a,b) => ordem === "vendas" ? b.agora.receita-a.agora.receita : ordem === "preco" ? (b.precoAtual ?? -1)-(a.precoAtual ?? -1) : a.sku.localeCompare(b.sku, "pt-BR", {numeric:true}) || a.onde.localeCompare(b.onde)), [dados.linhas, busca, semVenda, ordem]);
-  const {visible,pagination} = usePagination(linhas);
+  function aplicarPeriodo() {
+    const q = new URLSearchParams(parametros.toString());
+    q.set("de", datas.de); q.set("ate", datas.ate);
+    transicao(() => router.push(`/produtos?${q}`, { scroll: false }));
+  }
+  const linhas = React.useMemo(() => {
+    const termo = busca.trim().toLocaleLowerCase("pt-BR");
+    const maior = (l: LinhaPrecos, campo: "unidades" | "vendido") => Math.max(-1, ...colunas.map(c => l.canais[c.id]?.[campo] ?? -1));
+    return dados.linhas.filter(l => (!semVenda || colunas.every(c => !l.canais[c.id]?.unidades)) &&
+      `${l.sku} ${l.titulo} ${l.codigos.join(" ")}`.toLocaleLowerCase("pt-BR").includes(termo))
+      .sort((a, b) => (ordem === "unidades" ? maior(b, "unidades") - maior(a, "unidades") : ordem === "preco" ? maior(b, "vendido") - maior(a, "vendido") : 0) ||
+        a.sku.localeCompare(b.sku, "pt-BR", { numeric: true }) || a.titulo.localeCompare(b.titulo, "pt-BR"));
+  }, [dados.linhas, busca, semVenda, ordem, colunas]);
+  const { visible, pagination } = usePagination(linhas);
   function exportar() {
-    const csv = (v: unknown) => { if (typeof v === "number") return String(v).replace(".",","); const s = String(v ?? ""); return '"' + (/^[=+@\-\t\r]/.test(s) ? "'" : "") + s.replaceAll('"','""') + '"'; };
-    const rows = [["SKU","Produto","Canal / conta","Anúncio","Unidades","Receita","Preço vendido médio","Último preço anunciado","Tipo do preço","Data da leitura"], ...linhas.map((l) => [l.sku,l.titulo,l.onde,l.codigo,l.agora.unidades,l.agora.receita,l.agora.precoVendido,l.precoAtual,l.precoAtualOrigem === "oferta" ? "Oferta" : "Cadastro (cheio)",l.precoAtualData])];
-    const url = URL.createObjectURL(new Blob(['\uFEFF'+rows.map((r) => r.map(csv).join(';')).join('\r\n')], {type:'text/csv;charset=utf-8;'}));
-    const a = document.createElement('a'); a.href=url; a.download=`produtos-${dados.de}-${dados.ate}.csv`; a.click(); URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(new Blob([csvProdutosPrecos(linhas, colunas)], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a"); a.href = url; a.download = `produtos-precos-${dados.de}-${dados.ate}.csv`; a.click(); URL.revokeObjectURL(url);
   }
-  return <><PageHeader title="Produtos e preços" breadcrumb="Catálogo" description="Anunciados e vendidos, separados por canal." actions={<Button onClick={exportar}>Exportar tabela</Button>} filters={<div className="flex flex-wrap items-end gap-3">
-    <div className="max-w-full"><SeletorCanais grupos={dados.opcoes} selecionados={dados.recorte} aoAplicar={navegar} /></div>
-    <label className="text-xs text-ink-3">De<input aria-label="Data inicial" className={`${controle} block mt-1`} type="date" max={datas.ate} value={datas.de} onChange={(e) => setDatas({...datas,de:e.target.value})} /></label>
-    <label className="text-xs text-ink-3">Até<input aria-label="Data final" className={`${controle} block mt-1`} type="date" min={datas.de} value={datas.ate} onChange={(e) => setDatas({...datas,ate:e.target.value})} /></label>
-    <Button disabled={pendente || !datas.de || !datas.ate || datas.de > datas.ate} onClick={() => navegar()}>{pendente ? "Carregando…" : "Aplicar"}</Button>
-  </div>} />
-  <PageBody>
-    <div className="flex flex-wrap gap-2 text-xs text-ink-2"><Badge tone="neutral">{count(linhas.length)} itens</Badge><Badge tone="neutral">{count(linhas.filter((l) => !l.agora.unidades).length)} sem venda</Badge><span className="py-1">Vendas no calendário escolhido · preço anunciado na data da última leitura</span></div>
-    <Panel className="overflow-hidden">
-      <div className="flex flex-wrap items-center gap-3 border-b border-line p-3"><input className={`${controle} w-64`} aria-label="Buscar produto" placeholder="SKU, produto ou anúncio" value={busca} onChange={(e) => setBusca(e.target.value)} /><label className="flex min-h-11 items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={semVenda} onChange={(e) => setSemVenda(e.target.checked)} />Sem venda no período</label><select className={controle} aria-label="Ordenar produtos" value={ordem} onChange={(e) => setOrdem(e.target.value)}><option value="sku">Agrupar por SKU</option><option value="vendas">Maior receita</option><option value="preco">Maior preço anunciado</option></select></div>
-      <div className="divide-y divide-line">{visible.map((l) => <article key={l.chave}>
-        <button className="grid w-full grid-cols-2 gap-3 p-4 text-left hover:bg-panel-2 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]" type="button" aria-expanded={aberto === l.chave} onClick={() => setAberto(aberto === l.chave ? null : l.chave)}>
-          <div className="col-span-2 min-w-0 md:col-span-1"><p className="text-sm font-semibold text-ink">{l.sku || l.codigo}</p><p className="line-clamp-2 text-xs text-ink-2">{l.titulo}</p><p className="mt-1 text-xs text-brand">{l.onde}</p><p className="mt-1 text-[11px] text-ink-3">{l.codigo} · {aberto === l.chave ? "Fechar" : "Abrir histórico e estoques"}</p></div>
-          <div><p className="text-[11px] text-ink-3">Vendido no período</p><p className="num text-sm font-semibold text-ink">{count(l.agora.unidades)} un</p><p className="num text-xs text-ink-2">{money(l.agora.receita)}</p></div>
-          <div><p className="text-[11px] text-ink-3">Preço vendido médio</p><p className="num text-sm font-semibold text-ink">{l.agora.precoVendido == null ? "—" : money(l.agora.precoVendido)}</p><p className="text-[11px] text-ink-3">{!l.agora.unidades ? "sem venda" : "pedidos válidos"}</p></div>
-          <div><p className="text-[11px] text-ink-3">{l.precoAtualOrigem === "cadastro" ? "Anunciado (cheio)" : "Última oferta lida"}</p><p className="num text-sm font-semibold text-ink">{l.precoAtual == null ? "—" : money(l.precoAtual)}</p><p className="text-[11px] text-ink-3">{l.precoAtualData ? l.precoAtualData.split('-').reverse().join('/') : "sem leitura"}</p></div>
-        </button>
-        {aberto === l.chave && <Detalhe l={l} dados={dados} />}
-      </article>)}</div>
-      {!linhas.length && <p className="p-6 text-sm text-ink-3">Nenhum produto neste filtro.</p>}
-      <Pagination {...pagination} />
-    </Panel>
-    <p className="text-xs text-ink-3">Zero unidades significa sem venda. Preços ausentes ficam em branco. Sem API de catálogo, o canal mostra os produtos identificados nos pedidos; histórico de vitrine só existe a partir das leituras registradas.</p>
-  </PageBody></>;
+  function historico(sku: string) {
+    const q = new URLSearchParams({ sku, de: dados.de, ate: dados.ate, nivel: "produto" });
+    if (selecionados.length) q.set("canais", selecionados.join(","));
+    return `/vendas/queda?${q}`;
+  }
+
+  return <>
+    <PageHeader title="Produtos e preços" breadcrumb="Catálogo" description="Compare o mesmo SKU entre canais."
+      actions={<Button disabled={pendente || !linhas.length || !colunas.length} onClick={exportar}><Download size={15} />Exportar tabela</Button>}
+      filters={<div className="flex max-w-full flex-wrap items-end gap-3">
+        <div className="max-w-full"><SeletorCanais grupos={dados.opcoes} selecionados={selecionados} aoAplicar={mudarCanais} /></div>
+        <label className="min-w-0 text-xs text-ink-3">De<input aria-label="Data inicial" className={`${controle} mt-1 block`} type="date" max={datas.ate} value={datas.de} onChange={e => setDatas({ ...datas, de: e.target.value })} /></label>
+        <label className="min-w-0 text-xs text-ink-3">Até<input aria-label="Data final" className={`${controle} mt-1 block`} type="date" min={datas.de} value={datas.ate} onChange={e => setDatas({ ...datas, ate: e.target.value })} /></label>
+        <Button className="min-h-11" disabled={pendente || !datas.de || !datas.ate || datas.de > datas.ate} onClick={aplicarPeriodo}>{pendente ? "Carregando…" : "Aplicar período"}</Button>
+      </div>} />
+    <PageBody>
+      <Panel className="min-w-0 overflow-hidden" aria-busy={pendente}>
+        <div className="flex flex-wrap items-center gap-3 border-b border-line p-3">
+          <input className={`${controle} w-full sm:w-64`} aria-label="Buscar produto" placeholder="Buscar SKU, produto ou anúncio" value={busca} onChange={e => setBusca(e.target.value)} />
+          <label className="flex min-h-11 items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={semVenda} onChange={e => setSemVenda(e.target.checked)} />Sem venda no período</label>
+          <select className={`${controle} sm:ml-auto`} aria-label="Ordenar produtos" value={ordem} onChange={e => setOrdem(e.target.value)}>
+            <option value="sku">Ordenar por SKU</option><option value="unidades">Mais unidades no canal</option><option value="preco">Maior preço vendido</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2 text-xs text-ink-3" aria-live="polite">
+          <span>{count(linhas.length)} SKUs · {colunas.length} {colunas.length === 1 ? "canal" : "canais"} · {dataBr(dados.de)} a {dataBr(dados.ate)}</span>
+          <span className="inline-flex items-center gap-1">Deslize para comparar <ArrowRight size={13} /></span>
+        </div>
+        <div className={`max-h-[70vh] overflow-auto ${pendente ? "opacity-60" : ""}`} tabIndex={0} role="region" aria-label="Comparação de preços por SKU e canal">
+          <table className="w-max min-w-full border-separate border-spacing-0 text-[13px]">
+            <caption className="sr-only">Preço médio vendido e unidades no período; preço de vitrine na última leitura da API. Valores ausentes aparecem como Sem dado.</caption>
+            <thead className="sticky top-0 z-20 bg-panel-2">
+              <tr>
+                <th rowSpan={2} scope="col" className="sticky left-0 z-30 w-36 min-w-36 max-w-36 border-b border-r border-line bg-panel-2 px-3 py-3 text-left font-semibold text-ink sm:w-56 sm:min-w-56 sm:max-w-56">SKU / Produto</th>
+                {colunas.map(c => <th key={c.id} colSpan={3} scope="colgroup" className="min-w-[324px] border-b border-r border-line px-4 py-3 text-left font-semibold text-ink sm:text-center"><span className="sticky left-40 block w-fit max-w-40 sm:static sm:mx-auto sm:max-w-none">{c.nome}</span></th>)}
+              </tr>
+              <tr>{colunas.map(c => <React.Fragment key={c.id}>
+                <th scope="col" className="min-w-28 border-b border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2" title="Valor dos itens vendidos dividido pelas unidades; exclui pedidos cancelados.">Vendido (médio)</th>
+                <th scope="col" className="min-w-32 border-b border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2" title="Última leitura da API. Anúncios ativos com preços diferentes aparecem em faixa.">Vitrine</th>
+                <th scope="col" className="min-w-24 border-b border-r border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2">Unidades</th>
+              </React.Fragment>)}</tr>
+            </thead>
+            <tbody>{visible.map(l => <tr key={l.chave} className="group">
+              <th scope="row" className="sticky left-0 z-10 w-36 min-w-36 max-w-36 border-b border-r border-line bg-panel px-3 py-3 text-left align-top font-normal group-hover:bg-panel-2 sm:w-56 sm:min-w-56 sm:max-w-56">
+                {l.sku ? <Link href={historico(l.sku)} prefetch={false} className="block break-words font-semibold text-brand hover:underline" title="Abrir histórico e estoques deste SKU">{l.sku}</Link> : <span className="font-semibold text-ink-2">Sem SKU</span>}
+                <span className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-ink-3" title={l.titulo}>{l.titulo}</span>
+              </th>
+              {colunas.map(c => {
+                const d = l.canais[c.id];
+                return <React.Fragment key={c.id}>
+                  <td className="num border-b border-line px-3 py-3 text-right align-top font-medium text-ink group-hover:bg-panel-2">{d?.vendido == null ? semDado : <span className="whitespace-nowrap">{money(d.vendido)}</span>}</td>
+                  <td className="border-b border-line px-3 py-3 text-right align-top text-ink-2 group-hover:bg-panel-2"><Vitrine valor={d?.vitrine} /></td>
+                  <td className="num border-b border-r border-line px-3 py-3 text-right align-top text-ink-2 group-hover:bg-panel-2">{d?.unidades == null ? semDado : count(d.unidades)}</td>
+                </React.Fragment>;
+              })}
+            </tr>)}</tbody>
+          </table>
+          {(!linhas.length || !colunas.length) && <p className="p-6 text-sm text-ink-3">{!colunas.length ? "Nenhum canal disponível nesta empresa." : "Nenhum produto neste filtro."}</p>}
+        </div>
+        <Pagination {...pagination} />
+      </Panel>
+      <p className="text-xs leading-relaxed text-ink-3">Vendido e unidades: período selecionado. Vitrine: última leitura da API, com faixa quando há preços diferentes. Sem informação ou sem venda: Sem dado.</p>
+    </PageBody>
+  </>;
 }

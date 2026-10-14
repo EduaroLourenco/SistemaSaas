@@ -23,13 +23,14 @@ Implementar as quatro páginas de “Telas a arrumar e melhorar.pdf”, enviado 
 8. Estoques por fonte e depósito, incluindo Full, dentro do contexto do produto.
 9. Corrigir o bloqueio de publicação causado pela frequência do estoque automático incompatível com o plano Vercel.
 10. Corrigir o controle de velocidade do Bling e as tentativas após erro 429.
+11. Comparar produtos em uma matriz por SKU, com preço vendido, vitrine da API e unidades por canal, período livre e seleção de múltiplos canais.
 
 Cada entrega tem seu próprio arquivo em `issues/`. O estado e as verificações ficam nesses arquivos.
 
 ## Regras de dados e acesso
 
 - Toda consulta operacional usa a empresa da sessão e preserva conta/canal; nunca misturar empresas.
-- Ausência de medição não é zero. Sem vendas significa quantidade zero e preço vendido indisponível.
+- Ausência de medição não é zero. Na nova comparação de Produtos e preços, o pedido do usuário é mostrar “Sem dado” também quando não há venda; as outras telas mantêm suas regras de apresentação.
 - Não somar estoques de ERP e canal que possam espelhar as mesmas unidades.
 - Distinguir preço de vitrine, oferta atual, preço vendido e mínimo calculado. Não inventar histórico.
 - API prevalece nas métricas cobertas; importações continuam válidas onde não há API ou cobertura.
@@ -56,3 +57,4 @@ Em 14/10/2026, a integração Vercel confirmou a publicação de `1dc1d41` em Pr
 - 14/10/2026: após a correção, a publicação `HZWsmPJ3PmvqeFSfPa851U46KvcF` do commit `1dc1d41` concluiu em produção. Resposta HTTP e presença das novidades no pacote público do domínio confirmadas; nenhum acesso autenticado ou sincronização Bling foi declarado como testado.
 - 14/10/2026: diagnóstico do `403 /depositos` registrado no ticket 08. Mensagem de permissão insuficiente e ajuda no ERP ajustadas. A correção de interface não libera permissões no provedor: administrador/integrador precisa revisar o aplicativo no Bling e autorizar novamente.
 - 14/10/2026: após relato de `429 /pedidos/vendas`, fila de consultas e pausas do Bling corrigidas no ticket 10. Testes aprovados e uma leitura real de pedido da Bom de Compras aceita; atualização integral permanece para conferência em produção.
+- 14/10/2026: matriz de Produtos e preços implementada no ticket 11. Cálculos e carregamento com dados reais de Probel e Bom de Compras conferidos; período, seleção de canais, exportação e mobile conferidos em prévia fictícia. A investigação do emparelhamento de Chopeiras Memo foi cancelada pelo usuário e nenhum vínculo foi alterado.
