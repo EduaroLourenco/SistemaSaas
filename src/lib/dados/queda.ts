@@ -110,6 +110,8 @@ export type DadosQueda = {
   deAnterior: string;
   ateAnterior: string;
   dias: number;
+  /** Tamanho do período de comparação, que pode diferir do atual. */
+  diasAnterior: number;
   nivel: Nivel;
   recorte: string[];
   opcoes: GrupoRecorte[];
@@ -251,6 +253,8 @@ async function precosDeVitrine(
 export async function carregarQueda(opcoes: {
   de?: string;
   ate?: string;
+  deAnt?: string;
+  ateAnt?: string;
   nivel?: Nivel;
   canais?: string;
   sku?: string;
@@ -263,8 +267,33 @@ export async function carregarQueda(opcoes: {
   const ate = opcoes.ate && ISO.test(opcoes.ate) ? opcoes.ate : diaSP(-1);
   const de = opcoes.de && ISO.test(opcoes.de) && opcoes.de <= ate ? opcoes.de : somarDias(ate, -29);
   const dias = diasEntre(de, ate);
-  const ateAnterior = somarDias(de, -1);
-  const deAnterior = somarDias(ateAnterior, -(dias - 1));
+
+  /*
+   * O período de comparação é escolhido, e não deduzido.
+   *
+   * O padrão continua o de antes — mesmo tamanho, colado antes do "de" —,
+   * que é o que responde "caiu em relação ao mês passado". Mas dia de
+   * campanha só se compara com dia de campanha: setembro inteiro contra o
+   * mesmo intervalo do ano passado, a semana do aumento contra a semana
+   * anterior ao aumento. Deduzir não dá conta disso.
+   *
+   * Duas regras, as duas por correção e não por gosto: o anterior termina
+   * ANTES do "de" (dia nos dois períodos seria contado duas vezes, e a
+   * queda sairia diluída), e o vão entre os dois períodos é descartado —
+   * a leitura fetch cobre de uma ponta à outra, então sem descartar um mês
+   * no meio entraria no "antes" sem ninguém pedir.
+   */
+  const ateAnterior =
+    opcoes.ateAnt && ISO.test(opcoes.ateAnt) && opcoes.ateAnt < de ? opcoes.ateAnt : somarDias(de, -1);
+  const deAnterior =
+    opcoes.deAnt && ISO.test(opcoes.deAnt) && opcoes.deAnt <= ateAnterior
+      ? opcoes.deAnt
+      : somarDias(ateAnterior, -(dias - 1));
+  const diasAnterior = diasEntre(deAnterior, ateAnterior);
+
+  /** Em qual período o dia cai. null = no vão entre os dois, fora da conta. */
+  const ladoDoDia = (data: string): "agora" | "antes" | null =>
+    data >= de ? (data <= ate ? "agora" : null) : data >= deAnterior && data <= ateAnterior ? "antes" : null;
 
   const recorte = (opcoes.canais ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const recortes = recorte.map((v) => lerRecorte(v));
@@ -418,7 +447,9 @@ export async function carregarQueda(opcoes: {
     const g = grupo(chave, { codigo, sku: sku || "—", titulo: it.titulo ?? an?.titulo ?? "" });
     g.onde.add(onde);
     if (an) g.anuncios.add(an.id);
-    const lado = p.data >= de ? g.agora : g.antes;
+    const qual = ladoDoDia(p.data);
+    if (!qual) continue;
+    const lado = g[qual];
     const qtd = Number(it.quantidade) || 0;
     const valor = it.total == null ? qtd * n(it.preco_unitario) : n(it.total);
     lado.receita += valor;
@@ -429,8 +460,7 @@ export async function carregarQueda(opcoes: {
     if (nivel === "produto") {
       const parteChave = an ? an.id : `${p.conta_canal_id}`;
       const parte = g.partes.get(parteChave) ?? { onde, codigo: an?.codigo_externo ?? onde, antes: 0, agora: 0 };
-      if (p.data >= de) parte.agora += valor;
-      else parte.antes += valor;
+      parte[qual] += valor;
       g.partes.set(parteChave, parte);
     }
   }
@@ -457,7 +487,9 @@ export async function carregarQueda(opcoes: {
     const chave = chavePorAnuncio.get(d.anuncio_id);
     const g = chave && grupos.get(chave);
     if (!g) continue;
-    const lado = d.data >= de ? g.agora : g.antes;
+    const qual = ladoDoDia(d.data);
+    if (!qual) continue;
+    const lado = g[qual];
     lado.visitas += d.visitas;
     lado.temVisita = true;
   }
@@ -467,7 +499,9 @@ export async function carregarQueda(opcoes: {
     const chave = chavePorAnuncio.get(d.anuncio_id);
     const g = chave && grupos.get(chave);
     if (!g) continue;
-    const lado = d.data >= de ? g.catAgora : g.catAntes;
+    const qual = ladoDoDia(d.data);
+    if (!qual) continue;
+    const lado = qual === 'agora' ? g.catAgora : g.catAntes;
     lado.dias += 1;
     if (d.ganhando) lado.ganhando += 1;
   }
@@ -478,7 +512,7 @@ export async function carregarQueda(opcoes: {
     const chave = chavePorAnuncio.get(r.anuncio_id);
     const g = chave && grupos.get(chave);
     if (!g) continue;
-    if (r.data >= de) {
+    if (ladoDoDia(r.data) === 'agora') {
       // Produto com vários anúncios: o dia conta como sem estoque só se
       // NENHUM anúncio tinha. Um zerado com o irmão abastecido não para a venda.
       if (r.estoque > 0) {
@@ -494,7 +528,9 @@ export async function carregarQueda(opcoes: {
     const g = chave && grupos.get(chave);
     if (!g) continue;
     if (!vitrineDesde || data < vitrineDesde) vitrineDesde = data;
-    const lado = data >= de ? g.agora : g.antes;
+    const qual = ladoDoDia(data);
+    if (!qual) continue;
+    const lado = g[qual];
     lado.vitrineSoma += preco;
     lado.vitrineDias += 1;
   }
@@ -587,6 +623,7 @@ export async function carregarQueda(opcoes: {
     deAnterior,
     ateAnterior,
     dias,
+    diasAnterior,
     nivel,
     recorte,
     opcoes: opcoesRecorte(contas),

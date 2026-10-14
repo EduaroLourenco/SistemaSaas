@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 export default async function Pagina({
   searchParams,
 }: {
-  searchParams: Promise<{ de?: string; ate?: string; nivel?: string; canais?: string; sku?: string }>;
+  searchParams: Promise<{ de?: string; ate?: string; deAnt?: string; ateAnt?: string; nivel?: string; canais?: string; sku?: string }>;
 }) {
-  const { de, ate, nivel, canais, sku } = await searchParams;
-  const dados = await carregarQueda({ de, ate, nivel: nivel as Nivel | undefined, canais, sku });
+  const { de, ate, deAnt, ateAnt, nivel, canais, sku } = await searchParams;
+  const dados = await carregarQueda({ de, ate, deAnt, ateAnt, nivel: nivel as Nivel | undefined, canais, sku });
   return <QuedaCliente dados={dados} />;
 }

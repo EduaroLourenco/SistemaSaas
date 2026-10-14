@@ -65,6 +65,17 @@ const dataBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const varPct = (agora: number | null, antes: number | null) =>
   agora != null && antes != null && antes > 0 ? ((agora - antes) / antes) * 100 : null;
 
+/** Dias entre dois dias, as duas pontas contadas. */
+function diasEntre(de: string, ate: string) {
+  return Math.round((Date.parse(ate + "T12:00:00Z") - Date.parse(de + "T12:00:00Z")) / 86400000) + 1;
+}
+
+/** O período de comparação colado antes de `de`, do mesmo tamanho. */
+function colado(de: string, dias: number) {
+  const ateAnt = somarDias(de, -1);
+  return { de, deAnt: somarDias(ateAnt, -(dias - 1)), ateAnt };
+}
+
 function somarDias(iso: string, d: number) {
   const t = new Date(iso + "T12:00:00Z");
   t.setUTCDate(t.getUTCDate() + d);
@@ -92,12 +103,14 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
   const [colunas, setColunas] = React.useState({ coluna: "delta" as ColunaQueda, crescente: true, minimo: "", maximo: "", texto: "", presenca: "todos" });
   const [aberta, setAberta] = React.useState<string | null>(dados.skuFiltro ? dados.linhas[0]?.chave ?? null : null);
 
-  const navegar = (mudar: Partial<{ de: string; ate: string; nivel: Nivel; canais: string[] }>) => {
+  const navegar = (mudar: Partial<{ de: string; ate: string; deAnt: string; ateAnt: string; nivel: Nivel; canais: string[] }>) => {
     const q = new URLSearchParams();
     const de = mudar.de ?? dados.de;
     const ate = mudar.ate ?? dados.ate;
     q.set("de", de);
     q.set("ate", ate);
+    q.set("deAnt", mudar.deAnt ?? dados.deAnterior);
+    q.set("ateAnt", mudar.ateAnt ?? dados.ateAnterior);
     q.set("nivel", mudar.nivel ?? dados.nivel);
     const canais = mudar.canais ?? dados.recorte;
     if (canais.length) q.set("canais", canais.join(","));
@@ -146,14 +159,14 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
       <PageHeader
         title="Por que caiu"
         breadcrumb="Vendas"
-        description={`${dataBr(dados.de)} a ${dataBr(dados.ate)} contra ${dataBr(dados.deAnterior)} a ${dataBr(dados.ateAnterior)} · ${dados.dias} dias`}
+        description={`${dataBr(dados.de)} a ${dataBr(dados.ate)} (${dados.dias} dias) contra ${dataBr(dados.deAnterior)} a ${dataBr(dados.ateAnterior)} (${dados.diasAnterior} dias)${dados.dias === dados.diasAnterior ? "" : " · tamanhos diferentes: compare por dia, não pelo total"}`}
         filters={
           <BarraFiltros>
             <Filtro rotulo="Período">
               <Segmented
                 options={PERIODOS}
                 value={periodoAtual}
-                onChange={(v) => navegar({ de: somarDias(dados.ate, -(Number(v) - 1)) })}
+                onChange={(v) => navegar(colado(somarDias(dados.ate, -(Number(v) - 1)), Number(v)))}
               />
             </Filtro>
             {/*
@@ -170,7 +183,11 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                 max={dados.ate}
                 value={dados.de}
                 onChange={(e) =>
-                  e.target.value && navegar({ de: e.target.value, ate: dados.ate < e.target.value ? e.target.value : dados.ate })
+                  e.target.value &&
+                  navegar({
+                    ate: dados.ate < e.target.value ? e.target.value : dados.ate,
+                    ...colado(e.target.value, diasEntre(e.target.value, dados.ate < e.target.value ? e.target.value : dados.ate)),
+                  })
                 }
                 className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink num"
               />
@@ -187,6 +204,54 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                 className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink num"
               />
             </Filtro>
+            <FiltroDivisor />
+            {/*
+             * O período de comparação, livre.
+             *
+             * Dia de campanha só se compara com dia de campanha: deduzir
+             * "o mesmo tamanho logo antes" não dá conta de setembro contra
+             * setembro, nem da semana do aumento contra a semana anterior
+             * ao aumento.
+             *
+             * Mexer no período de cima recoloca este colado antes dele, que
+             * é o padrão de sempre; quem quiser outro intervalo mexe aqui
+             * depois. Termina antes do "de" por exigência do cálculo — dia
+             * nos dois períodos seria contado duas vezes.
+             */}
+            <Filtro rotulo="Comparar de">
+              <input
+                type="date"
+                aria-label="Primeiro dia do período de comparação"
+                max={dados.ateAnterior}
+                value={dados.deAnterior}
+                onChange={(e) =>
+                  e.target.value &&
+                  navegar({
+                    deAnt: e.target.value,
+                    ateAnt: dados.ateAnterior < e.target.value ? e.target.value : dados.ateAnterior,
+                  })
+                }
+                className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink num"
+              />
+            </Filtro>
+            <Filtro rotulo="Comparar até">
+              <input
+                type="date"
+                aria-label="Último dia do período de comparação"
+                min={dados.deAnterior}
+                max={somarDias(dados.de, -1)}
+                value={dados.ateAnterior}
+                onChange={(e) =>
+                  e.target.value &&
+                  navegar({
+                    ateAnt: e.target.value,
+                    deAnt: dados.deAnterior > e.target.value ? e.target.value : dados.deAnterior,
+                  })
+                }
+                className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink num"
+              />
+            </Filtro>
+            <FiltroDivisor />
             <Filtro rotulo="Canais" composto>
               <SeletorCanais grupos={dados.opcoes} selecionados={dados.recorte} aoAplicar={(c) => navegar({ canais: c })} />
             </Filtro>
@@ -510,7 +575,7 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         <Numero rotulo="Receita" antes={money(l.antes.receita)} agora={money(l.agora.receita)} />
         <Numero rotulo="Unidades" antes={count(l.antes.unidades)} agora={count(l.agora.unidades)} />
-        <Numero rotulo="Unidades por dia" antes={(l.antes.unidades/dados.dias).toLocaleString("pt-BR", { maximumFractionDigits:2 })} agora={(l.agora.unidades/dados.dias).toLocaleString("pt-BR", { maximumFractionDigits:2 })} />
+        <Numero rotulo="Unidades por dia" antes={(l.antes.unidades/dados.diasAnterior).toLocaleString("pt-BR", { maximumFractionDigits:2 })} agora={(l.agora.unidades/dados.dias).toLocaleString("pt-BR", { maximumFractionDigits:2 })} />
         <Numero rotulo="Conversão (unidades / visitas)" antes={l.antes.conversao == null ? "sem medição" : pct(l.antes.conversao,2)} agora={l.agora.conversao == null ? "sem medição" : pct(l.agora.conversao,2)} extra={`Base: ${pct(l.agora.cobertura * 100,0)} das unidades com visitas no dia`} />
         <Numero
           rotulo="Visitas"
