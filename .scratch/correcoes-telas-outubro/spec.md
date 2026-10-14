@@ -21,6 +21,7 @@ Implementar as quatro páginas de “Telas a arrumar e melhorar.pdf”, enviado 
 6. Fortalecer Por que caiu: SKU, anúncios, visitas, conversão, preços, comparações, filtros, ordenação e detalhe diário.
 7. Catálogo de produtos anunciados com canal, calendário, preços vendidos/anunciados e histórico disponível.
 8. Estoques por fonte e depósito, incluindo Full, dentro do contexto do produto.
+9. Corrigir o bloqueio de publicação causado pela frequência do estoque automático incompatível com o plano Vercel.
 
 Cada entrega tem seu próprio arquivo em `issues/`. O estado e as verificações ficam nesses arquivos.
 
@@ -50,3 +51,4 @@ O pedido atual autoriza commits e push por entrega. GitHub e aplicação publica
 - 13/10/2026: leituras reais separadas de Probel e Bom de Compras validaram financeiro, publicidade, catálogo, detalhe diário e consulta de estoque por SKU. Nenhuma alteração foi enviada aos anúncios ou preços dos canais.
 - 13/10/2026: prévia isolada com dados fictícios conferiu desktop e celular, seleção de dia no gráfico, produto sem vendas e Full separado do depósito. Isso não substitui a conferência da aplicação publicada com login.
 - 13/10/2026: usuário executou a migração 38. Leitura da coluna pela API e execução de `carregarMargensProduto` confirmaram disponibilidade nas operações Probel e Bom de Compras. Nenhuma margem individual foi alterada; o campo vazio continua herdando a regra da campanha.
+- 14/10/2026: GitHub confirmou recebimento de `ab8fdc3`, mas a Vercel rejeitou o agendamento de estoque a cada meia hora. Ajustado para uma execução diária, mantendo atualização manual; acompanhar a nova publicação no ticket 09.

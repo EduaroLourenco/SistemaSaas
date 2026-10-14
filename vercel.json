@@ -3,7 +3,7 @@
   "framework": "nextjs",
   "regions": ["gru1"],
   "crons": [
-    { "path": "/api/cron/estoques", "schedule": "3,33 * * * *" },
+    { "path": "/api/cron/estoques", "schedule": "3 7 * * *" },
     { "path": "/api/cron/meli?turno=13h", "schedule": "0 16 * * *" },
     { "path": "/api/cron/meli?turno=13h", "schedule": "6 16 * * *" },
     { "path": "/api/cron/meli?turno=13h", "schedule": "12 16 * * *" },
