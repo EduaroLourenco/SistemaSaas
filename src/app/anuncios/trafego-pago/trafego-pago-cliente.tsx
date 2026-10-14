@@ -14,7 +14,9 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { cn } from "@/lib/utils";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import { AlertCircle, TrendingDown } from "lucide-react";
-import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
+import { DataTable, type Column } from "@/components/ui/data-table";
+import type { DadosTrafegoPago, LinhaAnuncioAds, LinhaCampanha } from "@/lib/dados/trafego-pago";
+import { ROTULO_ACAO, type AcaoAds, type LinhaOportunidade } from "@/lib/dados/trafego-oportunidades";
 
 /**
  * Tráfego pago.
@@ -37,7 +39,21 @@ import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago
  * deixam a diferença visível, que é onde mora a dúvida.
  */
 
-type Aba = "anuncios" | "campanhas" | "desperdicio";
+type Aba = "anuncios" | "oportunidades" | "campanhas" | "desperdicio";
+
+/*
+ * O tom segue o DINHEIRO, não o alarme: vermelho onde está saindo
+ * (desligar, mídia acima da margem), verde onde pode entrar (mais verba,
+ * entrar no ads), amarelo onde está sobrando sem crédito.
+ */
+const TOM_ACAO: Record<AcaoAds, "up" | "down" | "warn" | "neutral"> = {
+  desligar: "down",
+  rever_preco: "down",
+  midia_sobrou: "warn",
+  escalar: "up",
+  entrar: "up",
+  manter: "neutral",
+};
 
 const SITUACAO: Record<
   LinhaAnuncioAds["situacao"],
@@ -55,8 +71,8 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
   const [aba, setAba] = React.useState<Aba>("anuncios");
   const [busca, setBusca] = React.useState("");
   const [situacao, setSituacao] = React.useState("");
-  const [ordem, setOrdem] = React.useState<"investimento" | "acos" | "receitaReal" | "cliques">("investimento");
-  const { totais, periodos, campanhas, linhas, conferencia } = dados;
+  const [acao, setAcao] = React.useState<string>("");
+  const { totais, periodos, campanhas, linhas, conferencia, oportunidades, referencias } = dados;
   const router = useRouter();
 
   /* Canal e janela andam juntos na URL: trocar de conta pode mudar quais
@@ -101,15 +117,195 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         l.sku.toLowerCase().includes(t) ||
         l.titulo.toLowerCase().includes(t) ||
         l.campanhas.some((c) => c.toLowerCase().includes(t))
-    ).sort((a,b) => (b[ordem] ?? -Infinity) - (a[ordem] ?? -Infinity));
-  }, [linhas, busca, situacao, ordem]);
+    );
+  }, [linhas, busca, situacao]);
 
   const semRetorno = linhas.filter((l) => l.situacao === "sem_retorno");
   const semAds = linhas.filter((l) => l.situacao === "vendeu_sem_ads");
   const prejuizo = linhas.filter((l) => l.situacao === "prejuizo");
 
+  /*
+   * SKU, código e nome, os três.
+   *
+   * A página de ads do Mercado Livre identifica a linha pelo MLB, e o
+   * resto do sistema pelo SKU: sem os dois lado a lado não há como
+   * conferir uma tela contra a outra. O nome do produto evita ter de
+   * decorar que GP745 é a tigela de inox.
+   */
+  const celulaAnuncio = (l: { sku: string; mlb: string; titulo: string; conta: string; tipo: string }) => (
+    <div className="min-w-0">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="num text-[12.5px] font-medium text-ink">{l.sku || "sem SKU"}</span>
+        <span className="num text-[11.5px] text-ink-3">{l.mlb}</span>
+        {l.tipo === "premium" && <Badge tone="neutral">premium</Badge>}
+      </div>
+      <p className="text-[12px] text-ink-2 truncate max-w-[280px]" title={l.titulo}>
+        {l.titulo || "—"}
+      </p>
+      <p className="text-[11px] text-ink-3">{l.conta}</p>
+    </div>
+  );
+
   const th = "px-2.5 py-2 text-[12px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-2.5 py-2 border-b border-line";
+
+  const colunasAnuncio: Column<LinhaAnuncioAds>[] = [
+    {
+      key: "anuncio",
+      header: "Anúncio",
+      sticky: true,
+      mobile: "title",
+      sortValue: (l) => l.sku || l.mlb,
+      cell: (l) => {
+        const st = SITUACAO[l.situacao];
+        return (
+          <div className="min-w-0">
+            {celulaAnuncio(l)}
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              {st && <Badge tone={st.tom}>{st.rotulo}</Badge>}
+              <span className="text-[11px] text-ink-3 truncate max-w-[220px]">{l.campanhas.join(" · ")}</span>
+            </div>
+          </div>
+        );
+      },
+    },
+    { key: "investimento", header: "Investido", align: "right", mobile: "metric", sortValue: (l) => l.investimento, cell: (l) => <span className="num text-ink">{money(l.investimento)}</span> },
+    { key: "cliques", header: "Cliques", align: "right", sortValue: (l) => l.cliques, cell: (l) => <span className="num">{count(l.cliques)}</span> },
+    { key: "impressoes", header: "Impressões", align: "right", sortValue: (l) => l.impressoes, cell: (l) => <span className="num">{count(l.impressoes)}</span> },
+    { key: "cpc", header: "CPC", align: "right", sortValue: (l) => l.cpc ?? -1, cell: (l) => <span className="num">{l.cpc != null ? money(l.cpc) : "—"}</span> },
+    { key: "receitaAtribuida", header: "Receita ads", align: "right", sortValue: (l) => l.receitaAtribuida, cell: (l) => <span className="num">{l.receitaAtribuida > 0 ? moneyShort(l.receitaAtribuida) : "—"}</span> },
+    {
+      key: "acos",
+      header: "ACOS",
+      align: "right",
+      sortValue: (l) => l.acos ?? -1,
+      cell: (l) =>
+        l.acos == null ? (
+          <span className="text-ink-3">—</span>
+        ) : (
+          <span className={cn("num font-medium", l.margemPct != null && l.acos > l.margemPct ? "text-down" : "text-ink-2")}>
+            {pct(l.acos, 1)}
+          </span>
+        ),
+    },
+    { key: "roas", header: "ROAS", align: "right", sortValue: (l) => l.roas ?? -1, cell: (l) => <span className="num">{l.roas != null ? l.roas.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}</span> },
+    { key: "receitaReal", header: "Faturou", align: "right", sortValue: (l) => l.receitaReal, cell: (l) => <span className="num">{l.receitaReal > 0 ? moneyShort(l.receitaReal) : "—"}</span> },
+    {
+      key: "margem",
+      header: "Margem",
+      align: "right",
+      sortValue: (l) => l.margem ?? -Infinity,
+      cell: (l) =>
+        l.margem == null ? (
+          <span className="text-[12px] text-ink-3">sem custo</span>
+        ) : (
+          <div className="flex flex-col items-end leading-tight">
+            <span className="num text-ink">{moneyShort(l.margem)}</span>
+            <span className="num text-[12px] text-ink-3">{pct(l.margemPct ?? 0, 1)}</span>
+          </div>
+        ),
+    },
+    {
+      key: "sobraAposMidia",
+      header: "Sobra",
+      align: "right",
+      mobile: "metric",
+      sortValue: (l) => l.sobraAposMidia ?? -Infinity,
+      cell: (l) =>
+        l.sobraAposMidia == null ? (
+          <span className="text-ink-3">—</span>
+        ) : (
+          <span className={cn("num font-semibold", l.sobraAposMidia >= 0 ? "text-up" : "text-down")}>{moneyShort(l.sobraAposMidia)}</span>
+        ),
+    },
+  ];
+
+  const colunasCampanha: Column<LinhaCampanha>[] = [
+    { key: "campanha", header: "Campanha", sticky: true, mobile: "title", sortValue: (c) => c.campanha, cell: (c) => (<div className="min-w-0"><p className="text-[12.5px] text-ink truncate max-w-[280px]" title={c.campanha}>{c.campanha}</p><p className="text-[11px] text-ink-3">{c.conta}</p></div>) },
+    { key: "anuncios", header: "Anúncios", align: "right", sortValue: (c) => c.anuncios, cell: (c) => <span className="num">{count(c.anuncios)}</span> },
+    { key: "investimento", header: "Investido", align: "right", mobile: "metric", sortValue: (c) => c.investimento, cell: (c) => <span className="num text-ink">{money(c.investimento)}</span> },
+    { key: "cliques", header: "Cliques", align: "right", sortValue: (c) => c.cliques, cell: (c) => <span className="num">{count(c.cliques)}</span> },
+    { key: "receitaAtribuida", header: "Receita ads", align: "right", sortValue: (c) => c.receitaAtribuida, cell: (c) => <span className="num">{c.receitaAtribuida > 0 ? moneyShort(c.receitaAtribuida) : "—"}</span> },
+    { key: "acos", header: "ACOS", align: "right", sortValue: (c) => c.acos ?? -1, cell: (c) => <span className="num">{c.acos != null ? pct(c.acos, 1) : "—"}</span> },
+    { key: "roas", header: "ROAS", align: "right", sortValue: (c) => c.roas ?? -1, cell: (c) => <span className="num">{c.roas != null ? c.roas.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}</span> },
+    { key: "margem", header: "Margem", align: "right", sortValue: (c) => c.margem ?? -Infinity, cell: (c) => <span className="num">{c.margem != null ? moneyShort(c.margem) : "parcial"}</span> },
+    {
+      key: "sobraAposMidia",
+      header: "Sobra",
+      align: "right",
+      mobile: "metric",
+      sortValue: (c) => c.sobraAposMidia ?? -Infinity,
+      cell: (c) =>
+        c.sobraAposMidia == null ? (
+          <span className="text-ink-3">—</span>
+        ) : (
+          <span className={cn("num font-semibold", c.sobraAposMidia >= 0 ? "text-up" : "text-down")}>{moneyShort(c.sobraAposMidia)}</span>
+        ),
+    },
+  ];
+
+  const colunasOportunidade: Column<LinhaOportunidade>[] = [
+    {
+      key: "acao",
+      header: "O que fazer",
+      sticky: true,
+      mobile: "title",
+      sortValue: (l) => ROTULO_ACAO[l.acao],
+      cell: (l) => (
+        <div className="min-w-0">
+          <Badge tone={TOM_ACAO[l.acao]}>{ROTULO_ACAO[l.acao]}</Badge>
+          {l.motivo && <p className="text-[11.5px] text-ink-3 mt-1 max-w-[280px]">{l.motivo}</p>}
+        </div>
+      ),
+    },
+    { key: "anuncio", header: "Anúncio", sortValue: (l) => l.sku || l.mlb, cell: (l) => celulaAnuncio(l) },
+    { key: "visitas", header: "Visitas", align: "right", sortValue: (l) => l.visitas ?? -1, cell: (l) => <span className="num">{l.visitas != null ? count(l.visitas) : "—"}</span> },
+    {
+      key: "conversao",
+      header: "Conversão",
+      align: "right",
+      mobile: "metric",
+      sortValue: (l) => l.conversao ?? -1,
+      cell: (l) =>
+        l.conversao == null ? (
+          <span className="text-ink-3">—</span>
+        ) : (
+          <span className={cn("num", referencias?.conversaoMediana != null && l.conversao >= referencias.conversaoMediana ? "text-up font-medium" : "text-ink-2")}>
+            {pct(l.conversao, 1)}
+          </span>
+        ),
+    },
+    { key: "unidades", header: "Unidades", align: "right", sortValue: (l) => l.unidades, cell: (l) => <span className="num">{count(l.unidades)}</span> },
+    { key: "receitaReal", header: "Faturou", align: "right", mobile: "metric", sortValue: (l) => l.receitaReal, cell: (l) => <span className="num text-ink">{l.receitaReal > 0 ? moneyShort(l.receitaReal) : "—"}</span> },
+    { key: "margemPct", header: "Margem", align: "right", sortValue: (l) => l.margemPct ?? -Infinity, cell: (l) => (l.margemPct == null ? <span className="text-[12px] text-ink-3">sem custo</span> : <span className="num">{pct(l.margemPct, 1)}</span>) },
+    { key: "investimento", header: "Investido", align: "right", sortValue: (l) => l.investimento, cell: (l) => <span className="num">{l.investimento > 0 ? money(l.investimento) : "—"}</span> },
+    { key: "acos", header: "ACOS", align: "right", sortValue: (l) => l.acos ?? -1, cell: (l) => <span className={cn("num", l.acos != null && l.margemPct != null && l.acos > l.margemPct && "text-down")}>{l.acos != null ? pct(l.acos, 1) : "—"}</span> },
+    {
+      key: "estoque",
+      header: "Estoque",
+      align: "right",
+      sortValue: (l) => l.estoque ?? -1,
+      cell: (l) =>
+        l.estoque == null ? (
+          <span className="text-[12px] text-ink-3">não lido</span>
+        ) : (
+          <span className={cn("num", l.estoque === 0 && "text-down font-medium")}>{count(l.estoque)}</span>
+        ),
+    },
+  ];
+
+  const oportunidadesVisiveis = React.useMemo(() => {
+    const t = busca.trim().toLowerCase();
+    return oportunidades
+      .filter((l) => !acao || l.acao === acao)
+      .filter(
+        (l) =>
+          !t ||
+          l.mlb.toLowerCase().includes(t) ||
+          l.sku.toLowerCase().includes(t) ||
+          l.titulo.toLowerCase().includes(t)
+      );
+  }, [oportunidades, acao, busca]);
 
   return (
     <>
@@ -360,6 +556,14 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           <Tabs
             tabs={[
               { value: "anuncios" as const, label: "Por anúncio", count: linhas.length },
+              {
+                value: "oportunidades" as const,
+                label: "O que fazer",
+                count:
+                  (referencias?.contagem.escalar ?? 0) +
+                  (referencias?.contagem.entrar ?? 0) +
+                  (referencias?.contagem.rever_preco ?? 0),
+              },
               { value: "campanhas" as const, label: "Por campanha", count: campanhas.length },
               {
                 value: "desperdicio" as const,
@@ -375,187 +579,109 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
             <>
               <div className="flex flex-wrap gap-2 p-3 border-b border-line">
                 <Input
-                  placeholder="Buscar MLB, SKU, título ou campanha"
+                  placeholder="Buscar SKU, código, título ou campanha"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   className="max-w-sm"
                 />
-                <select aria-label="Situação dos anúncios" value={situacao} onChange={(e)=>setSituacao(e.target.value)} className="min-h-10 max-w-full rounded-r1 border border-line bg-panel px-2 text-sm"><option value="">Todas as situações</option><option value="sem_retorno">Gasto sem venda</option><option value="vendeu_sem_ads">Vendas sem atribuição</option><option value="prejuizo">Mídia maior que a margem</option></select>
-                <select aria-label="Ordenar anúncios" value={ordem} onChange={(e)=>setOrdem(e.target.value as typeof ordem)} className="min-h-10 max-w-full rounded-r1 border border-line bg-panel px-2 text-sm"><option value="investimento">Maior investimento</option><option value="acos">Maior ACoS</option><option value="receitaReal">Maior faturamento</option><option value="cliques">Mais cliques</option></select>
+                <select
+                  aria-label="Situação dos anúncios"
+                  value={situacao}
+                  onChange={(e) => setSituacao(e.target.value)}
+                  className="min-h-10 max-w-full rounded-r1 border border-line bg-panel px-2 text-sm"
+                >
+                  <option value="">Todas as situações</option>
+                  <option value="sem_retorno">Gasto sem venda</option>
+                  <option value="vendeu_sem_ads">Vendas sem atribuição</option>
+                  <option value="prejuizo">Mídia maior que a margem</option>
+                </select>
               </div>
-              <div className="overflow-x-auto max-h-[620px]">
-                <table className="w-full border-collapse min-w-[980px]">
-                  <thead className="bg-panel-2 sticky top-0 z-10">
-                    <tr>
-                      <th className={`${th} text-left`}>Anúncio</th>
-                      <th className={`${th} text-right`}>Investido</th>
-                      <th className={`${th} text-right`}>Cliques</th>
-                      <th className={`${th} text-right`}>CPC</th>
-                      <th className={`${th} text-right`}>Receita ads</th>
-                      <th className={`${th} text-right`}>ACOS</th>
-                      <th className={`${th} text-right`}>Faturou</th>
-                      <th className={`${th} text-right`}>Margem</th>
-                      <th className={`${th} text-right`}>Sobra</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visiveis.slice(0, 300).map((l, i) => {
-                      const s = SITUACAO[l.situacao];
-                      return (
-                        <tr key={`${l.mlb}-${i}`} className="hover:bg-panel-2/50">
-                          <td className={td}>
-                            <div className="flex items-center gap-1.5">
-                              <span className="num text-[12.5px] text-ink font-medium">
-                                {l.sku || l.mlb}
-                              </span>
-                              {l.tipo === "premium" && (
-                                <Badge tone="neutral">premium</Badge>
-                              )}
-                              {s && <Badge tone={s.tom}>{s.rotulo}</Badge>}
-                            </div>
-                            <p className="text-[11px] text-ink-3">{l.conta}</p>
-                            <p className="text-[12px] text-ink-3 truncate max-w-[260px]">
-                              {l.campanhas.join(" · ")}
-                            </p>
-                          </td>
-                          <td className={`${td} text-right num text-[12.5px] text-ink`}>
-                            {money(l.investimento)}
-                          </td>
-                          <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
-                            {count(l.cliques)}
-                          </td>
-                          <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
-                            {l.cpc != null ? money(l.cpc) : "—"}
-                          </td>
-                          <td className={`${td} text-right num text-[12.5px] text-ink-2`}>
-                            {l.receitaAtribuida > 0 ? moneyShort(l.receitaAtribuida) : "—"}
-                          </td>
-                          <td className={`${td} text-right`}>
-                            {l.acos != null ? (
-                              <span
-                                className={`num text-[12.5px] font-medium ${
-                                  l.margemPct != null && l.acos > l.margemPct
-                                    ? "text-down"
-                                    : "text-ink-2"
-                                }`}
-                              >
-                                {pct(l.acos, 1)}
-                              </span>
-                            ) : (
-                              <span className="text-[12px] text-ink-3">—</span>
-                            )}
-                          </td>
-                          <td className={`${td} text-right num text-[12.5px] text-ink-2`}>
-                            {l.receitaReal > 0 ? moneyShort(l.receitaReal) : "—"}
-                          </td>
-                          <td className={`${td} text-right`}>
-                            {l.margem != null ? (
-                              <div className="flex flex-col items-end leading-tight">
-                                <span className="num text-[12.5px] text-ink">
-                                  {moneyShort(l.margem)}
-                                </span>
-                                <span className="num text-[12px] text-ink-3">
-                                  {pct(l.margemPct ?? 0, 1)}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-[12px] text-ink-3">sem custo</span>
-                            )}
-                          </td>
-                          <td className={`${td} text-right`}>
-                            {l.sobraAposMidia != null ? (
-                              <span
-                                className={`num text-[13px] font-semibold ${
-                                  l.sobraAposMidia >= 0 ? "text-up" : "text-down"
-                                }`}
-                              >
-                                {moneyShort(l.sobraAposMidia)}
-                              </span>
-                            ) : (
-                              <span className="text-[12px] text-ink-3">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {visiveis.length > 300 && (
-                <p className="px-3 py-2 text-[12px] text-ink-3 border-t border-line">
-                  Mostrando os 300 de maior investimento. Use a busca para o resto.
-                </p>
-              )}
+              {/* Quem ordena é o cabeçalho da tabela: qualquer coluna, nos
+                  dois sentidos. O seletor de ordem que existia aqui dava
+                  quatro opções fixas e escondia as outras seis. */}
+              <DataTable
+                columns={colunasAnuncio}
+                rows={visiveis}
+                rowKey={(l) => l.mlb}
+                defaultSort={{ key: "investimento", dir: "desc" }}
+                empty={<p className="px-4 py-6 text-[13px] text-ink-3">Nenhum anúncio com esse filtro.</p>}
+              />
             </>
           )}
 
-          {aba === "campanhas" && (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse min-w-[820px]">
-                <thead className="bg-panel-2">
-                  <tr>
-                    <th className={`${th} text-left`}>Campanha</th>
-                    <th className={`${th} text-right`}>Anúncios</th>
-                    <th className={`${th} text-right`}>Investido</th>
-                    <th className={`${th} text-right`}>Cliques</th>
-                    <th className={`${th} text-right`}>Receita ads</th>
-                    <th className={`${th} text-right`}>ACOS</th>
-                    <th className={`${th} text-right`}>Margem</th>
-                    <th className={`${th} text-right`}>Sobra</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {campanhas.map((c, i) => (
-                    <tr key={`${c.campanha}-${i}`} className="hover:bg-panel-2/50">
-                      <td className={`${td} text-[12.5px] text-ink`}>{c.campanha}<p className="mt-0.5 text-[11px] text-ink-3">{c.conta}</p></td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
-                        {count(c.anuncios)}
-                      </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink`}>
-                        {money(c.investimento)}
-                      </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
-                        {count(c.cliques)}
-                      </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-2`}>
-                        {c.receitaAtribuida > 0 ? moneyShort(c.receitaAtribuida) : "—"}
-                      </td>
-                      <td className={`${td} text-right`}>
-                        {c.acos != null ? (
-                          <span
-                            className={`num text-[12.5px] font-medium ${
-                              c.acos > 15 ? "text-down" : "text-ink-2"
-                            }`}
-                          >
-                            {pct(c.acos, 1)}
-                          </span>
-                        ) : (
-                          <Badge tone="down">nada vendeu</Badge>
-                        )}
-                      </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-2`}>
-                        {c.margem != null ? moneyShort(c.margem) : "—"}
-                      </td>
-                      <td className={`${td} text-right`}>
-                        {c.sobraAposMidia != null ? (
-                          <span
-                            className={`num text-[13px] font-semibold ${
-                              c.sobraAposMidia >= 0 ? "text-up" : "text-down"
-                            }`}
-                          >
-                            {moneyShort(c.sobraAposMidia)}
-                          </span>
-                        ) : (
-                          <span className="text-[12px] text-ink-3">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {aba === "oportunidades" && (
+            <>
+              {/*
+               * A tabela que o relatório do canal não tem.
+               *
+               * Ela inclui anúncio SEM mídia, que é onde está a pergunta
+               * que o painel de ads não responde: o que já vende bem no
+               * orgânico e merece verba. Os cortes vêm da mediana do
+               * próprio recorte, e ficam escritos aqui em cima para
+               * ninguém ter de adivinhar de onde saiu a classificação.
+               */}
+              <div className="flex flex-wrap items-center gap-2 p-3 border-b border-line">
+                <Input
+                  placeholder="Buscar SKU, código ou título"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="max-w-sm"
+                />
+                <select
+                  aria-label="O que fazer"
+                  value={acao}
+                  onChange={(e) => setAcao(e.target.value)}
+                  className="min-h-10 max-w-full rounded-r1 border border-line bg-panel px-2 text-sm"
+                >
+                  <option value="">Tudo ({oportunidades.length})</option>
+                  {(Object.keys(ROTULO_ACAO) as AcaoAds[])
+                    .filter((a) => (referencias?.contagem[a] ?? 0) > 0)
+                    .map((a) => (
+                      <option key={a} value={a}>
+                        {ROTULO_ACAO[a]} ({referencias?.contagem[a] ?? 0})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {referencias && (
+                <div className="flex flex-wrap gap-x-5 gap-y-1 px-3 py-2 border-b border-line text-[12px] text-ink-3">
+                  <span>
+                    conversão mediana{" "}
+                    <span className="num text-ink-2">
+                      {referencias.conversaoMediana != null ? pct(referencias.conversaoMediana, 1) : "—"}
+                    </span>
+                  </span>
+                  <span>
+                    já bem visto acima de{" "}
+                    <span className="num text-ink-2">{referencias.visitasTeto != null ? count(referencias.visitasTeto) : "—"}</span>{" "}
+                    visitas
+                  </span>
+                  <span>
+                    piso de{" "}
+                    <span className="num text-ink-2">{count(referencias.visitasMinimas)}</span> visitas para a taxa valer
+                  </span>
+                  <span>
+                    <span className="num text-ink-2">{count(referencias.comVisitaSuficiente)}</span> anúncios acima do piso
+                  </span>
+                </div>
+              )}
+              <DataTable
+                columns={colunasOportunidade}
+                rows={oportunidadesVisiveis}
+                rowKey={(l) => l.mlb}
+                empty={<p className="px-4 py-6 text-[13px] text-ink-3">Nenhum anúncio com esse filtro.</p>}
+              />
+            </>
           )}
-
+          {aba === "campanhas" && (
+            <DataTable
+              columns={colunasCampanha}
+              rows={campanhas}
+              rowKey={(c) => `${c.conta}|${c.campanha}`}
+              defaultSort={{ key: "investimento", dir: "desc" }}
+              empty={<p className="px-4 py-6 text-[13px] text-ink-3">Nenhuma campanha nesta janela.</p>}
+            />
+          )}
           {aba === "desperdicio" && (
             <div className="p-4 space-y-5">
               {[

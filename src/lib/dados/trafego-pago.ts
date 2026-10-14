@@ -5,6 +5,7 @@ import { carregarBaseMargem, agregar } from "./margem";
 import { carregarContasRecorte } from "./contas-recorte";
 import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
 import { conferirInvestimento, periodoTrafego } from "@/lib/trafego-pago-filtros";
+import { classificarOportunidades, type LinhaOportunidade, type Referencias } from "./trafego-oportunidades";
 
 /**
  * Tráfego pago: a mídia contra a margem que ela produz.
@@ -172,6 +173,16 @@ export type DadosTrafegoPago = {
   };
   /** Relatório e série diária do mesmo recorte e intervalo. */
   conferencia: ReturnType<typeof conferirInvestimento> | null;
+  /**
+   * O que fazer com cada anúncio — inclusive os que NÃO têm mídia.
+   *
+   * A tabela de cima responde pelo dinheiro que já foi gasto. Esta
+   * responde pelo que ainda não foi: o anúncio que converte bem e é
+   * pouco visto nunca aparece num relatório de ads, porque o canal só
+   * conhece quem já anuncia.
+   */
+  oportunidades: LinhaOportunidade[];
+  referencias: Referencias | null;
 };
 
 export async function carregarTrafegoPago(
@@ -202,7 +213,10 @@ export async function carregarTrafegoPago(
         .order("inicio")
     ),
     paginar(() =>
-      sb.from("anuncios").select("codigo_externo,sku_canal,titulo,tipo,canal_id,conta_canal_id").order("codigo_externo")
+      sb
+        .from("anuncios")
+        .select("id,codigo_externo,sku_canal,titulo,tipo,status,estoque,canal_id,conta_canal_id")
+        .order("codigo_externo")
     ),
     paginar(() =>
       sb
@@ -263,6 +277,8 @@ export async function carregarTrafegoPago(
         tacos: null, receitaTotalConta: 0,
       },
       conferencia: null,
+      oportunidades: [],
+      referencias: null,
     };
   }
 
@@ -293,10 +309,13 @@ export async function carregarTrafegoPago(
   /* O catálogo vem primeiro: é ele que diz de qual conta é cada anúncio,
      e o recorte abaixo depende disso. */
   type Anun = {
+    id: string;
     codigo_externo: string;
     sku_canal: string | null;
     titulo: string;
     tipo: string;
+    status: string | null;
+    estoque: number | null;
     canal_id: string | null;
     conta_canal_id: string | null;
   };
@@ -342,6 +361,8 @@ export async function carregarTrafegoPago(
         tacos: null, receitaTotalConta: 0,
       },
       conferencia: null,
+      oportunidades: [],
+      referencias: null,
     };
   }
 
@@ -364,6 +385,29 @@ export async function carregarTrafegoPago(
   // ou de contas que não têm relatório nesta janela como base do TACoS.
   const base = { ...baseCompleta, itens: baseCompleta.itens.filter((it) => idsContasRelatorio.has(it.contaCanalId)) };
   const margemPorMlb = new Map(agregar(base, "anuncio").map((l) => [l.chave, l]));
+
+  /*
+   * ── Visitas da MESMA janela da mídia ──
+   *
+   * Sem elas não há conversão, e sem conversão não há como separar
+   * "pouco visto" de "não convence". A leitura é por data e vem depois
+   * da escolha da janela, como a da margem: o intervalo só existe aqui.
+   */
+  const visitasRaw = await paginar(() =>
+    sb
+      .from("anuncio_desempenho_diario")
+      .select("anuncio_id,visitas,data")
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("id")
+  );
+  const mlbDoId = new Map((anunciosRaw as unknown as Anun[]).map((a) => [a.id, a.codigo_externo]));
+  const visitasPorMlb = new Map<string, number>();
+  for (const v of visitasRaw as unknown as { anuncio_id: string; visitas: number | null }[]) {
+    const mlb = mlbDoId.get(v.anuncio_id);
+    if (!mlb) continue;
+    visitasPorMlb.set(mlb, (visitasPorMlb.get(mlb) ?? 0) + n(v.visitas));
+  }
 
   /* ── Agrega a mídia por anúncio ── */
 
@@ -473,6 +517,44 @@ export async function carregarTrafegoPago(
 
   linhas.sort((a, b) => b.investimento - a.investimento);
 
+  /*
+   * ── Oportunidades: todo anúncio do recorte, não só os com mídia ──
+   *
+   * Entra quem teve mídia, venda ou visita na janela. Anúncio sem
+   * nenhuma das três não tem o que decidir, e encher a tabela com ele
+   * esconderia os que importam.
+   */
+  const candidatos = (anunciosRaw as unknown as Anun[]).filter((a) => {
+    if (!dentro(a.codigo_externo)) return false;
+    const ads = porMlb.get(a.codigo_externo);
+    const m = margemPorMlb.get(a.codigo_externo);
+    return Boolean(ads) || (m?.unidades ?? 0) > 0 || (visitasPorMlb.get(a.codigo_externo) ?? 0) > 0;
+  });
+
+  const { linhas: oportunidades, referencias } = classificarOportunidades(
+    candidatos.map((a) => {
+      const ads = porMlb.get(a.codigo_externo);
+      const m = margemPorMlb.get(a.codigo_externo);
+      const margem = m && m.cobertura >= 99.5 ? m.margem : null;
+      return {
+        mlb: a.codigo_externo,
+        sku: a.sku_canal ?? "",
+        titulo: a.titulo ?? "",
+        conta: nomeConta(a.codigo_externo),
+        tipo: a.tipo ?? "—",
+        visitas: visitasPorMlb.has(a.codigo_externo) ? visitasPorMlb.get(a.codigo_externo)! : null,
+        unidades: m?.unidades ?? 0,
+        receitaReal: r2(m?.receita ?? 0),
+        margem,
+        margemPct: margem != null ? m?.margemPct ?? null : null,
+        investimento: r2(ads?.inv ?? 0),
+        receitaAtribuida: r2(ads?.rec ?? 0),
+        estoque: a.estoque,
+        status: a.status,
+      };
+    })
+  );
+
   /* ── Campanhas ── */
 
   const margemPorMlbMap = margemPorMlb;
@@ -564,6 +646,8 @@ export async function carregarTrafegoPago(
       receitaTotalConta,
     },
     conferencia,
+    oportunidades,
+    referencias,
   };
 }
 
