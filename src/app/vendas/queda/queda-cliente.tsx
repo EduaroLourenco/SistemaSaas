@@ -156,14 +156,35 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                 onChange={(v) => navegar({ de: somarDias(dados.ate, -(Number(v) - 1)) })}
               />
             </Filtro>
+            {/*
+             * Os dois dias, livres. O atalho de período ao lado continua
+             * ancorado no "até"; estes dois mexem numa ponta e deixam a
+             * outra onde está, que é o que se espera de um intervalo.
+             * O período anterior acompanha sozinho: mesmo tamanho, colado
+             * antes do "de" — comparar 11 dias com 30 não diria nada.
+             */}
+            <Filtro rotulo="De">
+              <input
+                type="date"
+                aria-label="Primeiro dia do período"
+                max={dados.ate}
+                value={dados.de}
+                onChange={(e) =>
+                  e.target.value && navegar({ de: e.target.value, ate: dados.ate < e.target.value ? e.target.value : dados.ate })
+                }
+                className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink num"
+              />
+            </Filtro>
             <Filtro rotulo="Até">
               <input
                 type="date"
+                aria-label="Último dia do período"
+                min={dados.de}
                 value={dados.ate}
                 onChange={(e) =>
-                  e.target.value && navegar({ ate: e.target.value, de: somarDias(e.target.value, -(dados.dias - 1)) })
+                  e.target.value && navegar({ ate: e.target.value, de: dados.de > e.target.value ? e.target.value : dados.de })
                 }
-                className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink"
+                className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink num"
               />
             </Filtro>
             <Filtro rotulo="Canais" composto>
