@@ -26,6 +26,56 @@ export function ErpPainel({
   const router = useRouter();
   const [salvando, setSalvando] = React.useState<string | null>(null);
   const [aviso, setAviso] = React.useState<string | null>(null);
+  const [desde, setDesde] = React.useState(`${new Date().getFullYear()}-01-01`);
+  const [puxando, setPuxando] = React.useState(false);
+  const [progresso, setProgresso] = React.useState<string | null>(null);
+
+  /*
+   * O histórico vem em várias chamadas: a rota lê o que couber em 300s e
+   * devolve em `continuar` o dia onde parou. O laço aqui é o que torna isso
+   * um clique só. O limite de voltas é trava de segurança — cada chamada
+   * anda pelo menos 10 dias, então 60 voltas cobrem mais de um ano.
+   */
+  async function puxarHistorico() {
+    setPuxando(true);
+    setProgresso("lendo…");
+    let ate = hojeSP();
+    let pedidos = 0;
+    try {
+      for (let volta = 0; volta < 60; volta++) {
+        const r = await fetch("/api/bling/historico", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ de: desde, ate }),
+        });
+        const j = (await r.json().catch(() => ({}))) as {
+          erro?: string;
+          aviso?: string;
+          pedidos?: number;
+          continuar?: string | null;
+        };
+        if (!r.ok) {
+          setProgresso(j.erro ?? "Não consegui ler o histórico.");
+          return;
+        }
+        pedidos += j.pedidos ?? 0;
+        if (j.aviso) {
+          setProgresso(`${pedidos} pedidos gravados. Parou em ${j.continuar ?? desde}: ${j.aviso}`);
+          return;
+        }
+        if (!j.continuar) {
+          setProgresso(`Pronto: ${pedidos} pedidos de ${desde} até hoje.`);
+          return;
+        }
+        ate = j.continuar;
+        setProgresso(`${pedidos} pedidos até agora — já cheguei em ${ate}, continuando…`);
+      }
+      setProgresso(`${pedidos} pedidos gravados. Clique de novo para continuar de ${ate}.`);
+    } finally {
+      setPuxando(false);
+      router.refresh();
+    }
+  }
 
   async function ligar(loja: string, conta: string) {
     setSalvando(loja);
@@ -49,6 +99,7 @@ export function ErpPainel({
   const lojas = [...new Set([...Object.keys(erp?.lojas ?? {}), ...Object.keys(erp?.pendentes ?? {})])].sort(
     (a, b) => Number(a) - Number(b)
   );
+  const temLigacao = Object.keys(erp?.lojas ?? {}).length > 0;
   const nomeConta = (c: ContaCanal) => `${c.canalNome} · ${c.nome}`;
 
   return (
@@ -168,6 +219,45 @@ export function ErpPainel({
         </Panel>
       )}
 
+      {erp?.conectado && (
+        <Panel>
+          <PanelHeader
+            title="Puxar histórico"
+            hint="Conectar lê só os últimos dias. Para comparar mês a mês, escolha desde quando ler. Pode demorar alguns minutos e vai sozinho até o fim — deixe a página aberta."
+          />
+          <div className="px-5 py-4 flex flex-col gap-2 text-[13px]">
+            <div className="flex items-end gap-3 flex-wrap">
+              <label className="flex flex-col gap-1">
+                <span className="label">Ler desde</span>
+                <input
+                  type="date"
+                  value={desde}
+                  max={hojeSP()}
+                  disabled={puxando}
+                  onChange={(e) => setDesde(e.target.value)}
+                  className="h-9 rounded-r1 border border-line-2 bg-panel-2 px-2 text-[13px] num"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={puxarHistorico}
+                disabled={puxando || !desde}
+                className="h-9 rounded-r1 border border-brand bg-brand px-3 text-[12px] font-medium text-brand-ink transition-colors hover:bg-brand-2 disabled:opacity-60"
+              >
+                {puxando ? "Lendo…" : "Puxar"}
+              </button>
+            </div>
+            {progresso && <p className="text-[12.5px] text-ink-2">{progresso}</p>}
+            {!temLigacao && (
+              <p className="text-[12.5px] text-ink-3">
+                Nenhuma loja ligada a um canal ainda: os pedidos lidos ficam parados até você escolher o canal de cada
+                loja acima.
+              </p>
+            )}
+          </div>
+        </Panel>
+      )}
+
       <Panel>
         <PanelHeader title="Outros ERPs" />
         <div className="px-5 py-4 flex flex-col gap-2 text-[13px]">
@@ -182,6 +272,11 @@ export function ErpPainel({
     </div>
   );
 }
+
+/* Hoje em São Paulo, e não no fuso do navegador: o dia da plataforma é o de
+   São Paulo, e o cliente pode abrir de qualquer lugar. "sv-SE" é o truque
+   curto para AAAA-MM-DD. */
+const hojeSP = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
 
 /*
  * O canal provável pelo formato do número do pedido. O app do Bling sem o
