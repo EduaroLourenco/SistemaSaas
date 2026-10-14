@@ -67,6 +67,14 @@ export type Anuncio = {
   status: "ativo" | "pausado";
   conta: string;
   categoria: string;
+  /**
+   * Saldo da última sincronização do canal. Null = nunca lido, que é
+   * diferente de zero: zero é ruptura, e ruptura explica venda que parou.
+   * Sem esta coluna a lista mostrava queda sem dizer se havia produto.
+   */
+  estoque: number | null;
+  /** Preço publicado agora, do cadastro do anúncio. */
+  precoAtual: number | null;
   semanas: SemanaDesempenho[];
 };
 

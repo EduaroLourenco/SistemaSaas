@@ -4,6 +4,8 @@ import { linkDoAnuncio } from "@/lib/links";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { DisputaPainel } from "./disputa-painel";
+import type { DadosDisputa } from "@/lib/dados/disputa-catalogo";
 import {
   BarraFiltros,
   Filtro,
@@ -150,7 +152,15 @@ function BarraComposicao({
    Página
    ══════════════════════════════════════════════════════════════ */
 
-export default function CatalogoAnuncios({ dados, buscaInicial = "" }: { dados: DadosCatalogo; buscaInicial?: string }) {
+export default function CatalogoAnuncios({
+  dados,
+  disputa,
+  buscaInicial = "",
+}: {
+  dados: DadosCatalogo;
+  disputa: DadosDisputa;
+  buscaInicial?: string;
+}) {
   const {
     itens: CATALOGO,
     categorias: CATEGORIAS_CATALOGO,
@@ -533,6 +543,11 @@ export default function CatalogoAnuncios({ dados, buscaInicial = "" }: { dados: 
       />
 
       <PageBody>
+        {/* A disputa primeiro: "estou ganhando o catálogo?" é a pergunta
+            que o nome da tela promete, e a lista de anúncios responde
+            outra. */}
+        <DisputaPainel disputa={disputa} />
+
         {erroSync && (
           <Panel className="px-4 py-3 flex items-start gap-2.5 border-down/30">
             <TriangleAlert className="w-4 h-4 text-down shrink-0 mt-0.5" strokeWidth={2} />

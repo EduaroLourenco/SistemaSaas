@@ -1,6 +1,7 @@
 "use client";
 
 import { linkDoAnuncio } from "@/lib/links";
+import { cn } from "@/lib/utils";
 import * as React from "react";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -348,6 +349,50 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
             </span>
           </span>
         </span>
+      ),
+    },
+    {
+      key: "sku",
+      header: "SKU",
+      width: "110px",
+      sortValue: (a) => a.sku || a.mlb,
+      cell: (a) => (
+        <span className="num text-[12.5px] text-ink-2">{a.sku || <span className="text-ink-3">sem SKU</span>}</span>
+      ),
+    },
+    {
+      /*
+       * Estoque na lista, e não só no raio-X.
+       *
+       * A tela mostrava queda de venda sem dizer se havia produto para
+       * vender. Com a coluna, ordenar por estoque crescente põe a ruptura
+       * no topo — que é a primeira pergunta de quem olha uma queda.
+       *
+       * Null é "nunca lido", diferente de zero. Zero é ruptura e vai em
+       * vermelho; nulo diz que o canal não informou.
+       */
+      key: "estoque",
+      header: "Estoque",
+      align: "right",
+      width: "92px",
+      sortValue: (a) => a.estoque ?? -1,
+      cell: (a) =>
+        a.estoque == null ? (
+          <span className="text-[12px] text-ink-3">não lido</span>
+        ) : (
+          <span className={cn("num text-[12.5px]", a.estoque === 0 ? "text-down font-semibold" : a.estoque <= 3 ? "text-warn" : "text-ink-2")}>
+            {a.estoque}
+          </span>
+        ),
+    },
+    {
+      key: "precoAtual",
+      header: "Publicado",
+      align: "right",
+      width: "104px",
+      sortValue: (a) => a.precoAtual ?? -1,
+      cell: (a) => (
+        <span className="num text-[12.5px] text-ink-2">{a.precoAtual != null ? money(a.precoAtual) : "—"}</span>
       ),
     },
     {

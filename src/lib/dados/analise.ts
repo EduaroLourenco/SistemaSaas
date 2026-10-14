@@ -44,6 +44,8 @@ type LinhaSemana = {
     sku_canal: string | null;
     tipo: string;
     status: string;
+    estoque: number | null;
+    preco_atual: string | number | null;
     contas_canal: { nome: string } | null;
   } | null;
 };
@@ -75,7 +77,7 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
         .from("anuncio_desempenho_semanal")
         .select(
           "ano_iso,semana_iso,inicio,fim,visitas,vendas,receita,preco_praticado,preco_anunciado,preco_ideal,comissao_negociada," +
-            "anuncios(codigo_externo,titulo,sku_canal,tipo,status,contas_canal(nome))"
+            "anuncios(codigo_externo,titulo,sku_canal,tipo,status,estoque,preco_atual,contas_canal(nome))"
         )
         .order("semana_iso", { ascending: true })
     ),
@@ -119,6 +121,8 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
         status: a.status === "pausado" ? "pausado" : "ativo",
         conta: a.contas_canal?.nome ?? "Conta principal",
         categoria: categoriaDe(a.titulo),
+        estoque: a.estoque,
+        precoAtual: a.preco_atual == null ? null : n(a.preco_atual),
         semanas: [],
       };
       porAnuncio.set(a.codigo_externo, anuncio);
