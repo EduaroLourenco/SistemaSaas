@@ -1,5 +1,6 @@
 import "server-only";
 import { gravarSegredo, lerSegredo, type Integracao } from "@/lib/integracoes/cofre";
+import { criarLeitorBling } from "./limite";
 
 /**
  * Bling (API v3): autorização e chamada.
@@ -80,16 +81,7 @@ async function acesso(integ: Integracao): Promise<string> {
   return novo.access_token;
 }
 
-/*
- * O Bling aceita 3 requisições por segundo por aplicação. 350ms entre uma
- * e outra deixa folga; 429 espera e tenta de novo, até três vezes.
- */
-let ultima = 0;
-async function freio() {
-  const espera = ultima + 350 - Date.now();
-  if (espera > 0) await new Promise((r) => setTimeout(r, espera));
-  ultima = Date.now();
-}
+const lerComLimite = criarLeitorBling();
 
 export async function bling<T>(
   integ: Integracao,
@@ -101,36 +93,34 @@ export async function bling<T>(
     if (Array.isArray(v)) for (const item of v) url.searchParams.append(k, String(item));
     else url.searchParams.set(k, String(v));
   }
-  const tok = await acesso(integ);
-  for (let tentativa = 0; ; tentativa++) {
-    await freio();
-    const r = await fetch(url, { headers: { Authorization: `Bearer ${tok}`, accept: "application/json" } });
-    if (r.status === 429 && tentativa < 3) {
-      await new Promise((x) => setTimeout(x, 1000 * (tentativa + 1)));
-      continue;
-    }
-    const j = (await r.json().catch(() => ({}))) as T & { error?: { type?: string; description?: string; message?: string } };
-    if (!r.ok) {
-      const detalhe = j.error?.description ?? j.error?.message ?? "sem detalhe";
-      const semPermissao = r.status === 403 && (
-        j.error?.type === "insufficient_scope" || j.error?.message === "insufficient_scope" ||
-        detalhe.toLowerCase().includes("the request requires higher privileges than provided by the access token")
+  const r = await lerComLimite(integ.id, caminho, async () => {
+    const tok = await acesso(integ);
+    return () => fetch(url, {
+      headers: { Authorization: `Bearer ${tok}`, accept: "application/json" },
+      signal: AbortSignal.timeout(30_000),
+    });
+  });
+  const j = (await r.json().catch(() => ({}))) as T & { error?: { type?: string; description?: string; message?: string } };
+  if (!r.ok) {
+    const detalhe = j.error?.description ?? j.error?.message ?? "sem detalhe";
+    const semPermissao = r.status === 403 && (
+      j.error?.type === "insufficient_scope" || j.error?.message === "insufficient_scope" ||
+      detalhe.toLowerCase().includes("the request requires higher privileges than provided by the access token")
+    );
+    if (semPermissao) {
+      const recurso = caminho === "/depositos" ? "depósitos"
+        : caminho === "/produtos" ? "produtos"
+        : caminho.startsWith("/estoques/") ? "estoques" : "este recurso";
+      // Renovar o token não amplia permissões: elas vêm do cadastro do app.
+      throw new Error(
+        `Bling sem permissão para consultar ${recurso} (403 em ${caminho}). ` +
+        `Confira a permissão de leitura no aplicativo do Bling e depois reconecte em Canais e contas → ERP. ` +
+        `Veja o passo a passo no link de ajuda dessa aba.`
       );
-      if (semPermissao) {
-        const recurso = caminho === "/depositos" ? "depósitos"
-          : caminho === "/produtos" ? "produtos"
-          : caminho.startsWith("/estoques/") ? "estoques" : "este recurso";
-        // Renovar o token não amplia permissões: elas vêm do cadastro do app.
-        throw new Error(
-          `Bling sem permissão para consultar ${recurso} (403 em ${caminho}). ` +
-          `Confira a permissão de leitura no aplicativo do Bling e depois reconecte em Canais e contas → ERP. ` +
-          `Veja o passo a passo no link de ajuda dessa aba.`
-        );
-      }
-      throw new Error(`Bling respondeu ${r.status} em ${caminho}: ${detalhe}`);
     }
-    return j;
+    throw new Error(`Bling respondeu ${r.status} em ${caminho}: ${detalhe}`);
   }
+  return j;
 }
 
 /** Nome e CNPJ da empresa que autorizou. Opcional: falha não derruba a conexão. */

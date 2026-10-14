@@ -22,6 +22,7 @@ Implementar as quatro páginas de “Telas a arrumar e melhorar.pdf”, enviado 
 7. Catálogo de produtos anunciados com canal, calendário, preços vendidos/anunciados e histórico disponível.
 8. Estoques por fonte e depósito, incluindo Full, dentro do contexto do produto.
 9. Corrigir o bloqueio de publicação causado pela frequência do estoque automático incompatível com o plano Vercel.
+10. Corrigir o controle de velocidade do Bling e as tentativas após erro 429.
 
 Cada entrega tem seu próprio arquivo em `issues/`. O estado e as verificações ficam nesses arquivos.
 
@@ -54,3 +55,4 @@ Em 14/10/2026, a integração Vercel confirmou a publicação de `1dc1d41` em Pr
 - 14/10/2026: GitHub confirmou recebimento de `ab8fdc3`, mas a Vercel rejeitou o agendamento de estoque a cada meia hora. Ajustado para uma execução diária, mantendo atualização manual; acompanhar a nova publicação no ticket 09.
 - 14/10/2026: após a correção, a publicação `HZWsmPJ3PmvqeFSfPa851U46KvcF` do commit `1dc1d41` concluiu em produção. Resposta HTTP e presença das novidades no pacote público do domínio confirmadas; nenhum acesso autenticado ou sincronização Bling foi declarado como testado.
 - 14/10/2026: diagnóstico do `403 /depositos` registrado no ticket 08. Mensagem de permissão insuficiente e ajuda no ERP ajustadas. A correção de interface não libera permissões no provedor: administrador/integrador precisa revisar o aplicativo no Bling e autorizar novamente.
+- 14/10/2026: após relato de `429 /pedidos/vendas`, fila de consultas e pausas do Bling corrigidas no ticket 10. Testes aprovados e uma leitura real de pedido da Bom de Compras aceita; atualização integral permanece para conferência em produção.
