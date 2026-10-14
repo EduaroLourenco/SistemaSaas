@@ -139,6 +139,38 @@ export async function sincronizarBling(integ: Integracao, de: string, ate: strin
       frete: Number(detalhes.get(p.id)?.transporte?.frete) || 0,
       origem: "api",
     }));
+    /*
+     * Cópia do mesmo pedido em OUTRA conta, de quando a loja do Bling
+     * apontava para outro lugar.
+     *
+     * A chave única de `pedidos` é (canal_id, codigo_externo). Remapear uma
+     * loja para uma conta de canal diferente muda o canal_id, e aí o upsert
+     * INSERE em vez de atualizar: o mesmo pedido passa a ser contado nos
+     * dois canais. Aconteceu na Chopeiras Memo — 95 pedidos do site próprio
+     * também somavam no Mercado Livre, R$ 151 mil só em outubro.
+     *
+     * A condição é o CANAL, não a conta: o upsert resolve a linha do canal
+     * de destino, então toda cópia em outro canal é velha — tanto a de uma
+     * conta diferente quanto a da mesma conta que trocou de canal.
+     *
+     * O código é `bling-{id}`, id do pedido dentro da conta do Bling, e a
+     * operação tem uma integração do Bling: qualquer linha com esse código
+     * em outro canal é cópia velha, nunca pedido legítimo.
+     */
+    const codigos = cabecalhos.map((c) => c.codigo_externo);
+    const orfas: { conta_canal_id: string; data: string }[] = [];
+    for (let i = 0; i < codigos.length; i += 200) {
+      const { data: velhas, error: eo } = await sb
+        .from("pedidos")
+        .delete()
+        .eq("operacao_id", integ.operacaoId)
+        .neq("canal_id", conta.canal_id)
+        .in("codigo_externo", codigos.slice(i, i + 200))
+        .select("conta_canal_id,data");
+      if (eo) throw new Error(`Falha ao limpar cópias de outra conta: ${eo.message}`);
+      orfas.push(...((velhas ?? []) as typeof orfas));
+    }
+
     const { data: salvos, error } = await sb
       .from("pedidos")
       .upsert(cabecalhos, { onConflict: "canal_id,codigo_externo" })
@@ -184,6 +216,31 @@ export async function sincronizarBling(integ: Integracao, de: string, ate: strin
     }
 
     await consolidarDiarias({ operacaoId: integ.operacaoId, canalId: conta.canal_id, contaCanalId: contaId }, de, ate, { de, ate });
+
+    /*
+     * As diárias da conta abandonada foram somadas com os pedidos que
+     * acabaram de sair dela: refaz o intervalo. Não serve apagar a linha
+     * nem zerar a receita — a conta pode ter venda própria no mesmo dia, e
+     * a linha também guarda visitas, que a reconsolidação preserva.
+     */
+    const porContaOrfa = new Map<string, string[]>();
+    for (const o of orfas) {
+      const d = String(o.data).slice(0, 10);
+      porContaOrfa.set(o.conta_canal_id, [...(porContaOrfa.get(o.conta_canal_id) ?? []), d]);
+    }
+    for (const [cid, datas] of porContaOrfa) {
+      const c = contaPorId.get(cid);
+      if (!c) continue;
+      const ini = datas.reduce((a, b) => (b < a ? b : a));
+      const fim = datas.reduce((a, b) => (b > a ? b : a));
+      await consolidarDiarias(
+        { operacaoId: integ.operacaoId, canalId: c.canal_id as string, contaCanalId: cid },
+        ini,
+        fim,
+        { de: ini, ate: fim }
+      );
+    }
+
     gravados += cabecalhos.length;
     itensGravados += itens.length;
   }
