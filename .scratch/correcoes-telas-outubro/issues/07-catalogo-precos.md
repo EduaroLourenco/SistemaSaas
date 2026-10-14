@@ -1,6 +1,6 @@
 # 07 — Catálogo e preços
 
-Status: concluído no código; publicação pendente
+Status: publicado em 14/10/2026; catálogo novo confirmado no pacote público
 
 Catálogo anunciado por canal e intervalo de calendário; preço vendido por canal, preço atual de vitrine/oferta onde a API disponibiliza, evolução disponível e itens sem vendas. Não preencher preço desconhecido com zero nem prometer histórico anterior à coleta.
 

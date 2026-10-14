@@ -1,6 +1,6 @@
 # Correções das telas — outubro de 2026
 
-Status: código entregue no GitHub e migração 38 confirmada; publicação e validação do Bling pendentes
+Status: código publicado e migração 38 confirmada; validação autenticada e estoque Bling pendentes
 
 ## Pedido
 
@@ -37,12 +37,12 @@ Cada entrega tem seu próprio arquivo em `issues/`. O estado e as verificações
 
 ## Publicação
 
-O pedido atual autoriza commits e push por entrega. GitHub e aplicação publicada são estados diferentes: o acesso Vercel desta sessão recusou o projeto anteriormente e o envio ao GitHub não comprovou implantação automática. Registrar essa limitação se persistir, sem afirmar que as mudanças estão online.
+Em 14/10/2026, a integração Vercel confirmou a publicação de `1dc1d41` em Production. O domínio `https://sistema-saas-one.vercel.app` respondeu normalmente e seu arquivo público de interface contém o novo catálogo `/produtos` e a navegação “Resultados de vendas”. O acesso administrativo direto continua indisponível nesta sessão; a publicação foi feita pela integração GitHub.
 
 ## Pendências para liberar tudo
 
-- Publicar os commits no projeto Vercel e conferir a aplicação com uma sessão autenticada. O acesso disponível nesta sessão não administra o projeto.
-- Depois da publicação, sincronizar e conferir o Bling com as credenciais disponíveis em produção. Não declarar estoque do Bling atualizado antes dessa leitura.
+- Conferir as telas publicadas com uma sessão autenticada.
+- Sincronizar e conferir o Bling com as credenciais disponíveis em produção. Não declarar estoque do Bling atualizado antes dessa leitura.
 
 ## Comments
 
@@ -52,3 +52,4 @@ O pedido atual autoriza commits e push por entrega. GitHub e aplicação publica
 - 13/10/2026: prévia isolada com dados fictícios conferiu desktop e celular, seleção de dia no gráfico, produto sem vendas e Full separado do depósito. Isso não substitui a conferência da aplicação publicada com login.
 - 13/10/2026: usuário executou a migração 38. Leitura da coluna pela API e execução de `carregarMargensProduto` confirmaram disponibilidade nas operações Probel e Bom de Compras. Nenhuma margem individual foi alterada; o campo vazio continua herdando a regra da campanha.
 - 14/10/2026: GitHub confirmou recebimento de `ab8fdc3`, mas a Vercel rejeitou o agendamento de estoque a cada meia hora. Ajustado para uma execução diária, mantendo atualização manual; acompanhar a nova publicação no ticket 09.
+- 14/10/2026: após a correção, a publicação `HZWsmPJ3PmvqeFSfPa851U46KvcF` do commit `1dc1d41` concluiu em produção. Resposta HTTP e presença das novidades no pacote público do domínio confirmadas; nenhum acesso autenticado ou sincronização Bling foi declarado como testado.

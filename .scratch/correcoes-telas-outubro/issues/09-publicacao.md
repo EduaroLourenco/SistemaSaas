@@ -1,6 +1,6 @@
 # 09 — Publicação bloqueada pelo agendamento de estoque
 
-Status: configuração corrigida; aguardando nova publicação
+Status: concluído; publicação em produção confirmada
 
 ## Problema
 
@@ -18,3 +18,4 @@ Em `vercel.json`, `/api/cron/estoques` estava agendado com `3,33 * * * *`, a cad
 ## Comments
 
 - 14/10/2026: conferido que `main` local e GitHub estavam em `ab8fdc3`. O problema é a recusa de publicação, não um commit ausente. O acesso direto à Vercel continua sem autorização; acompanhar a nova tentativa pela integração do GitHub e verificar o resultado antes de declarar online.
+- 14/10/2026: `1dc1d41` publicado com sucesso no ambiente Production, implantação `HZWsmPJ3PmvqeFSfPa851U46KvcF`, confirmada pelo GitHub às 09:12 de Brasília. O domínio principal respondeu 200 e seu pacote público contém `/produtos` e “Resultados de vendas”. A interface autenticada e o Bling ainda dependem de validação com login.

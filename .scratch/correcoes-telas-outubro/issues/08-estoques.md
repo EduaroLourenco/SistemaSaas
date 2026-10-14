@@ -1,6 +1,6 @@
 # 08 — Estoques no produto
 
-Status: concluído no código; Bling e publicação pendentes
+Status: publicado em 14/10/2026; validação do Bling pendente
 
 Exibir origem e nomes reais dos depósitos, Full separado, saldos zero e atualização. Painel contextual ao produto e acesso à tela completa. Indicar indisponibilidade de conexão sem usar saldo antigo como atual.
 

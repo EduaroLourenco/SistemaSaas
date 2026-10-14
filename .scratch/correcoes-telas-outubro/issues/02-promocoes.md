@@ -1,6 +1,6 @@
 # 02 — Promoções
 
-Status: concluído no código e recuperação de dados confirmada; publicação pendente
+Status: publicado em 14/10/2026; recuperação de dados confirmada
 
 Corrigir o salvamento das regras por empresa e a persistência de planilhas processadas em histórico/campanhas. Melhorar mensagens de erro e a leitura das campanhas, sem enviar alterações ao marketplace.
 

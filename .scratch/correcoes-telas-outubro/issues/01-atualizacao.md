@@ -1,6 +1,6 @@
 # 01 — Atualizar dados
 
-Status: concluído no código; publicação pendente
+Status: publicado em 14/10/2026; conferência autenticada pendente
 
 Permitir a atualização por qualquer membro da empresa atual. Manter autenticação, isolamento, limites e o bloqueio ao trocar de empresa. Exibir falhas úteis, sem sucesso falso.
 

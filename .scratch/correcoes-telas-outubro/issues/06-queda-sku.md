@@ -1,6 +1,6 @@
 # 06 — Queda e SKU
 
-Status: concluído no código; publicação pendente
+Status: publicado em 14/10/2026; conferência autenticada pendente
 
 Comparações diretas de receita, unidades/dia, preço vendido, visitas e conversão; anúncios agrupados por SKU/conta; filtros e ordenação nas colunas. Tornar a decomposição da receita compreensível e mostrar detalhes ao selecionar dias no gráfico.
 

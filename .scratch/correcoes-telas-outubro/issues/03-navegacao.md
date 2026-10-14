@@ -1,6 +1,6 @@
 # 03 — Navegação agrupada
 
-Status: concluído no código; publicação pendente
+Status: publicado em 14/10/2026; navegação nova confirmada no pacote público
 
 Agrupar Análise de anúncios, Clássico/Premium e Catálogo. Em Vendas, reunir Anual/Canais/Comparativos/Cancelamentos; Dia/Mês/Semanal/SKU/Queda; Lançamentos/Metas. Manter páginas acessíveis e filtros. Promoções: Campanhas e Processar independentes, regras/histórico agrupados. Conferir desktop e mobile.
 
