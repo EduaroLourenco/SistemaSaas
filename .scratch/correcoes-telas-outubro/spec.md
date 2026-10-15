@@ -24,6 +24,8 @@ Implementar as quatro páginas de “Telas a arrumar e melhorar.pdf”, enviado 
 9. Corrigir o bloqueio de publicação causado pela frequência do estoque automático incompatível com o plano Vercel.
 10. Corrigir o controle de velocidade do Bling e as tentativas após erro 429.
 11. Comparar produtos em uma matriz por SKU, com preço vendido, vitrine da API e unidades por canal, período livre e seleção de múltiplos canais.
+12. Mostrar curva ABC por canal na matriz de preços e filtrar os produtos pela curva de um canal específico, preservando a comparação com os demais.
+13. Conferir a reconexão do Bling e investigar negativos nos depósitos Magalu, distinguindo saldo informado pelo ERP de reserva calculada e de estoque consultado diretamente no canal.
 
 Cada entrega tem seu próprio arquivo em `issues/`. O estado e as verificações ficam nesses arquivos.
 

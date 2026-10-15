@@ -1,6 +1,6 @@
 # 11 — Comparar preços por SKU e canal
 
-Status: implementação e validação concluídas; envio ao GitHub e publicação em acompanhamento
+Status: publicado — commit b8dacfd confirmado em Production em 14/10/2026
 
 Uma linha por SKU. Para cada canal escolhido, preço vendido médio, vitrine da API e unidades. Período livre e múltiplos canais/contas selecionáveis. Sem informação ou sem venda, mostrar “Sem dado”.
 

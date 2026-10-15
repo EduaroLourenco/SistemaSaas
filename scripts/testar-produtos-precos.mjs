@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {montarProdutosPrecos, periodoProdutos, csvProdutosPrecos} from '../src/lib/produtos-precos.ts';
+import {montarProdutosPrecos, periodoProdutos, csvProdutosPrecos, filtrarCurvaProdutos} from '../src/lib/produtos-precos.ts';
 
 const produto = (sku) => ({id:sku,sku,titulo:'Produto '+sku});
 const anuncio = (id,sku,conta='sp',canal='ml',status='ativo') => ({id,sku_canal:sku,produto_id:sku,codigo_externo:id,titulo:'Anúncio '+sku,canal_id:canal,conta_canal_id:conta,status});
@@ -45,13 +45,16 @@ assert.equal(porSku.get('PAI').canais.ml,undefined,'Vendas da variação não v�
 assert.equal(porSku.get('VAR').canais.ml.vendido,50);
 assert.equal(porSku.get('ZERO').canais.ml.vendido,0,'Zero medido não é ausência de dado');
 assert.equal(porSku.get('ZERO').canais.ml.vitrine.min,0);
+assert.equal(porSku.get('ZERO').canais.ml.curva,null,'Receita zero não gera uma classificação de faturamento');
 assert.equal(porSku.get('INCOMPLETO').canais.ml.vendido,null,'Preço parcialmente ausente não produz média artificial');
+assert.equal(porSku.get('INCOMPLETO').canais.ml.curva,null,'Receita incompleta não gera uma curva artificial');
 assert.equal(porSku.has('OUTRA'),false);
 assert.deepEqual(d.recorte,['ml','site']);
 
 const semVenda = montarProdutosPrecos({...entrada,de:'2026-10-04',ate:'2026-10-05'}).linhas.find(l=>l.sku==='001');
 assert.equal(semVenda.canais.ml.vendido,null);
 assert.equal(semVenda.canais.ml.unidades,null);
+assert.equal(semVenda.canais.ml.curva,null,'Sem venda no período, sem curva');
 assert.equal(semVenda.canais.ml.vitrine.min,90,'Última vitrine é explicitamente independente do período das vendas');
 assert.equal(montarProdutosPrecos({...entrada,sku:' 001 '}).linhas.length,1);
 
@@ -62,10 +65,40 @@ assert.deepEqual(periodoProdutos({de:'2026-10-01',ate:'2026-10-10'},'2026-10-14'
 const csv = csvProdutosPrecos([x,porSku.get('002')],d.colunas.filter(c=>c.id==='site'));
 assert.ok(csv.startsWith('\uFEFF'));
 assert.ok(csv.includes('Site próprio — Vendido médio'));
+assert.ok(csv.includes('Site próprio — Curva ABC'));
 assert.ok(!csv.includes('Mercado Livre'));
 assert.ok(csv.includes('Sem dado'));
 assert.equal(csv.split('\r\n').length,3);
 const perigoso = csvProdutosPrecos([{...x,sku:'=1+1',titulo:'+texto'}],[]);
 assert.ok(perigoso.includes('"\'=1+1"'));
 assert.ok(perigoso.includes('"\'+texto"'));
-console.log('OK: SKU único, média ponderada por canal/conta, datas, cancelados, variações, vitrine de API, faixa, nulos, zero e exportação.');
+
+const baseAbc={...entrada,produtos:['DOM','SEG','TER','FINAL','SEM'].map(produto),anuncios:[],leituras:[],itens:[
+  venda('DOM',1,800),venda('SEG',1,150,'ml','full'),venda('TER',1,40),venda('FINAL',1,10,'ml','full'),
+  venda('DOM',1,10,'site','site-a'),venda('SEG',1,40,'site','site-a'),venda('TER',1,150,'site','site-a'),venda('FINAL',1,800,'site','site-a'),
+]};
+const abc=montarProdutosPrecos(baseAbc);
+const linha=(sku)=>abc.linhas.find(l=>l.sku===sku);
+assert.equal(linha('DOM').canais.ml.curva,'A');
+assert.equal(linha('DOM').canais.site.curva,'C','Mesmo SKU pode ser A em um canal e C em outro');
+assert.equal(linha('SEG').canais.ml.curva,'B','O produto seguinte aos 80% passa à curva B');
+assert.equal(linha('TER').canais.ml.curva,'C','O produto seguinte aos 95% passa à curva C');
+assert.equal(linha('SEG').canais['conta:full'].curva,'A','Contas do mesmo canal têm classificação independente');
+assert.deepEqual(filtrarCurvaProdutos(abc.linhas,'A',['ml']).map(l=>l.sku),['DOM']);
+assert.deepEqual(filtrarCurvaProdutos(abc.linhas,'A',['site']).map(l=>l.sku),['FINAL']);
+assert.deepEqual(filtrarCurvaProdutos(abc.linhas,'A',['ml','site']).map(l=>l.sku),['DOM','FINAL']);
+assert.equal(filtrarCurvaProdutos(abc.linhas,'A',['sem-vendas']).length,0);
+assert.equal(filtrarCurvaProdutos(abc.linhas,'',[]).length,5);
+assert.equal(montarProdutosPrecos({...baseAbc,sku:'SEG'}).linhas[0].canais.ml.curva,'B','Busca por SKU não deve recalcular sua curva contra ele mesmo');
+assert.equal(linha('DOM').canais.site.curva,'C','Filtrar curva A no ML conserva a curva C do site');
+const mudouPeriodo=montarProdutosPrecos({...baseAbc,de:'2026-10-10',itens:[...baseAbc.itens,
+  venda('SEG',1,2000,'ml','full',{pedidos:{data:'2026-10-12',canal_id:'ml',conta_canal_id:'full',cancelado:false}}),
+]});
+assert.equal(mudouPeriodo.linhas.find(l=>l.sku==='SEG').canais.ml.curva,'A','Período novo recalcula a curva; um único SKU vendido é A');
+const exata=montarProdutosPrecos({...baseAbc,itens:[venda('DOM',3,null,'ml','sp',{total:1000}),venda('SEG',1,250)]});
+assert.equal(exata.linhas.find(l=>l.sku==='SEG').canais.ml.curva,'B','A curva usa o faturamento exato, sem multiplicar o preço médio arredondado');
+const exportadoAbc=csvProdutosPrecos(filtrarCurvaProdutos(abc.linhas,'A',['ml']),abc.colunas.filter(c=>!c.contaId));
+assert.equal(exportadoAbc.split('\r\n').length,2);
+assert.ok(exportadoAbc.includes('"A";800'));
+assert.ok(exportadoAbc.includes('"C";10'));
+console.log('OK: preços e curva ABC por canal/conta, faturamento exato, cortes 80/95, período, busca sem reclassificar, ausência de dados e CSV filtrado.');

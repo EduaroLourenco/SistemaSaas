@@ -16,9 +16,11 @@ export type ItemPrecos = {
 /** Somente leituras da API; preço cadastrado/importado não substitui vitrine. */
 export type LeituraVitrine = { anuncio_id: string; data: string; preco: Numero };
 export type ColunaPrecos = { id: string; nome: string; canalId: string; contaId?: string };
+export type CurvaPrecos = "A" | "B" | "C";
 export type CelulaPrecos = {
   vendido: number | null;
   unidades: number | null;
+  curva: CurvaPrecos | null;
   vitrine: { min: number; max: number; de: string; ate: string; anuncios: number } | null;
 };
 export type LinhaPrecos = {
@@ -77,7 +79,6 @@ export function montarProdutosPrecos(entrada: {
   const filtro = skuNormal(entrada.sku);
   const grupo = (sku: string, alternativa: string, titulo: string) => {
     const normal = skuNormal(sku);
-    if (filtro && normal !== filtro) return null;
     const chave = normal ? `sku:${normal}` : alternativa;
     let g = grupos.get(chave);
     if (!g) { g = { chave, sku: normal, titulo, codigos: new Set(), canais: new Map() }; grupos.set(chave, g); }
@@ -120,11 +121,32 @@ export function montarProdutosPrecos(entrada: {
       if (valor != null) { c.receita += valor; c.unidadesComPreco += quantidade; }
     }
   }
-  const linhas = [...grupos.values()].map(g => ({
+  // A curva usa a receita original (não o preço médio arredondado) de TODOS
+  // os produtos do canal/conta no período, antes de buscar ou filtrar um SKU.
+  const curvas = new Map<string, Map<string, CurvaPrecos>>();
+  for (const coluna of colunas) {
+    const base = [...grupos.values()].flatMap(g => {
+      const c = g.canais.get(coluna.id);
+      const centavos = Math.round((c?.receita ?? 0) * 100);
+      return c && centavos > 0 && c.unidadesComPreco === c.unidades
+        ? [{ chave: g.chave, centavos }] : [];
+    }).sort((a, b) => b.centavos - a.centavos || a.chave.localeCompare(b.chave, "pt-BR", { numeric: true }));
+    const total = base.reduce((s, g) => s + g.centavos, 0);
+    const classes = new Map<string, CurvaPrecos>();
+    let acumulado = 0;
+    for (const g of base) {
+      // Inclui o produto que atinge o limite: um único SKU dominante é A.
+      classes.set(g.chave, acumulado * 100 < total * 80 ? "A" : acumulado * 100 < total * 95 ? "B" : "C");
+      acumulado += g.centavos;
+    }
+    curvas.set(coluna.id, classes);
+  }
+  const linhas = [...grupos.values()].filter(g => !filtro || g.sku === filtro).map(g => ({
     chave: g.chave, sku: g.sku, titulo: g.titulo, codigos: [...g.codigos],
     canais: Object.fromEntries([...g.canais].map(([id, c]) => [id, {
       unidades: c.unidades || null,
       vendido: c.unidades > 0 && c.unidadesComPreco === c.unidades ? r2(c.receita / c.unidades) : null,
+      curva: curvas.get(id)?.get(g.chave) ?? null,
       vitrine: c.precos.length ? {
         min: Math.min(...c.precos.map(p => p.preco)), max: Math.max(...c.precos.map(p => p.preco)),
         de: c.precos.map(p => p.data).sort()[0], ate: c.precos.map(p => p.data).sort().at(-1)!, anuncios: c.precos.length,
@@ -137,6 +159,11 @@ export function montarProdutosPrecos(entrada: {
   };
 }
 
+/** Só restringe as linhas; nunca recalcula a curva dos resultados filtrados. */
+export function filtrarCurvaProdutos(linhas: LinhaPrecos[], curva: CurvaPrecos | "", canais: string[]) {
+  return curva ? linhas.filter(l => canais.some(id => l.canais[id]?.curva === curva)) : linhas;
+}
+
 /** Exporta as mesmas colunas e o mesmo recorte da comparação, sem limitar à página. */
 export function csvProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPrecos[]) {
   const campo = (v: unknown) => {
@@ -144,10 +171,10 @@ export function csvProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPrecos[]
     const s = String(v ?? "Sem dado");
     return '"' + (/^[=+@\-\t\r]/.test(s) ? "'" : "") + s.replaceAll('"', '""') + '"';
   };
-  const linhasCsv: unknown[][] = [["SKU", "Produto", ...colunas.flatMap(c => [`${c.nome} — Vendido médio`, `${c.nome} — Vitrine`, `${c.nome} — Unidades`, `${c.nome} — Data da vitrine`])]];
+  const linhasCsv: unknown[][] = [["SKU", "Produto", ...colunas.flatMap(c => [`${c.nome} — Curva ABC`, `${c.nome} — Vendido médio`, `${c.nome} — Vitrine`, `${c.nome} — Unidades`, `${c.nome} — Data da vitrine`])]];
   for (const l of linhas) linhasCsv.push([l.sku || "Sem SKU", l.titulo, ...colunas.flatMap(c => {
     const dado = l.canais[c.id], v = dado?.vitrine;
-    return [dado?.vendido, v ? v.min === v.max ? v.min : `${v.min.toFixed(2).replace('.', ',')} a ${v.max.toFixed(2).replace('.', ',')}` : null,
+    return [dado?.curva, dado?.vendido, v ? v.min === v.max ? v.min : `${v.min.toFixed(2).replace('.', ',')} a ${v.max.toFixed(2).replace('.', ',')}` : null,
       dado?.unidades, v ? v.de === v.ate ? v.ate : `${v.de} a ${v.ate}` : null];
   })]);
   return '\uFEFF' + linhasCsv.map(l => l.map(campo).join(';')).join('\r\n');
