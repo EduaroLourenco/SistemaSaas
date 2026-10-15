@@ -368,6 +368,52 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       );
   }, [oportunidades, acao, busca]);
 
+  const [exportando, setExportando] = React.useState(false);
+  const [erroExport, setErroExport] = React.useState<string | null>(null);
+
+  /*
+   * Exporta o que está FILTRADO, e nada além.
+   *
+   * O arquivo tem de bater com a tela: filtrar "entrar no ads" e receber
+   * os 700 anúncios de volta desfaz o filtro, e quem confere o total
+   * descobre a diferença depois de ter decidido verba em cima dela. O
+   * botão diz quantas linhas vão.
+   *
+   * O gerador entra por import dinâmico: o ExcelJS é grande e só serve no
+   * clique, então não pesa no carregamento da tela.
+   */
+  async function exportar() {
+    setExportando(true);
+    setErroExport(null);
+    try {
+      const { planilhaOportunidades } = await import("@/lib/planilhas/trafego-oportunidades");
+      const filtro = [acao ? ROTULO_ACAO[acao as AcaoAds] : null, busca.trim() || null]
+        .filter(Boolean)
+        .join(" · ");
+      const wb = planilhaOportunidades(oportunidadesVisiveis, referencias, {
+        janela: dados.janela,
+        recorte: dados.contasDoRelatorio?.join(" + ") || "todas as contas do relatório",
+        filtro,
+      });
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([new Uint8Array(buffer)], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `o-que-fazer-${dados.janela.replace("|", "-a-")}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setErroExport("Não consegui gerar a planilha. Tente de novo.");
+    } finally {
+      setExportando(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -703,6 +749,15 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                       </option>
                     ))}
                 </select>
+                <Button
+                  onClick={exportar}
+                  disabled={exportando || !oportunidadesVisiveis.length}
+                  aria-busy={exportando}
+                  className="sm:ml-auto"
+                >
+                  {exportando ? "Gerando Excel…" : `Baixar Excel (${oportunidadesVisiveis.length})`}
+                </Button>
+                {erroExport && <span role="alert" className="text-[12.5px] text-down">{erroExport}</span>}
               </div>
               {referencias && (
                 <div className="flex flex-wrap gap-x-5 gap-y-1 px-3 py-2 border-b border-line text-[12px] text-ink-3">
