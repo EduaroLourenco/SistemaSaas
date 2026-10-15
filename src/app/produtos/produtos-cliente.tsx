@@ -8,7 +8,7 @@ import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { SeletorCanais } from "@/components/ui/seletor-canais";
 import { Pagination, usePagination } from "@/components/ui/pagination";
-import { csvProdutosPrecos, filtrarCurvaProdutos, type CurvaPrecos, type DadosProdutosPrecos, type LinhaPrecos, type CelulaPrecos } from "@/lib/produtos-precos";
+import { csvProdutosPrecos, filtrarCurvaProdutos, ordenar, type CurvaPrecos, type DadosProdutosPrecos, type LinhaPrecos, type CelulaPrecos, type Metrica, type Ordenacao } from "@/lib/produtos-precos";
 import { count, money } from "@/lib/format";
 
 const controle = "min-h-11 max-w-full rounded-r1 border border-line bg-panel px-3 text-sm text-ink";
@@ -38,7 +38,37 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
   const parametros = useSearchParams();
   const [busca, setBusca] = React.useState("");
   const [semVenda, setSemVenda] = React.useState(false);
-  const [ordem, setOrdem] = React.useState("sku");
+  const [ordem, setOrdem] = React.useState<Ordenacao>({ coluna: "", metrica: "sku", desc: false });
+  /* Mesma coluna alterna o sentido; coluna nova começa decrescente, que é
+     o que se quer de dinheiro e de quantidade. SKU começa crescente. */
+  const alternar = (coluna: string, metrica: Metrica) =>
+    setOrdem((o) =>
+      o.coluna === coluna && o.metrica === metrica
+        ? { ...o, desc: !o.desc }
+        : { coluna, metrica, desc: metrica !== "sku" }
+    );
+  const Ordenavel = ({ coluna, metrica, children, titulo, classe }: {
+    coluna: string; metrica: Metrica; children: React.ReactNode; titulo?: string; classe?: string;
+  }) => {
+    const ativa = ordem.coluna === coluna && ordem.metrica === metrica;
+    return (
+      <th
+        scope="col"
+        aria-sort={ativa ? (ordem.desc ? "descending" : "ascending") : "none"}
+        className={classe}
+        title={titulo}
+      >
+        <button
+          type="button"
+          onClick={() => alternar(coluna, metrica)}
+          className={`inline-flex min-h-9 items-center gap-1 ${ativa ? "text-ink" : ""} hover:text-ink`}
+        >
+          {children}
+          <span aria-hidden className="text-[10px] text-ink-3">{ativa ? (ordem.desc ? "▼" : "▲") : "↕"}</span>
+        </button>
+      </th>
+    );
+  };
   const [datas, setDatas] = React.useState({ de: dados.de, ate: dados.ate });
   const [pendente, transicao] = React.useTransition();
   const [exportando, setExportando] = React.useState(false);
@@ -70,12 +100,10 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
   }
   const linhas = React.useMemo(() => {
     const termo = busca.trim().toLocaleLowerCase("pt-BR");
-    const maior = (l: LinhaPrecos, campo: "unidades" | "vendido") => Math.max(-1, ...colunas.map(c => l.canais[c.id]?.[campo] ?? -1));
     const naCurva = filtrarCurvaProdutos(dados.linhas, curva, canalCurva ? [canalCurva.id] : colunas.map(c => c.id));
-    return naCurva.filter(l => (!semVenda || colunas.every(c => !l.canais[c.id]?.unidades)) &&
-      `${l.sku} ${l.titulo} ${l.codigos.join(" ")}`.toLocaleLowerCase("pt-BR").includes(termo))
-      .sort((a, b) => (ordem === "unidades" ? maior(b, "unidades") - maior(a, "unidades") : ordem === "preco" ? maior(b, "vendido") - maior(a, "vendido") : 0) ||
-        a.sku.localeCompare(b.sku, "pt-BR", { numeric: true }) || a.titulo.localeCompare(b.titulo, "pt-BR"));
+    const filtradas = naCurva.filter(l => (!semVenda || colunas.every(c => !l.canais[c.id]?.unidades)) &&
+      `${l.sku} ${l.titulo} ${l.codigos.join(" ")}`.toLocaleLowerCase("pt-BR").includes(termo));
+    return ordenar(filtradas, ordem);
   }, [dados.linhas, busca, semVenda, ordem, colunas, curva, canalCurva]);
   const { visible, pagination } = usePagination(linhas);
   function exportar() {
@@ -105,7 +133,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
   }
 
   return <>
-    <PageHeader title="Produtos e preços" breadcrumb="Catálogo" description="Compare o mesmo SKU entre canais."
+    <PageHeader title="Produtos e preços" breadcrumb="Catálogo" description="Compare o mesmo SKU entre canais: preço, unidades e receita."
       actions={<>
         <Button disabled={pendente || exportando || !linhas.length || !colunas.length} onClick={exportarExcel} aria-busy={exportando}><Download size={15} />{exportando ? "Gerando Excel…" : "Baixar Excel"}</Button>
         <Button disabled={pendente || !linhas.length || !colunas.length} onClick={exportar} title="Baixar os mesmos dados em CSV">CSV</Button>
@@ -125,9 +153,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
         <div className="flex flex-wrap items-center gap-3 border-b border-line p-3">
           <input className={`${controle} w-full sm:w-64`} aria-label="Buscar produto" placeholder="Buscar SKU, produto ou anúncio" value={busca} onChange={e => setBusca(e.target.value)} />
           <label className="flex min-h-11 items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={semVenda} onChange={e => setSemVenda(e.target.checked)} />Sem venda no período</label>
-          <select className={`${controle} sm:ml-auto`} aria-label="Ordenar produtos" value={ordem} onChange={e => setOrdem(e.target.value)}>
-            <option value="sku">Ordenar por SKU</option><option value="unidades">Mais unidades no canal</option><option value="preco">Maior preço vendido</option>
-          </select>
+          <span className="text-xs text-ink-3 sm:ml-auto">Clique no título de qualquer coluna para ordenar.</span>
         </div>
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel-2 px-3 py-2">
           <label className="flex items-center gap-2 text-xs text-ink-2">Curva
@@ -152,13 +178,19 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
             <caption className="sr-only">Preço médio vendido, curva ABC por faturamento e unidades no período; preço de vitrine na última leitura da API. Valores ausentes aparecem como Sem dado.</caption>
             <thead className="sticky top-0 z-20 bg-panel-2">
               <tr>
-                <th rowSpan={2} scope="col" className="sticky left-0 z-30 w-36 min-w-36 max-w-36 border-b border-r border-line bg-panel-2 px-3 py-3 text-left font-semibold text-ink sm:w-56 sm:min-w-56 sm:max-w-56">SKU / Produto</th>
-                {colunas.map(c => <th key={c.id} colSpan={3} scope="colgroup" className="min-w-[324px] border-b border-r border-line px-4 py-3 text-left font-semibold text-ink sm:text-center"><span className="sticky left-40 block w-fit max-w-40 sm:static sm:mx-auto sm:max-w-none">{c.nome}</span></th>)}
+                <th rowSpan={2} scope="col" aria-sort={ordem.metrica === "sku" ? (ordem.desc ? "descending" : "ascending") : "none"} className="sticky left-0 z-30 w-36 min-w-36 max-w-36 border-b border-r border-line bg-panel-2 px-3 py-3 text-left font-semibold text-ink sm:w-56 sm:min-w-56 sm:max-w-56">
+                  <button type="button" onClick={() => alternar("", "sku")} className="inline-flex min-h-9 items-center gap-1 hover:underline">
+                    SKU / Produto
+                    <span aria-hidden className="text-[10px] text-ink-3">{ordem.metrica === "sku" ? (ordem.desc ? "▼" : "▲") : "↕"}</span>
+                  </button>
+                </th>
+                {colunas.map(c => <th key={c.id} colSpan={4} scope="colgroup" className="min-w-[430px] border-b border-r border-line px-4 py-3 text-left font-semibold text-ink sm:text-center"><span className="sticky left-40 block w-fit max-w-40 sm:static sm:mx-auto sm:max-w-none">{c.nome}</span></th>)}
               </tr>
               <tr>{colunas.map(c => <React.Fragment key={c.id}>
-                <th scope="col" className="min-w-28 border-b border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2" title="Valor dos itens vendidos dividido pelas unidades; exclui pedidos cancelados.">Vendido (médio)</th>
-                <th scope="col" className="min-w-32 border-b border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2" title="Última leitura da API. Anúncios ativos com preços diferentes aparecem em faixa.">Vitrine</th>
-                <th scope="col" className="min-w-24 border-b border-r border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2">Unidades</th>
+                <Ordenavel coluna={c.id} metrica="vendido" titulo="Valor dos itens vendidos dividido pelas unidades; exclui pedidos cancelados." classe="min-w-28 border-b border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2">Vendido (médio)</Ordenavel>
+                <Ordenavel coluna={c.id} metrica="vitrine" titulo="Última leitura da API. Anúncios ativos com preços diferentes aparecem em faixa. Ordena pelo menor preço da faixa." classe="min-w-32 border-b border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2">Vitrine</Ordenavel>
+                <Ordenavel coluna={c.id} metrica="unidades" classe="min-w-24 border-b border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2">Unidades</Ordenavel>
+                <Ordenavel coluna={c.id} metrica="receita" titulo="Faturamento do SKU neste canal no período. É a mesma base da curva ABC." classe="min-w-28 border-b border-r border-line px-3 pb-2 pt-1 text-right text-xs font-medium text-ink-2">Receita</Ordenavel>
               </React.Fragment>)}</tr>
             </thead>
             <tbody>{visible.map(l => <tr key={l.chave} className="group">
@@ -174,7 +206,8 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
                     {d?.curva && <div className="mt-1" title={`Curva ${d.curva} pelo faturamento em ${c.nome}, no período selecionado.`}><Badge tone={d.curva === "A" ? "brand" : d.curva === "B" ? "info" : "neutral"} className="min-h-5 px-1.5 text-[10px]">Curva {d.curva}</Badge></div>}
                   </td>
                   <td className="border-b border-line px-3 py-3 text-right align-top text-ink-2 group-hover:bg-panel-2"><Vitrine valor={d?.vitrine} /></td>
-                  <td className="num border-b border-r border-line px-3 py-3 text-right align-top text-ink-2 group-hover:bg-panel-2">{d?.unidades == null ? semDado : count(d.unidades)}</td>
+                  <td className="num border-b border-line px-3 py-3 text-right align-top text-ink-2 group-hover:bg-panel-2">{d?.unidades == null ? semDado : count(d.unidades)}</td>
+                  <td className="num border-b border-r border-line px-3 py-3 text-right align-top font-medium text-ink group-hover:bg-panel-2">{d?.receita == null ? semDado : <span className="whitespace-nowrap">{money(d.receita)}</span>}</td>
                 </React.Fragment>;
               })}
             </tr>)}</tbody>
@@ -183,7 +216,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
         </div>
         <Pagination {...pagination} />
       </Panel>
-      <p className="text-xs leading-relaxed text-ink-3">Vendido e unidades: período selecionado. Curva por faturamento do canal: A até atingir 80%, B até 95%, C o restante. Sem faturamento conhecido, sem curva. Vitrine: última leitura da API. Sem informação ou sem venda: Sem dado.</p>
+      <p className="text-xs leading-relaxed text-ink-3">Vendido, unidades e receita: período selecionado. Curva por faturamento do canal: A até atingir 80%, B até 95%, C o restante. Sem faturamento conhecido, sem curva. Vitrine: última leitura da API. Sem informação ou sem venda: Sem dado.</p>
     </PageBody>
   </>;
 }

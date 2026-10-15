@@ -20,6 +20,19 @@ export type CurvaPrecos = "A" | "B" | "C";
 export type CelulaPrecos = {
   vendido: number | null;
   unidades: number | null;
+  /**
+   * Faturamento do SKU naquele canal no período.
+   *
+   * O acumulador já somava — é o que classifica a curva ABC —, e a tela
+   * só mostrava preço médio e unidades. Sem ele não havia como ver
+   * QUANTO cada canal fatura do mesmo produto, que é a pergunta de quem
+   * compara canais: 3 unidades a R$ 400 e 40 a R$ 30 têm preço médio
+   * muito diferente e peso parecido.
+   *
+   * Null quando parte da receita é desconhecida — a mesma régua do preço
+   * médio, para não somar meia venda como se fosse a venda inteira.
+   */
+  receita: number | null;
   curva: CurvaPrecos | null;
   vitrine: { min: number; max: number; de: string; ate: string; anuncios: number } | null;
 };
@@ -146,6 +159,7 @@ export function montarProdutosPrecos(entrada: {
     canais: Object.fromEntries([...g.canais].map(([id, c]) => [id, {
       unidades: c.unidades || null,
       vendido: c.unidades > 0 && c.unidadesComPreco === c.unidades ? r2(c.receita / c.unidades) : null,
+      receita: c.unidades > 0 && c.unidadesComPreco === c.unidades ? r2(c.receita) : null,
       curva: curvas.get(id)?.get(g.chave) ?? null,
       vitrine: c.precos.length ? {
         min: Math.min(...c.precos.map(p => p.preco)), max: Math.max(...c.precos.map(p => p.preco)),
@@ -157,6 +171,50 @@ export function montarProdutosPrecos(entrada: {
     operacaoId: entrada.operacaoId, de: entrada.de, ate: entrada.ate, hoje: entrada.hoje, skuFiltro: entrada.sku ?? "",
     colunas, opcoes, recorte: [...new Set(entrada.recorte ?? [])].filter(id => colunasValidas.has(id)), linhas,
   };
+}
+
+/**
+ * Ordenar por qualquer coluna, numa tabela que é uma MATRIZ.
+ *
+ * Aqui coluna não é um campo: é um campo DENTRO de um canal. Ordenar por
+ * receita só faz sentido perguntando "receita de qual canal" — o mesmo SKU
+ * é curva A no Mercado Livre e C no site. Então a ordenação guarda o par
+ * (canal, métrica), e clicar no cabeçalho de uma métrica ordena pelo canal
+ * em que ela está.
+ *
+ * O seletor de três ordens que existia aqui não tinha como expressar isso:
+ * ele pegava o MAIOR valor entre os canais exibidos, o que responde
+ * "onde vendeu mais" e nunca "ordene esta coluna".
+ */
+export type Metrica = "sku" | "vendido" | "vitrine" | "unidades" | "receita";
+export type Ordenacao = { coluna: string; metrica: Metrica; desc: boolean };
+
+export function valorDe(l: LinhaPrecos, coluna: string, metrica: Metrica): number | string | null {
+  if (metrica === "sku") return l.sku || l.titulo;
+  const d = l.canais[coluna];
+  if (!d) return null;
+  if (metrica === "vitrine") return d.vitrine?.min ?? null;
+  return d[metrica];
+}
+
+/* Ausência vai sempre para o FIM, nos dois sentidos. "Sem dado" no topo de
+   uma ordenação por receita decrescente seria o contrário do pedido: quem
+   não tem número não é quem mais fatura, nem quem menos. */
+export function ordenar(linhas: LinhaPrecos[], o: Ordenacao) {
+  const sinal = o.desc ? -1 : 1;
+  return [...linhas].sort((a, b) => {
+    const va = valorDe(a, o.coluna, o.metrica);
+    const vb = valorDe(b, o.coluna, o.metrica);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    const cmp = typeof va === "number" && typeof vb === "number"
+      ? va - vb
+      : String(va).localeCompare(String(vb), "pt-BR", { numeric: true });
+    return cmp * sinal ||
+      a.sku.localeCompare(b.sku, "pt-BR", { numeric: true }) ||
+      a.titulo.localeCompare(b.titulo, "pt-BR");
+  });
 }
 
 /** Só restringe as linhas; nunca recalcula a curva dos resultados filtrados. */
@@ -171,11 +229,11 @@ export function csvProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPrecos[]
     const s = String(v ?? "Sem dado");
     return '"' + (/^[=+@\-\t\r]/.test(s) ? "'" : "") + s.replaceAll('"', '""') + '"';
   };
-  const linhasCsv: unknown[][] = [["SKU", "Produto", ...colunas.flatMap(c => [`${c.nome} — Curva ABC`, `${c.nome} — Vendido médio`, `${c.nome} — Vitrine`, `${c.nome} — Unidades`, `${c.nome} — Data da vitrine`])]];
+  const linhasCsv: unknown[][] = [["SKU", "Produto", ...colunas.flatMap(c => [`${c.nome} — Curva ABC`, `${c.nome} — Vendido médio`, `${c.nome} — Vitrine`, `${c.nome} — Unidades`, `${c.nome} — Receita`, `${c.nome} — Data da vitrine`])]];
   for (const l of linhas) linhasCsv.push([l.sku || "Sem SKU", l.titulo, ...colunas.flatMap(c => {
     const dado = l.canais[c.id], v = dado?.vitrine;
     return [dado?.curva, dado?.vendido, v ? v.min === v.max ? v.min : `${v.min.toFixed(2).replace('.', ',')} a ${v.max.toFixed(2).replace('.', ',')}` : null,
-      dado?.unidades, v ? v.de === v.ate ? v.ate : `${v.de} a ${v.ate}` : null];
+      dado?.unidades, dado?.receita, v ? v.de === v.ate ? v.ate : `${v.de} a ${v.ate}` : null];
   })]);
   return '\uFEFF' + linhasCsv.map(l => l.map(campo).join(';')).join('\r\n');
 }

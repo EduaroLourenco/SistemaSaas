@@ -9,6 +9,11 @@ type Contexto = {
 const dataBr = (data: string) => data.split("-").reverse().join("/");
 const moeda = '"R$" #,##0.00';
 const semDado = "Sem dado";
+/* Métricas por canal, na ordem em que entram na linha. A aritmética de
+   mesclagem e de formato depende deste número, então ele fica num lugar
+   só: acrescentar métrica sem mexer nos dois cálculos deslocava o
+   cabeçalho de um canal para cima dos dados do outro. */
+const METRICAS = 7;
 
 /** Recebe todas as linhas filtradas e somente as colunas visíveis, antes da paginação. */
 export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPrecos[], contexto: Contexto) {
@@ -17,10 +22,10 @@ export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPre
   const ws = wb.addWorksheet("Produtos e preços", {
     views: [{ state: "frozen", xSplit: 2, ySplit: 6, showGridLines: false }],
   });
-  const totalColunas = 2 + colunas.length * 6;
+  const totalColunas = 2 + colunas.length * METRICAS;
   ws.columns = [
     { width: 20 }, { width: 46 },
-    ...colunas.flatMap(() => [12, 20, 17, 17, 13, 29].map(width => ({ width }))),
+    ...colunas.flatMap(() => [12, 20, 17, 17, 13, 18, 29].map(width => ({ width }))),
   ];
   const filtros = [
     contexto.curva && `Curva ${contexto.curva} em ${contexto.canalCurva ?? "qualquer canal exibido"}`,
@@ -45,10 +50,10 @@ export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPre
   ws.getCell(5, 1).value = "Produto";
   const titulos = ["SKU", "Produto"];
   colunas.forEach((canal, i) => {
-    const inicio = 3 + i * 6;
-    ws.mergeCells(5, inicio, 5, inicio + 5);
+    const inicio = 3 + i * METRICAS;
+    ws.mergeCells(5, inicio, 5, inicio + METRICAS - 1);
     ws.getCell(5, inicio).value = canal.nome;
-    titulos.push("Curva ABC", "Vendido (médio)", "Vitrine mínima", "Vitrine máxima", "Unidades", "Data(s) da vitrine");
+    titulos.push("Curva ABC", "Vendido (médio)", "Vitrine mínima", "Vitrine máxima", "Unidades", "Receita", "Data(s) da vitrine");
   });
   ws.getRow(6).values = titulos;
   for (const n of [5, 6]) {
@@ -64,6 +69,7 @@ export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPre
     const row = ws.addRow([l.sku || "Sem SKU", l.titulo, ...colunas.flatMap(c => {
       const d = l.canais[c.id], v = d?.vitrine;
       return [d?.curva ?? semDado, d?.vendido ?? semDado, v?.min ?? semDado, v?.max ?? semDado, d?.unidades ?? semDado,
+        d?.receita ?? semDado,
         v ? v.de === v.ate ? dataBr(v.ate) : `${dataBr(v.de)} a ${dataBr(v.ate)}` : semDado];
     })]);
     row.height = Math.max(30, Math.ceil(l.titulo.length / 44) * 14 + 8, Math.ceil(l.sku.length / 18) * 14 + 8);
@@ -71,10 +77,11 @@ export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPre
       cell.font = { name: "Aptos", size: 10, color: { argb: cell.value === semDado ? "FF76827E" : "FF233B33" } };
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: row.number % 2 ? "FFFFFFFF" : "FFF4F7F5" } };
       cell.alignment = { vertical: "middle", wrapText: true, horizontal: typeof cell.value === "number" ? "right" : "left" };
+      const metrica = (i - 3) % METRICAS;
       if (i <= 2) cell.numFmt = "@";
-      else if ([1, 2, 3].includes((i - 3) % 6)) cell.numFmt = moeda;
-      else if ((i - 3) % 6 === 4) cell.numFmt = "#,##0.##";
-      if (i > 2 && (i - 3) % 6 === 0 && cell.value === "A") {
+      else if ([1, 2, 3, 5].includes(metrica)) cell.numFmt = moeda;
+      else if (metrica === 4) cell.numFmt = "#,##0.##";
+      if (i > 2 && metrica === 0 && cell.value === "A") {
         cell.font = { ...cell.font, bold: true, color: { argb: "FF245A4D" } };
       }
     });
