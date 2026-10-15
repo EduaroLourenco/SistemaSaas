@@ -17,6 +17,47 @@ import { AlertCircle, TrendingDown } from "lucide-react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import type { DadosTrafegoPago, LinhaAnuncioAds, LinhaCampanha } from "@/lib/dados/trafego-pago";
 import { ROTULO_ACAO, type AcaoAds, type LinhaOportunidade } from "@/lib/dados/trafego-oportunidades";
+import type { SituacaoDisputa } from "@/lib/dados/disputa-catalogo";
+
+/*
+ * A etiqueta de catálogo.
+ *
+ * Um C curto, com a situação por extenso no title: a coluna do anúncio
+ * já carrega SKU, código e nome, e escrever "Ganhando catálogo" ali
+ * empurraria o nome do produto para fora.
+ *
+ * Existe porque muda a decisão. "Gastou e não vendeu" num anúncio de
+ * catálogo pode ser venda que saiu pelo anúncio vencedor, e desligar a
+ * mídia seria desligar a de um anúncio que vende — só não é ele que
+ * aparece no pedido.
+ */
+const TOM_CATALOGO: Record<SituacaoDisputa, "up" | "down" | "warn" | "neutral" | "brand"> = {
+  ganhando: "up",
+  dividindo: "brand",
+  competindo: "down",
+  listado: "warn",
+  fora: "neutral",
+};
+const TEXTO_CATALOGO: Record<SituacaoDisputa, string> = {
+  ganhando: "catálogo: ganhando",
+  dividindo: "catálogo: dividindo o 1º lugar",
+  competindo: "catálogo: perdendo — a venda pode sair pelo anúncio vencedor",
+  listado: "catálogo: só listado, fora da disputa",
+  fora: "catálogo: fora",
+};
+
+/* Aceita string porque o motor de oportunidades é puro e não importa o
+   tipo daqui — ele guarda a situação como texto. Valor desconhecido não
+   vira etiqueta: inventar um tom para ele mentiria sobre a disputa. */
+function EtiquetaCatalogo({ situacao }: { situacao: string | null | undefined }) {
+  if (!situacao || !(situacao in TOM_CATALOGO)) return null;
+  const s = situacao as SituacaoDisputa;
+  return (
+    <span title={TEXTO_CATALOGO[s]}>
+      <Badge tone={TOM_CATALOGO[s]}>C</Badge>
+    </span>
+  );
+}
 
 /**
  * Tráfego pago.
@@ -132,12 +173,20 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
    * conferir uma tela contra a outra. O nome do produto evita ter de
    * decorar que GP745 é a tigela de inox.
    */
-  const celulaAnuncio = (l: { sku: string; mlb: string; titulo: string; conta: string; tipo: string }) => (
+  const celulaAnuncio = (l: {
+    sku: string;
+    mlb: string;
+    titulo: string;
+    conta: string;
+    tipo: string;
+    catalogo?: string | null;
+  }) => (
     <div className="min-w-0">
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="num text-[12.5px] font-medium text-ink">{l.sku || "sem SKU"}</span>
         <span className="num text-[11.5px] text-ink-3">{l.mlb}</span>
         {l.tipo === "premium" && <Badge tone="neutral">premium</Badge>}
+        <EtiquetaCatalogo situacao={l.catalogo ?? null} />
       </div>
       <p className="text-[12px] text-ink-2 truncate max-w-[280px]" title={l.titulo}>
         {l.titulo || "—"}
@@ -259,6 +308,18 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       ),
     },
     { key: "anuncio", header: "Anúncio", sortValue: (l) => l.sku || l.mlb, cell: (l) => celulaAnuncio(l) },
+    {
+      key: "catalogo",
+      header: "Catálogo",
+      width: "110px",
+      sortValue: (l) => l.catalogo ?? "",
+      cell: (l) =>
+        l.catalogo ? (
+          <span className="text-[12.5px] text-ink-2">{(TEXTO_CATALOGO[l.catalogo as SituacaoDisputa] ?? l.catalogo).replace("catálogo: ", "").split(" —")[0]}</span>
+        ) : (
+          <span className="text-[12px] text-ink-3">—</span>
+        ),
+    },
     { key: "visitas", header: "Visitas", align: "right", sortValue: (l) => l.visitas ?? -1, cell: (l) => <span className="num">{l.visitas != null ? count(l.visitas) : "—"}</span> },
     {
       key: "conversao",
@@ -689,7 +750,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                   chave: "sem_retorno" as const,
                   lista: semRetorno,
                   titulo: "Não vendeu nem com ads, nem sozinho",
-                  nota: "Confira gasto, cliques, oferta e tempo de campanha antes de decidir pela pausa.",
+                  nota: "Confira gasto, cliques, oferta e tempo de campanha antes de decidir pela pausa. O C marca anúncio de catálogo: a venda pode ter saído pelo anúncio vencedor.",
                 },
                 {
                   chave: "vendeu_sem_ads" as const,
@@ -727,7 +788,10 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                             <span className="num text-ink">{l.sku || l.mlb}</span>{" "}
                             <span className="num text-ink-3">
                               {money(l.investimento)}
-                            </span>
+                            </span>{" "}
+                            {/* A etiqueta vem aqui também, e aqui é onde ela mais
+                                importa: esta aba é a que sugere desligar. */}
+                            <EtiquetaCatalogo situacao={l.catalogo} />
                           </span>
                         ))}
                       {lista.length > 12 && (

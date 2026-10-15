@@ -42,6 +42,22 @@ assert.equal(
   "desligar"
 );
 
+/* 2b. Mesmo caso, mas o anúncio disputa catálogo: a ação continua sendo
+   desligar, e o motivo PASSA A AVISAR — a venda pode ter saído pelo
+   anúncio vencedor, e desligar às cegas tira a mídia de um anúncio que
+   vende. É o caso que o relatório do canal não distingue. */
+const comCatalogo = classificarOportunidades([
+  com({ mlb: "A", investimento: 50, receitaAtribuida: 0, receitaReal: 0, unidades: 0, catalogo: "competindo" }),
+]).linhas[0];
+assert.equal(comCatalogo.acao, "desligar");
+assert.match(comCatalogo.motivo, /catálogo \(competindo\)/);
+assert.match(comCatalogo.motivo, /confira o anúncio vencedor/);
+
+const semCatalogo = classificarOportunidades([
+  com({ mlb: "A", investimento: 50, receitaAtribuida: 0, receitaReal: 0, unidades: 0 }),
+]).linhas[0];
+assert.doesNotMatch(semCatalogo.motivo, /catálogo/, "anúncio fora de catálogo não ganha ressalva que não se aplica");
+
 /* 3. Gastou, o canal não creditou, mas o anúncio faturou: a mídia sobrou.
    Mesmos números do caso 2 no relatório do canal, ação oposta. */
 assert.equal(

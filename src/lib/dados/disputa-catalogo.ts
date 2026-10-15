@@ -117,6 +117,31 @@ const ALAVANCAS: Record<string, string> = {
   same_day_shipping: "envio no mesmo dia",
 };
 
+type Sb = Awaited<ReturnType<typeof clienteServidor>>;
+
+/**
+ * Só a situação mais recente de cada anúncio na disputa, por `anuncio_id`.
+ *
+ * Existe para o Tráfego pago poder marcar a linha com a etiqueta de
+ * catálogo sem arrastar a tela de disputa inteira: lê duas colunas, não as
+ * onze que `carregarDisputa` precisa.
+ *
+ * O "mais recente" é por anúncio, e não o último dia do conjunto: anúncio
+ * que saiu do catálogo para de ser medido, e usar a data global o deixaria
+ * sem etiqueta como se nunca tivesse disputado.
+ */
+export async function situacaoDeCatalogo(sb: Sb): Promise<Map<string, SituacaoDisputa>> {
+  const linhas = await paginar(() =>
+    sb.from("anuncio_catalogo_diario").select("anuncio_id,data,situacao").order("data")
+  );
+  const ultimo = new Map<string, { data: string; situacao: string }>();
+  for (const l of linhas as unknown as { anuncio_id: string; data: string; situacao: string }[]) {
+    const atual = ultimo.get(l.anuncio_id);
+    if (!atual || String(l.data) >= atual.data) ultimo.set(l.anuncio_id, { data: String(l.data), situacao: l.situacao });
+  }
+  return new Map([...ultimo].map(([id, u]) => [id, SITUACOES[u.situacao] ?? "fora"]));
+}
+
 export async function carregarDisputa(): Promise<DadosDisputa> {
   const sb = await clienteServidor();
 

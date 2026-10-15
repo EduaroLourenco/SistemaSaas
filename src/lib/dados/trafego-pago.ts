@@ -6,6 +6,7 @@ import { carregarContasRecorte } from "./contas-recorte";
 import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
 import { conferirInvestimento, periodoTrafego } from "@/lib/trafego-pago-filtros";
 import { classificarOportunidades, type LinhaOportunidade, type Referencias } from "./trafego-oportunidades";
+import { situacaoDeCatalogo, type SituacaoDisputa } from "./disputa-catalogo";
 
 /**
  * Tráfego pago: a mídia contra a margem que ela produz.
@@ -80,6 +81,14 @@ export type LinhaAnuncioAds = {
   sobraAposMidia: number | null;
   /** Sem receita atribuída: vendeu por fora, ou não vendeu nada? */
   situacao: "ok" | "sem_retorno" | "vendeu_sem_ads" | "prejuizo";
+  /**
+   * Situação na disputa de catálogo; null quando o anúncio não disputa.
+   *
+   * A tela mostra como etiqueta porque ela muda a decisão: gasto sem
+   * retorno num anúncio de catálogo pode ser venda que saiu pelo
+   * anúncio vencedor, e não mídia desperdiçada.
+   */
+  catalogo: SituacaoDisputa | null;
 };
 
 export type LinhaCampanha = {
@@ -402,6 +411,15 @@ export async function carregarTrafegoPago(
       .order("id")
   );
   const mlbDoId = new Map((anunciosRaw as unknown as Anun[]).map((a) => [a.id, a.codigo_externo]));
+
+  /* A disputa de catálogo, por MLB: é o que permite ler "gastou e não
+     vendeu" sem confundir com venda que saiu pelo anúncio vencedor. */
+  const catalogoPorId = await situacaoDeCatalogo(sb);
+  const catalogoPorMlb = new Map<string, SituacaoDisputa>();
+  for (const [id, s] of catalogoPorId) {
+    const mlb = mlbDoId.get(id);
+    if (mlb) catalogoPorMlb.set(mlb, s);
+  }
   const visitasPorMlb = new Map<string, number>();
   for (const v of visitasRaw as unknown as { anuncio_id: string; visitas: number | null }[]) {
     const mlb = mlbDoId.get(v.anuncio_id);
@@ -512,6 +530,7 @@ export async function carregarTrafegoPago(
       roas: a.inv > 0 && a.rec > 0 ? r2(a.rec / a.inv) : null,
       sobraAposMidia: sobra,
       situacao,
+      catalogo: catalogoPorMlb.get(mlb) ?? null,
     });
   }
 
@@ -551,6 +570,7 @@ export async function carregarTrafegoPago(
         receitaAtribuida: r2(ads?.rec ?? 0),
         estoque: a.estoque,
         status: a.status,
+        catalogo: catalogoPorMlb.get(a.codigo_externo) ?? null,
       };
     })
   );

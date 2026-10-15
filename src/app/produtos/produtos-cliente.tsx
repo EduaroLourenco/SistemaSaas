@@ -15,6 +15,14 @@ const controle = "min-h-11 max-w-full rounded-r1 border border-line bg-panel px-
 const dataBr = (v: string) => v.split("-").reverse().join("/");
 const semDado = <span className="whitespace-nowrap text-xs font-normal text-ink-3">Sem dado</span>;
 
+function baixar(blob: Blob, nome: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nome;
+  document.body.appendChild(a); a.click(); a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function Vitrine({ valor }: { valor?: CelulaPrecos["vitrine"] }) {
   if (!valor) return semDado;
   const data = valor.de === valor.ate ? dataBr(valor.ate) : `${dataBr(valor.de)} a ${dataBr(valor.ate)}`;
@@ -33,6 +41,8 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
   const [ordem, setOrdem] = React.useState("sku");
   const [datas, setDatas] = React.useState({ de: dados.de, ate: dados.ate });
   const [pendente, transicao] = React.useTransition();
+  const [exportando, setExportando] = React.useState(false);
+  const [erroExportacao, setErroExportacao] = React.useState("");
   const recorteUrl = parametros.get("canais") ?? "";
   const selecionados = React.useMemo(() => [...new Set(recorteUrl.split(",").filter(id => dados.colunas.some(c => c.id === id)))], [recorteUrl, dados.colunas]);
   const colunas = React.useMemo(() => dados.colunas.filter(c => selecionados.length ? selecionados.includes(c.id) : !c.contaId), [dados.colunas, selecionados]);
@@ -69,8 +79,24 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
   }, [dados.linhas, busca, semVenda, ordem, colunas, curva, canalCurva]);
   const { visible, pagination } = usePagination(linhas);
   function exportar() {
-    const url = URL.createObjectURL(new Blob([csvProdutosPrecos(linhas, colunas)], { type: "text/csv;charset=utf-8;" }));
-    const a = document.createElement("a"); a.href = url; a.download = `produtos-precos-${dados.de}-${dados.ate}.csv`; a.click(); URL.revokeObjectURL(url);
+    baixar(new Blob([csvProdutosPrecos(linhas, colunas)], { type: "text/csv;charset=utf-8;" }), `produtos-precos-${dados.de}-${dados.ate}.csv`);
+  }
+  async function exportarExcel() {
+    setExportando(true); setErroExportacao("");
+    try {
+      // Carrega o gerador apenas no download, usando o mesmo recorte da tabela.
+      const { planilhaProdutosPrecos } = await import("@/lib/planilhas/produtos-precos");
+      const wb = planilhaProdutosPrecos(linhas, colunas, {
+        de: dados.de, ate: dados.ate, busca, semVenda, curva,
+        canalCurva: canalCurva?.nome ?? "qualquer canal exibido",
+      });
+      const buffer = await wb.xlsx.writeBuffer();
+      baixar(new Blob([new Uint8Array(buffer)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `produtos-precos-${dados.de}-${dados.ate}.xlsx`);
+    } catch {
+      setErroExportacao("Não foi possível gerar o Excel. Tente baixar novamente.");
+    } finally {
+      setExportando(false);
+    }
   }
   function historico(sku: string) {
     const q = new URLSearchParams({ sku, de: dados.de, ate: dados.ate, nivel: "produto" });
@@ -80,14 +106,21 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
 
   return <>
     <PageHeader title="Produtos e preços" breadcrumb="Catálogo" description="Compare o mesmo SKU entre canais."
-      actions={<Button disabled={pendente || !linhas.length || !colunas.length} onClick={exportar}><Download size={15} />Exportar tabela</Button>}
+      actions={<>
+        <Button disabled={pendente || exportando || !linhas.length || !colunas.length} onClick={exportarExcel} aria-busy={exportando}><Download size={15} />{exportando ? "Gerando Excel…" : "Baixar Excel"}</Button>
+        <Button disabled={pendente || !linhas.length || !colunas.length} onClick={exportar} title="Baixar os mesmos dados em CSV">CSV</Button>
+      </>}
       filters={<div className="flex max-w-full flex-wrap items-end gap-3">
-        <div className="max-w-full"><SeletorCanais grupos={dados.opcoes} selecionados={selecionados} aoAplicar={mudarCanais} /></div>
         <label className="min-w-0 text-xs text-ink-3">De<input aria-label="Data inicial" className={`${controle} mt-1 block`} type="date" max={datas.ate} value={datas.de} onChange={e => setDatas({ ...datas, de: e.target.value })} /></label>
         <label className="min-w-0 text-xs text-ink-3">Até<input aria-label="Data final" className={`${controle} mt-1 block`} type="date" min={datas.de} value={datas.ate} onChange={e => setDatas({ ...datas, ate: e.target.value })} /></label>
         <Button className="min-h-11" disabled={pendente || !datas.de || !datas.ate || datas.de > datas.ate} onClick={aplicarPeriodo}>{pendente ? "Carregando…" : "Aplicar período"}</Button>
       </div>} />
     <PageBody>
+      <div role="group" aria-label="Canais na tabela" className="flex max-w-full flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-ink-2">Canais na tabela</span>
+        <div className="max-w-full"><SeletorCanais grupos={dados.opcoes} selecionados={selecionados} aoAplicar={mudarCanais} /></div>
+      </div>
+      {erroExportacao && <p role="alert" className="text-sm text-down">{erroExportacao}</p>}
       <Panel className="min-w-0 overflow-hidden" aria-busy={pendente}>
         <div className="flex flex-wrap items-center gap-3 border-b border-line p-3">
           <input className={`${controle} w-full sm:w-64`} aria-label="Buscar produto" placeholder="Buscar SKU, produto ou anúncio" value={busca} onChange={e => setBusca(e.target.value)} />

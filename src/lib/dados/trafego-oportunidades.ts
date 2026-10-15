@@ -51,6 +51,16 @@ export type EntradaOportunidade = {
   receitaAtribuida: number;
   estoque: number | null;
   status: string | null;
+  /**
+   * Situação na disputa de catálogo, ou null para anúncio que não
+   * disputa catálogo nenhum.
+   *
+   * Entra aqui porque muda a LEITURA do gasto sem retorno: num anúncio
+   * de catálogo a venda pode ter saído pelo anúncio vencedor, e
+   * "desligar" seria desligar a mídia de um anúncio que está vendendo
+   * — só não é ele que aparece no pedido.
+   */
+  catalogo: string | null;
 };
 
 export type LinhaOportunidade = EntradaOportunidade & {
@@ -149,7 +159,9 @@ export function classificarOportunidades(entradas: EntradaOportunidade[]): {
 
     if (e.investimento > 0 && e.receitaAtribuida === 0 && e.receitaReal === 0) {
       acao = "desligar";
-      motivo = `${reais(e.investimento)} sem venda nenhuma`;
+      motivo = e.catalogo
+        ? `${reais(e.investimento)} sem venda neste anúncio — é de catálogo (${e.catalogo}), confira o anúncio vencedor antes`
+        : `${reais(e.investimento)} sem venda nenhuma`;
     } else if (e.investimento > 0 && e.receitaAtribuida === 0 && e.receitaReal > 0) {
       acao = "midia_sobrou";
       motivo = `vendeu ${reais(e.receitaReal)} sem a mídia creditar nada`;
