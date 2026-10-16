@@ -121,6 +121,17 @@ const PERMITIDOS = [
    * sendo leitura: anunciante, campanha e anúncio, com métrica do
    * período.
    */
+  /*
+   * Promoções VIVAS do vendedor, cupom incluído.
+   *
+   * É o que responde "o que está no ar agora", e nenhuma planilha
+   * processada responde isso. Conferido na conta real em 16/10/2026:
+   * devolve LIGHTNING, SMART, PRE_NEGOTIATED, SELLER_CAMPAIGN,
+   * SELLER_COUPON_CAMPAIGN e DEAL. O id vem com prefixo de letras e hífen
+   * (C-MLB6017095, P-MLB18061018, LGH-MLB1000) — daí o padrão.
+   */
+  /^\/seller-promotions\/users\/\d+$/,
+  /^\/seller-promotions\/promotions\/[A-Z]+-[A-Z]{3}\d+\/items$/i,
   /^\/advertising\/advertisers$/,
   /^\/marketplace\/advertising\/[A-Z]{3}\/advertisers\/\d+\/product_ads\/(campaigns|ads)\/search$/,
 ];

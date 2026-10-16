@@ -542,6 +542,15 @@ export type Pedido = {
   envioId: number | null;
   /** Preenchido por `completarFretes`, não pela busca de pedidos. */
   fretePago: number | null;
+  /**
+   * Desconto de CUPOM concedido neste pedido, em reais.
+   *
+   * O canal manda em `coupon.amount`, e é a única medida de uso de cupom
+   * que existe: a API de campanha de cupom diz o que foi configurado, não
+   * o que foi usado. Zero é diferente de nulo — zero é "pedido sem cupom",
+   * nulo é "o canal não informou".
+   */
+  cupom: number | null;
 };
 
 type OrdemBruta = {
@@ -552,6 +561,7 @@ type OrdemBruta = {
   total_amount?: number;
   paid_amount?: number;
   shipping?: { id?: number } | null;
+  coupon?: { amount?: number | null; id?: string | null } | null;
   payments?: {
     installments?: number;
     transaction_amount?: number;
@@ -622,6 +632,7 @@ function normalizarPedido(o: OrdemBruta): Pedido {
     parcelas,
     envioId: o.shipping?.id ?? null,
     fretePago: null,
+    cupom: o.coupon == null ? null : +Number(o.coupon.amount ?? 0).toFixed(2),
   };
 }
 

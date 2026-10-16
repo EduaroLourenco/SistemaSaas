@@ -1,6 +1,7 @@
 import { abastecerProdutos } from "@/lib/produtos/abastecer";
 import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
+import { lerPromocoesDoCanal, lerItensDaPromocao } from "./promocoes-canal";
 import { paginar } from "@/lib/dados/paginar";
 import {
   catalogoCompleto,
@@ -54,6 +55,8 @@ type Resumo = {
   estoque: { linhas: number };
   catalogo: { consultados: number; gravados: number };
   reputacao: { gravada: boolean };
+  /** Promoções vivas lidas do canal, e quantos itens elas cobrem. */
+  promocoes: { campanhas: number; itens: number };
   diarias: { dias: number };
   semanais: { linhas: number };
   avisos: string[];
@@ -264,6 +267,7 @@ async function gravarPedidos(
     comissao: p.comissao,
     comissao_origem: p.comissao == null ? null : "canal",
     juros: p.juros,
+    cupom: p.cupom,
     origem: "api",
   }));
 
@@ -585,6 +589,8 @@ export type OpcoesSincronizacao = {
     diarias?: boolean;
     /** A disputa do catálogo é um pedido por anúncio; pesa mais que as outras. */
     disputa?: boolean;
+    /** Promoções vivas do canal, cupom incluído. Duas chamadas por promoção. */
+    promocoes?: boolean;
   };
   /** Deixa registro em `sincronizacoes`. Sem isto, a execução não é anotada. */
   registro?: { origem: Origem; turno?: string };
@@ -659,6 +665,104 @@ export async function sincronizarMeli(opcoes: OpcoesSincronizacao = {}): Promise
   }
 }
 
+/**
+ * As promoções vivas do canal, e os itens de cada uma.
+ *
+ * Duas chamadas por promoção, e são poucas — oito na Probel. Roda depois
+ * do catálogo porque o item aponta para `anuncios.id` quando o anúncio já
+ * é conhecido; quando não é, fica só o MLB, que é o suficiente para a tela.
+ *
+ * Falha aqui NÃO derruba a sincronização: promoção é leitura acessória, e
+ * perder pedido do dia por causa dela seria troca ruim. O aviso entra no
+ * resumo, que a tela de atualização mostra.
+ */
+async function gravarPromocoesDoCanal(
+  ctx: Awaited<ReturnType<typeof resolverConta>>,
+  conta: Conta,
+  resumo: Resumo
+) {
+  const sb = clientePrivilegiado();
+  let promocoes;
+  try {
+    promocoes = await lerPromocoesDoCanal(conta);
+  } catch (e) {
+    resumo.avisos.push(`Promoções do canal: ${(e as Error).message}`);
+    return;
+  }
+  if (!promocoes.length) return;
+
+  const linhas = promocoes.map((p) => ({
+    operacao_id: ctx.operacaoId,
+    conta_canal_id: ctx.contaCanalId,
+    codigo: p.codigo,
+    tipo: p.tipo,
+    sub_tipo: p.subTipo,
+    nome: p.nome,
+    status: p.status,
+    inicio: p.inicio,
+    fim: p.fim,
+    percentual: p.percentual,
+    valor_fixo: p.valorFixo,
+    compra_minima: p.compraMinima,
+    compra_maxima: p.compraMaxima,
+    bruto: p.bruto,
+    lido_em: new Date().toISOString(),
+  }));
+  const { data: salvas, error } = await sb
+    .from("promocoes_canal")
+    .upsert(linhas, { onConflict: "conta_canal_id,codigo" })
+    .select("id,codigo,tipo");
+  if (error) {
+    /* Tabela ausente é migração não rodada, não defeito: avisa e segue. */
+    resumo.avisos.push(
+      /relation .* does not exist|schema cache/i.test(error.message)
+        ? "Promoções do canal: rode db/40_cupons_e_promocoes_do_canal.sql para a plataforma passar a guardá-las."
+        : `Promoções do canal: ${error.message}`
+    );
+    return;
+  }
+  resumo.promocoes.campanhas = (salvas ?? []).length;
+
+  /* O anúncio, para ligar o item por id quando o catálogo já o conhece. */
+  const conhecidos = await paginar(() =>
+    sb.from("anuncios").select("id,codigo_externo").eq("operacao_id", ctx.operacaoId).eq("conta_canal_id", ctx.contaCanalId).order("id")
+  );
+  const idPorMlb = new Map(conhecidos.map((a) => [String(a.codigo_externo).toUpperCase(), a.id as string]));
+
+  for (const p of salvas ?? []) {
+    let itens;
+    try {
+      itens = await lerItensDaPromocao(conta, { codigo: p.codigo as string, tipo: p.tipo as string });
+    } catch (e) {
+      resumo.avisos.push(`Itens da promoção ${p.codigo}: ${(e as Error).message}`);
+      continue;
+    }
+    if (!itens.length) continue;
+    const { error: e2 } = await sb
+      .from("promocao_canal_itens")
+      .upsert(
+        itens.map((i) => ({
+          operacao_id: ctx.operacaoId,
+          promocao_id: p.id as string,
+          codigo_externo: i.codigoExterno,
+          anuncio_id: idPorMlb.get(i.codigoExterno.toUpperCase()) ?? null,
+          status: i.status,
+          preco_original: i.precoOriginal,
+          preco_promocional: i.precoPromocional,
+          percentual: i.percentual,
+          inicio: i.inicio,
+          fim: i.fim,
+        })),
+        { onConflict: "promocao_id,codigo_externo" }
+      );
+    if (e2) {
+      resumo.avisos.push(`Itens da promoção ${p.codigo}: ${e2.message}`);
+      continue;
+    }
+    resumo.promocoes.itens += itens.length;
+  }
+}
+
 async function executar(
   opcoes: OpcoesSincronizacao,
   conta: Conta,
@@ -668,7 +772,7 @@ async function executar(
   const ate = opcoes.ate ?? hoje();
   const diasVisitas = Math.min(150, Math.max(1, opcoes.diasVisitas ?? 30));
   const etapas = {
-    catalogo: true, pedidos: true, visitas: true, diarias: true, disputa: true,
+    catalogo: true, pedidos: true, visitas: true, diarias: true, disputa: true, promocoes: true,
     ...(opcoes.etapas ?? {}),
   };
 
@@ -680,6 +784,7 @@ async function executar(
     estoque: { linhas: 0 },
     catalogo: { consultados: 0, gravados: 0 },
     reputacao: { gravada: false },
+    promocoes: { campanhas: 0, itens: 0 },
     diarias: { dias: 0 },
     semanais: { linhas: 0 },
     avisos: [],
@@ -705,6 +810,8 @@ async function executar(
     await gravarReputacao(ctx, conta, resumo);
     if (etapas.disputa) await gravarCatalogoDiario(ctx, itens, conta, resumo);
   }
+
+  if (etapas.promocoes) await gravarPromocoesDoCanal(ctx, conta, resumo);
 
   if (etapas.pedidos) {
     const lista = await buscarPedidos({ de, ate, conta });
