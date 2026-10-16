@@ -123,6 +123,9 @@ export const NAV: NavGroup[] = [
     label: "Mercado Livre",
     icon: Tags,
     items: [
+      /* O termômetro vem primeiro: é a tela que se abre de manhã, antes de
+         qualquer análise. */
+      { label: "Termômetro", href: "/mercado-livre" },
       area(3),
       { label: "Campanhas", href: "/promocoes/campanhas" },
       { label: "Processar planilha", href: "/promocoes/processar" },
