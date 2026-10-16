@@ -156,7 +156,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       header: "Produto",
       mobile: "title",
       cell: (r) => (
-        <span className="font-medium text-ink block truncate max-w-[190px] 2xl:max-w-[320px]">
+        <span className="font-medium text-ink block break-words max-w-[190px] 2xl:max-w-[320px]">
           {r.titulo}
         </span>
       ),

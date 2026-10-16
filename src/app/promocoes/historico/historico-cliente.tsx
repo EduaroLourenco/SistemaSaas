@@ -248,7 +248,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
                                   <Badge tone={CORES_CURVA[g.curva]}>{g.curva}</Badge>
                                 )}
                               </span>
-                              <span className="text-[12px] text-ink-2 block truncate max-w-[280px]">
+                              <span className="text-[12px] text-ink-2 block break-words max-w-[280px]">
                                 {g.titulo}
                               </span>
                             </span>

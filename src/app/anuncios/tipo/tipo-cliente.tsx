@@ -317,7 +317,7 @@ function Pares({ pares }: { pares: ParSku[] }) {
       celula: (p) => (
         <span className="min-w-0">
           <span className="num text-ink font-medium">{p.sku}</span>
-          <span className="block text-[12px] text-ink-3 truncate max-w-[260px]">
+          <span className="block text-[12px] text-ink-3 break-words max-w-[260px]">
             {p.titulo}
           </span>
         </span>

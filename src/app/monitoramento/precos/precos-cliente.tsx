@@ -340,7 +340,7 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
                               </span>
                               <Badge tone={CORES_CURVA[s.curva]}>{s.curva}</Badge>
                             </span>
-                            <span className="text-[12px] text-ink-2 block truncate max-w-[300px]">
+                            <span className="text-[12px] text-ink-2 block break-words max-w-[300px]">
                               {s.titulo}
                             </span>
                           </span>

@@ -365,7 +365,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                   <tr key={l.produtoId} className="hover:bg-panel-2/50">
                     <td className={td}>
                       <p className="num text-[12.5px] text-ink font-medium">{l.sku}</p>
-                      <p className="text-[12px] text-ink-3 truncate max-w-[220px]">
+                      <p className="text-[12px] text-ink-3 break-words max-w-[220px]">
                         {l.titulo}
                       </p>
                     </td>

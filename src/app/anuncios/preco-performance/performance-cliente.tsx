@@ -309,7 +309,7 @@ export default function PerformancePrecoCliente({
                   <span className="num">{detalhe.sku}</span> — unidades por dia
                   em cada preço
                 </p>
-                <p className="text-[12px] text-ink-3 truncate max-w-xl">
+                <p className="text-[12px] text-ink-3 break-words max-w-xl">
                   {detalhe.titulo}
                 </p>
                 {detalhe.mlbs.length > 0 && (
@@ -459,7 +459,7 @@ export default function PerformancePrecoCliente({
                             {l.sku}
                           </span>
                         </div>
-                        <p className="text-[12px] text-ink-3 truncate max-w-[220px]">
+                        <p className="text-[12px] text-ink-3 break-words max-w-[220px]">
                           {l.titulo}
                         </p>
                       </td>

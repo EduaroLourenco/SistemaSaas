@@ -490,7 +490,10 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                           {l.sku}
                         </Link>
                       </div>
-                      <p className="text-[12px] text-ink-3 truncate max-w-[230px]">
+                      {/* Quebra em vez de cortar: "Chopeira Elétrica Memo
+                          Small 50L/h - …" esconde a capacidade e a voltagem,
+                          que é o que separa um SKU do outro. */}
+                      <p className="text-[12px] text-ink-3 break-words max-w-[230px]">
                         {l.titulo}
                       </p>
                     </td>

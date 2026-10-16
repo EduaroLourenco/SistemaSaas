@@ -662,7 +662,7 @@ export default function CustosCliente({
                           <p className="num text-[12.5px] text-ink font-medium">
                             {l.sku}
                           </p>
-                          <p className="text-[12px] text-ink-3 truncate max-w-[240px]">
+                          <p className="text-[12px] text-ink-3 break-words max-w-[240px]">
                             {l.titulo}
                           </p>
                         </td>

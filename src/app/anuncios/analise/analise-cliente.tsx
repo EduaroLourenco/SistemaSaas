@@ -338,7 +338,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
           </span>
           <span className="min-w-0">
             <span className="flex items-center gap-1.5">
-              <span className="font-medium text-ink truncate max-w-[220px]">
+              <span className="font-medium text-ink break-words max-w-[220px]">
                 {a.titulo}
               </span>
               {a.metricas.curvaAReceita && <Badge tone="brand">A</Badge>}

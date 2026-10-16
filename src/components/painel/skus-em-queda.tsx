@@ -158,7 +158,7 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
                             </span>
                             <Badge tone={CORES_CURVA[s.curva]}>{s.curva}</Badge>
                           </span>
-                          <span className="text-[12px] text-ink-2 block truncate max-w-[280px]">
+                          <span className="text-[12px] text-ink-2 block break-words max-w-[280px]">
                             {s.titulo}
                           </span>
                         </span>

@@ -294,7 +294,7 @@ export default function CatalogoAnuncios({
             <Package className="w-3.5 h-3.5 text-ink-3" strokeWidth={1.75} />
           </span>
           <span className="min-w-0">
-            <span className="block font-medium text-ink truncate max-w-[230px]">
+            <span className="block font-medium text-ink break-words max-w-[230px]">
               {i.titulo}
             </span>
             <span className="block text-[12px] text-ink-3 truncate">

@@ -201,7 +201,7 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
                           <span className="num text-[12px] font-semibold text-ink-3">
                             {String(i + 1).padStart(2, "0")}
                           </span>
-                          <span className="text-[13px] font-semibold text-ink truncate">
+                          <span className="text-[13px] font-semibold text-ink break-words">
                             {s.titulo}
                           </span>
                         </span>

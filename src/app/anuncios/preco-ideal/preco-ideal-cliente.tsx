@@ -255,7 +255,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
       sortValue: (l) => l.titulo,
       cell: (l) => (
         <span className="min-w-0 block">
-          <span className="block font-medium text-ink truncate max-w-[260px]">
+          <span className="block font-medium text-ink break-words max-w-[260px]">
             {l.titulo}
           </span>
           <span className="block text-[12px] text-ink-3 truncate">

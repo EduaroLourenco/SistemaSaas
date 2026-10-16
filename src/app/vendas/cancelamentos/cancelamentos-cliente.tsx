@@ -307,7 +307,7 @@ function PorSku({ dados }: { dados: DadosCancelamento }) {
       celula: (s) => (
         <span className="min-w-0">
           <span className="num text-ink font-medium">{s.sku}</span>
-          <span className="block text-[12px] text-ink-3 truncate max-w-[280px]">
+          <span className="block text-[12px] text-ink-3 break-words max-w-[280px]">
             {s.titulo}
           </span>
         </span>

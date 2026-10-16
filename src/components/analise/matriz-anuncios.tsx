@@ -339,7 +339,7 @@ export function MatrizAnuncios({
                             <span className="num text-[12px] font-semibold text-ink block">
                               {g.sku}
                             </span>
-                            <span className="text-[12px] text-ink-2 block truncate">
+                            <span className="text-[12px] text-ink-2 block break-words">
                               {g.titulo}
                             </span>
                             {g.mlbs.length > 1 && (
