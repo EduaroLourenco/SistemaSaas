@@ -188,7 +188,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         {l.tipo === "premium" && <Badge tone="neutral">premium</Badge>}
         <EtiquetaCatalogo situacao={l.catalogo ?? null} />
       </div>
-      <p className="text-[12px] text-ink-2 truncate max-w-[280px]" title={l.titulo}>
+      <p className="text-[12px] text-ink-2 break-words max-w-[280px]">
         {l.titulo || "—"}
       </p>
       <p className="text-[11px] text-ink-3">{l.conta}</p>

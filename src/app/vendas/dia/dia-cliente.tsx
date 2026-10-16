@@ -548,7 +548,7 @@ function ProdutosDoDia({ produtos }: { produtos: DiaProduto[] }) {
                 {visible.map((p) => (
                   <tr key={p.sku + p.titulo} className="border-t border-line">
                     <td className="px-4 py-2.5">
-                      <span className="block max-w-[360px] truncate font-medium text-ink" title={p.titulo}>
+                      <span className="block max-w-[360px] break-words font-medium text-ink">
                         {p.titulo || "—"}
                       </span>
                     </td>

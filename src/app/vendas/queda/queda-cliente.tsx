@@ -509,7 +509,7 @@ function Linha({
               <Badge tone={TOM[l.causa]}>{l.causa}</Badge>
             </span>
           </span>
-          <span className="block truncate text-[12px] text-ink-2" title={l.titulo}>
+          <span className="block break-words text-[12px] text-ink-2">
             {l.titulo || "—"}
           </span>
           <span className="block truncate text-[12px] text-ink-3">{l.onde}</span>

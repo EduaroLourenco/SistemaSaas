@@ -479,7 +479,7 @@ function TabelaProdutos({ produtos }: { produtos: ProdutoResultado[] }) {
               <tr key={p.chave} className="border-t border-line">
                 <td className="max-w-[320px] px-3 py-2">
                   <span className="block font-semibold text-ink">{p.chave}</span>
-                  <span className="block truncate font-sans text-[12px] text-ink-3" title={p.titulo}>{p.titulo}</span>
+                  <span className="block break-words font-sans text-[12px] text-ink-3">{p.titulo}</span>
                 </td>
                 <td className="px-3 py-2 text-right">
                   <span className="text-ink-3">{moneyShort(p.antes.receita)}</span> → <span className="font-semibold">{moneyShort(p.agora.receita)}</span>
@@ -583,7 +583,7 @@ function LinhaPromo({ p }: { p: LinhaPromocao }) {
                         <tr key={a.codigo} className="border-t border-line">
                           <td className="max-w-[320px] px-3 py-2">
                             <span className="block font-semibold text-ink">{a.codigo}</span>
-                            <span className="block truncate font-sans text-[12px] text-ink-3" title={a.titulo}>{a.titulo}</span>
+                            <span className="block break-words font-sans text-[12px] text-ink-3">{a.titulo}</span>
                           </td>
                           <td className="px-3 py-2 text-right">
                             {a.precoOferta != null ? money(a.precoOferta) : "—"}

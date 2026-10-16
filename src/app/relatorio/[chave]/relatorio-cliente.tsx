@@ -745,7 +745,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                           <span className={`inline-block w-5 text-center rounded-[4px] text-[12px] font-semibold ${l.curva === "A" ? "bg-brand-wash text-brand" : l.curva === "B" ? "bg-ground text-ink-2" : "text-ink-3"}`}>{l.curva}</span>
                         </td>
                         <td className="px-3 py-1.5 num text-ink">{l.sku ?? "—"}</td>
-                        <td className="px-3 py-1.5 text-ink-2 max-w-[260px] truncate" title={l.titulo}>{l.titulo}</td>
+                        <td className="px-3 py-1.5 text-ink-2 max-w-[260px] break-words">{l.titulo}</td>
                         <td className={`px-2 py-1.5 text-right num ${semEstoque ? "text-down font-semibold" : "text-ink-2"}`}>
                           {l.situacao === "paused" ? "pausado" : l.situacao === "encerrado" ? "encerrado" : numero(l.estoque)}
                         </td>
@@ -1399,7 +1399,7 @@ function ListaProdutos({
                 <span className="num text-[12px] text-ink">{l.sku ?? l.mlb}</span>
                 <span className="text-[12px] text-ink-3">{l.tipo}</span>
               </div>
-              <p className="text-[12px] text-ink-2 truncate" title={l.titulo}>{l.titulo}</p>
+              <p className="text-[12px] text-ink-2 break-words">{l.titulo}</p>
               <p className="num text-[12px] text-ink-3">{extra(l)}</p>
             </li>
           ))}
@@ -1505,7 +1505,7 @@ function SkuEntreCanais({ x }: { x: SkuMulticanal }) {
         <div className="min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="num text-[13px] font-semibold text-ink">{x.sku}</span>
-            <span className="text-[12px] text-ink-3 truncate max-w-[420px]">{x.titulo}</span>
+            <span className="text-[12px] text-ink-3 break-words max-w-[420px]">{x.titulo}</span>
           </div>
           <p className="text-[12px] text-ink-2 mt-1">
             {x.canais.length} canais · vende mais em <strong className="font-medium text-ink">{x.lider}</strong>

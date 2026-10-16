@@ -506,7 +506,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
                           )}
                           {p.tipo === "Premium" && <Badge tone="neutral">premium</Badge>}
                         </div>
-                        <p className="text-[12px] text-ink-2 truncate max-w-[320px]" title={p.titulo}>
+                        <p className="text-[12px] text-ink-2 break-words max-w-[320px]">
                           {p.titulo}
                         </p>
                       </td>

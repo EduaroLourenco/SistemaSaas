@@ -418,7 +418,7 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
         chave: `sem-venda-${p.mlb}`,
         gravidade: "alta",
         titulo: `${p.sku || p.mlb} teve ${p.visitas} visitas e nenhuma venda`,
-        detalhe: `${p.titulo.slice(0, 60)} · ${p.tipo}${p.preco ? ` · ${p.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}`,
+        detalhe: `${p.titulo} · ${p.tipo}${p.preco ? ` · ${p.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}`,
         valor: null,
       });
     }
@@ -427,7 +427,7 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
         chave: `sem-estoque-${p.mlb}`,
         gravidade: "alta",
         titulo: `${p.sku || p.mlb} está com estoque zero e recebeu ${p.visitas} visitas`,
-        detalhe: p.titulo.slice(0, 70),
+        detalhe: p.titulo,
         valor: null,
       });
     }
