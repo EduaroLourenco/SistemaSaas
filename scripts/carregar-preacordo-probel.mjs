@@ -350,22 +350,38 @@ itens.push({
   }),
 });
 
-/* Uma ação por data de relâmpago: é assim que elas aparecem no calendário,
-   e é a data que o canal cobra. */
+/*
+ * Uma ação por data de relâmpago, cobrindo a JANELA DE COMPRA.
+ *
+ * Colchão não se compra no impulso do dia. Medir o relâmpago só na sexta
+ * em que ele rodou deu −100% na primeira leitura; a MESMA ação, medida em
+ * 7 dias contra a semana limpa anterior, deu +175% — R$ 30.268 contra
+ * R$ 11.026, 24 unidades contra 10. O dia é quando a oferta aparece; a
+ * venda chega depois.
+ *
+ * Sete dias e não três: em 3 dias o mesmo relâmpago deu +66%, e a série
+ * diária põe o pico entre o terceiro e o sexto dia.
+ */
+const JANELA_COMPRA = 6; // dias somados ao dia da oferta
 for (const [i, data] of outubro.datas.entries()) {
+  const fimJanela = new Date(Date.parse(data + "T12:00:00Z") + JANELA_COMPRA * 86400000).toISOString().slice(0, 10);
   itens.push({
     natureza: "acao",
     campanha_id: idCampanha.out,
     titulo: `Relâmpago ${data.slice(8, 10)}/${data.slice(5, 7)}`,
     inicio: data,
-    fim: data,
-    status: data <= "2026-10-16" ? "Concluída" : "Planejada",
+    fim: fimJanela,
+    status: fimJanela <= "2026-10-16" ? "Concluída" : data <= "2026-10-16" ? "Em andamento" : "Planejada",
     tipo: "Promoção",
     etapa: "Lançamento",
     cor: "#e11d48",
     skus: [...new Set(comRelampago.map(skuDe).filter(Boolean))],
     detalhes: detalhes({
-      objetivo: `Campanha relâmpago da semana ${i + 1} sobre o preço com rebate.`,
+      objetivo: `Oferta em ${data.slice(8, 10)}/${data.slice(5, 7)}, medida até ${fimJanela.slice(8, 10)}/${fimJanela.slice(5, 7)} — a janela em que a venda de colchão cai.`,
+      briefing:
+        i === 0
+          ? "Comparação limpa: a semana anterior (26/09 a 02/10) não teve relâmpago. Medido: +175% em receita, 24 unidades contra 10."
+          : "CUIDADO na leitura: a semana anterior a esta também teve relâmpago, então o comparativo automático mede uma ação contra a outra, e não contra uma semana normal. Para avaliar esta data, use uma semana sem relâmpago como base.",
       porProduto: Object.fromEntries(
         comRelampago
           .map((l) => [skuDe(l) || l.mlb, `${reais(l.relampagoPreco)} · desconto ${l.relampagoPct != null ? Math.round(l.relampagoPct * 100) + "%" : "—"}`])
