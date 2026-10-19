@@ -2,7 +2,8 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "@/lib/dados/operacao";
 import { paginar } from "./paginar";
-import { montarProdutosPrecos, periodoProdutos, type CanalPrecos, type ContaPrecos, type ProdutoPrecos, type AnuncioPrecos, type ItemPrecos, type LeituraVitrine } from "@/lib/produtos-precos";
+import { montarProdutosPrecos, periodoProdutos, type CanalPrecos, type ContaPrecos, type ProdutoPrecos, type AnuncioPrecos, type ItemPrecos, type LeituraVitrine, type CatalogoPorAnuncio } from "@/lib/produtos-precos";
+import { estadoDeCatalogo } from "./catalogo-semana";
 
 export async function carregarProdutosPrecos(p: { de?: string; ate?: string; canais?: string; sku?: string }) {
   const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
@@ -34,5 +35,17 @@ export async function carregarProdutosPrecos(p: { de?: string; ate?: string; can
     for (const l of (data ?? []) as LeituraVitrine[]) if (faltam.delete(l.anuncio_id)) leituras.push(l);
     if (!data || data.length < 1000) break;
   }
-  return montarProdutosPrecos({ ...base, canais, contas, produtos, anuncios, itens, leituras });
+  /*
+   * Disputa de catálogo dos últimos 30 dias.
+   *
+   * Trinta dias e não "hoje" porque o que interessa não é só a situação
+   * atual: é saber que o anúncio ganhava até semana passada. A janela é
+   * independente do período da tela — o estado da vitrine é de agora, não
+   * do intervalo de vendas que o usuário escolheu.
+   */
+  const desde = new Date(Date.parse(hoje + "T12:00:00Z") - 30 * 86_400_000).toISOString().slice(0, 10);
+  const estado = await estadoDeCatalogo(sb, desde);
+  const catalogo: CatalogoPorAnuncio = {};
+  for (const [id, e] of estado) catalogo[id] = { ganhando: e.ganhando, situacao: e.situacao, perdeuDepoisDe: e.perdeuDepoisDe };
+  return montarProdutosPrecos({ ...base, canais, contas, produtos, anuncios, itens, leituras, catalogo });
 }

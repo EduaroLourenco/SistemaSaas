@@ -23,6 +23,7 @@ import { money, moneyShort, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, TriangleAlert, Flame, Snowflake, Minus } from "lucide-react";
 import type { DadosTermometro, DiaTermometro } from "@/lib/dados/termometro";
+import type { CatalogoSemana } from "@/lib/dados/catalogo-semana";
 
 /**
  * Termômetro do Mercado Livre.
@@ -358,6 +359,9 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           />
         </div>
 
+        {/* ── Catálogo na semana ─────────────────────────────────── */}
+        {dados.catalogo && <CatalogoDaSemana dados={dados.catalogo} />}
+
         {/* ── Reputação ──────────────────────────────────────────── */}
         <Panel>
           <PanelHeader
@@ -381,17 +385,26 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     {[
-                      { rot: "Reclamações", v: rep.reclamacoes, limite: 2 },
-                      { rot: "Cancelamentos", v: rep.cancelamentos, limite: 2 },
-                      { rot: "Atrasos", v: rep.atrasos, limite: 4 },
-                    ].map((x) => (
-                      <div key={x.rot}>
-                        <p className="label">{x.rot}</p>
-                        <p className={cn("num text-[16px] font-semibold leading-tight", x.v != null && x.v >= x.limite ? "text-down" : "text-ink")}>
-                          {x.v == null ? "—" : pct(x.v, 2)}
-                        </p>
-                      </div>
-                    ))}
+                      { rot: "Reclamações", v: rep.reclamacoes, antes: rep.anterior?.reclamacoes ?? null, limite: 2 },
+                      { rot: "Cancelamentos", v: rep.cancelamentos, antes: rep.anterior?.cancelamentos ?? null, limite: 2 },
+                      { rot: "Envios atrasados", v: rep.atrasos, antes: rep.anterior?.atrasos ?? null, limite: 4 },
+                    ].map((x) => {
+                      /* Piorar aqui é subir: a seta tem que apontar o
+                         contrário do que aponta numa métrica de receita. */
+                      const piorou = x.v != null && x.antes != null && x.v > x.antes + 0.05;
+                      const melhorou = x.v != null && x.antes != null && x.v < x.antes - 0.05;
+                      return (
+                        <div key={x.rot}>
+                          <p className="label">{x.rot}</p>
+                          <p className={cn("num text-[16px] font-semibold leading-tight", x.v != null && x.v >= x.limite ? "text-down" : "text-ink")}>
+                            {x.v == null ? "—" : pct(x.v, 2)}
+                          </p>
+                          <p className={cn("text-[11px] leading-tight", piorou ? "text-down" : melhorou ? "text-up" : "text-ink-3")}>
+                            {x.antes == null ? "sem base na semana passada" : `era ${pct(x.antes, 2)}`}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="mt-3 flex items-center gap-4 text-[12px] text-ink-3 flex-wrap">
                     <span>
@@ -541,6 +554,113 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
 }
 
 /** Os números de um dia, quando se clica nele. */
+/**
+ * Catálogo na semana.
+ *
+ * Ganhar catálogo é o que coloca o anúncio na vitrine do produto; perder
+ * é o que faz a receita cair sem que nada tenha mudado no anúncio. O
+ * painel compara o retrato do último dia medido desta semana com o da
+ * mesma fatia da anterior, e lista nominalmente quem trocou de lado —
+ * porque "caiu 40 anúncios" não dá para agir, e "PA85351 saiu" dá.
+ */
+function CatalogoDaSemana({ dados }: { dados: CatalogoSemana }) {
+  const [abrir, setAbrir] = React.useState(false);
+  if (!dados.medido) {
+    return (
+      <Panel>
+        <PanelHeader title="Catálogo na semana" />
+        <p className="px-4 py-6 text-[13px] text-ink-3">
+          Nenhuma leitura de disputa de catálogo nesta janela. Ela vem na sincronização do canal.
+        </p>
+      </Panel>
+    );
+  }
+  const t = dados.totais;
+  const delta = t.ganhandoAnterior == null ? undefined : varPct(t.ganhando, t.ganhandoAnterior);
+  const lista = [
+    ...dados.perdidos.map((x) => ({ ...x, lado: "perdeu" as const })),
+    ...dados.ganhos.map((x) => ({ ...x, lado: "ganhou" as const })),
+  ];
+  return (
+    <Panel>
+      <PanelHeader
+        title="Catálogo na semana"
+        hint={`Retrato de ${dados.contas[0]?.dia ? dataBr(dados.contas[0].dia) : "—"} contra ${dados.contas[0]?.diaAnterior ? dataBr(dados.contas[0].diaAnterior) : "—"}. Ganhar catálogo é estar na vitrine do produto.`}
+        action={
+          lista.length > 0 ? (
+            <Button variant="ghost" size="sm" onClick={() => setAbrir((v) => !v)}>
+              {abrir ? "Esconder" : `Ver os ${lista.length} que mudaram`}
+            </Button>
+          ) : undefined
+        }
+      />
+      <div className="grid gap-3 p-4 sm:grid-cols-2">
+        <StatTile
+          label="Ganhando a vitrine"
+          value={`${count(t.ganhando)} de ${count(t.disputando)}`}
+          delta={delta}
+          hint={t.ganhandoAnterior == null ? "sem base na semana passada" : `era ${count(t.ganhandoAnterior)} de ${count(t.disputandoAnterior ?? 0)}`}
+          ajuda="Anúncios que estão em primeiro lugar na página do produto, ou dividindo o primeiro lugar. É a posição que recebe a visita."
+        />
+        <div className="panel panel-1 p-4 min-w-0">
+          <p className="label">Por conta</p>
+          <div className="mt-2 flex flex-col gap-1.5">
+            {dados.contas.map((c) => {
+              const piorou = c.ganhandoAnterior != null && c.ganhando < c.ganhandoAnterior;
+              return (
+                <div key={c.contaId} className="flex items-baseline justify-between gap-3 text-[13px]">
+                  <span className="truncate text-ink-2">{c.nome}</span>
+                  <span className={cn("num whitespace-nowrap", piorou ? "text-down font-semibold" : "text-ink")}>
+                    {c.ganhandoAnterior != null && `${count(c.ganhandoAnterior)} → `}
+                    {count(c.ganhando)} <span className="text-ink-3">de {count(c.disputando)}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      {abrir && lista.length > 0 && (
+        <div className="border-t border-line">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-line text-left">
+                <th className="label px-4 py-2">Anúncio</th>
+                <th className="label px-4 py-2">Conta</th>
+                <th className="label px-4 py-2">O que mudou</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((x) => (
+                <tr key={x.mlb} className="border-b border-line last:border-0 align-top">
+                  <td className="px-4 py-2">
+                    {linkDoAnuncio(x.mlb) ? (
+                      <a href={linkDoAnuncio(x.mlb)!} target="_blank" rel="noreferrer" className="num text-[12px] text-brand hover:underline">
+                        {x.sku || x.mlb}
+                      </a>
+                    ) : (
+                      <span className="num text-[12px] text-ink">{x.sku || x.mlb}</span>
+                    )}
+                    <p className="text-[12px] text-ink-3">{x.titulo}</p>
+                  </td>
+                  <td className="px-4 py-2 text-ink-2 whitespace-nowrap">{x.conta}</td>
+                  <td className="px-4 py-2">
+                    {x.lado === "perdeu" ? (
+                      <Badge tone="down">saiu da vitrine · agora {x.situacao}</Badge>
+                    ) : (
+                      <Badge tone="up">entrou na vitrine</Badge>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function DetalheDoDia({ dia }: { dia: DiaTermometro }) {
   const linhas: { rot: string; agora: string; antes: string; d?: number }[] = [
     { rot: "Receita", agora: money(dia.receita), antes: money(dia.anterior?.receita ?? 0), d: varPct(dia.receita, dia.anterior?.receita ?? null) },

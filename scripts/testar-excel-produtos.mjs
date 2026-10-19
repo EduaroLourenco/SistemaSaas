@@ -1,13 +1,19 @@
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import ExcelJS from 'exceljs';
-import {planilhaProdutosPrecos} from '../src/lib/planilhas/produtos-precos.ts';
-import {filtrarCurvaProdutos} from '../src/lib/produtos-precos.ts';
+import { createJiti } from '../node_modules/jiti/lib/jiti.mjs';
+
+const raiz = fileURLToPath(new URL('../', import.meta.url));
+const jiti = createJiti(import.meta.url, { alias: { '@': path.join(raiz, 'src') }, interopDefault: true });
+const { planilhaProdutosPrecos } = await jiti.import(path.join(raiz, 'src/lib/planilhas/produtos-precos.ts'));
+const { filtrarCurvaProdutos } = await jiti.import(path.join(raiz, 'src/lib/produtos-precos.ts'));
 
 const colunas=[{id:'ml',nome:'Mercado Livre',canalId:'ml'},{id:'site',nome:'Site próprio',canalId:'site'}];
-const celula={vendido:123.45,unidades:3,receita:370.35,curva:'A',vitrine:{min:100,max:150,de:'2026-09-28',ate:'2026-10-15',anuncios:2}};
+const celula={vendido:123.45,unidades:3,receita:370.35,curva:'A',vitrine:{min:100,max:150,de:'2026-09-28',ate:'2026-10-15',anuncios:2},catalogo:{ganhando:2,disputando:2,perdeuDepoisDe:null}};
 const linhas=Array.from({length:33},(_,i)=>({chave:String(i),sku:String(i).padStart(5,'0'),titulo:'Produto '+i,codigos:[],canais:{ml:{...celula},site:{vendido:99,unidades:1,receita:99,curva:'C',vitrine:null}}}));
 linhas[0].titulo='=1+1';
-linhas[1].canais.ml={...celula,vendido:0,unidades:1,curva:null,vitrine:{min:0,max:0,de:'2026-10-15',ate:'2026-10-15',anuncios:1}};
+linhas[1].canais.ml={...celula,vendido:0,unidades:1,curva:null,vitrine:{min:0,max:0,de:'2026-10-15',ate:'2026-10-15',anuncios:1},catalogo:{ganhando:0,disputando:1,perdeuDepoisDe:'2026-10-12'}};
 linhas[2].canais={};
 const contexto={de:'2026-10-01',ate:'2026-10-15',busca:'Produto',curva:'A',canalCurva:'Mercado Livre'};
 const wb=planilhaProdutosPrecos(linhas,[colunas[0]],contexto);
@@ -17,7 +23,7 @@ await reaberto.xlsx.load(salvo);
 const ws=reaberto.worksheets[0];
 assert.equal(reaberto.worksheets.length,1);
 assert.equal(ws.rowCount,39,'Exporta todas as 33 linhas, sem limitar à paginação');
-assert.equal(ws.columnCount,9,'Só o canal selecionado: duas colunas do produto e sete métricas');
+assert.equal(ws.columnCount,10,'Só o canal selecionado: duas colunas do produto e oito métricas');
 assert.equal(ws.getCell('C5').value,'Mercado Livre');
 assert.ok(!JSON.stringify(ws.model).includes('Site próprio'),'Não vaza colunas de canais ocultos');
 assert.equal(ws.getCell('A7').value,'00000','SKU é texto e mantém zeros à esquerda');
@@ -35,11 +41,14 @@ assert.ok(ws.getCell('H7').numFmt.includes('R$'));
 assert.equal(ws.getCell('I7').value,'28/09/2026 a 15/10/2026','Datas de vitrine não são confundidas com período de vendas');
 assert.equal(ws.getCell('D8').value,0,'Zero informado não vira Sem dado');
 assert.equal(ws.getCell('E8').value,0);
+assert.equal(ws.getCell('J7').value,'Ganhando','Ganhar todos os anúncios da disputa não vira contagem');
+assert.equal(ws.getCell('J8').value,'Perdeu (ganhava até 12/10)','Perder catálogo traz o último dia na vitrine');
 assert.equal(ws.getCell('D9').value,'Sem dado');
+assert.equal(ws.getCell('J9').value,'Sem dado','Canal sem disputa de catálogo não inventa situação');
 assert.equal(ws.getCell('G9').value,'Sem dado');
 assert.equal(ws.views[0].xSplit,2);
 assert.equal(ws.views[0].ySplit,6);
-assert.equal(ws.autoFilter,'A6:I39');
+assert.equal(ws.autoFilter,'A6:J39');
 assert.ok(ws.getCell('A2').value.includes('01/10/2026 a 15/10/2026'));
 assert.ok(ws.getCell('A3').value.includes('Curva A em Mercado Livre'));
 
@@ -51,4 +60,5 @@ assert.equal(outra.getCell('C7').value,'C','Preserva a curva do canal exportado'
 assert.equal(outra.getCell('D7').value,99);
 assert.equal(outra.getCell('E7').value,'Sem dado','Canal sem API não recebe vitrine inventada');
 assert.equal(outra.getCell('H7').value,99,'Receita acompanha o canal exportado');
-console.log('OK: XLSX reaberto, canais e linhas filtrados, todas as páginas, números, faixa de vitrine, datas, zeros, nulos e SKU textual.');
+assert.equal(outra.getCell('J7').value,'Sem dado','Site próprio não disputa catálogo');
+console.log('OK: XLSX reaberto, canais e linhas filtrados, todas as páginas, números, faixa de vitrine, datas, catálogo, zeros, nulos e SKU textual.');

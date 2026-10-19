@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { carregarCatalogoSemana, type CatalogoSemana } from "./catalogo-semana";
 
 /**
  * Termômetro do Mercado Livre — a leitura operacional do dia.
@@ -57,6 +58,14 @@ export type ReputacaoConta = {
   atrasos: number | null;
   vendas60d: number | null;
   perguntasSemResposta: number | null;
+  /** A mesma leitura na semana anterior — é o que mostra a piora. */
+  anterior: {
+    data: string;
+    nivel: string | null;
+    reclamacoes: number | null;
+    cancelamentos: number | null;
+    atrasos: number | null;
+  } | null;
 };
 
 export type ProdutoDoDia = {
@@ -126,6 +135,8 @@ export type DadosTermometro = {
   /** O dia de hoje contra o mesmo dia da semana passada. */
   dia: DiaTermometro | null;
   reputacao: ReputacaoConta[];
+  /** Disputa de catálogo nesta semana contra a mesma fatia da anterior. */
+  catalogo: CatalogoSemana | null;
   maisVistos: ProdutoDoDia[];
   /** De qual dia é o ranking de visitas. */
   diaDoRanking: string;
@@ -189,7 +200,7 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
       vazio: true, hoje, semana: { inicio, fim }, semanaAnterior: { inicio: inicioAnt, fim: fimAnt },
       diasCorridos, parcial, contas, contaSelecionada: "", dias: [], diasAnteriores: [], diaDoRanking: ate, campanhas: [],
       ritmo: { receita: 0, receitaAnterior: 0, pedidos: 0, pedidosAnterior: 0, unidades: 0, unidadesAnterior: 0, visitas: null, visitasAnterior: null, investimento: 0, investimentoAnterior: 0, conversao: null, conversaoAnterior: null, ticket: null, ticketAnterior: null },
-      dia: null, reputacao: [], maisVistos: [], atencao: [],
+      dia: null, reputacao: [], catalogo: null, maisVistos: [], atencao: [],
       frescor: { vendas: null, visitas: null, ads: null, reputacao: null },
     };
   }
@@ -231,8 +242,9 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
       .from("conta_reputacao_diaria")
       .select("conta_canal_id,data,nivel,categoria,reclamacoes_taxa,cancelamentos_taxa,atrasos_taxa,vendas_60d,perguntas_sem_resposta")
       .in("conta_canal_id", contasAtivas)
-      .order("data", { ascending: false })
-      .limit(60),
+      .gte("data", inicioAnt)
+      .lte("data", fim)
+      .order("data", { ascending: false }),
   ]);
 
   const anuncios = anunciosRaw as unknown as {
@@ -349,10 +361,32 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
 
   /* ── Reputação: a leitura mais recente de cada conta ── */
   const repPorConta = new Map<string, ReputacaoConta>();
-  for (const r of (repRaw.data ?? []) as unknown as Record<string, unknown>[]) {
+  const repAnterior = new Map<string, ReputacaoConta["anterior"]>();
+  const repLinhas = (repRaw.data ?? []) as unknown as Record<string, unknown>[];
+  /*
+   * A leitura da semana anterior é a do ÚLTIMO dia medido daquela fatia,
+   * não a mais antiga: a reputação é um estado que o canal recalcula todo
+   * dia, e o que interessa é como a semana TERMINOU.
+   */
+  for (const r of repLinhas) {
+    const id = String(r.conta_canal_id);
+    const d = String(r.data).slice(0, 10);
+    if (d < inicioAnt || d > ultimoCompleto) continue;
+    if (d >= inicio) continue; // esse lado é o atual
+    if (repAnterior.has(id)) continue; // já ordenado do mais recente
+    repAnterior.set(id, {
+      data: d,
+      nivel: (r.nivel as string) ?? null,
+      reclamacoes: r.reclamacoes_taxa == null ? null : n(r.reclamacoes_taxa) * 100,
+      cancelamentos: r.cancelamentos_taxa == null ? null : n(r.cancelamentos_taxa) * 100,
+      atrasos: r.atrasos_taxa == null ? null : n(r.atrasos_taxa) * 100,
+    });
+  }
+  for (const r of repLinhas) {
     const id = String(r.conta_canal_id);
     if (repPorConta.has(id)) continue; // já ordenado do mais recente
     repPorConta.set(id, {
+      anterior: repAnterior.get(id) ?? null,
       conta: nomeConta.get(id) ?? "Conta",
       data: String(r.data).slice(0, 10),
       nivel: (r.nivel as string) ?? null,
@@ -407,6 +441,22 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     })
     .sort((a, b) => b.visitas - a.visitas)
     .slice(0, 20);
+
+  /* ── Catálogo: o estado da vitrine nas duas semanas ── */
+  const catalogo = await carregarCatalogoSemana(sb, {
+    contas: contaSelecionada ? contas.filter((c) => c.id === contaSelecionada) : contas,
+    anuncios: anuncios.map((a) => ({
+      id: a.id,
+      codigo_externo: a.codigo_externo,
+      sku_canal: a.sku_canal,
+      titulo: a.titulo,
+      conta_canal_id: a.conta_canal_id,
+    })),
+    inicio,
+    ate: ultimoCompleto,
+    inicioAnterior: inicioAnt,
+    ateAnterior: dia(ultimoCompleto, -7),
+  });
 
   /* ── Pontos de atenção ── */
   const atencao: Atencao[] = [];
@@ -468,6 +518,49 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
         gravidade: (r.reclamacoes ?? 0) >= 2 ? "alta" : "media",
         titulo: `Reclamações em ${r.reclamacoes?.toFixed(2)}% em ${r.conta}`,
         detalhe: "Acima de 2% a conta sai do verde.",
+        valor: null,
+      });
+    }
+  }
+  /*
+   * Perder catálogo é a causa que não aparecia em tela nenhuma: a receita
+   * cai, e o motivo é que o anúncio saiu da vitrine do produto. Entra como
+   * ponto de atenção porque é a primeira coisa a explicar a semana.
+   */
+  if (catalogo.medido && catalogo.perdidos.length) {
+    const antes = catalogo.totais.ganhandoAnterior;
+    atencao.push({
+      chave: "catalogo-perdido",
+      gravidade: catalogo.perdidos.length >= 5 ? "alta" : "media",
+      titulo: `${catalogo.perdidos.length} anúncio(s) perderam a vitrine do catálogo desde a semana passada`,
+      detalhe:
+        (antes != null ? `Ganhando ${antes} → ${catalogo.totais.ganhando} de ${catalogo.totais.disputando} disputas. ` : "") +
+        catalogo.perdidos.slice(0, 4).map((x) => x.sku || x.mlb).join(" · ") +
+        (catalogo.perdidos.length > 4 ? ` e mais ${catalogo.perdidos.length - 4}` : ""),
+      valor: null,
+    });
+  }
+  for (const r of repPorConta.values()) {
+    /*
+     * Envios: o número que derrubou a conta de São Paulo. Sozinho ele não
+     * diz nada; contra o da semana passada, diz se está piorando.
+     */
+    const a = r.anterior;
+    if (a?.atrasos != null && r.atrasos != null && r.atrasos > a.atrasos + 0.3) {
+      atencao.push({
+        chave: `envios-${r.conta}`,
+        gravidade: r.atrasos >= 2 ? "alta" : "media",
+        titulo: `Envios piorando em ${r.conta}: ${a.atrasos.toFixed(2)}% → ${r.atrasos.toFixed(2)}% de atraso`,
+        detalhe: "É a métrica que tira a conta da disputa de catálogo antes de aparecer na receita.",
+        valor: null,
+      });
+    }
+    if (a?.nivel && r.nivel && a.nivel !== r.nivel) {
+      atencao.push({
+        chave: `nivel-${r.conta}`,
+        gravidade: r.nivel < a.nivel ? "alta" : "baixa",
+        titulo: `${r.conta} mudou de nível: ${a.nivel} → ${r.nivel}`,
+        detalhe: `Medido em ${a.data.slice(8)}/${a.data.slice(5, 7)} e em ${r.data.slice(8)}/${r.data.slice(5, 7)}.`,
         valor: null,
       });
     }
@@ -555,6 +648,7 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     ritmo,
     dia: hojeDia,
     reputacao: [...repPorConta.values()],
+    catalogo,
     maisVistos,
     diaDoRanking,
     campanhas,

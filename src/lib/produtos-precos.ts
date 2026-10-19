@@ -15,6 +15,18 @@ export type ItemPrecos = {
 };
 /** Somente leituras da API; preço cadastrado/importado não substitui vitrine. */
 export type LeituraVitrine = { anuncio_id: string; data: string; preco: Numero };
+/**
+ * Disputa de catálogo por anúncio, para a célula poder dizer se o produto
+ * está NA VITRINE do catálogo — que é o que decide se ele recebe visita.
+ * Opcional: canal sem catálogo simplesmente não manda.
+ */
+export type CatalogoPorAnuncio = Record<string, { ganhando: boolean; situacao: string; perdeuDepoisDe: string | null }>;
+export type CatalogoCelula = {
+  ganhando: number;
+  disputando: number;
+  /** Ganhava e não ganha mais — a data é o último dia em que ganhou. */
+  perdeuDepoisDe: string | null;
+};
 export type ColunaPrecos = { id: string; nome: string; canalId: string; contaId?: string };
 export type CurvaPrecos = "A" | "B" | "C";
 export type CelulaPrecos = {
@@ -35,6 +47,8 @@ export type CelulaPrecos = {
   receita: number | null;
   curva: CurvaPrecos | null;
   vitrine: { min: number; max: number; de: string; ate: string; anuncios: number } | null;
+  /** Null quando nenhum anúncio deste SKU neste canal disputa catálogo. */
+  catalogo: CatalogoCelula | null;
 };
 export type LinhaPrecos = {
   chave: string; sku: string; titulo: string; codigos: string[];
@@ -60,6 +74,7 @@ export function montarProdutosPrecos(entrada: {
   operacaoId: string; de: string; ate: string; hoje: string; sku?: string; recorte?: string[];
   canais: CanalPrecos[]; contas: ContaPrecos[]; produtos: ProdutoPrecos[];
   anuncios: AnuncioPrecos[]; itens: ItemPrecos[]; leituras: LeituraVitrine[];
+  catalogo?: CatalogoPorAnuncio;
 }): DadosProdutosPrecos {
   const canais = [...entrada.canais].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const colunas: ColunaPrecos[] = [];
@@ -86,7 +101,10 @@ export function montarProdutosPrecos(entrada: {
       leituras.set(l.anuncio_id, { preco, data: l.data });
     }
   }
-  type Acc = { unidades: number; unidadesComPreco: number; receita: number; precos: { preco: number; data: string }[] };
+  type Acc = {
+    unidades: number; unidadesComPreco: number; receita: number; precos: { preco: number; data: string }[];
+    ganhando: number; disputando: number; perdeuDepoisDe: string | null;
+  };
   type Grupo = { chave: string; sku: string; titulo: string; codigos: Set<string>; canais: Map<string, Acc> };
   const grupos = new Map<string, Grupo>();
   const filtro = skuNormal(entrada.sku);
@@ -100,7 +118,7 @@ export function montarProdutosPrecos(entrada: {
   };
   const celula = (g: Grupo, id: string) => {
     let c = g.canais.get(id);
-    if (!c) { c = { unidades: 0, unidadesComPreco: 0, receita: 0, precos: [] }; g.canais.set(id, c); }
+    if (!c) { c = { unidades: 0, unidadesComPreco: 0, receita: 0, precos: [], ganhando: 0, disputando: 0, perdeuDepoisDe: null }; g.canais.set(id, c); }
     return c;
   };
   // O cadastro mantém o SKU visível mesmo quando o recorte não contém vendas.
@@ -111,8 +129,18 @@ export function montarProdutosPrecos(entrada: {
     if (!g) continue;
     g.codigos.add(a.codigo_externo);
     const leitura = leituras.get(a.id);
-    if (a.status !== "ativo" || !leitura) continue;
-    for (const id of destinos(a.canal_id, a.conta_canal_id)) celula(g, id).precos.push(leitura);
+    const cat = entrada.catalogo?.[a.id];
+    if (a.status !== "ativo" || (!leitura && !cat)) continue;
+    for (const id of destinos(a.canal_id, a.conta_canal_id)) {
+      const c = celula(g, id);
+      if (leitura) c.precos.push(leitura);
+      if (!cat) continue;
+      c.disputando += 1;
+      if (cat.ganhando) c.ganhando += 1;
+      /* A data mais recente entre os anúncios do SKU: é a última vez que
+         este produto esteve na vitrine, por qualquer um deles. */
+      if (cat.perdeuDepoisDe && (!c.perdeuDepoisDe || cat.perdeuDepoisDe > c.perdeuDepoisDe)) c.perdeuDepoisDe = cat.perdeuDepoisDe;
+    }
   }
   for (const it of entrada.itens) {
     const p = it.pedidos;
@@ -165,6 +193,7 @@ export function montarProdutosPrecos(entrada: {
         min: Math.min(...c.precos.map(p => p.preco)), max: Math.max(...c.precos.map(p => p.preco)),
         de: c.precos.map(p => p.data).sort()[0], ate: c.precos.map(p => p.data).sort().at(-1)!, anuncios: c.precos.length,
       } : null,
+      catalogo: c.disputando ? { ganhando: c.ganhando, disputando: c.disputando, perdeuDepoisDe: c.ganhando ? null : c.perdeuDepoisDe } : null,
     } satisfies CelulaPrecos])),
   })).sort((a, b) => a.sku.localeCompare(b.sku, "pt-BR", { numeric: true }) || a.titulo.localeCompare(b.titulo, "pt-BR"));
   return {
@@ -222,6 +251,14 @@ export function filtrarCurvaProdutos(linhas: LinhaPrecos[], curva: CurvaPrecos |
   return curva ? linhas.filter(l => canais.some(id => l.canais[id]?.curva === curva)) : linhas;
 }
 
+/** O mesmo texto na tela, no CSV e no Excel. */
+export function rotuloCatalogo(c: CatalogoCelula | null | undefined) {
+  if (!c) return null;
+  if (c.ganhando) return c.ganhando === c.disputando ? "Ganhando" : `Ganhando ${c.ganhando} de ${c.disputando}`;
+  if (c.perdeuDepoisDe) return `Perdeu (ganhava até ${c.perdeuDepoisDe.slice(8)}/${c.perdeuDepoisDe.slice(5, 7)})`;
+  return "Não ganha";
+}
+
 /** Exporta as mesmas colunas e o mesmo recorte da comparação, sem limitar à página. */
 export function csvProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPrecos[]) {
   const campo = (v: unknown) => {
@@ -229,11 +266,11 @@ export function csvProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPrecos[]
     const s = String(v ?? "Sem dado");
     return '"' + (/^[=+@\-\t\r]/.test(s) ? "'" : "") + s.replaceAll('"', '""') + '"';
   };
-  const linhasCsv: unknown[][] = [["SKU", "Produto", ...colunas.flatMap(c => [`${c.nome} — Curva ABC`, `${c.nome} — Vendido médio`, `${c.nome} — Vitrine`, `${c.nome} — Unidades`, `${c.nome} — Receita`, `${c.nome} — Data da vitrine`])]];
+  const linhasCsv: unknown[][] = [["SKU", "Produto", ...colunas.flatMap(c => [`${c.nome} — Curva ABC`, `${c.nome} — Vendido médio`, `${c.nome} — Vitrine`, `${c.nome} — Unidades`, `${c.nome} — Receita`, `${c.nome} — Data da vitrine`, `${c.nome} — Catálogo`])]];
   for (const l of linhas) linhasCsv.push([l.sku || "Sem SKU", l.titulo, ...colunas.flatMap(c => {
     const dado = l.canais[c.id], v = dado?.vitrine;
     return [dado?.curva, dado?.vendido, v ? v.min === v.max ? v.min : `${v.min.toFixed(2).replace('.', ',')} a ${v.max.toFixed(2).replace('.', ',')}` : null,
-      dado?.unidades, dado?.receita, v ? v.de === v.ate ? v.ate : `${v.de} a ${v.ate}` : null];
+      dado?.unidades, dado?.receita, v ? v.de === v.ate ? v.ate : `${v.de} a ${v.ate}` : null, rotuloCatalogo(dado?.catalogo)];
   })]);
   return '\uFEFF' + linhasCsv.map(l => l.map(campo).join(';')).join('\r\n');
 }

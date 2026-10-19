@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import type { ColunaPrecos, CurvaPrecos, LinhaPrecos } from "@/lib/produtos-precos";
+import { rotuloCatalogo, type ColunaPrecos, type CurvaPrecos, type LinhaPrecos } from "@/lib/produtos-precos";
 
 type Contexto = {
   de: string; ate: string; busca?: string; semVenda?: boolean;
@@ -13,7 +13,7 @@ const semDado = "Sem dado";
    mesclagem e de formato depende deste número, então ele fica num lugar
    só: acrescentar métrica sem mexer nos dois cálculos deslocava o
    cabeçalho de um canal para cima dos dados do outro. */
-const METRICAS = 7;
+const METRICAS = 8;
 
 /** Recebe todas as linhas filtradas e somente as colunas visíveis, antes da paginação. */
 export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPrecos[], contexto: Contexto) {
@@ -25,7 +25,7 @@ export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPre
   const totalColunas = 2 + colunas.length * METRICAS;
   ws.columns = [
     { width: 20 }, { width: 46 },
-    ...colunas.flatMap(() => [12, 20, 17, 17, 13, 18, 29].map(width => ({ width }))),
+    ...colunas.flatMap(() => [12, 20, 17, 17, 13, 18, 29, 26].map(width => ({ width }))),
   ];
   const filtros = [
     contexto.curva && `Curva ${contexto.curva} em ${contexto.canalCurva ?? "qualquer canal exibido"}`,
@@ -36,7 +36,7 @@ export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPre
     "Produtos e preços",
     `Vendas: ${dataBr(contexto.de)} a ${dataBr(contexto.ate)} · ${linhas.length} produtos · ${colunas.length} canais/contas`,
     filtros || "Todos os produtos dos canais selecionados",
-    "Vitrine: última leitura da API, independente do período de vendas. Sem informação: Sem dado.",
+    "Vitrine: última leitura da API, independente do período de vendas. Catálogo: disputa dos últimos 30 dias; Perdeu traz o último dia na vitrine do produto. Sem informação: Sem dado.",
   ];
   notas.forEach((texto, i) => {
     ws.mergeCells(i + 1, 1, i + 1, totalColunas);
@@ -53,7 +53,7 @@ export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPre
     const inicio = 3 + i * METRICAS;
     ws.mergeCells(5, inicio, 5, inicio + METRICAS - 1);
     ws.getCell(5, inicio).value = canal.nome;
-    titulos.push("Curva ABC", "Vendido (médio)", "Vitrine mínima", "Vitrine máxima", "Unidades", "Receita", "Data(s) da vitrine");
+    titulos.push("Curva ABC", "Vendido (médio)", "Vitrine mínima", "Vitrine máxima", "Unidades", "Receita", "Data(s) da vitrine", "Catálogo");
   });
   ws.getRow(6).values = titulos;
   for (const n of [5, 6]) {
@@ -70,7 +70,8 @@ export function planilhaProdutosPrecos(linhas: LinhaPrecos[], colunas: ColunaPre
       const d = l.canais[c.id], v = d?.vitrine;
       return [d?.curva ?? semDado, d?.vendido ?? semDado, v?.min ?? semDado, v?.max ?? semDado, d?.unidades ?? semDado,
         d?.receita ?? semDado,
-        v ? v.de === v.ate ? dataBr(v.ate) : `${dataBr(v.de)} a ${dataBr(v.ate)}` : semDado];
+        v ? v.de === v.ate ? dataBr(v.ate) : `${dataBr(v.de)} a ${dataBr(v.ate)}` : semDado,
+        rotuloCatalogo(d?.catalogo) ?? semDado];
     })]);
     row.height = Math.max(30, Math.ceil(l.titulo.length / 44) * 14 + 8, Math.ceil(l.sku.length / 18) * 14 + 8);
     row.eachCell((cell, i) => {

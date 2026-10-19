@@ -8,7 +8,7 @@ import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { SeletorCanais } from "@/components/ui/seletor-canais";
 import { Pagination, usePagination } from "@/components/ui/pagination";
-import { csvProdutosPrecos, filtrarCurvaProdutos, ordenar, type CurvaPrecos, type DadosProdutosPrecos, type LinhaPrecos, type CelulaPrecos, type Metrica, type Ordenacao } from "@/lib/produtos-precos";
+import { csvProdutosPrecos, filtrarCurvaProdutos, ordenar, rotuloCatalogo, type CurvaPrecos, type DadosProdutosPrecos, type LinhaPrecos, type CelulaPrecos, type Metrica, type Ordenacao } from "@/lib/produtos-precos";
 import { count, money } from "@/lib/format";
 
 const controle = "min-h-11 max-w-full rounded-r1 border border-line bg-panel px-3 text-sm text-ink";
@@ -23,13 +23,29 @@ function baixar(blob: Blob, nome: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function Vitrine({ valor }: { valor?: CelulaPrecos["vitrine"] }) {
-  if (!valor) return semDado;
+/**
+ * A etiqueta de catálogo, junto do preço.
+ *
+ * Fica aqui e não numa coluna nova porque é a mesma pergunta: ganhar
+ * catálogo é estar NA vitrine do produto. "Perdeu" traz a data em que
+ * ganhava — é o que liga a queda de receita a um dia específico.
+ */
+function Catalogo({ valor }: { valor?: CelulaPrecos["catalogo"] }) {
+  if (!valor) return null;
+  const texto = rotuloCatalogo(valor);
+  if (!texto) return null;
+  const tom = valor.ganhando ? "up" : valor.perdeuDepoisDe ? "down" : "neutral";
+  return <div className="mt-1"><Badge tone={tom}>{texto}</Badge></div>;
+}
+
+function Vitrine({ valor, catalogo }: { valor?: CelulaPrecos["vitrine"]; catalogo?: CelulaPrecos["catalogo"] }) {
+  if (!valor) return <>{semDado}<Catalogo valor={catalogo} /></>;
   const data = valor.de === valor.ate ? dataBr(valor.ate) : `${dataBr(valor.de)} a ${dataBr(valor.ate)}`;
   return <div title={`Última leitura da API · ${data} · ${valor.anuncios} anúncio(s) ativo(s)`}>
     <span className="num block whitespace-nowrap">{money(valor.min)}</span>
     {valor.max !== valor.min && <span className="num block whitespace-nowrap text-xs text-ink-2">a {money(valor.max)}</span>}
     <span className="mt-0.5 block text-[10px] font-normal text-ink-3">{valor.de === valor.ate ? dataBr(valor.ate) : "leituras em datas diferentes"}</span>
+    <Catalogo valor={catalogo} />
   </div>;
 }
 
@@ -205,7 +221,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
                     {d?.vendido == null ? semDado : <span className="whitespace-nowrap">{money(d.vendido)}</span>}
                     {d?.curva && <div className="mt-1" title={`Curva ${d.curva} pelo faturamento em ${c.nome}, no período selecionado.`}><Badge tone={d.curva === "A" ? "brand" : d.curva === "B" ? "info" : "neutral"} className="min-h-5 px-1.5 text-[10px]">Curva {d.curva}</Badge></div>}
                   </td>
-                  <td className="border-b border-line px-3 py-3 text-right align-top text-ink-2 group-hover:bg-panel-2"><Vitrine valor={d?.vitrine} /></td>
+                  <td className="border-b border-line px-3 py-3 text-right align-top text-ink-2 group-hover:bg-panel-2"><Vitrine valor={d?.vitrine} catalogo={d?.catalogo} /></td>
                   <td className="num border-b border-line px-3 py-3 text-right align-top text-ink-2 group-hover:bg-panel-2">{d?.unidades == null ? semDado : count(d.unidades)}</td>
                   <td className="num border-b border-r border-line px-3 py-3 text-right align-top font-medium text-ink group-hover:bg-panel-2">{d?.receita == null ? semDado : <span className="whitespace-nowrap">{money(d.receita)}</span>}</td>
                 </React.Fragment>;
