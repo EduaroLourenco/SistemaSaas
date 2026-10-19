@@ -986,6 +986,26 @@ type ItemBruto = {
   attributes?: { id?: string; value_name?: string | null }[];
 };
 
+/**
+ * O SKU do anúncio, que mora em dois lugares.
+ *
+ * `seller_custom_field` é o campo antigo. Anúncio criado pelas telas
+ * novas do canal grava o código só no atributo `SELLER_SKU`, e aí o
+ * campo antigo volta `null`. Ler só um deles deixa o anúncio sem SKU no
+ * sistema, e sem SKU ele não casa com a tabela de preço nem com o custo:
+ * na Imprimil eram 16 anúncios de 59, entre eles a linha inteira da Copa
+ * do Mundo e a dos cadernos florais.
+ */
+export function skuDoItem(b: {
+  seller_custom_field?: string | null;
+  attributes?: { id?: string; value_name?: string | null }[];
+}): string | null {
+  const antigo = b.seller_custom_field?.trim();
+  if (antigo) return antigo;
+  const atributo = b.attributes?.find((a) => a.id === "SELLER_SKU")?.value_name;
+  return atributo?.trim() || null;
+}
+
 /** `21800 g` → 21.8. A API devolve peso com unidade colada no texto. */
 function pesoEmKg(attrs: ItemBruto["attributes"]): number | null {
   const bruto = attrs?.find((a) => a.id === "SELLER_PACKAGE_WEIGHT")?.value_name;
@@ -1041,7 +1061,7 @@ export async function catalogoCompleto({
       saida.push({
         mlb: b.id,
         titulo: b.title ?? "",
-        sku: b.seller_custom_field?.trim() || null,
+        sku: skuDoItem(b),
         preco: b.price ?? null,
         status: b.status ?? null,
         tipoBruto: b.listing_type_id ?? null,
