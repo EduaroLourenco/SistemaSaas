@@ -55,6 +55,13 @@ type Linha = {
   decisao: string;
   aprovado: boolean;
   recalculado: boolean;
+  /** Onde a decisão mora na planilha, para poder trocá-la sem reprocessar. */
+  aba: string;
+  colunaAcao: string;
+  colunaPreco: string;
+  acaoPositiva: string;
+  acaoNegativa: string;
+  editavel: boolean;
   motivo: string;
   tags: Tag[];
 };
@@ -210,6 +217,16 @@ export default function ProcessarPromocoes() {
   const [processando, setProcessando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [resultado, setResultado] = React.useState<Resultado | null>(null);
+  /*
+   * As decisões que o usuário trocou à mão, por id de linha.
+   *
+   * A regra decide por tabela, e a regra erra para menos: recusa o que
+   * não cabe no preço, sem saber que aquele estoque está parado há três
+   * meses. Quem conhece o produto decide a dedo, e a planilha sai com a
+   * escolha dele — não com a do sistema.
+   */
+  const [ajustes, setAjustes] = React.useState<Record<string, boolean>>({});
+  const [aplicando, setAplicando] = React.useState(false);
   const [baixando, setBaixando] = React.useState(false);
 
   /**
@@ -222,6 +239,56 @@ export default function ProcessarPromocoes() {
    *
    * Agora o erro vira mensagem na tela, com o texto que o servidor mandou.
    */
+  /**
+   * Manda as trocas manuais e devolve o id do pacote ajustado.
+   *
+   * Edita as células no .xlsx que já está pronto em vez de reprocessar:
+   * reprocessar pediria os arquivos originais de novo — que o navegador
+   * não tem mais — e refaria as outras decisões, que ninguém pediu para
+   * mudar.
+   */
+  async function aplicarAjustes(id: string): Promise<string | null> {
+    const linhas = (resultado?.linhas ?? []).filter((l) => ajustes[l.id] !== undefined);
+    if (!linhas.length) return id;
+    setAplicando(true);
+    try {
+      const r = await fetch("/api/promocoes/ajustar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id,
+          ajustes: linhas.map((l) => ({
+            arquivo: l.arquivo,
+            aba: l.aba,
+            linha: l.linha,
+            colunaAcao: l.colunaAcao,
+            acao: ajustes[l.id] ? l.acaoPositiva : l.acaoNegativa,
+            /* O preço só acompanha quando ENTRA numa campanha de preço
+               editável: quem sai não precisa de preço, e campanha de
+               tarifa reduzida tem a coluna travada. */
+            colunaPreco: ajustes[l.id] && l.recalculado ? l.colunaPreco : "",
+            preco: ajustes[l.id] && l.recalculado ? l.precoOferta : null,
+          })),
+        }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setErro(j.erro ?? `Não consegui aplicar os ajustes (HTTP ${r.status}).`);
+        return null;
+      }
+      /* O pacote antigo foi descartado no servidor: a tela passa a
+         apontar para o novo, senão um segundo download acha 404. */
+      setResultado((atual) => (atual ? { ...atual, id: j.id } : atual));
+      setAjustes({});
+      return j.id as string;
+    } catch {
+      setErro("Sem conexão — os ajustes não foram aplicados.");
+      return null;
+    } finally {
+      setAplicando(false);
+    }
+  }
+
   async function baixarPacote(id: string) {
     setBaixando(true);
     setErro(null);
@@ -308,6 +375,7 @@ export default function ProcessarPromocoes() {
       }
 
       setResultado(json as unknown as Resultado);
+      setAjustes({});
       setEtapa(2);
     } catch (e) {
       const detalhe = e instanceof Error ? ` (${e.message})` : "";
@@ -471,9 +539,37 @@ export default function ProcessarPromocoes() {
       mobile: "metric",
       width: "160px",
       sortValue: (l) => l.decisao,
-      cell: (l) => (
-        <Badge tone={l.aprovado ? "up" : "neutral"}>{l.decisao}</Badge>
-      ),
+      cell: (l) => {
+        const trocado = ajustes[l.id];
+        const entra = trocado ?? l.aprovado;
+        if (!l.editavel) {
+          return (
+            <span title="Oferta já fechada com o canal — o sistema não reescreve">
+              <Badge tone="neutral">{l.decisao}</Badge>
+            </span>
+          );
+        }
+        return (
+          <button
+            type="button"
+            onClick={() =>
+              setAjustes((a) => {
+                const proximo = { ...a };
+                if ((a[l.id] ?? l.aprovado) !== l.aprovado) delete proximo[l.id];
+                else proximo[l.id] = !l.aprovado;
+                return proximo;
+              })
+            }
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-r1 px-1 hover:bg-panel-2"
+            title={entra ? "Clique para deixar de fora" : "Clique para participar"}
+          >
+            <Badge tone={entra ? "up" : "neutral"}>
+              {entra ? l.acaoPositiva : l.acaoNegativa}
+            </Badge>
+            {trocado !== undefined && <Badge tone="brand">à mão</Badge>}
+          </button>
+        );
+      },
     },
     {
       key: "motivo",
@@ -935,10 +1031,18 @@ export default function ProcessarPromocoes() {
                 <Button
                   variant="primary"
                   className="max-sm:h-11 max-sm:w-full"
-                  disabled={baixando}
-                  onClick={() => baixarPacote(resultado.id)}
+                  disabled={baixando || aplicando}
+                  onClick={async () => {
+                    const alvo = await aplicarAjustes(resultado.id);
+                    if (alvo) await baixarPacote(alvo);
+                  }}
                 >
-                  {baixando ? (
+                  {aplicando ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Aplicando
+                    </>
+                  ) : baixando ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       Baixando
@@ -946,7 +1050,9 @@ export default function ProcessarPromocoes() {
                   ) : (
                     <>
                       <Download className="w-3.5 h-3.5" />
-                      Baixar planilhas processadas
+                      {Object.keys(ajustes).length
+                        ? `Baixar com ${Object.keys(ajustes).length} troca${Object.keys(ajustes).length > 1 ? "s" : ""}`
+                        : "Baixar planilhas processadas"}
                     </>
                   )}
                 </Button>

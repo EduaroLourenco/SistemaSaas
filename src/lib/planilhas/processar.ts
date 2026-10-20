@@ -170,6 +170,26 @@ export type LinhaProcessada = {
   /** Número da linha na planilha de origem, para achar o item lá. */
   linha: number;
   arquivo: string;
+  /**
+   * Onde escrever para mudar a decisão desta linha, e o que escrever.
+   *
+   * O usuário confere o resultado e discorda de algumas linhas — quer
+   * aceitar uma que o sistema recusou. Sem a coluna e os rótulos aqui, o
+   * ajuste teria que reprocessar a planilha inteira para descobrir os
+   * dois, e os rótulos mudam por campanha: umas aceitam "Participar", as
+   * outras "Aplicar proposta".
+   *
+   * `editavel` é falso na oferta já fechada com o canal, que não se
+   * mexe nem a pedido: reescrevê-la troca um acordo vigente por outro que
+   * ainda precisaria passar pelo canal.
+   */
+  /** A aba onde esta linha vive — o ajuste manual precisa dela. */
+  aba: string;
+  colunaAcao: string;
+  colunaPreco: string;
+  acaoPositiva: string;
+  acaoNegativa: string;
+  editavel: boolean;
   mlb: string;
   sku: string;
   titulo: string;
@@ -216,6 +236,8 @@ export type LinhaProcessada = {
 
 export type ResultadoPlanilha = {
   arquivo: string;
+  /** O nome da aba processada — o editor cirúrgico acha a planilha por ele. */
+  aba: string;
   campanha: string;
   buffer: Buffer;
   linhas: LinhaProcessada[];
@@ -738,6 +760,12 @@ export async function processarPlanilha(
     }
 
     linhas.push({
+      aba: targetWorksheet.name,
+      colunaAcao: getColLetter(actionColIndex),
+      colunaPreco: finalPriceColIndex === -1 ? "" : getColLetter(finalPriceColIndex),
+      acaoPositiva,
+      acaoNegativa,
+      editavel: !jaParticipando,
       id: `${nomeArquivo}#${i}`,
       linha: i,
       arquivo: nomeArquivo,
@@ -794,6 +822,7 @@ export async function processarPlanilha(
 
   return {
     arquivo: nomeArquivo,
+    aba: targetWorksheet.name,
     campanha: localCampanha,
     buffer: bufferSaida,
     linhas,
