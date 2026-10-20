@@ -117,7 +117,7 @@ export default function TipoAnuncio({ dados }: { dados: DadosTipo }) {
               <EmptyState
                 icon={Layers}
                 title="Sem dados de desempenho neste recorte"
-                description="Suba o catálogo e o relatório de desempenho em Importar, ou amplie o período e o canal acima."
+                description="Suba o catálogo em Importar, ou amplie o período."
               />
             </Panel>
           </div>
@@ -296,7 +296,7 @@ function Pares({ pares }: { pares: ParSku[] }) {
         <EmptyState
           icon={Layers}
           title="Nenhum SKU nos dois tipos"
-          description="A comparação justa exige o mesmo produto anunciado como Clássico e como Premium, com visita nos dois. Sem isso, só há a comparação de médias — que mistura tipo e mix."
+          description="Exige o mesmo produto nos dois tipos, com visita em ambos."
         />
       </Panel>
     );

@@ -149,7 +149,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
   }
 
   return <>
-    <PageHeader title="Produtos e preços" breadcrumb="Catálogo" description="Compare o mesmo SKU entre canais: preço, unidades e receita."
+    <PageHeader title="Produtos e preços" breadcrumb="Catálogo" description="Mesmo SKU, canal a canal"
       actions={<>
         <Button disabled={pendente || exportando || !linhas.length || !colunas.length} onClick={exportarExcel} aria-busy={exportando}><Download size={15} />{exportando ? "Gerando Excel…" : "Baixar Excel"}</Button>
         <Button disabled={pendente || !linhas.length || !colunas.length} onClick={exportar} title="Baixar os mesmos dados em CSV">CSV</Button>
@@ -232,7 +232,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
         </div>
         <Pagination {...pagination} />
       </Panel>
-      <p className="text-xs leading-relaxed text-ink-3">Vendido, unidades e receita: período selecionado. Curva por faturamento do canal: A até atingir 80%, B até 95%, C o restante. Sem faturamento conhecido, sem curva. Vitrine: última leitura da API. Sem informação ou sem venda: Sem dado.</p>
+      <p className="text-xs leading-relaxed text-ink-3">Curva por faturamento do canal: A até 80%, B até 95%, C o resto. Vitrine: última leitura da API.</p>
     </PageBody>
   </>;
 }

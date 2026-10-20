@@ -76,7 +76,7 @@ export function DisputaPainel({ disputa }: { disputa: DadosDisputa }) {
       <Panel>
         <PanelHeader
           title="Disputa de catálogo"
-          hint="Nenhuma medição ainda. A sincronização do Mercado Livre grava a situação de cada anúncio de catálogo uma vez por dia."
+          hint="Sem medição ainda · a leitura é diária"
         />
       </Panel>
     );

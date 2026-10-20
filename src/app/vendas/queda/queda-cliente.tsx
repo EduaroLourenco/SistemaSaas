@@ -393,8 +393,8 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
             </div>
 
             <Disclosure title="Como ler esta análise">
-              <p>Compare períodos de igual duração. A etiqueta destaca um sinal a investigar; não comprova a causa da queda.</p>
-              <p className="mt-2">Abra um SKU para separar os canais e, depois, cada anúncio. Sem visitas medidas, a análise usa unidades e preço. Estoque é disponibilidade declarada ao canal; confira os depósitos na tela de estoques.</p>
+              <p>A etiqueta aponta um sinal, não prova a causa.</p>
+              <p className="mt-2">Abra um SKU para ver canal e anúncio.</p>
             </Disclosure>
 
             {/* ── A lista ── */}
@@ -711,8 +711,8 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
 
       {aba === "anuncios" && (
         <div>
-          <p className="mb-3 text-xs text-ink-3">Cada análise usa apenas os dados daquele canal e daquela conta.</p>
-          {erro ? <p role="alert" className="text-xs text-down">{erro}</p> : !anuncios ? <p className="text-xs text-ink-3" aria-busy="true">Carregando anúncios…</p> : !anuncios.length ? <p className="text-xs text-ink-3">Nenhum anúncio com vendas vinculado a este SKU no recorte.</p> : <ul className="space-y-2">{anuncios.map((a) => <li key={a.chave} className="overflow-hidden rounded-xl border border-line bg-panel">
+          <p className="mb-3 text-xs text-ink-3">Por canal e conta.</p>
+          {erro ? <p role="alert" className="text-xs text-down">{erro}</p> : !anuncios ? <p className="text-xs text-ink-3" aria-busy="true">Carregando anúncios…</p> : !anuncios.length ? <p className="text-xs text-ink-3">Sem anúncio com venda neste recorte.</p> : <ul className="space-y-2">{anuncios.map((a) => <li key={a.chave} className="overflow-hidden rounded-xl border border-line bg-panel">
             <button type="button" aria-expanded={anuncioAberto === a.chave} onClick={() => setAnuncioAberto(anuncioAberto === a.chave ? null : a.chave)} className="flex w-full flex-wrap items-center justify-between gap-3 p-3 text-left hover:bg-panel-3">
               <div className="min-w-0"><p className="text-xs font-semibold text-brand">{a.onde}</p><p className="num mt-1 text-xs text-ink">{a.codigo}</p><p className="mt-1 text-[11px] text-ink-3">{a.agora.visitas == null ? "Pedidos e preços vendidos" : "Pedidos, visitas e dados do anúncio"}</p></div>
               <div className="text-right"><Badge tone={TOM[a.causa]}>{a.causa}</Badge><p className={cn("num mt-2 text-sm font-semibold", a.delta < 0 ? "text-down" : "text-up")}>{a.delta > 0 ? "+" : ""}{money(a.delta)}</p><p className="text-[11px] text-ink-3">Abrir análise {anuncioAberto === a.chave ? "−" : "+"}</p></div>
@@ -797,7 +797,7 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
             </ResponsiveContainer>
           </div>
         )}
-        <div className="mt-3 flex flex-wrap items-center gap-2"><p className="text-[11px] text-ink-3">Clique em um pico ou escolha o dia. Cinza: período anterior.</p><input type="date" aria-label="Dia do detalhe" min={dados.deAnterior} max={dados.ate} value={diaEscolhido} onChange={(e) => setDiaEscolhido(e.target.value)} onBlur={(e) => setDiaEscolhido(e.target.value)} className="min-h-10 rounded-r1 border border-line bg-panel px-2 text-xs" /></div>
+        <div className="mt-3 flex flex-wrap items-center gap-2"><p className="text-[11px] text-ink-3">Cinza: período anterior.</p><input type="date" aria-label="Dia do detalhe" min={dados.deAnterior} max={dados.ate} value={diaEscolhido} onChange={(e) => setDiaEscolhido(e.target.value)} onBlur={(e) => setDiaEscolhido(e.target.value)} className="min-h-10 rounded-r1 border border-line bg-panel px-2 text-xs" /></div>
         {serie?.filter((d) => d.data === diaEscolhido).map((d) => <div key={d.data} className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4" aria-live="polite">
           <Numero rotulo={`Vendas · ${dataBr(d.data)}`} agora={money(d.receita)} antes={`${count(d.unidades)} unidades`} rotuloAntes="" />
           <Numero rotulo="Preço vendido" agora={d.precoVendido == null ? "sem venda" : money(d.precoVendido)} antes="média do dia" rotuloAntes="" />

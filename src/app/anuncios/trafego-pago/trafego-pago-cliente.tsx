@@ -516,7 +516,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
               Barras: mídia · linha: faturamento. Datas deste gráfico independem do relatório abaixo.
             </p>
           </Panel>
-        ) : <Panel className="p-4 text-[13px] text-ink-2">Sem dados diários neste intervalo. Escolha outro período ou atualize as fontes da empresa.</Panel>}
+        ) : <Panel className="p-4 text-[13px] text-ink-2">Sem dado diário neste intervalo.</Panel>}
 
         {dados.vazio ? <SemFonte titulo="Sem relatório de publicidade neste canal" origem="Escolha outro canal acima. No Mercado Livre, use Atualizar agora para buscar a publicidade ou importe um relatório. O gráfico diário continua disponível quando houver dados." /> : <>
 
@@ -530,7 +530,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           <p className="mt-2.5 text-[12px] leading-relaxed text-ink-3">
             {dados.contasDoRelatorio?.join(" · ") || "Conta selecionada"} · Indicadores e tabelas usam este intervalo.
           </p>
-          {dados.contaNaoIdentificada && <p className="mt-2 text-xs text-warn">Há anúncios sem conta identificada. TACoS indisponível até conferir o vínculo.</p>}
+          {dados.contaNaoIdentificada && <p className="mt-2 text-xs text-warn">Anúncio sem conta · TACoS indisponível</p>}
         </Panel>
 
         {/* ── Os cinco números da janela escolhida ── */}

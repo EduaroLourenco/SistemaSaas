@@ -772,7 +772,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
               <EmptyState
                 icon={SearchX}
                 title="Nenhum anúncio neste recorte"
-                description="Ajuste a busca, troque a quantidade de semanas ou limpe os filtros de tipo e situação."
+                description="Ajuste a busca ou limpe os filtros."
                 action={
                   <Button size="sm" onClick={limparFiltros}>
                     Limpar filtros

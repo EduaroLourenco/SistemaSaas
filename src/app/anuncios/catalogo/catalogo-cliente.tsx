@@ -423,7 +423,7 @@ export default function CatalogoAnuncios({
         mobileFilters={false}
         title="Catálogo"
         breadcrumb="Anúncios"
-        description="Espelho das publicações do canal — preço praticado, comissão e situação por MLB"
+        description="Preço, comissão e situação por MLB"
         actions={
           <>
             <Button size="sm" variant="primary" disabled={sincronizando} onClick={sincronizar}>
@@ -698,7 +698,7 @@ export default function CatalogoAnuncios({
               <EmptyState
                 icon={SearchX}
                 title="Nenhum anúncio encontrado"
-                description="Ajuste a busca ou limpe os filtros de tipo, situação e categoria."
+                description="Ajuste a busca ou limpe os filtros."
                 action={
                   <Button size="sm" onClick={limparFiltros}>
                     Limpar filtros

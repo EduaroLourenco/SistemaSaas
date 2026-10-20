@@ -129,7 +129,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           <Panel>
             <PanelHeader
               title="Nenhuma conta do Mercado Livre nesta empresa"
-              hint="Conecte a conta em Integrações para o termômetro começar a medir."
+              hint="Conecte a conta em Integrações."
             />
           </Panel>
         </PageBody>
@@ -255,7 +255,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
         <Panel className="overflow-hidden">
           <PanelHeader
             title="Dia a dia, contra a mesma semana anterior"
-            hint="A barra é esta semana; a linha é a anterior. Clique no dia para abrir os números dele."
+            hint="Barra: esta semana · linha: a anterior"
             action={
               <div className="flex gap-1">
                 {([
@@ -370,7 +370,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           />
           <div className="grid gap-3 p-4 sm:grid-cols-2">
             {dados.reputacao.length === 0 && (
-              <p className="text-[13px] text-ink-3">Nenhuma leitura de reputação ainda. Ela vem na sincronização do canal.</p>
+              <p className="text-[13px] text-ink-3">Sem leitura de reputação ainda.</p>
             )}
             {dados.reputacao.map((rep) => {
               const nivel = rep.nivel ? NIVEL[rep.nivel] : null;
@@ -447,7 +447,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           <Panel className="overflow-hidden">
             <PanelHeader
               title="No ar nas duas semanas"
-              hint="Do Planejamento. Campanha que terminou explica queda que o número sozinho não explica."
+              hint="Do Planejamento"
               action={
                 <Link href="/planejamento" className="text-[12.5px] font-medium text-brand hover:underline">
                   Abrir planejamento →
