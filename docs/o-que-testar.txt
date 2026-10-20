@@ -1,0 +1,351 @@
+===============================================================
+ O QUE MUDOU DESDE ONTEM — ROTEIRO DE TESTE
+ 19 e 20 de outubro de 2026 · 24 alterações
+===============================================================
+
+Como usar este documento: vá tela por tela, na ordem. Cada item tem
+ONDE CLICAR, O QUE VOCÊ DEVE VER, e SE ESTIVER ERRADO (o sinal de que
+quebrou). Leva uns 20 minutos.
+
+Começa pelas três primeiras — são as maiores. O resto é conferência.
+
+
+===============================================================
+ 1. MERCADO LIVRE > ANÚNCIOS       <-- a maior mudança
+===============================================================
+Endereço: /anuncios/analise
+
+Esta tela foi refeita do zero. Antes tinha quatro blocos respondendo a
+mesma pergunta; agora tem dois.
+
+
+1.1  O NÚMERO VERMELHO DE CIMA
+-----------------------------------------------
+ONDE: logo ao abrir, canto superior esquerdo.
+
+DEVE VER:
+    DEIXOU DE GANHAR
+    R$ 35.464
+    156 anúncios vendidos abaixo da sua tabela, em 8 semanas
+
+O QUE É: tudo que você vendeu mais barato do que manda a sua Fórmula
+base, somado, nas últimas 8 semanas.
+
+POR QUE IMPORTA: este número NUNCA existiu. Antes a tela mostrava um
+cartão "Margem subsidiada" com R$ 0,00 — e mostrava zero desde o
+primeiro dia, porque o preço de tabela nunca era carregado.
+
+SE ESTIVER ERRADO: se aparecer R$ 0,00, o preço de tabela voltou a não
+carregar. Me avise.
+
+
+1.2  OS CINCO BOTÕES DE PROBLEMA
+-----------------------------------------------
+ONDE: fila de botões logo abaixo do número vermelho.
+
+DEVE VER cinco botões, cada um com nome e quantidade:
+    Vendendo abaixo da tabela   156
+    Preço acima da tabela        12
+    Muita visita, pouca venda   114
+    Vende bem, falta visita      11
+    Sem preço de tabela         125
+
+SIMULE: clique em "Vendendo abaixo da tabela".
+    - O botão fica roxo.
+    - A tabela de baixo passa a mostrar só esses anúncios.
+    - Aparece embaixo dos botões: "Como calculei" e "O que fazer".
+    Clique de novo no mesmo botão: volta a mostrar todos.
+
+POR QUE IMPORTA: antes os nomes eram "Sangrando margem", "Falsa
+tração", "Joias escondidas" — e os dois primeiros eram 64 dos MESMOS
+74 anúncios, dois botões para o mesmo problema.
+
+SE ESTIVER ERRADO: se algum botão mostrar 0 e sumir da fila, aquela
+análise parou de funcionar.
+
+
+1.3  A TABELA, UMA LINHA POR PRODUTO
+-----------------------------------------------
+ONDE: painel "Por produto".
+
+DEVE VER em cada linha:
+    - a FOTO DE CAPA do produto (nova)
+    - o SKU, o nome, quantos anúncios tem
+    - etiquetas coloridas: "barato demais", "não fecha", "falta
+      visita", "caro demais", "sem tabela", "fora do ar"
+    - uma curvinha verde ou vermelha com o formato das 8 semanas
+    - as colunas: Visitas, Vendas, Conversão, Receita, Preço pago,
+      Diferença da tabela, Deixou de ganhar, Estoque
+
+SIMULE 1 — trocar a curva:
+    Em cima da tabela tem "Curva: Receita | Visitas | Preço pago".
+    Clique em "Preço pago". Todas as curvinhas redesenham.
+
+SIMULE 2 — abrir um produto:
+    Clique na primeira linha (PA65751 ou parecido).
+    - A linha abre e mostra os anúncios dele, um por linha, cada um
+      com os PRÓPRIOS números.
+    - Anúncios que não tiveram visita nem venda não viram linha:
+      aparece um resumo "3 sem visita nem venda no período · 2 fora
+      do ar".
+
+    POR QUE IMPORTA: antes, abrir um SKU mostrava a frase "Anúncio
+    deste SKU — os números da linha acima somam todos", repetida uma
+    vez por anúncio. Oito vezes num SKU com oito anúncios.
+
+SIMULE 3 — abrir o raio-X:
+    Com o produto aberto, clique num ANÚNCIO (a linha cinza).
+    - Abre um painel lateral com o histórico daquele anúncio.
+    - Role até "Preço e venda por semana": DEVE VER DOIS gráficos
+      empilhados — preço em cima, unidades embaixo.
+
+    POR QUE IMPORTA: antes era UM gráfico com dois eixos (vendas na
+    esquerda, reais na direita). O encaixe entre as duas escalas é
+    arbitrário e a tela sugeria que a venda acompanhava o preço
+    quando quem decidiu isso foi o recorte do eixo.
+
+SIMULE 4 — comparar:
+    Com o produto aberto, marque a caixinha de 2 ou 3 anúncios.
+    - Aparece o botão "Comparar" no topo do painel.
+    - Clique: abre os dois/três lado a lado.
+
+SIMULE 5 — a legenda:
+    No rodapé da tabela tem "O que cada coluna quer dizer".
+    Clique: abre explicando cada coluna. Clique de novo: fecha.
+
+SE ESTIVER ERRADO:
+    - foto quebrada (ícone de imagem rasgada) em vez de quadrado
+      cinza
+    - coluna "Diferença da tabela" com -100% em quase todo mundo
+      (era o bug antigo)
+    - estoque mostrando 40.000 ou 160.004 em vez de "sob encomenda"
+
+
+1.4  NO CELULAR
+-----------------------------------------------
+Abra a mesma tela no telefone.
+DEVE VER: o número grande, os botões rolando de lado, e a tabela
+rolando dentro do próprio quadro com a coluna do produto fixa.
+NÃO DEVE: a página inteira rolar para os lados.
+
+
+===============================================================
+ 2. PLANEJAMENTO
+===============================================================
+Endereço: /planejamento
+
+ONDE: ao abrir, sem nenhuma campanha selecionada.
+
+DEVE VER no topo:
+    5 no ar hoje
+    4 campanhas correndo · 2 atrasadas · 8 em 7 dias
+
+    Depois, duas listas:
+    ATRASADAS  (fundo rosa)
+    HOJE, 20/10
+
+    Cada linha: bolinha da cor da campanha, nome da ação, de qual
+    campanha é, quantos SKUs, e o prazo em palavras — "termina hoje",
+    "termina amanhã", "atrasada desde 16/10".
+
+SIMULE: clique numa linha da lista. Abre a ficha daquela ação.
+
+POR QUE IMPORTA: antes essa área mostrava, nesta ordem: um ícone
+girado, "MARKETING & OPERAÇÃO", "Estúdio de campanhas", "VISÃO DO SEU
+PLANEJAMENTO", "Seu próximo movimento" e "Um espaço para conectar
+ideias, produtos e canais". Seis linhas de texto e nenhum número.
+
+OUTRAS COISAS NA MESMA TELA:
+    - O título agora é "Planejamento" (batia com o menu; antes era
+      "Estúdio de campanhas").
+    - Na lista de campanhas à esquerda, a que está correndo hoje tem
+      uma etiqueta verde "no ar".
+    - Selecione uma campanha: o cabeçalho dela mostra "faltam 11
+      dias" junto das datas.
+    - "Mixes de produtos" virou "Grupos de produtos"; "Seus tipos de
+      ação" virou "Tipos de ação".
+
+SE ESTIVER ERRADO: se "no ar hoje" mostrar 0 com campanha rodando,
+o critério de data quebrou.
+
+
+===============================================================
+ 3. PROMOÇÕES > PROCESSAR PLANILHA
+===============================================================
+Endereço: /promocoes/processar
+
+ONDE: suba uma planilha de promoção do Mercado Livre como sempre.
+
+DEVE VER: na lista de resultado, a coluna de decisão ("Participar" /
+"Não participar") agora é um BOTÃO, não um texto.
+
+SIMULE:
+    1. Clique na decisão de uma linha que o sistema recusou.
+       - Ela vira "Participar" e ganha uma etiqueta roxa "à mão".
+    2. Olhe o botão de baixar: mudou para "Baixar com 1 troca".
+    3. Clique em baixar.
+       - Ele aplica a troca e baixa o arquivo.
+    4. Abra o .xlsx baixado: só aquela célula mudou, e a lista de
+       valores aceitos da coluna continua lá.
+
+O QUE NÃO DEIXA TROCAR: linha de oferta já fechada com o canal.
+Ela continua texto, não botão.
+
+POR QUE IMPORTA: antes, pra aceitar uma linha que a regra recusou,
+você tinha que abrir o .xlsx no Excel e achar a linha no meio de 36.
+
+SE ESTIVER ERRADO: se o Mercado Livre recusar o arquivo no retorno,
+a validação da coluna se perdeu na edição. Me mande o arquivo.
+
+
+===============================================================
+ 4. TRÁFEGO PAGO
+===============================================================
+Endereço: /anuncios/trafego-pago
+
+MUDANÇA 1 — foto de capa em cada linha de anúncio.
+
+MUDANÇA 2 — etiqueta "mídia já parada".
+    DEVE VER: anúncios cuja mídia você já desligou ganham uma
+    etiqueta cinza "mídia já parada".
+
+    POR QUE IMPORTA: a janela do relatório são 30 dias corridos. Você
+    desliga a mídia hoje e o gasto continua aparecendo por mais um
+    mês — a tela mandava desligar o que você já tinha desligado.
+
+    ATENÇÃO: essa etiqueta pode não aparecer em ninguém agora. A
+    coluna de status parou de ser gravada em 31/08 e eu consertei,
+    mas ela só começa a encher na PRÓXIMA sincronização. Se depois
+    de sincronizar ainda não aparecer, me avise — o nome do campo na
+    API pode ser outro e é uma linha pra ajustar.
+
+MUDANÇA 3 — etiqueta de situação (pausado / encerrado) nos anúncios.
+
+
+===============================================================
+ 5. MERCADO LIVRE > TERMÔMETRO
+===============================================================
+Endereço: /mercado-livre
+
+DEVE VER: um bloco novo de catálogo da semana, comparando com a
+semana anterior, e a reputação de cada conta mostrando o valor da
+semana passada embaixo de cada taxa.
+
+"Atrasos" foi renomeado para "Envios atrasados".
+
+POR QUE IMPORTA: perder catálogo só aparecia na aba própria de
+catálogo. Agora aparece aqui e no painel de produto.
+
+
+===============================================================
+ 6. PLANEJAMENTO > RESULTADOS
+===============================================================
+Endereço: /planejamento/resultados
+
+DEVE VER: a tabela de produtos começa com VISITAS e CONVERSÃO (antes
+e durante), não com receita.
+
+O gráfico de comparação agora tem UM eixo só, com as duas séries
+indexadas a 100 no primeiro dia e uma linha de referência no 100.
+
+SIMULE: abra uma campanha que foi carregada por script (as "Oferta
+Relâmpago" de outubro).
+    DEVE VER números, não zeros.
+
+    POR QUE IMPORTA: esse era o seu "as campanhas não estão
+    atualizando". Os scripts gravavam o código MLB na campanha e o
+    editor gravava o id — e o cálculo só casava por id. Toda campanha
+    carregada por script media zero.
+
+
+===============================================================
+ 7. VENDAS > DIA
+===============================================================
+Endereço: /vendas/dia (pelo menu Vendas)
+
+DEVE VER: as visitas aparecem embaixo da receita em cada comparação.
+Dia sem coleta mostra travessão, não zero.
+
+
+===============================================================
+ 8. FOTO DE CAPA — CONFERIR EM TODAS
+===============================================================
+A foto de capa do anúncio foi para oito telas. Passe rápido:
+
+    /anuncios/analise            (Anúncios)
+    /anuncios/trafego-pago       (Tráfego pago)
+    /anuncios/catalogo           (Catálogo)
+    /anuncios/catalogo           (painel de disputa, dentro)
+    /anuncios/preco-ideal        (Preço ideal)
+    /promocoes/comparar          (Comparar ofertas)
+    /promocoes/historico         (Histórico)
+    /vendas/queda                (Queda — só nas linhas de anúncio)
+
+DEVE VER: a miniatura do produto antes do texto.
+
+QUADRADO CINZA VAZIO É NORMAL em:
+    - Chopeiras Memo e Imprimil (as fotos delas só entram na própria
+      sincronização; o Mercado Livre só devolve a capa pro dono do
+      anúncio)
+    - anúncios encerrados há muito tempo
+
+Hoje: 1.235 dos 1.667 anúncios têm capa. A Probel está inteira.
+
+
+===============================================================
+ 9. NO CELULAR — A BARRA DE BAIXO
+===============================================================
+Abra qualquer tela no telefone.
+
+DEVE VER: a barra de navegação virou uma pílula escura flutuando, um
+pouco transparente, estilo Instagram/iFood.
+
+SIMULE: role a tela para baixo. A barra ENCOLHE.
+        Role para cima. Ela volta ao tamanho.
+
+O item ativo mostra ícone + nome; os outros só o ícone.
+
+
+===============================================================
+ 10. CONSERTOS QUE NÃO TÊM TELA
+===============================================================
+Não dá pra "ver", mas mudou o resultado:
+
+  - SKU DO ANÚNCIO: o Mercado Livre guarda o SKU em dois lugares, e o
+    sistema lia só um. Na Imprimil eram 16 anúncios de 59 sem SKU —
+    entre eles a linha inteira da Copa do Mundo e a dos cadernos
+    florais. Sem SKU eles não casavam com tabela de preço nem custo.
+
+  - PLANILHA DE PROMOÇÃO COM ANÚNCIO REPETIDO: derrubava o lote
+    inteiro na gravação. Agora a última linha vence e o resto passa.
+
+  - RELÂMPAGO AUTOMÁTICA: campanha em que o canal define o preço.
+    O sistema tentava reescrever o preço e o canal recusava o
+    arquivo.
+
+  - IMPRIMIL: a tabela de Preço Mínimo virou a base de preço do
+    sistema. Piso do kit de 10 da linha floral: R$ 299,00.
+
+  - OFERTAS RELÂMPAGO DE OUTUBRO: entraram no Planejamento, um item
+    por dia de oferta, abraçando o dia seguinte.
+
+
+===============================================================
+ SE SOBRAR TEMPO — OS DOIS MANUAIS
+===============================================================
+  docs/como-usar-anuncios.txt   como usar a aba Anúncios no dia a dia
+  docs/o-que-testar.txt         este arquivo
+
+
+===============================================================
+ O QUE EU AINDA NÃO FIZ
+===============================================================
+  1. Painel de promoções por SKU dentro de Mercado Livre
+  2. Repaginar /mercado-livre e /vendas/dia no padrão novo
+  3. "O que aconteceu na semana" no painel semanal
+
+ E DUAS QUE DEPENDEM DE VOCÊ:
+  4. Liberar o sistema para ESCREVER no Mercado Livre (desligar
+     anúncio, mudar lance). Hoje está bloqueado de propósito.
+  5. Fórmula base da Chopeiras Memo (não tem nenhuma) e os 62
+     anúncios ativos da Bom de Compras que estão fora dela.
