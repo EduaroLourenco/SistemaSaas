@@ -14,10 +14,8 @@ import {
 import {
   Button,
   Panel,
-  PanelHeader,
   Badge,
   Delta,
-  EmptyState,
 } from "@/components/ui/primitives";
 import {
   Segmented,
@@ -31,17 +29,16 @@ import {
   Progress,
   SectionTitle,
 } from "@/components/ui/controls";
-import { StatTile, Sparkline } from "@/components/ui/stat-tile";
 import { AXIS, GRID, Legend } from "@/components/ui/chart";
-import { DataTable, type Column } from "@/components/ui/data-table";
 import { TabelaSemanal } from "@/components/analise/tabela-semanal";
-import { MatrizAnuncios } from "@/components/analise/matriz-anuncios";
+import { TabelaProdutos } from "@/components/analise/tabela-produtos";
+import { PainelLentes } from "@/components/analise/painel-lentes";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
 import { LinhaDoTempo } from "@/components/analise/linha-do-tempo";
 import { Elasticidade } from "@/components/analise/elasticidade";
 import { CompararAnuncios } from "@/components/analise/comparar";
 import type { DadosAnalise } from "@/lib/dados/analise";
-import { analisar, LENTES, type AnuncioAnalisado } from "@/lib/analise";
+import { analisar, LENTES, type AnuncioAnalisado, type Lente } from "@/lib/analise";
 import { money, count, pct, delta as fmtDelta } from "@/lib/format";
 import {
   Bar,
@@ -59,13 +56,11 @@ import {
   Upload,
   Download,
   X,
-  SearchX,
   ExternalLink,
   SlidersHorizontal,
   RefreshCw,
   TriangleAlert,
   Package,
-  Columns2,
 } from "lucide-react";
 
 /**
@@ -188,6 +183,8 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
   const [selecionado, setSelecionado] = React.useState<AnuncioAnalisado | null>(null);
   const [marcados, setMarcados] = React.useState<string[]>([]);
   const [filtrosAbertos, setFiltrosAbertos] = React.useState(false);
+  /* A lente é filtro, não aba: ela recorta a mesma tabela. */
+  const [lente, setLente] = React.useState<Lente>("todos");
   const [comparando, setComparando] = React.useState(false);
 
   const semanasSelecionadas = React.useMemo(
@@ -234,6 +231,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
   const filtrados = React.useMemo(() => {
     const q = busca.trim().toLowerCase();
     return itens.filter((i) => {
+      if (lente !== "todos" && !i.lentes.includes(lente)) return false;
       if (conta && i.conta !== conta) return false;
       if (tipo !== "Todos" && i.tipo !== tipo) return false;
       if (status !== "Todos" && i.status !== status) return false;
@@ -244,7 +242,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
         i.mlb.toLowerCase().includes(q)
       );
     });
-  }, [itens, busca, tipo, status, conta]);
+  }, [itens, busca, tipo, status, conta, lente]);
 
   /**
    * Link direto para um anúncio: `?anuncio=MLB123`.
@@ -311,224 +309,13 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
     setMarcados((m) => (m.includes(mlb) ? m.filter((x) => x !== mlb) : [...m, mlb]));
   }
 
-  const colunas: Column<AnuncioAnalisado>[] = [
-    {
-      key: "marcar",
-      header: "",
-      width: "36px",
-      cell: (a) => (
-        <span onClick={(e) => e.stopPropagation()} className="flex">
-          <Checkbox
-            checked={marcados.includes(a.mlb)}
-            onChange={() => alternarMarca(a.mlb)}
-          />
-        </span>
-      ),
-    },
-    {
-      key: "titulo",
-      header: "Anúncio",
-      mobile: "title",
-      sticky: true,
-      width: "320px",
-      sortValue: (a) => a.titulo,
-      cell: (a) => (
-        <span className="flex items-center gap-2.5 min-w-0">
-          <span className="w-7 h-7 rounded-r1 bg-panel-3 border border-line flex items-center justify-center shrink-0">
-            <Package className="w-3.5 h-3.5 text-ink-3" strokeWidth={1.75} />
-          </span>
-          <span className="min-w-0">
-            <span className="flex items-center gap-1.5">
-              <span className="font-medium text-ink break-words max-w-[220px]">
-                {a.titulo}
-              </span>
-              {a.metricas.curvaAReceita && <Badge tone="brand">A</Badge>}
-              {a.status === "pausado" && <Badge tone="neutral">pausado</Badge>}
-            </span>
-            <span className="num block text-[12px] text-ink-3 mt-0.5">
-              {a.mlb} · {a.sku}
-            </span>
-          </span>
-        </span>
-      ),
-    },
-    {
-      key: "sku",
-      header: "SKU",
-      width: "110px",
-      sortValue: (a) => a.sku || a.mlb,
-      cell: (a) => (
-        <span className="num text-[12.5px] text-ink-2">{a.sku || <span className="text-ink-3">sem SKU</span>}</span>
-      ),
-    },
-    {
-      /*
-       * Estoque na lista, e não só no raio-X.
-       *
-       * A tela mostrava queda de venda sem dizer se havia produto para
-       * vender. Com a coluna, ordenar por estoque crescente põe a ruptura
-       * no topo — que é a primeira pergunta de quem olha uma queda.
-       *
-       * Null é "nunca lido", diferente de zero. Zero é ruptura e vai em
-       * vermelho; nulo diz que o canal não informou.
-       */
-      key: "estoque",
-      header: "Estoque",
-      align: "right",
-      width: "92px",
-      sortValue: (a) => a.estoque ?? -1,
-      cell: (a) =>
-        a.estoque == null ? (
-          <span className="text-[12px] text-ink-3">não lido</span>
-        ) : (
-          <span className={cn("num text-[12.5px]", a.estoque === 0 ? "text-down font-semibold" : a.estoque <= 3 ? "text-warn" : "text-ink-2")}>
-            {a.estoque}
-          </span>
-        ),
-    },
-    {
-      key: "precoAtual",
-      header: "Publicado",
-      align: "right",
-      width: "104px",
-      sortValue: (a) => a.precoAtual ?? -1,
-      cell: (a) => (
-        <span className="num text-[12.5px] text-ink-2">{a.precoAtual != null ? money(a.precoAtual) : "—"}</span>
-      ),
-    },
-    {
-      key: "conta",
-      header: "Conta",
-      mobile: "subtitle",
-      width: "130px",
-      sortValue: (a) => a.conta,
-      cell: (a) => <span className="text-ink-2 truncate">{a.conta}</span>,
-    },
-    {
-      key: "visitas",
-      header: "Visitas",
-      align: "right",
-      width: "100px",
-      sortValue: (a) => a.metricas.visitas,
-      cell: (a) => <span className="num">{count(a.metricas.visitas)}</span>,
-    },
-    {
-      key: "vendas",
-      header: "Vendas",
-      align: "right",
-      mobile: "metric",
-      width: "90px",
-      sortValue: (a) => a.metricas.vendas,
-      cell: (a) => <span className="num">{count(a.metricas.vendas)}</span>,
-    },
-    {
-      key: "conversao",
-      header: "Conversão",
-      align: "right",
-      mobile: "metric",
-      width: "140px",
-      sortValue: (a) => a.metricas.conversao,
-      cell: (a) => (
-        <span className="flex items-center justify-end gap-2">
-          <Progress
-            className="hidden lg:block w-12"
-            value={(a.metricas.conversao / 4) * 100}
-            tone={a.metricas.conversao >= resumo.mediaConversao ? "up" : "warn"}
-          />
-          <span
-            className={
-              "num " +
-              (a.metricas.conversao >= resumo.mediaConversao
-                ? "text-up font-semibold"
-                : "text-ink-2")
-            }
-          >
-            {pct(a.metricas.conversao, 2)}
-          </span>
-        </span>
-      ),
-    },
-    {
-      key: "receita",
-      header: "Receita",
-      align: "right",
-      mobile: "metric",
-      width: "130px",
-      sortValue: (a) => a.metricas.receita,
-      cell: (a) => (
-        <span className="num font-semibold text-ink">{money(a.metricas.receita)}</span>
-      ),
-    },
-    {
-      key: "evolucao",
-      header: "Evolução",
-      align: "right",
-      width: "110px",
-      sortValue: (a) => a.metricas.tendencia,
-      cell: (a) => (
-        <span className="flex items-center justify-end gap-2">
-          <span className="inline-block w-14 h-6">
-            <Sparkline
-              data={a.metricas.serieVendas}
-              tone={a.metricas.tendencia >= 0 ? "up" : "down"}
-            />
-          </span>
-        </span>
-      ),
-    },
-    {
-      key: "preco",
-      header: "Preço vs. ideal",
-      align: "right",
-      width: "180px",
-      sortValue: (a) => a.metricas.desvio,
-      cell: (a) => (
-        <IndicadorPreco
-          praticado={a.metricas.preco}
-          ideal={a.metricas.precoIdeal}
-          compacto
-        />
-      ),
-    },
-    {
-      key: "subsidio",
-      header: "Subsídio",
-      align: "right",
-      width: "120px",
-      sortValue: (a) => a.metricas.subsidio,
-      cell: (a) =>
-        a.metricas.subsidio > 0 ? (
-          <span className="num text-down font-semibold">
-            {money(a.metricas.subsidio)}
-          </span>
-        ) : (
-          <span className="text-ink-3">—</span>
-        ),
-    },
-    {
-      key: "campanhas",
-      header: "Campanhas",
-      align: "right",
-      width: "110px",
-      sortValue: (a) => a.metricas.campanhasAtivas,
-      cell: (a) =>
-        a.metricas.campanhasAtivas === 0 ? (
-          <span className="text-ink-3">—</span>
-        ) : (
-          <Badge tone="info">
-            <span className="num">{a.metricas.campanhasAtivas}</span>
-          </Badge>
-        ),
-    },
-  ];
 
   return (
     <>
       <PageHeader
         mobileFilters={false}
-        title="Análise de anúncios"
-        breadcrumb="Anúncios"
-        description="Desempenho semanal, aderência de preço e diagnóstico por anúncio"
+        title="Anúncios"
+        breadcrumb="Mercado Livre"
         actions={
           <>
             <Button
@@ -669,120 +456,38 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
         )}
 
         {precos.fase === "ok" && (
-          <Panel className="px-4 py-3 flex gap-2.5">
-            <RefreshCw
-              className="w-4 h-4 text-ink-3 shrink-0 mt-px"
-              strokeWidth={1.75}
-            />
-            <p className="text-[12px] text-ink-2">
-              <span className="font-semibold text-ink">
-                {count(precos.atualizados)} preços atualizados
-              </span>{" "}
-              às{" "}
-              <span className="num">
-                {precos.quando.toLocaleTimeString("pt-BR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-              .{" "}
-              {precos.comErro > 0 && (
-                <>
-                  <span className="num">{precos.comErro}</span> anúncios não
-                  responderam.{" "}
-                </>
-              )}
-              O preço pago continua vindo dos pedidos, com o histórico completo.
-            </p>
-          </Panel>
+          <p className="text-[12px] text-ink-3 -mb-1">
+            <span className="num">{count(precos.atualizados)}</span> preços lidos às{" "}
+            <span className="num">
+              {precos.quando.toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+            {precos.comErro > 0 && (
+              <>
+                {" · "}
+                <span className="num">{precos.comErro}</span> sem resposta
+              </>
+            )}
+          </p>
         )}
 
-        {/* ── Indicadores do recorte ─────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <StatTile
-            label="Receita acumulada"
-            value={money(resumo.receita)}
-            delta={variacaoDe(resumo.receita, resumoAnterior?.receita)}
-            hint={dicaComparacao}
-          />
-          <StatTile label="Unidades vendidas" value={count(resumo.vendas)} delta={variacaoDe(resumo.vendas, resumoAnterior?.vendas)} hint={dicaComparacao} />
-          <StatTile
-            label="Conversão média"
-            value={pct(resumo.conversao, 2)}
-            delta={variacaoDe(resumo.conversao, resumoAnterior?.conversao)}
-            hint={dicaComparacao}
-          />
-          <StatTile label="Visitas acumuladas" value={count(resumo.visitas)} delta={variacaoDe(resumo.visitas, resumoAnterior?.visitas)} hint={dicaComparacao} />
-          <StatTile
-            label="Margem subsidiada"
-            value={money(resumo.subsidio)}
-            delta={variacaoDe(resumo.subsidio, resumoAnterior?.subsidio)}
-            inverse
-            hint="vendido abaixo do preço ideal"
-          />
-        </div>
+        <PainelLentes
+          itens={itens}
+          lente={lente}
+          escolher={setLente}
+          periodo={`${recorte} semanas`}
+        />
 
-        {/* ── SKU × semana, com o gráfico de quem subiu e quem caiu ── */}
-        <MatrizAnuncios itens={filtrados} semanas={semanasSelecionadas} />
-
-        {/* ── Lista por anúncio ──────────────────────────────── */}
-        <Panel className="overflow-hidden">
-          <PanelHeader
-            title="Lista por anúncio"
-            hint="um MLB por linha · clique para abrir o raio-X"
-            action={
-              marcados.length > 0 ? (
-                <span className="flex items-center gap-2">
-                  <span className="num text-[12px] text-ink-2">
-                    {marcados.length} selecionados
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={() => setComparando(true)}
-                    disabled={marcados.length < 2 || marcados.length > 3}
-                    title={
-                      marcados.length < 2
-                        ? "Selecione ao menos dois anúncios"
-                        : marcados.length > 3
-                          ? "Compare no máximo três de cada vez"
-                          : "Ver lado a lado"
-                    }
-                  >
-                    <Columns2 className="w-3.5 h-3.5" />
-                    Comparar
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setMarcados([])}>
-                    Limpar
-                  </Button>
-                </span>
-              ) : (
-                <span className="num text-[12px] text-ink-3 md:hidden">
-                  {filtrados.length}
-                </span>
-              )
-            }
-          />
-          <DataTable
-            columns={colunas}
-            rows={filtrados}
-            rowKey={(a) => a.mlb}
-            defaultSort={{ key: "receita", dir: "desc" }}
-            onRowClick={setSelecionado}
-            empty={
-              <EmptyState
-                icon={SearchX}
-                title="Nenhum anúncio neste recorte"
-                description="Ajuste a busca ou limpe os filtros."
-                action={
-                  <Button size="sm" onClick={limparFiltros}>
-                    Limpar filtros
-                  </Button>
-                }
-              />
-            }
-          />
-        </Panel>
+        <TabelaProdutos
+          itens={filtrados}
+          semanas={semanasSelecionadas}
+          abrir={setSelecionado}
+          marcados={marcados}
+          marcar={setMarcados}
+          comparar={() => setComparando(true)}
+        />
       </PageBody>
 
       {selecionado && (

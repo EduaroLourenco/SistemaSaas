@@ -93,15 +93,17 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
         case "receita":
           return w.receita;
         case "realizado":
-          return pago;
+          return pago ?? -1;
         case "anunciado":
-          return w.precoAnunciado;
+          return w.precoAnunciado ?? -1;
         case "comissao":
           return w.comissao;
         case "cobrada":
           return w.tarifaCobrada ?? -1;
         case "desvio":
-          return w.precoIdeal ? ((pago - w.precoIdeal) / w.precoIdeal) * 100 : 0;
+          return w.precoIdeal && pago != null
+            ? ((pago - w.precoIdeal) / w.precoIdeal) * 100
+            : 0;
       }
     };
 
@@ -176,14 +178,18 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
           <tbody>
             {linhas.map((w, i) => {
               const pago = w.precoRealizado ?? w.precoAnunciado;
-              const desvio = w.precoIdeal
-                ? ((pago - w.precoIdeal) / w.precoIdeal) * 100
-                : 0;
+              /* Null significa semana sem leitura de vitrine e sem venda.
+                 Desvio contra nada é desvio inventado. */
+              const desvio =
+                w.precoIdeal && pago != null
+                  ? ((pago - w.precoIdeal) / w.precoIdeal) * 100
+                  : null;
               const conv = w.visitas ? (w.vendas / w.visitas) * 100 : 0;
               // Pago abaixo da vitrine = houve desconto extra na venda:
               // campanha relâmpago, cupom ou frete embutido.
               const comDesconto =
                 w.precoRealizado !== null &&
+                w.precoAnunciado != null &&
                 w.precoRealizado < w.precoAnunciado * 0.995;
               const escolhida = aberta === w.semana;
 
@@ -228,7 +234,9 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
                       )}
                     </td>
                     <td className="num h-8 px-2 text-right text-ink-3">
-                      {money(w.precoAnunciado)}
+                      {/* Sem leitura de vitrine naquela semana: as leituras
+                          diárias de preço começam em outubro de 2026. */}
+                      {w.precoAnunciado == null ? "—" : money(w.precoAnunciado)}
                     </td>
                     <td className="num h-8 px-2 text-right text-ink-3">
                       {w.comissao > 0 ? pct(w.comissao) : "—"}
@@ -251,9 +259,22 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
                       )}
                     </td>
                     <td className="h-8 px-2 text-right">
-                      <Badge tone={tomDesvio(desvio)}>
-                        <span className="num">{fmtDelta(desvio)}</span>
-                      </Badge>
+                      {desvio == null ? (
+                        <span
+                          className="text-ink-3"
+                          title={
+                            w.precoIdeal
+                              ? "sem preço medido nesta semana"
+                              : "anúncio fora da Fórmula base"
+                          }
+                        >
+                          —
+                        </span>
+                      ) : (
+                        <Badge tone={tomDesvio(desvio)}>
+                          <span className="num">{fmtDelta(desvio)}</span>
+                        </Badge>
+                      )}
                     </td>
                   </tr>
 
@@ -262,8 +283,11 @@ export function TabelaSemanal({ item }: { item: AnuncioAnalisado }) {
                       <td colSpan={COLUNAS.length} className="px-2 py-2.5">
                         {w.dias.length === 0 ? (
                           <p className="text-[12px] text-ink-3">
-                            Nenhuma venda nesta semana. Na vitrine o preço era{" "}
-                            <span className="num">{money(w.precoAnunciado)}</span>.
+                            {w.precoAnunciado == null
+                              ? "Nenhuma venda nesta semana, e sem leitura de vitrine."
+                              : `Nenhuma venda nesta semana. Na vitrine, ${money(
+                                  w.precoAnunciado,
+                                )}.`}
                           </p>
                         ) : (
                           <>

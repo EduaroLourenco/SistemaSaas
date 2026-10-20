@@ -2,6 +2,8 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarTarifasCobradas, chaveSemana } from "./tarifa-cobrada";
+import { carregarFormulaBase } from "./formula-base";
+import { carregarVitrineSemanal } from "./vitrine-semanal";
 import type { Anuncio, SemanaDesempenho, DiaVenda } from "@/lib/analise";
 
 /**
@@ -68,10 +70,37 @@ function categoriaDe(titulo: string): string {
   return primeira.charAt(0).toUpperCase() + primeira.slice(1).toLowerCase();
 }
 
+/**
+ * O preço de tabela de um anúncio, na comissão padrão dele.
+ *
+ * Procura por SKU e cai para MLB — a Fórmula base tem as duas chaves, o
+ * SKU cobre quase tudo, e o MLB existe para o caso de o mesmo SKU ter
+ * preço diferente por anúncio. Devolve 0 quando o anúncio não está na
+ * tabela, que é o que a tela já trata como "sem tabela": são 135 dos
+ * 1.004 anúncios da Probel, e inventar um preço para eles faria a tela
+ * acusar desvio de um número que ninguém definiu.
+ */
+function precoDeTabela(
+  base: Awaited<ReturnType<typeof carregarFormulaBase>>,
+  mlb: string,
+  sku: string | null,
+): number {
+  if (!base) return 0;
+  const item = base.dados.baseMlb.get(mlb);
+  if (!item) return 0;
+  const comissao = Math.round(item.padrao * 1000) / 1000;
+  const porMlb = base.dados.precosMLB.get(mlb);
+  const porSku = sku ? base.dados.precosSKU.get(sku) : undefined;
+  /* O MLB ganha do SKU: ele só existe quando alguém quis um preço
+     diferente para aquele anúncio. */
+  const achado = porMlb?.[comissao] ?? porSku?.[comissao];
+  return achado ?? 0;
+}
+
 export async function carregarAnalise(): Promise<DadosAnalise> {
   const sb = await clienteServidor();
 
-  const [linhas, { data: imports }, tarifas] = await Promise.all([
+  const [linhas, { data: imports }, tarifas, base, vitrine] = await Promise.all([
     paginar(() =>
       sb
         .from("anuncio_desempenho_semanal")
@@ -88,6 +117,8 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
       .order("criado_em", { ascending: false })
       .limit(20),
     carregarTarifasCobradas(sb),
+    carregarFormulaBase(),
+    carregarVitrineSemanal(sb),
   ]);
 
   const dados = linhas as unknown as LinhaSemana[];
@@ -146,19 +177,30 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
       vendas,
       receita,
       /*
-       * Sem retrato da vitrine, o preço anunciado cai para o preço pago.
-       * É aproximação, e ela some quando a API do Meli começar a gravar o
-       * retrato semanal — que é o único lugar de onde o preço de uma
-       * semana SEM venda pode vir.
+       * Da leitura diária de vitrine, no último dia medido da semana.
+       * Null quando não houve leitura — cair para o preço pago, como
+       * antes, misturava dois preços diferentes e zerava a semana sem
+       * venda.
        */
-      precoAnunciado: n(l.preco_anunciado) || (vendas ? receita / vendas : 0),
+      precoAnunciado:
+        n(l.preco_anunciado) ||
+        vitrine.get(chaveSemana(a.codigo_externo, l.inicio)) ||
+        null,
       precoRealizado:
         l.preco_praticado != null
           ? n(l.preco_praticado)
           : vendas
             ? receita / vendas
             : null,
-      precoIdeal: n(l.preco_ideal),
+      /*
+       * Da Fórmula base, ao vivo. A coluna `preco_ideal` desta tabela
+       * está nula nas 10.452 linhas do banco — nunca foi gravada — e era
+       * ela que deixava três lentes apagadas e a margem subsidiada em
+       * zero. Fica o `??` porque, no dia em que alguém gravar a coluna,
+       * o valor gravado para aquela semana é mais preciso que a tabela
+       * de hoje.
+       */
+      precoIdeal: n(l.preco_ideal) || precoDeTabela(base, a.codigo_externo, a.sku_canal),
       comissao: n(l.comissao_negociada),
       // A de tabela vem do catálogo; esta vem do que foi cobrado de fato.
       // Null quando não houve venda com comissão conhecida na semana.

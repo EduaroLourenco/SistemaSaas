@@ -138,12 +138,16 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
       const quando = dia || inicioDaSemana(w.intervalo);
       if (!ant) return;
 
-      // preço da vitrine mudou mais de 1%
+      /* Preço da vitrine mudou mais de 1%.
+         As duas semanas precisam ter leitura: comparar com semana sem
+         leitura acusaria "caiu 100%" toda vez que o retrato começou. */
+      const antes = ant.precoAnunciado;
+      const agora = w.precoAnunciado;
       const variacaoPreco =
-        ant.precoAnunciado > 0
-          ? ((w.precoAnunciado - ant.precoAnunciado) / ant.precoAnunciado) * 100
+        antes != null && antes > 0 && agora != null
+          ? ((agora - antes) / antes) * 100
           : 0;
-      if (Math.abs(variacaoPreco) >= 1) {
+      if (Math.abs(variacaoPreco) >= 1 && antes != null && agora != null) {
         const subiu = variacaoPreco > 0;
         saida.push({
           chave: `preco-${w.semana}`,
@@ -153,8 +157,8 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
           tipo: "preco",
           tom: subiu ? "ruim" : "neutro",
           texto: `Preço da vitrine ${subiu ? "subiu" : "caiu"} de ${money(
-            ant.precoAnunciado
-          )} para ${money(w.precoAnunciado)}`,
+            antes
+          )} para ${money(agora)}`,
           automatico: true,
         });
       }

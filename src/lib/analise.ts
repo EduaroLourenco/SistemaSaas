@@ -33,12 +33,17 @@ export type SemanaDesempenho = {
 
   /**
    * O preço da vitrine — o que estava publicado no anúncio.
-   * Vem de um retrato semanal (`/items/{id}`), porque a API só devolve o
-   * preço de AGORA, sem histórico. É o único preço que existe mesmo em
-   * semana sem venda — e é justamente ele que explica por que parou de
-   * vender.
+   *
+   * Vem da leitura diária de preço (`anuncio_estoque_diario.preco`), do
+   * último dia medido dentro da semana: preço é estado, não fluxo, e a
+   * média de sete dias esconde a troca que aconteceu na quarta.
+   *
+   * Null quando a semana não teve leitura — as leituras começam em
+   * outubro de 2026. Nulo não é zero: zero seria "estava de graça", e foi
+   * tratar um pelo outro que fez 825 anúncios aparecerem como "100%
+   * abaixo do preço ideal".
    */
-  precoAnunciado: number;
+  precoAnunciado: number | null;
 
   /**
    * O preço que o cliente de fato pagou — média ponderada do `unit_price`
@@ -130,6 +135,16 @@ export type ResumoGlobal = {
   mediaConversao: number;
 };
 
+/**
+ * Vendas mínimas para a conversão de um anúncio virar diagnóstico.
+ *
+ * Com uma venda só, 1 em 3 visitas vira "33% de conversão" e qualquer
+ * anúncio que teve sorte entra na lista. Com duas, a taxa já descreve
+ * um comportamento. O corte é por venda e não por visita porque a lente
+ * exige, por definição, tráfego abaixo da média da carteira.
+ */
+const VENDAS_MINIMAS = 2;
+
 const fmtPct = (v: number) =>
   v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -210,16 +225,31 @@ export function analisar(
       const comVenda = semanas.filter((w) => w.vendas > 0);
       const ultimaComVenda = comVenda[comVenda.length - 1];
       const ultima = semanas[semanas.length - 1];
+      /*
+       * O preço que vale para comparar com a tabela: o pago na última
+       * semana com venda; sem venda nenhuma, o da vitrine na última
+       * semana que teve leitura. Zero significa "não há preço medido", e
+       * nenhuma lente de preço acende nesse caso.
+       */
+      const ultimaComVitrine = [...semanas]
+        .reverse()
+        .find((w) => w.precoAnunciado != null);
       const preco = ultimaComVenda
         ? ultimaComVenda.receita / ultimaComVenda.vendas
-        // Sem venda na última semana, cai para o preço da vitrine.
-        : (ultima ? ultima.precoAnunciado : 0);
+        : (ultimaComVitrine?.precoAnunciado ?? 0);
       const precoIdeal = ultimaComVenda
         ? ultimaComVenda.precoIdeal
         : ultima
           ? ultima.precoIdeal
           : 0;
-      const desvio = precoIdeal ? ((preco - precoIdeal) / precoIdeal) * 100 : 0;
+      /*
+       * Desvio só existe com os dois preços. Faltando o praticado — nem
+       * venda, nem leitura de vitrine —, a conta dava (0 − tabela) ÷
+       * tabela = −100%, e a tela acusava "100% abaixo do preço ideal"
+       * em 825 dos 1.004 anúncios da Probel. Eles não estavam abaixo de
+       * nada; ninguém tinha lido o preço deles.
+       */
+      const desvio = precoIdeal > 0 && preco > 0 ? ((preco - precoIdeal) / precoIdeal) * 100 : 0;
 
       const meio = Math.floor(semanas.length / 2);
       const inicio = semanas.slice(0, meio);
@@ -235,7 +265,11 @@ export function analisar(
       const precoCaiu = precoInicio > 0 && precoFim > 0 && precoFim < precoInicio * 0.99;
       const elasticidadePositiva = precoCaiu && convFim > convInicio;
 
-      const desperdicioTrafego = visitas > mediaVisitas && conversao < mediaConversao;
+      const baseSuficiente = vendas >= VENDAS_MINIMAS;
+      const noAr = anuncio.status === "ativo";
+
+      const desperdicioTrafego =
+        noAr && visitas > mediaVisitas && conversao < mediaConversao;
 
       const primeiraComVenda = comVenda[0];
       const tendencia =
@@ -275,11 +309,16 @@ export function analisar(
         )} de margem deixada na mesa.`;
       }
 
-      if (visitas < mediaVisitas && conversao > mediaConversao && vendas > 0) {
+      if (
+        baseSuficiente &&
+        visitas < mediaVisitas &&
+        conversao > mediaConversao &&
+        vendas > 0
+      ) {
         lentes.push("joias");
         motivos.joias = `Converte a ${fmtPct(conversao)}% contra a média de ${fmtPct(
           mediaConversao
-        )}%, mas recebe menos tráfego que a média da carteira.`;
+        )}% — ${vendas} vendas em ${visitas.toLocaleString("pt-BR")} visitas — e recebe menos tráfego que a média.`;
       }
 
       if (vendas > 0 && subsidio > 0 && metricas.subsidioPct >= 3) {
@@ -295,7 +334,7 @@ export function analisar(
           "Recebe tráfego acima da média e converte abaixo dela. O problema está na página, não no alcance.";
       }
 
-      if (precoIdeal > 0 && Math.abs(desvio) >= 6) {
+      if (precoIdeal > 0 && preco > 0 && Math.abs(desvio) >= 6) {
         lentes.push("fora_do_preco");
         motivos.fora_do_preco =
           desvio > 0
@@ -350,7 +389,7 @@ export const LENTES: {
     id: "joias",
     rotulo: "Joias escondidas",
     regra:
-      "Tráfego abaixo da média da carteira e conversão acima da média — vende bem para quem chega.",
+      "Tráfego abaixo da média e conversão acima da média, com pelo menos duas vendas no recorte — vende bem para quem chega.",
     acao: "Investir em mídia e posicionamento; o funil já está afiado.",
   },
   {
@@ -363,7 +402,7 @@ export const LENTES: {
     id: "desperdicio",
     rotulo: "Desperdício de tráfego",
     regra:
-      "Visitas acima da média e conversão abaixo da média — o anúncio recebe gente e não fecha.",
+      "Anúncio no ar com visitas acima da média e conversão abaixo da média — recebe gente e não fecha.",
     acao: "Revisar preço, título, fotos e ficha técnica antes de investir mais.",
   },
   {
