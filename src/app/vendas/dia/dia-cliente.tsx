@@ -270,6 +270,14 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
                     <span className="num text-[15px] text-ink">{c.receita != null ? money(c.receita) : "—"}</span>
                     {c.variacao != null && <Delta value={c.variacao} />}
                   </div>
+                  {/* A visita embaixo da receita: é ela que separa queda de
+                      tráfego de queda de conversão. */}
+                  <div className="flex items-baseline gap-2">
+                    <span className="num text-[12.5px] text-ink-3">
+                      {c.visitas != null ? `${count(c.visitas)} visitas` : "sem visita medida"}
+                    </span>
+                    {c.variacaoVisitas != null && <Delta value={c.variacaoVisitas} />}
+                  </div>
                 </div>
               ))}
             </div>

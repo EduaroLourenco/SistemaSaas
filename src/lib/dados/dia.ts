@@ -62,6 +62,18 @@ export type Comparacao = {
   rotulo: string;
   receita: number | null;
   variacao: number | null;
+  /*
+   * A visita do dia comparado, ao lado da receita.
+   *
+   * Receita caindo com visita caindo é problema de tráfego; receita
+   * caindo com visita igual é problema de preço ou de oferta. A tela
+   * mostrava só a receita, e as duas leituras ficavam iguais.
+   *
+   * Null quando não houve coleta naquele dia — zero diria "mediu e não
+   * teve visita", que é outra coisa.
+   */
+  visitas: number | null;
+  variacaoVisitas: number | null;
 };
 
 /** Uma conta de canal no dia em foco. */
@@ -396,11 +408,27 @@ export async function carregarDia(
     ? r2(mesmos.reduce((s, d) => s + d.receitaLiquida, 0) / mesmos.length)
     : null;
 
+  /* Média de visita das mesmas segundas (ou terças…) do mês, só com os
+     dias em que houve coleta — somar dia sem medição puxaria a média para
+     baixo e inventaria uma queda. */
+  const comVisita = mesmos.filter((d) => d.visitas > 0);
+  const mediaVisitas = comVisita.length
+    ? Math.round(comVisita.reduce((s, d) => s + d.visitas, 0) / comVisita.length)
+    : null;
+
+  /* Visita é nula quando não houve coleta; comparar com zero inventaria
+     uma variação de -100% num dia que simplesmente não foi medido. */
+  const vis = (d: DiaLinha | null | undefined) => (d && d.visitas > 0 ? d.visitas : null);
+  const varVis = (antes: number | null) =>
+    antes != null && hoje.visitas > 0 ? variacao(hoje.visitas, antes) : null;
+
   const comparacoes: Comparacao[] = [
     {
       rotulo: "Dia anterior",
       receita: ontem?.receitaLiquida ?? null,
       variacao: ontem ? variacao(hoje.receitaLiquida, ontem.receitaLiquida) : null,
+      visitas: vis(ontem),
+      variacaoVisitas: varVis(vis(ontem)),
     },
     {
       rotulo: `${nomeDoDia(hoje.diaSemana)} passada`,
@@ -408,11 +436,15 @@ export async function carregarDia(
       variacao: semanaPassada
         ? variacao(hoje.receitaLiquida, semanaPassada.receitaLiquida)
         : null,
+      visitas: vis(semanaPassada),
+      variacaoVisitas: varVis(vis(semanaPassada)),
     },
     {
       rotulo: `Média das ${nomeDoDia(hoje.diaSemana)}s do mês`,
       receita: mediaMesmoDia,
       variacao: mediaMesmoDia ? variacao(hoje.receitaLiquida, mediaMesmoDia) : null,
+      visitas: mediaVisitas,
+      variacaoVisitas: varVis(mediaVisitas),
     },
   ];
 
