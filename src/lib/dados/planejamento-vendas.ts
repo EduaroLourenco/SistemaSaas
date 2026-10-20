@@ -88,6 +88,9 @@ export async function carregarVendasPlanejamento(
       cancelado: p.cancelado,
       sku: (a?.produto_id ? skuProduto.get(a.produto_id) : null) ?? a?.sku_canal ?? l.sku ?? "",
       anuncio: a?.id ?? "",
+      /* O MLB, além do id: a ação pode ter sido cadastrada por um ou por
+         outro, e casar só por id faz a medição dar zero em silêncio. */
+      anuncioCodigo: String(a?.codigo_externo ?? l.codigo_externo ?? "").toUpperCase(),
       quantidade: Number(l.quantidade),
       receita: Number(l.total),
       atualizado: p.atualizado_em,

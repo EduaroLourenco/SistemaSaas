@@ -219,3 +219,32 @@ if (process.argv.includes('--banco')) {
   await db.close();
   console.log('OK Postgres: instalação idempotente, CRUD, revisões, datas, exclusão em cascata e isolamento entre operações.');
 }
+
+/* ══ O anúncio da ação casa por id E por código ══
+   A tela de estratégia grava o id do anúncio; cargas feitas por script
+   gravaram o MLB. Casar só por id fazia a ação medir zero — e zero aqui
+   não parece defeito, parece campanha que não vendeu. */
+{
+  const venda = (over) => ({
+    pedido: "p1", data: "2026-10-19", canal: "canal-1", conta: "conta-1", cancelado: false,
+    sku: "PA85351", anuncio: "id-do-anuncio", anuncioCodigo: "MLB4530736830",
+    quantidade: 1, receita: 100, atualizado: "", ...over,
+  });
+  const comItem = (anuncios) => ({
+    ...m.novoItem("2026-10-19"), canais: ["canal-1"], contas: [], skus: [],
+    detalhes: { ...m.novoItem("2026-10-19").detalhes, estrategia: { ...estrategia.estrategiaVazia(), anuncios } },
+  });
+
+  assert.equal(resultados.filtroDaAcao(comItem(["id-do-anuncio"]))(venda()), true, "casa pelo id, como a tela grava");
+  assert.equal(resultados.filtroDaAcao(comItem(["MLB4530736830"]))(venda()), true, "casa pelo MLB, como a carga gravou");
+  assert.equal(resultados.filtroDaAcao(comItem(["mlb4530736830"]))(venda()), true, "caixa do MLB não pode importar");
+  assert.equal(resultados.filtroDaAcao(comItem(["MLB9999999999"]))(venda()), false, "anúncio de fora continua de fora");
+  /* Com anúncio escolhido, o SKU não entra sozinho: a ação é daqueles
+     anúncios, e o mesmo SKU vendido em outro anúncio não é dela. */
+  assert.equal(
+    resultados.filtroDaAcao(comItem(["MLB4530736830"]))(venda({ anuncio: "outro", anuncioCodigo: "MLB7777777777" })),
+    false,
+    "mesmo SKU em outro anúncio não conta quando a ação escolhe anúncios"
+  );
+  console.log("OK anúncio da ação casa por id e por código, e só por eles");
+}

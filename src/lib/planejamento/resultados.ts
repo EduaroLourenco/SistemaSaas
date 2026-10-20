@@ -9,6 +9,8 @@ export type LinhaVenda = {
   cancelado: boolean;
   sku: string;
   anuncio: string;
+  /** O MLB do anúncio, em maiúsculas. */
+  anuncioCodigo: string;
   quantidade: number;
   receita: number;
   atualizado: string;
@@ -55,9 +57,16 @@ export function temRecorte(item: Item): boolean {
     estrategiaDe(item).anuncios.length
   );
 }
-/** A venda é da ação? Canal/conta e produto/anúncio, sem olhar data. */
+/**
+ * A venda é da ação? Canal/conta e produto/anúncio, sem olhar data.
+ *
+ * O anúncio escolhido é casado pelo ID e também pelo CÓDIGO (MLB). A tela
+ * de estratégia grava o id; cargas feitas por script gravaram o MLB. Casar
+ * só por id fazia a ação inteira medir zero — e "zero" aqui não parece
+ * defeito, parece campanha que não vendeu.
+ */
 export function filtroDaAcao(item: Item): (l: LinhaVenda) => boolean {
-  const anuncios = new Set(estrategiaDe(item).anuncios),
+  const anuncios = new Set(estrategiaDe(item).anuncios.map((a) => String(a).toUpperCase())),
     skus = new Set(item.skus.map((s) => s.toUpperCase()));
   return (l) => {
     if (
@@ -66,7 +75,11 @@ export function filtroDaAcao(item: Item): (l: LinhaVenda) => boolean {
       !item.contas.includes(l.conta)
     )
       return false;
-    if (anuncios.size ? !anuncios.has(l.anuncio) : skus.size && !skus.has(l.sku.toUpperCase()))
+    if (
+      anuncios.size
+        ? !anuncios.has(l.anuncio.toUpperCase()) && !anuncios.has(l.anuncioCodigo)
+        : skus.size && !skus.has(l.sku.toUpperCase())
+    )
       return false;
     return true;
   };
