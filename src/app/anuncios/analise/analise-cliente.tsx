@@ -885,6 +885,11 @@ function RaioX({
     ideal: w.precoIdeal,
   }));
 
+  /* A última semana em que houve visita OU venda: é onde a série para. */
+  const ultimaSemanaMedida = [...item.semanas]
+    .reverse()
+    .find((w) => w.visitas > 0 || w.vendas > 0)?.intervalo;
+
   const diagnosticos = LENTES.filter(
     (l) => l.id !== "todos" && item.lentes.includes(l.id)
   );
@@ -892,7 +897,7 @@ function RaioX({
   return (
     <Sheet
       title={item.titulo}
-      subtitle={`${item.mlb} · ${item.sku} · ${item.conta}`}
+      subtitle={`${item.mlb} · ${item.sku} · ${item.conta}${item.status !== "ativo" ? ` · ${item.status}` : ""}`}
       onClose={onClose}
       width="640px"
       footer={
@@ -1119,6 +1124,14 @@ function RaioX({
       <LinhaDoTempo item={item} />
 
       {/* histórico semana a semana */}
+      {item.status !== "ativo" && (
+        <p className="px-4 pb-1 text-[12px] text-ink-3">
+          Anúncio {item.status}
+          {ultimaSemanaMedida
+            ? `: a série para em ${ultimaSemanaMedida} porque anúncio fora do ar não recebe visita.`
+            : ": anúncio fora do ar não recebe visita."}
+        </p>
+      )}
       <TabelaSemanal item={item} />
 
       <div className="px-4 pb-4">

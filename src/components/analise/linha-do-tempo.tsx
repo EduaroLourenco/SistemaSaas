@@ -49,6 +49,8 @@ type Anotacao = {
 type Evento = {
   chave: string;
   data: string;
+  /** Já formatado, para a semana sem dia medido. */
+  quando?: string;
   semana: string;
   tipo: TipoAnotacao | "venda";
   texto: string;
@@ -92,10 +94,22 @@ function gravarAnotacoes(lista: Anotacao[]) {
   }
 }
 
-/** dd/mm a partir do ISO. */
+/**
+ * dd/mm a partir do ISO.
+ *
+ * Volta vazio quando não há data: semana sem nenhum dia medido — anúncio
+ * pausado, por exemplo — chegava aqui com string vazia e a tela escrevia
+ * "undefined/undefined" na linha do tempo.
+ */
 function dataCurta(iso: string) {
-  const [, m, d] = iso.split("-");
-  return `${d}/${m}`;
+  const partes = String(iso ?? "").split("-");
+  if (partes.length < 3 || !partes[1] || !partes[2]) return "";
+  return `${partes[2].slice(0, 2)}/${partes[1]}`;
+}
+
+/** O começo da semana, quando nenhum dia dela foi medido. */
+function inicioDaSemana(intervalo: string) {
+  return String(intervalo ?? "").split(" a ")[0] ?? "";
 }
 
 export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
@@ -118,7 +132,10 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
 
     item.semanas.forEach((w, i) => {
       const ant = item.semanas[i - 1];
+      /* Sem dia medido, a data do evento é o começo da semana: a semana
+         existe mesmo quando o anúncio ficou fora do ar nela. */
       const dia = w.dias[0]?.data ?? "";
+      const quando = dia || inicioDaSemana(w.intervalo);
       if (!ant) return;
 
       // preço da vitrine mudou mais de 1%
@@ -131,6 +148,7 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
         saida.push({
           chave: `preco-${w.semana}`,
           data: dia,
+          quando,
           semana: w.semana,
           tipo: "preco",
           tom: subiu ? "ruim" : "neutro",
@@ -146,6 +164,7 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
         saida.push({
           chave: `camp-in-${w.semana}`,
           data: dia,
+          quando,
           semana: w.semana,
           tipo: "campanha",
           tom: "neutro",
@@ -156,6 +175,7 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
         saida.push({
           chave: `camp-out-${w.semana}`,
           data: dia,
+          quando,
           semana: w.semana,
           tipo: "campanha",
           tom: "neutro",
@@ -171,6 +191,7 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
           saida.push({
             chave: `venda-${w.semana}`,
             data: dia,
+            quando,
             semana: w.semana,
             tipo: "venda",
             tom: variacao > 0 ? "bom" : "ruim",
@@ -328,7 +349,7 @@ export function LinhaDoTempo({ item }: { item: AnuncioAnalisado }) {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2 flex-wrap">
                     <span className="num text-[12px] text-ink-3">
-                      {dataCurta(e.data)}
+                      {dataCurta(e.data) || e.quando || ""}
                     </span>
                     {e.semana && (
                       <span className="num text-[12px] text-ink-3">{e.semana}</span>
