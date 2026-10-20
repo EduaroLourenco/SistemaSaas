@@ -43,6 +43,8 @@ export type LinhaDisputa = {
   titulo: string;
   conta: string;
   tipo: string;
+  /** Ativo, pausado, encerrado. Anúncio fora do ar não aceita a ação. */
+  status: string;
   estoque: number | null;
   /** O retrato do dia mais recente em que este anúncio foi medido. */
   dia: string;
@@ -164,6 +166,7 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
     sku_canal: string | null;
     titulo: string;
     tipo: string;
+    status: string | null;
     estoque: number | null;
     contas_canal: { nome: string; canais: { nome: string } | null } | null;
   };
@@ -180,7 +183,7 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
     paginar(() =>
       sb
         .from("anuncios")
-        .select("id,codigo_externo,sku_canal,titulo,tipo,estoque,contas_canal(nome,canais(nome))")
+        .select("id,codigo_externo,sku_canal,titulo,tipo,status,estoque,contas_canal(nome,canais(nome))")
         .order("codigo_externo")
     ),
   ]);
@@ -249,6 +252,7 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
       titulo: a.titulo,
       conta: a.contas_canal ? `${a.contas_canal.canais?.nome ?? "Canal"} · ${a.contas_canal.nome}` : "Conta principal",
       tipo: a.tipo === "premium" ? "Premium" : "Clássico",
+      status: a.status ?? "",
       estoque: a.estoque,
       dia: String(u.data).slice(0, 10),
       situacao,

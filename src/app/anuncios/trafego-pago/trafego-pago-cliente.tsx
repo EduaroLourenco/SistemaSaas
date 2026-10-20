@@ -18,6 +18,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import type { DadosTrafegoPago, LinhaAnuncioAds, LinhaCampanha } from "@/lib/dados/trafego-pago";
 import { ROTULO_ACAO, type AcaoAds, type LinhaOportunidade } from "@/lib/dados/trafego-oportunidades";
 import type { SituacaoDisputa } from "@/lib/dados/disputa-catalogo";
+import { TagAnuncio } from "@/components/ui/tag-anuncio";
 
 /*
  * A etiqueta de catálogo.
@@ -180,6 +181,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
     conta: string;
     tipo: string;
     catalogo?: string | null;
+    status?: string | null;
   }) => (
     <div className="min-w-0">
       <div className="flex items-center gap-1.5 flex-wrap">
@@ -187,6 +189,9 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         <span className="num text-[11.5px] text-ink-3">{l.mlb}</span>
         {l.tipo === "premium" && <Badge tone="neutral">premium</Badge>}
         <EtiquetaCatalogo situacao={l.catalogo ?? null} />
+        {/* Pausado no meio de uma lista que manda desligar ou escalar: a
+            ação já não cabe, e sem a etiqueta ele parece igual aos outros. */}
+        <TagAnuncio status={l.status} />
       </div>
       <p className="text-[12px] text-ink-2 break-words max-w-[280px]">
         {l.titulo || "—"}

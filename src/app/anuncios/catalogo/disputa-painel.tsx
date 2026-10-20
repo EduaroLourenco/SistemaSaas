@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/controls";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { StatTile } from "@/components/ui/stat-tile";
 import { linkDoAnuncio } from "@/lib/links";
+import { TagAnuncio } from "@/components/ui/tag-anuncio";
 import { money, pct, count } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DadosDisputa, LinhaDisputa, SituacaoDisputa, Fatia } from "@/lib/dados/disputa-catalogo";
@@ -123,6 +124,8 @@ export function DisputaPainel({ disputa }: { disputa: DadosDisputa }) {
               <span className="num text-[11.5px] text-ink-3">{l.mlb}</span>
             )}
             {l.tipo === "Premium" && <Badge tone="neutral">premium</Badge>}
+            {/* Pausado ou encerrado: a recomendação de preço não cabe. */}
+            <TagAnuncio status={l.status} />
           </div>
           <p className="text-[12px] text-ink-2 break-words max-w-[280px]">
             {l.titulo}
