@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Segmented } from "@/components/ui/controls";
@@ -285,6 +286,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
                                          border-r border-line font-normal"
                             >
                               <span className="flex items-center gap-1.5 pl-5">
+                                <FotoAnuncio mlb={h.mlb} alt={h.mlb} tamanho={24} />
                                 <span className="num text-[12px] text-ink-2">{h.mlb}</span>
                                 <Badge tone={h.tipoAnuncio === "Premium" ? "brand" : "neutral"}>
                                   {h.tipoAnuncio}

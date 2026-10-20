@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Input } from "@/components/ui/controls";
 import { DataTable, type Column } from "@/components/ui/data-table";
@@ -108,7 +109,9 @@ export function DisputaPainel({ disputa }: { disputa: DadosDisputa }) {
       width: "300px",
       sortValue: (l) => l.sku || l.mlb,
       cell: (l) => (
-        <div className="min-w-0">
+        <div className="flex items-start gap-2 min-w-0">
+          <FotoAnuncio mlb={l.mlb} alt={l.titulo} tamanho={34} />
+          <div className="min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="num text-[12.5px] font-medium text-ink">{l.sku || "sem SKU"}</span>
             {linkDoAnuncio(l.mlb) ? (
@@ -131,6 +134,7 @@ export function DisputaPainel({ disputa }: { disputa: DadosDisputa }) {
             {l.titulo}
           </p>
           <p className="text-[11px] text-ink-3">{l.conta}</p>
+          </div>
         </div>
       ),
     },

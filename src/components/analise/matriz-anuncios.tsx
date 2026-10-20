@@ -440,7 +440,7 @@ export function MatrizAnuncios({
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr className="border-b border-line">
-                <th className="sticky left-0 z-20 bg-panel text-left px-3 py-2 border-r border-line min-w-[220px]">
+                <th className="sticky left-0 z-20 bg-panel text-left px-3 py-2 border-r border-line min-w-[180px] sm:min-w-[220px]">
                   <span className="label">SKU · produto</span>
                 </th>
                 {semanas.map((w) => (
@@ -468,7 +468,7 @@ export function MatrizAnuncios({
                       <th
                         scope="row"
                         className="sticky left-0 z-10 bg-panel text-left px-3 py-2
-                                   border-r border-line font-normal max-w-[260px]"
+                                   border-r border-line font-normal max-w-[210px] sm:max-w-[280px]"
                       >
                         <span className="flex items-start gap-1.5">
                           {expandido ? (
@@ -476,7 +476,7 @@ export function MatrizAnuncios({
                           ) : (
                             <ChevronRight className="w-3.5 h-3.5 text-ink-3 mt-0.5 shrink-0" />
                           )}
-                          <FotoAnuncio mlb={g.mlbs[0]?.mlb} alt={g.titulo} tamanho={38} />
+                          <FotoAnuncio mlb={g.mlbs[0]?.mlb} alt={g.titulo} tamanho={32} />
                           <span className="min-w-0 flex-1">
                             <span className="num text-[12px] font-semibold text-ink block">
                               {g.sku}

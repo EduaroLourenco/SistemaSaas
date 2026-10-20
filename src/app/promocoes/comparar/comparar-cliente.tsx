@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Segmented } from "@/components/ui/controls";
@@ -287,6 +288,8 @@ function LinhaAnuncio({
         ) : (
           <ChevronRight className="w-3.5 h-3.5 shrink-0 text-ink-3" />
         )}
+
+        <FotoAnuncio mlb={a.mlb} alt={a.titulo ?? a.mlb} tamanho={32} />
 
         <span className="min-w-0 flex-1">
           <span className="block text-[12.5px] font-medium text-ink truncate">

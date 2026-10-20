@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -501,7 +502,13 @@ function Linha({
         className="grid w-full grid-cols-[1rem_minmax(0,1fr)] items-start gap-2 px-4 py-3 text-left hover:bg-panel-2 md:grid-cols-[1rem_minmax(0,2fr)_repeat(5,minmax(0,1fr))_9rem] md:items-center md:gap-3"
       >
         <Seta className="mt-0.5 h-4 w-4 text-ink-3 md:mt-0" aria-hidden />
-        <span className="min-w-0">
+        <span className="flex min-w-0 items-start gap-2">
+          {/* Só a linha de anúncio tem capa: SKU não é anúncio, e um
+              quadrado vazio em cada linha de SKU é ruído. */}
+          {l.nivel === "anuncio" && (
+            <FotoAnuncio mlb={l.codigo} alt={l.titulo ?? l.codigo} tamanho={32} />
+          )}
+          <span className="min-w-0">
           <span className="flex items-center gap-1.5">
             <span className="num text-[13px] font-semibold text-ink">{l.codigo}</span>
             <Badge tone={l.curva === "A" ? "brand" : "neutral"}>{l.curva}</Badge>
@@ -513,6 +520,7 @@ function Linha({
             {l.titulo || "—"}
           </span>
           <span className="block truncate text-[12px] text-ink-3">{l.onde}</span>
+          </span>
         </span>
 
         {/* Celular: um resumo em linha. Desktop: colunas. */}
