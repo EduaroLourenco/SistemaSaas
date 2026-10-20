@@ -250,8 +250,36 @@ function MobileTabBar({
   pathname: string;
   onMore: () => void;
 }) {
+  /*
+   * Encolhe quando se desce, volta quando se sobe ou se chega ao topo.
+   *
+   * A barra flutua sobre o conteúdo, então ela tapa linha de tabela
+   * enquanto se lê. Encolhida ela some do caminho sem sumir de vez — o
+   * dedo ainda acha, e o gesto de voltar é subir, que é o mesmo gesto de
+   * reler. A faixa morta de 6px evita o tremor em rolagem de precisão.
+   */
+  const [encolhida, setEncolhida] = React.useState(false);
+  React.useEffect(() => {
+    let anterior = window.scrollY;
+    let pendente = false;
+    const aoRolar = () => {
+      if (pendente) return;
+      pendente = true;
+      requestAnimationFrame(() => {
+        pendente = false;
+        const y = window.scrollY;
+        const d = y - anterior;
+        if (Math.abs(d) < 6) return;
+        anterior = y;
+        setEncolhida(y > 120 && d > 0);
+      });
+    };
+    window.addEventListener("scroll", aoRolar, { passive: true });
+    return () => window.removeEventListener("scroll", aoRolar);
+  }, []);
+
   const itemBase =
-    "relative flex items-center justify-center gap-2 h-11 rounded-full transition-all duration-200 select-none";
+    "relative flex items-center justify-center gap-2 rounded-full transition-all duration-300 select-none";
   return (
     <nav
       aria-label="Navegação"
@@ -259,12 +287,21 @@ function MobileTabBar({
       style={{ paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}
     >
       <div
-        className="pointer-events-auto flex items-center gap-1 rounded-full p-1.5 max-w-full overflow-x-auto"
+        className={cn(
+          "pointer-events-auto flex items-center gap-1 rounded-full max-w-full transition-all duration-300",
+          encolhida ? "p-1 scale-[.88] opacity-80" : "p-1.5 scale-100 opacity-100"
+        )}
         style={{
-          background: "color-mix(in srgb, var(--ink) 94%, transparent)",
-          backdropFilter: "saturate(140%) blur(12px)",
-          WebkitBackdropFilter: "saturate(140%) blur(12px)",
-          boxShadow: "0 10px 30px -8px rgba(10,22,56,.45), 0 2px 8px -2px rgba(10,22,56,.3)",
+          /* Translúcida: o conteúdo atravessa, e o desfoque mantém o
+             contraste do ícone. Opaca demais vira um bloco no meio da
+             leitura; transparente demais perde o ícone no fundo claro. */
+          background: "color-mix(in srgb, var(--ink) 82%, transparent)",
+          backdropFilter: "saturate(160%) blur(18px)",
+          WebkitBackdropFilter: "saturate(160%) blur(18px)",
+          boxShadow: encolhida
+            ? "0 6px 18px -8px rgba(10,22,56,.35)"
+            : "0 12px 34px -10px rgba(10,22,56,.5), 0 2px 8px -2px rgba(10,22,56,.3)",
+          transformOrigin: "bottom center",
         }}
       >
         {MOBILE_TABS.map((t) => {
@@ -276,17 +313,25 @@ function MobileTabBar({
               href={t.href}
               aria-current={active ? "page" : undefined}
               aria-label={t.label}
-              className={cn(itemBase, active ? "bg-white/[.16] px-4 text-white" : "w-11 text-white/65 active:text-white")}
+              className={cn(
+                itemBase,
+                encolhida ? "h-10" : "h-11",
+                active
+                  ? cn("bg-white/[.18] text-white", encolhida ? "w-10" : "px-4")
+                  : cn("text-white/65 active:text-white", encolhida ? "w-10" : "w-11")
+              )}
             >
               <Icon className="h-[21px] w-[21px] shrink-0" strokeWidth={active ? 2.3 : 1.9} />
-              {active && <span className="text-[13px] font-semibold whitespace-nowrap">{t.label}</span>}
+              {active && !encolhida && (
+                <span className="text-[13px] font-semibold whitespace-nowrap">{t.label}</span>
+              )}
             </Link>
           );
         })}
         <button
           onClick={onMore}
           aria-label="Mais telas"
-          className={cn(itemBase, "w-11 text-white/65 active:text-white")}
+          className={cn(itemBase, encolhida ? "h-10 w-10" : "h-11 w-11", "text-white/65 active:text-white")}
         >
           <Menu className="h-[21px] w-[21px]" strokeWidth={1.9} />
         </button>

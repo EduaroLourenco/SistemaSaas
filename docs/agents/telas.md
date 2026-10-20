@@ -29,6 +29,31 @@ não sobre paleta.
 - **Maior, mais visual, mais fácil de navegar.** Número grande onde a decisão
   está; detalhe atrás de um clique.
 
+## Texto é o inimigo
+
+A reclamação mais dura do dono, e a mais certeira: **legenda demais, subtexto
+demais, frase onde cabia número.** É o que mais faz a tela parecer gerada por
+máquina.
+
+Em ordem de severidade:
+
+- **Nenhuma frase explica o que o número já diz.** Se a linha mostra
+  `1.246 visitas  +54%`, não escreva embaixo que as visitas cresceram 54%
+  contra a semana passada.
+- **Um rótulo, não uma sentença.** `Receita`, não `Receita líquida do período
+  selecionado, já descontados os cancelados`.
+- **A procedência é um sufixo curto, não um parágrafo.** `leitura de 19/10`,
+  `últimos 30 dias`, `da API`. Três palavras. Precisou de mais? Vai para um
+  botão de ajuda que o usuário abre se quiser.
+- **Nada de nota de rodapé embaixo de gráfico.** O gráfico se explica pelo eixo
+  e por uma legenda de uma linha. Se não se explica, o errado é o gráfico.
+- **O motivo de um vazio cabe na própria célula**, em três ou quatro palavras:
+  `pausado desde 04/10`, `sem coleta`. Não em um quadro de aviso.
+- **Título de página não leva subtítulo descritivo.** O nome já diz.
+
+Antes de escrever qualquer frase na tela, pergunte: isto é dado, ou sou eu me
+explicando? Se for a segunda, corte.
+
 ## Formas: o que usar
 
 | O dado é | Use | Nunca |

@@ -8,7 +8,6 @@ import { Panel, Badge, Delta, EmptyState } from "@/components/ui/primitives";
 import { money, moneyShort, pct, count, nomeDoDia } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, CalendarDays, Trophy, TrendingDown, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { Disclosure } from "@/components/ui/disclosure";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import type { GrupoRecorte } from "@/lib/recorte";
 import { SeletorCanais } from "@/components/ui/seletor-canais";
@@ -223,7 +222,7 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
             <Cartao
               k="Receita líquida"
               v={money(h.receitaLiquida)}
-              sub={h.valorCancelado > 0 ? `${moneyShort(h.valorCancelado)} cancelados` : "sem cancelamento"}
+              sub={h.valorCancelado > 0 ? `${moneyShort(h.valorCancelado)} cancelados` : ""}
             />
             <Cartao
               k="Meta do dia"
@@ -234,17 +233,17 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
                     ? `sobrou ${moneyShort(h.sobraMeta)}`
                     : `faltou ${moneyShort(-h.sobraMeta)}`
                   : dados.metaPorConta
-                    ? "meta é do canal inteiro"
-                    : "sem meta para o dia"
+                    ? "meta do canal"
+                    : "sem meta"
               }
               tom={h.bateu === null ? undefined : h.bateu ? "up" : "down"}
             />
             <Cartao k="Pedidos" v={count(h.pedidosValidos)} sub={`${count(h.pedidos)} no total`} />
-            <Cartao k="Ticket médio" v={h.ticket != null ? money(h.ticket) : "—"} sub="líquida ÷ válidos" />
+            <Cartao k="Ticket médio" v={h.ticket != null ? money(h.ticket) : "—"} />
             <Cartao
               k="Conversão"
               v={h.conversao != null ? pct(h.conversao, 2) : "—"}
-              sub={h.visitas > 0 ? `${count(h.visitas)} visitas` : "sem visita registrada"}
+              sub={h.visitas > 0 ? `${count(h.visitas)} visitas` : "sem visita"}
             />
             <Cartao
               k="Ads"
@@ -252,16 +251,14 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
               sub={
                 h.ads > 0 && h.receitaLiquida > 0
                   ? `TACoS ${pct((h.ads / h.receitaLiquida) * 100, 1)}`
-                  : "sem investimento"
+                  : ""
               }
             />
           </div>
 
           {/* ── Contra o quê ── */}
           <Panel className="px-4 py-3 mb-3">
-            <p className="text-[12px] text-ink-3 mb-2">
-              {nomeDoDia(h.diaSemana)}, {br(h.data)} comparada com
-            </p>
+            <p className="label mb-2">Comparado com</p>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
               {dados.comparacoes.map((c) => (
                 <div key={c.rotulo} className="flex flex-col gap-0.5 min-w-0">
@@ -274,17 +271,14 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
                       tráfego de queda de conversão. */}
                   <div className="flex items-baseline gap-2">
                     <span className="num text-[12.5px] text-ink-3">
-                      {c.visitas != null ? `${count(c.visitas)} visitas` : "sem visita medida"}
+                      {c.visitas != null ? `${count(c.visitas)} vis.` : "sem visita"}
                     </span>
                     {c.variacaoVisitas != null && <Delta value={c.variacaoVisitas} />}
                   </div>
                 </div>
               ))}
             </div>
-            <Disclosure title="Por que comparar com o mesmo dia da semana" className="mt-2.5">
-              A comparação com a mesma {nomeDoDia(h.diaSemana)} evita a conclusão errada mais comum: segunda sempre
-              parece ruim ao lado de domingo.
-            </Disclosure>
+
           </Panel>
 
           <PorCanal linhas={dados.porCanal} />

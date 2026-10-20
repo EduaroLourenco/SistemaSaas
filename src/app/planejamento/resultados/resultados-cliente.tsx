@@ -329,9 +329,8 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
         {!l.skus && !f.canais.length && (
           <p className="mt-3 text-[13px]">
             <Link href="/planejamento" className="font-medium text-brand hover:underline">
-              Escolher os produtos e o canal desta ação no Planejamento
-            </Link>{" "}
-            <span className="text-ink-3">para que o resultado meça a ação, e não a loja inteira.</span>
+              Escolher produtos e canal
+            </Link>
           </p>
         )}
       </section>
@@ -384,8 +383,8 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
 
           <section>
             <h3 className="label mb-2">
-              Dia a dia, com os dois na mesma régua · roxo = {l.skus || f.canais.length ? "a ação" : "a loja"}
-              {l.restoAtual != null ? ` · cinza = ${l.produtosSaoDoCanal ? "outros canais" : "resto do canal"}` : ""}
+              Dia a dia · base 100 · roxo = {l.skus || f.canais.length ? "ação" : "loja"}
+              {l.restoAtual != null ? ` · cinza = ${l.produtosSaoDoCanal ? "outros canais" : "resto"}` : ""}
             </h3>
             <div className="h-[220px] rounded-r1 border border-line bg-panel p-2">
               <ResponsiveContainer width="100%" height="100%">
@@ -422,18 +421,13 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <p className="mt-1 text-[11px] text-ink-3">
-              A faixa cinza é o período anterior. As duas linhas partem de 100 no
-              primeiro dia: o que se compara é o movimento, não o tamanho.
-            </p>
+
           </section>
 
           {l.produtos.length > 0 && (
             <section>
               <h3 className="label mb-2">
-                {l.produtosSaoDoCanal
-                  ? "Produtos que mais venderam no período (a ação não tem produto escolhido)"
-                  : "Produto a produto"}
+                {l.produtosSaoDoCanal ? "Mais vendidos no período · ação sem produto escolhido" : "Por produto"}
               </h3>
               <TabelaProdutos produtos={l.produtos} />
             </section>
