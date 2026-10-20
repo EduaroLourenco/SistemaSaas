@@ -120,6 +120,25 @@ export async function lerPromocoesDoCanal(conta: Conta): Promise<PromocaoCanal[]
  * falha silenciosa do outro lado, e laço infinito num cron é pior que dado
  * incompleto.
  */
+/**
+ * O mesmo anúncio aparece mais de uma vez na mesma promoção.
+ *
+ * O canal devolve uma linha por OFERTA, não por anúncio: um MLB com
+ * variações, ou proposto duas vezes dentro da mesma campanha, volta
+ * repetido. O banco grava por (promoção, anúncio), e o Postgres recusa um
+ * upsert cujo lote toque a mesma chave duas vezes — "ON CONFLICT DO UPDATE
+ * command cannot affect row a second time". O lote inteiro se perde por
+ * causa de uma repetição.
+ *
+ * Fica a ÚLTIMA ocorrência: é a mais recente na ordem do cursor, e é a que
+ * o canal usaria se gravasse uma por vez.
+ */
+export function semRepetidos(itens: ItemPromocaoCanal[]): ItemPromocaoCanal[] {
+  const porCodigo = new Map<string, ItemPromocaoCanal>();
+  for (const i of itens) porCodigo.set(i.codigoExterno.toUpperCase(), i);
+  return [...porCodigo.values()];
+}
+
 export async function lerItensDaPromocao(
   conta: Conta,
   promocao: { codigo: string; tipo: string },

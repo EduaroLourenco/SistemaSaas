@@ -1,7 +1,7 @@
 import { abastecerProdutos } from "@/lib/produtos/abastecer";
 import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
-import { lerPromocoesDoCanal, lerItensDaPromocao } from "./promocoes-canal";
+import { lerPromocoesDoCanal, lerItensDaPromocao, semRepetidos } from "./promocoes-canal";
 import { paginar } from "@/lib/dados/paginar";
 import {
   catalogoCompleto,
@@ -738,10 +738,13 @@ async function gravarPromocoesDoCanal(
       continue;
     }
     if (!itens.length) continue;
+    /* Sem isto, um anúncio repetido na mesma promoção derruba o lote
+       inteiro com "cannot affect row a second time". */
+    const unicos = semRepetidos(itens);
     const { error: e2 } = await sb
       .from("promocao_canal_itens")
       .upsert(
-        itens.map((i) => ({
+        unicos.map((i) => ({
           operacao_id: ctx.operacaoId,
           promocao_id: p.id as string,
           codigo_externo: i.codigoExterno,
@@ -759,7 +762,7 @@ async function gravarPromocoesDoCanal(
       resumo.avisos.push(`Itens da promoção ${p.codigo}: ${e2.message}`);
       continue;
     }
-    resumo.promocoes.itens += itens.length;
+    resumo.promocoes.itens += unicos.length;
   }
 }
 
