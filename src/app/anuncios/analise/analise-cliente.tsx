@@ -45,9 +45,10 @@ import { analisar, LENTES, type AnuncioAnalisado } from "@/lib/analise";
 import { money, count, pct, delta as fmtDelta } from "@/lib/format";
 import {
   Bar,
+  BarChart,
   CartesianGrid,
-  ComposedChart,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -865,6 +866,51 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
    Raio-X do anúncio
    ══════════════════════════════════════════════════════════════ */
 
+/**
+ * A dica das duas faixas de semana.
+ *
+ * Mesma caixa em cima e embaixo: quem passa na semana 40 do preço e na
+ * semana 40 da venda espera ler a mesma coisa. Fora do JSX porque dois
+ * gráficos a usam.
+ */
+function DicaSemana({
+  active,
+  payload,
+  label,
+  serie,
+}: {
+  active?: boolean;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+  label?: string | number;
+  serie: { semana: string; intervalo: string }[];
+}) {
+  if (!active || !payload?.length) return null;
+  const s = serie.find((x) => x.semana === label);
+  return (
+    <div className="panel px-2.5 py-2 min-w-[170px]" style={{ boxShadow: "var(--sh-3)" }}>
+      <p className="text-[12px] font-semibold text-ink-2 mb-1.5">
+        {s ? `${s.semana} · ${s.intervalo}` : String(label ?? "")}
+      </p>
+      <div className="flex flex-col gap-1">
+        {payload.map((p, i) => (
+          <div key={i} className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-1.5 min-w-0">
+              <span
+                className="w-2 h-2 rounded-[2px] shrink-0"
+                style={{ background: p.color }}
+              />
+              <span className="text-[12px] text-ink-2 truncate">{p.name}</span>
+            </span>
+            <span className="num text-[12px] font-semibold text-ink">
+              {p.name === "Unidades" ? count(Number(p.value)) : money(Number(p.value))}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RaioX({
   item,
   onClose,
@@ -1017,85 +1063,37 @@ function RaioX({
         </div>
       </div>
 
-      {/* vendas × preço */}
+      {/* preço e venda, nas mesmas semanas e em eixos separados */}
       <div className="px-4 py-3.5 border-b border-line">
         <div className="flex items-center justify-between gap-3 mb-2">
-          <p className="label">Vendas e preço por semana</p>
+          <p className="label">Preço e venda por semana</p>
           <Delta value={m.tendencia} />
         </div>
-        <div className="h-[210px] -ml-2">
+
+        <div className="h-[140px] -ml-2">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={serie} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
+            <LineChart data={serie} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
               <CartesianGrid {...GRID} />
-              <XAxis dataKey="semana" {...AXIS} />
-              <YAxis yAxisId="v" {...AXIS} width={34} />
+              {/* O eixo de semana aparece só embaixo: repetir os mesmos
+                  rótulos nos dois gasta altura e não acrescenta nada. */}
+              <XAxis dataKey="semana" {...AXIS} tick={false} height={4} />
               <YAxis
-                yAxisId="p"
-                orientation="right"
                 {...AXIS}
                 width={56}
+                domain={["auto", "auto"]}
                 tickFormatter={(v: number) => money(v)}
               />
-              <Tooltip
-                cursor={{ fill: "var(--panel-3)" }}
-                content={({ active, payload, label }) => {
-                  if (!active || !payload || !payload.length) return null;
-                  const s = serie.find((x) => x.semana === label);
-                  return (
-                    <div
-                      className="panel px-2.5 py-2 min-w-[170px]"
-                      style={{ boxShadow: "var(--sh-3)" }}
-                    >
-                      <p className="text-[12px] font-semibold text-ink-2 mb-1.5">
-                        {s ? `${s.semana} · ${s.intervalo}` : String(label ?? "")}
-                      </p>
-                      <div className="flex flex-col gap-1">
-                        {payload.map((p, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center justify-between gap-3"
-                          >
-                            <span className="flex items-center gap-1.5 min-w-0">
-                              <span
-                                className="w-2 h-2 rounded-[2px] shrink-0"
-                                style={{ background: p.color }}
-                              />
-                              <span className="text-[12px] text-ink-2 truncate">
-                                {p.name}
-                              </span>
-                            </span>
-                            <span className="num text-[12px] font-semibold text-ink">
-                              {p.name === "Vendas"
-                                ? count(Number(p.value))
-                                : money(Number(p.value))}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-              <Bar
-                yAxisId="v"
-                dataKey="vendas"
-                name="Vendas"
-                fill="var(--s1)"
-                radius={[2, 2, 0, 0]}
-                isAnimationActive={false}
-              />
+              <Tooltip content={<DicaSemana serie={serie} />} cursor={{ stroke: "var(--line-2)" }} />
               <Line
-                yAxisId="p"
                 type="monotone"
                 dataKey="preco"
                 name="Preço praticado"
                 stroke="var(--s3)"
-                strokeWidth={1.75}
+                strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
               />
               <Line
-                yAxisId="p"
                 type="monotone"
                 dataKey="ideal"
                 name="Preço ideal"
@@ -1105,15 +1103,34 @@ function RaioX({
                 dot={false}
                 isAnimationActive={false}
               />
-            </ComposedChart>
+            </LineChart>
           </ResponsiveContainer>
         </div>
+
+        <div className="h-[104px] -ml-2 mt-1">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={serie} margin={{ top: 2, right: 4, left: 0, bottom: 0 }}>
+              <CartesianGrid {...GRID} />
+              <XAxis dataKey="semana" {...AXIS} />
+              <YAxis {...AXIS} width={56} allowDecimals={false} />
+              <Tooltip content={<DicaSemana serie={serie} />} cursor={{ fill: "var(--panel-3)" }} />
+              <Bar
+                dataKey="vendas"
+                name="Unidades"
+                fill="var(--s1)"
+                radius={[2, 2, 0, 0]}
+                isAnimationActive={false}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
         <Legend
           className="mt-2"
           items={[
-            { label: "Vendas", color: "var(--s1)" },
             { label: "Preço praticado", color: "var(--s3)" },
             { label: "Preço ideal", color: "var(--ink-3)" },
+            { label: "Unidades", color: "var(--s1)" },
           ]}
         />
       </div>

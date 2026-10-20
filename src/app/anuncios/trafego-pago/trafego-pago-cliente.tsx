@@ -11,6 +11,7 @@ import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, Button } from "@/components/ui/primitives";
 import { Tabs, Input } from "@/components/ui/controls";
 import { Disclosure } from "@/components/ui/disclosure";
+import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { cn } from "@/lib/utils";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import { AlertCircle, TrendingDown } from "lucide-react";
@@ -183,7 +184,9 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
     catalogo?: string | null;
     status?: string | null;
   }) => (
-    <div className="min-w-0">
+    <div className="flex items-start gap-2 min-w-0">
+      <FotoAnuncio mlb={l.mlb} alt={l.titulo} tamanho={34} />
+      <div className="min-w-0">
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="num text-[12.5px] font-medium text-ink">{l.sku || "sem SKU"}</span>
         <span className="num text-[11.5px] text-ink-3">{l.mlb}</span>
@@ -197,6 +200,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         {l.titulo || "—"}
       </p>
       <p className="text-[11px] text-ink-3">{l.conta}</p>
+      </div>
     </div>
   );
 

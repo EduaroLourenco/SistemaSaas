@@ -968,6 +968,15 @@ export type AnuncioCompleto = {
   motivoPausa: string[];
   link: string | null;
   catalogo: boolean;
+  /**
+   * Miniatura de capa, em https.
+   *
+   * Vem junto no /items, sem chamada a mais. `secure_thumbnail` e não
+   * `thumbnail`: o segundo é http puro, e o navegador bloqueia imagem
+   * http dentro de página https — a foto simplesmente não apareceria em
+   * produção.
+   */
+  foto: string | null;
 };
 
 type ItemBruto = {
@@ -984,6 +993,8 @@ type ItemBruto = {
   sub_status?: string[];
   shipping?: { free_shipping?: boolean; logistic_type?: string } | null;
   attributes?: { id?: string; value_name?: string | null }[];
+  secure_thumbnail?: string | null;
+  thumbnail?: string | null;
 };
 
 /**
@@ -1004,6 +1015,20 @@ export function skuDoItem(b: {
   if (antigo) return antigo;
   const atributo = b.attributes?.find((a) => a.id === "SELLER_SKU")?.value_name;
   return atributo?.trim() || null;
+}
+
+/**
+ * A capa do anúncio, sempre em https.
+ *
+ * O campo `thumbnail` do canal volta http em parte do acervo; dentro de
+ * uma página https o navegador bloqueia a imagem sem erro visível, e a
+ * tela fica com o quadrado vazio. Quando só existe a versão http, trocar
+ * o esquema funciona: é o mesmo CDN, que serve os dois.
+ */
+function fotoDoItem(b: ItemBruto): string | null {
+  const url = b.secure_thumbnail?.trim() || b.thumbnail?.trim();
+  if (!url) return null;
+  return url.startsWith("http://") ? "https://" + url.slice(7) : url;
 }
 
 /** `21800 g` → 21.8. A API devolve peso com unidade colada no texto. */
@@ -1074,6 +1099,7 @@ export async function catalogoCompleto({
         motivoPausa: b.sub_status ?? [],
         link: b.permalink ?? null,
         catalogo: Boolean(b.catalog_listing),
+        foto: fotoDoItem(b),
       });
     }
   }

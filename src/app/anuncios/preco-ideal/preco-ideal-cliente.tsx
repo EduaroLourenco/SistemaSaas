@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import {
   BarraFiltros,
@@ -254,12 +255,15 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
       width: "290px",
       sortValue: (l) => l.titulo,
       cell: (l) => (
-        <span className="min-w-0 block">
-          <span className="block font-medium text-ink break-words max-w-[260px]">
-            {l.titulo}
-          </span>
-          <span className="block text-[12px] text-ink-3 truncate">
-            {l.categoria} · {l.tipo}
+        <span className="flex items-start gap-2.5 min-w-0">
+          <FotoAnuncio mlb={l.mlb} alt={l.titulo} tamanho={34} />
+          <span className="min-w-0 block">
+            <span className="block font-medium text-ink break-words max-w-[230px]">
+              {l.titulo}
+            </span>
+            <span className="block text-[12px] text-ink-3 truncate">
+              {l.categoria} · {l.tipo}
+            </span>
           </span>
         </span>
       ),

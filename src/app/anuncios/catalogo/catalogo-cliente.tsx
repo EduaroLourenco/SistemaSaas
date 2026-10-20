@@ -2,6 +2,7 @@
 
 import { linkDoAnuncio } from "@/lib/links";
 import * as React from "react";
+import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { DisputaPainel } from "./disputa-painel";
@@ -50,7 +51,6 @@ import {
   ExternalLink,
   Info,
   Loader2,
-  Package,
   RefreshCw,
   Search,
   SearchX,
@@ -290,9 +290,7 @@ export default function CatalogoAnuncios({
       sortValue: (i) => i.titulo,
       cell: (i) => (
         <span className="flex items-center gap-2.5 min-w-0">
-          <span className="w-7 h-7 rounded-r1 bg-panel-3 border border-line flex items-center justify-center shrink-0">
-            <Package className="w-3.5 h-3.5 text-ink-3" strokeWidth={1.75} />
-          </span>
+          <FotoAnuncio mlb={i.mlb} alt={i.titulo} tamanho={34} />
           <span className="min-w-0">
             <span className="block font-medium text-ink break-words max-w-[230px]">
               {i.titulo}

@@ -152,6 +152,7 @@ async function gravarCatalogo(
     frete_gratis: a.freteGratis,
     logistica: a.logistica,
     url: a.link,
+    foto: a.foto,
     sincronizado_em: new Date().toISOString(),
   }));
 
