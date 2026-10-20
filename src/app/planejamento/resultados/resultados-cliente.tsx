@@ -8,6 +8,7 @@ import {
   Line,
   LineChart,
   ReferenceArea,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,7 +19,7 @@ import { Panel, Badge, EmptyState } from "@/components/ui/primitives";
 import { Segmented } from "@/components/ui/controls";
 import { Disclosure } from "@/components/ui/disclosure";
 import { AXIS, GRID } from "@/components/ui/chart";
-import { money, moneyShort, count } from "@/lib/format";
+import { money, moneyShort, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type {
   DadosResultados,
@@ -305,10 +306,10 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
           </div>
         )}
         {f.checklist.length > 0 && (
-          <div className="mt-3">
-            <p className="text-[12px] text-ink-3">
+          <details className="mt-3">
+            <summary className="cursor-pointer text-[12px] text-ink-3">
               Passos: {feitos} de {f.checklist.length} feitos
-            </p>
+            </summary>
             <ul className="mt-1 flex flex-col gap-0.5 text-[13px]">
               {f.checklist.map((c, i) => (
                 <li key={i} className={cn("flex items-center gap-1.5", c.feito ? "text-ink" : "text-ink-3")}>
@@ -316,7 +317,7 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         )}
         {(f.fechamento.funcionou || f.fechamento.problemas || f.fechamento.proximoPasso) && (
           <div className="mt-3 flex flex-col gap-1 text-[13px]">
@@ -383,39 +384,48 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
 
           <section>
             <h3 className="label mb-2">
-              Dia a dia · roxo = {l.skus || f.canais.length ? "a ação" : "a loja"}
-              {l.restoAtual != null ? ` · cinza = ${l.produtosSaoDoCanal ? "outros canais" : "resto do canal"} (eixo da direita)` : ""}
+              Dia a dia, com os dois na mesma régua · roxo = {l.skus || f.canais.length ? "a ação" : "a loja"}
+              {l.restoAtual != null ? ` · cinza = ${l.produtosSaoDoCanal ? "outros canais" : "resto do canal"}` : ""}
             </h3>
             <div className="h-[220px] rounded-r1 border border-line bg-panel p-2">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={l.serie} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
+                <LineChart data={indexar(l.serie)} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
                   <CartesianGrid {...GRID} />
                   <ReferenceArea yAxisId="a" x1={l.anteriorInicio} x2={l.anteriorFim} fill="var(--panel-3)" fillOpacity={0.7} />
                   <XAxis dataKey="data" {...AXIS} tickFormatter={curta} minTickGap={24} />
-                  <YAxis yAxisId="a" {...AXIS} width="auto" tickFormatter={(v) => moneyShort(Number(v))} />
-                  {l.restoAtual != null && <YAxis yAxisId="r" orientation="right" {...AXIS} width="auto" tickFormatter={(v) => moneyShort(Number(v))} />}
+                  <YAxis yAxisId="a" {...AXIS} width="auto" tickFormatter={(v) => `${Math.round(Number(v))}`} />
                   <Tooltip
                     content={({ active, payload, label }) =>
                       active && payload?.length ? (
                         <div className="panel px-2.5 py-2 text-[12px]" style={{ boxShadow: "var(--sh-3)" }}>
                           <p className="mb-1 font-semibold text-ink-2">{dataBr(String(label))}</p>
-                          {payload.map((p) => (
-                            <p key={String(p.dataKey)} className="num">
-                              {p.dataKey === "acao" ? "ação" : "resto"} {money(Number(p.value))}
-                            </p>
-                          ))}
+                          {payload.map((p) => {
+                            const bruto = (p.payload as Record<string, number>)[
+                              p.dataKey === "acao" ? "acaoBruto" : "restoBruto"
+                            ];
+                            return (
+                              <p key={String(p.dataKey)} className="num">
+                                {p.dataKey === "acao" ? "ação" : "resto"} {money(Number(bruto))}{" "}
+                                <span className="text-ink-3">({Math.round(Number(p.value))})</span>
+                              </p>
+                            );
+                          })}
                         </div>
                       ) : null
                     }
                   />
+                  <ReferenceLine yAxisId="a" y={100} stroke="var(--line-2)" />
                   <Line yAxisId="a" dataKey="acao" stroke="var(--brand)" strokeWidth={2} dot={false} isAnimationActive={false} />
                   {l.restoAtual != null && (
-                    <Line yAxisId="r" dataKey="resto" stroke="var(--ink-3)" strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+                    <Line yAxisId="a" dataKey="resto" stroke="var(--ink-3)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
                   )}
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <p className="mt-1 text-[11px] text-ink-3">A faixa cinza é o período anterior.</p>
+            <p className="mt-1 text-[11px] text-ink-3">
+              A faixa cinza é o período anterior. As duas linhas partem de 100 no
+              primeiro dia: o que se compara é o movimento, não o tamanho.
+            </p>
           </section>
 
           {l.produtos.length > 0 && (
@@ -432,6 +442,27 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
       )}
     </div>
   );
+}
+
+/**
+ * As duas séries na mesma régua: 100 no primeiro dia com valor.
+ *
+ * Antes cada uma tinha o seu eixo, um à esquerda e outro à direita. O
+ * alinhamento entre duas escalas assim é arbitrário — a tela desenhava uma
+ * correlação que não estava no dado. Indexar resolve sem perder o número:
+ * o valor em reais continua no tooltip.
+ */
+function indexar(serie: { data: string; acao: number; resto: number }[]) {
+  const base = (campo: "acao" | "resto") => serie.find((d) => d[campo] > 0)?.[campo] ?? 0;
+  const bAcao = base("acao");
+  const bResto = base("resto");
+  return serie.map((d) => ({
+    data: d.data,
+    acaoBruto: d.acao,
+    restoBruto: d.resto,
+    acao: bAcao ? (d.acao / bAcao) * 100 : 0,
+    resto: bResto ? (d.resto / bResto) * 100 : 0,
+  }));
 }
 
 function Linha3({
@@ -462,14 +493,16 @@ function Linha3({
 function TabelaProdutos({ produtos }: { produtos: ProdutoResultado[] }) {
   return (
     <div className="overflow-x-auto rounded-r1 border border-line bg-panel">
-      <table className="w-full min-w-[640px] text-[13px]">
+      <table className="w-full min-w-[820px] text-[13px]">
         <thead>
           <tr className="text-[12px] text-ink-3">
             <th className="px-3 py-2 text-left font-semibold">Produto</th>
-            <th className="px-3 py-2 text-right font-semibold">Receita antes → durante</th>
-            <th className="px-3 py-2 text-right font-semibold">Variação</th>
+            <th className="px-3 py-2 text-right font-semibold">Visitas</th>
+            <th className="px-3 py-2 text-right font-semibold">Conversão</th>
             <th className="px-3 py-2 text-right font-semibold">Unidades</th>
-            <th className="px-3 py-2 text-right font-semibold">Preço médio vendido</th>
+            <th className="px-3 py-2 text-right font-semibold">Receita</th>
+            <th className="px-3 py-2 text-right font-semibold">Variação</th>
+            <th className="px-3 py-2 text-right font-semibold">Preço médio</th>
           </tr>
         </thead>
         <tbody className="num">
@@ -477,18 +510,40 @@ function TabelaProdutos({ produtos }: { produtos: ProdutoResultado[] }) {
             const v = varPct(p.agora.receita, p.antes.receita);
             return (
               <tr key={p.chave} className="border-t border-line">
-                <td className="max-w-[320px] px-3 py-2">
+                <td className="sticky left-0 z-[1] max-w-[320px] bg-panel px-3 py-2">
                   <span className="block font-semibold text-ink">{p.chave}</span>
                   <span className="block break-words font-sans text-[12px] text-ink-3">{p.titulo}</span>
+                </td>
+                {/* Visita e conversão primeiro: é a ordem da pergunta — veio
+                    menos gente, ou a mesma gente comprou menos? */}
+                <td className="px-3 py-2 text-right">
+                  {p.antes.visitas == null && p.agora.visitas == null ? (
+                    <span className="font-sans text-[12px] text-ink-3">sem medição</span>
+                  ) : (
+                    <>
+                      <span className="text-ink-3">{p.antes.visitas == null ? "—" : count(p.antes.visitas)}</span> →{" "}
+                      <span className="font-semibold">{p.agora.visitas == null ? "—" : count(p.agora.visitas)}</span>
+                    </>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  {p.antes.conversao == null && p.agora.conversao == null ? (
+                    <span className="font-sans text-[12px] text-ink-3">—</span>
+                  ) : (
+                    <>
+                      <span className="text-ink-3">{p.antes.conversao == null ? "—" : pct(p.antes.conversao, 2)}</span> →{" "}
+                      <span className="font-semibold">{p.agora.conversao == null ? "—" : pct(p.agora.conversao, 2)}</span>
+                    </>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  {count(p.antes.unidades)} → {count(p.agora.unidades)}
                 </td>
                 <td className="px-3 py-2 text-right">
                   <span className="text-ink-3">{moneyShort(p.antes.receita)}</span> → <span className="font-semibold">{moneyShort(p.agora.receita)}</span>
                 </td>
-                <td className={cn("px-3 py-2 text-right", v != null && (v < 0 ? "text-down" : "text-up"))}>
+                <td className={cn("px-3 py-2 text-right font-semibold", v != null && (v < 0 ? "text-down" : "text-up"))}>
                   {p.antes.receita > 0 ? pc(v) : p.agora.receita > 0 ? "novo" : "—"}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  {count(p.antes.unidades)} → {count(p.agora.unidades)}
                 </td>
                 <td className="px-3 py-2 text-right">
                   {p.antes.preco != null ? money(p.antes.preco) : "—"} → {p.agora.preco != null ? money(p.agora.preco) : "—"}

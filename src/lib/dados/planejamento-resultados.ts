@@ -45,11 +45,23 @@ export type Feito = {
   fechamento: { funcionou: string; problemas: string; proximoPasso: string };
 };
 
+export type LadoProduto = {
+  receita: number;
+  unidades: number;
+  preco: number | null;
+  /** Null quando não houve coleta de visita no período — não é zero. */
+  visitas: number | null;
+  /** Unidades ÷ visitas. Null sem visita medida. */
+  conversao: number | null;
+};
+
 export type ProdutoResultado = {
   chave: string;
   titulo: string;
-  antes: { receita: number; unidades: number; preco: number | null };
-  agora: { receita: number; unidades: number; preco: number | null };
+  /** O SKU, mesmo quando a linha é um anúncio: é por ele que se procura. */
+  sku: string;
+  antes: LadoProduto;
+  agora: LadoProduto;
 };
 
 export type LinhaResultado = {
@@ -207,6 +219,45 @@ export async function carregarResultadosPlanejamento(): Promise<DadosResultados>
   }
   const validas = vendas.filter((l) => !l.cancelado);
 
+  /*
+   * Visita por anúncio e por dia, na mesma janela das vendas.
+   *
+   * É o que faltava para a tela responder "vendeu menos porque veio menos
+   * gente, ou porque a mesma gente comprou menos?". Sem ela, toda queda
+   * parecia a mesma coisa.
+   *
+   * Só é lida quando há janela: tela sem nenhuma ação medida não paga uma
+   * varredura de desempenho diário.
+   */
+  const visitaPorDia = new Map<string, number>();
+  if (inicios.length) {
+    const brutas = await paginar(() =>
+      sb
+        .from("anuncio_desempenho_diario")
+        .select("anuncio_id,data,visitas")
+        .eq("operacao_id", op.id)
+        .gte("data", inicios[0])
+        .lte("data", hoje)
+        .order("anuncio_id")
+        .order("data")
+    ).catch(() => [] as unknown[]);
+    for (const v of brutas as { anuncio_id: string; data: string; visitas: number | null }[]) {
+      if (v.visitas == null) continue;
+      const k = `${v.anuncio_id}|${String(v.data).slice(0, 10)}`;
+      visitaPorDia.set(k, (visitaPorDia.get(k) ?? 0) + Number(v.visitas));
+    }
+  }
+  /* Os anúncios de cada SKU, para somar visita quando a ação é por SKU. */
+  const anunciosDoSku = new Map<string, string[]>();
+  for (const a of anuncios as An[]) {
+    const k = (a.sku_canal ?? "").toUpperCase();
+    if (!k) continue;
+    const lista = anunciosDoSku.get(k) ?? [];
+    lista.push(a.id);
+    anunciosDoSku.set(k, lista);
+  }
+  const anuncioPorCodigo = new Map((anuncios as An[]).map((a) => [a.codigo_externo.toUpperCase(), a]));
+
   /* ── Ações do planejamento ── */
   const linhas: LinhaResultado[] = itens.map((item) => {
     const est = estrategiaDe(item);
@@ -299,19 +350,45 @@ export async function carregarResultadosPlanejamento(): Promise<DadosResultados>
         {
           chave: est.anuncios.length ? anuncioPorId.get(k)?.codigo_externo ?? k : k,
           titulo: est.anuncios.length ? anuncioPorId.get(k)?.titulo ?? "" : tituloSku.get(k) ?? "",
-          antes: { receita: 0, unidades: 0, preco: null },
-          agora: { receita: 0, unidades: 0, preco: null },
+          sku: est.anuncios.length ? (anuncioPorId.get(k)?.sku_canal ?? "").toUpperCase() : k,
+          antes: { receita: 0, unidades: 0, preco: null, visitas: null, conversao: null },
+          agora: { receita: 0, unidades: 0, preco: null, visitas: null, conversao: null },
         };
       const lado = l.data >= p.inicio ? pr.agora : pr.antes;
       lado.receita += l.receita;
       lado.unidades += l.quantidade;
       porProduto.set(k, pr);
     }
+    /* A visita de um produto: do anúncio, ou de todos os anúncios do SKU. */
+    const visitasDe = (pr: ProdutoResultado, de: string, ate: string): number | null => {
+      const ids = est.anuncios.length
+        ? [anuncioPorCodigo.get(pr.chave.toUpperCase())?.id].filter((x): x is string => !!x)
+        : anunciosDoSku.get(pr.chave.toUpperCase()) ?? [];
+      if (!ids.length) return null;
+      let total = 0;
+      let mediu = false;
+      for (const id of ids) {
+        for (let d = de; d <= ate; d = somarDias(d, 1)) {
+          const v = visitaPorDia.get(`${id}|${d}`);
+          if (v == null) continue;
+          mediu = true;
+          total += v;
+        }
+      }
+      return mediu ? total : null;
+    };
+    const fecha = (lado: ProdutoResultado["antes"], visitas: number | null) => ({
+      ...lado,
+      receita: r2(lado.receita),
+      preco: lado.unidades ? r2(lado.receita / lado.unidades) : null,
+      visitas,
+      conversao: visitas && visitas > 0 ? r2((lado.unidades * 100) / visitas) : null,
+    });
     const listaProdutos = [...porProduto.values()]
       .map((pr) => ({
         ...pr,
-        antes: { ...pr.antes, receita: r2(pr.antes.receita), preco: pr.antes.unidades ? r2(pr.antes.receita / pr.antes.unidades) : null },
-        agora: { ...pr.agora, receita: r2(pr.agora.receita), preco: pr.agora.unidades ? r2(pr.agora.receita / pr.agora.unidades) : null },
+        antes: fecha(pr.antes, visitasDe(pr, p.anteriorInicio, p.anteriorFim)),
+        agora: fecha(pr.agora, visitasDe(pr, p.inicio, p.fim)),
       }))
       .sort((a, b) => b.agora.receita + b.antes.receita - (a.agora.receita + a.antes.receita))
       .slice(0, 40);
