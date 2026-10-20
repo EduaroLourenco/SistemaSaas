@@ -71,7 +71,14 @@ const TABELA = [
   { codigo: "IMP_06101", nome: "Caderneta com Suporte de Celular", classico: 31.84, premium: 34.75 },
   /* Sem código na planilha; o vínculo sai do catálogo do canal. */
   { nome: "Moleskine Copa", classico: 25, premium: 27, familia: /^MOLCOPA\d+$/ },
-  { nome: "Moleskine full", classico: 29, premium: 29.9, familia: /^MOL-FLORAL-\d+$/, porAnuncio: /^Caderno /i },
+  { nome: "Moleskine full — unidade", classico: 29, premium: 29.9, familia: /^MOL-FLORAL-\d+$/, porAnuncio: /^Caderno /i },
+  /*
+   * O kit de 10 não estava na planilha: o Eduardo definiu R$ 299,00 em
+   * 19/10, que é dez vezes o piso do avulso. Na prática o kit fica fora de
+   * promoção — ele é publicado a R$ 299,35, ou seja, R$ 29,94 por caderno,
+   * quatro centavos acima do piso da unidade. Nasceu com o desconto dentro.
+   */
+  { nome: "Moleskine full — kit de 10", classico: 299, premium: 299, familia: /^MOL-FLORAL-\d+$/, porAnuncio: /^Kit 10 /i },
 ];
 
 const { data: anuncios, error: ea } = await sb
