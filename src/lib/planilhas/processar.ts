@@ -337,6 +337,9 @@ export async function processarPlanilha(
   const findCol = (exatos: string[], contem: string[] = []) =>
     localizar(headerRow, exatos, contem);
 
+  const brl = (v: number | null) =>
+    v == null ? "sem preço" : `R$ ${v.toFixed(2).replace(".", ",")}`;
+
   const skuColIndex = findCol(["sku"], ["sku"]);
   const mlbColIndex = findCol(
     ["item_id", "mlb", "número do anúncio", "código do anúncio"],
@@ -414,6 +417,28 @@ export async function processarPlanilha(
       if (extractText(row1[c]).trim().toUpperCase() === "DISCOUNT_PERCENTAGE") return c;
     }
     return findCol(["discount_percentage"], []);
+  })();
+
+  /*
+   * O subtipo da proposta, na linha técnica.
+   *
+   * `AUTOMATIC` é a relâmpago automática: o canal define o preço e a
+   * coluna de preço final, apesar de dizer "Você pode alterar esta
+   * coluna", NÃO aceita número diferente do proposto. Quem reescreve ali
+   * recebe de volta "Devido a um erro, não foi possível programar este
+   * produto" — e a linha fica fora da campanha.
+   *
+   * Aconteceu em 19/10/2026 na Bom de Compras: sete anúncios voltaram
+   * recusados, todos AUTOMATIC, todos com o preço de tabela escrito por
+   * cima da proposta do canal. As outras oito linhas do mesmo arquivo,
+   * que não são automáticas, mantiveram o preço e passaram.
+   */
+  const subTipoColIndex = (() => {
+    const row1 = (targetWorksheet!.getRow(1).values as any[]) ?? [];
+    for (let c = 1; c < row1.length; c++) {
+      if (extractText(row1[c]).trim().toUpperCase() === "PROMO_SUB_TYPE") return c;
+    }
+    return -1;
   })();
 
   const campanhaPropria =
@@ -522,7 +547,7 @@ export async function processarPlanilha(
         ? extractText(row.getCell(tipoAnuncioColIndex).value).trim()
         : "N/A";
 
-    const result = processItem(
+    let result = processItem(
       rawMlb,
       rawSku,
       saleFee,
@@ -535,6 +560,33 @@ export async function processarPlanilha(
       undefined,
       campanhaPropria
     );
+
+    /*
+     * Proposta de preço TRAVADO: decide, não reescreve.
+     *
+     * O motor calculou o nosso mínimo e quis escrevê-lo na planilha. Numa
+     * relâmpago automática isso faz o canal recusar a linha inteira. Aqui
+     * a pergunta vira binária, que é o que a campanha permite: a proposta
+     * do canal cobre o nosso mínimo? Cobre, participa no preço dele; não
+     * cobre, fica de fora com o motivo escrito.
+     */
+    const subTipo =
+      subTipoColIndex !== -1
+        ? extractText(row.getCell(subTipoColIndex).value).trim().toUpperCase()
+        : "";
+    const precoTravado = subTipo === "AUTOMATIC";
+    if (precoTravado && result.newPrice !== null) {
+      const minimo = result.newPrice;
+      const cobre = finalPrice != null && finalPrice >= minimo - 0.01;
+      result = cobre
+        ? { ...result, newPrice: null }
+        : {
+            ...result,
+            action: acaoNegativa,
+            newPrice: null,
+            pendencia: `oferta relâmpago automática: o canal propõe ${brl(finalPrice)} e o mínimo é ${brl(minimo)} — nesta campanha o preço não pode ser alterado`,
+          };
+    }
 
     /*
      * SÓ SE ESCREVE NA LINHA QUE AINDA ESTÁ EM ABERTO.
