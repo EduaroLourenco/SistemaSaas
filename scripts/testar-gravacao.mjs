@@ -13,8 +13,16 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { processarPlanilha } from "./lib/processar.mjs";
 
-const URL_BASE = process.env.SUPABASE_URL;
-const CHAVE = process.env.SUPABASE_KEY;
+/* Os nomes do projeto, com os antigos ainda aceitos para quem exporta à mão. */
+for (const linha of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
+  const corte = linha.trim();
+  const i = corte.indexOf("=");
+  if (i > 0 && !corte.startsWith("#") && !process.env[corte.slice(0, i)]) {
+    process.env[corte.slice(0, i)] = corte.slice(i + 1).trim();
+  }
+}
+const URL_BASE = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const CHAVE = process.env.SUPABASE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 const OPERACAO = "00000000-0000-0000-0000-000000000101";
 
 const h = {

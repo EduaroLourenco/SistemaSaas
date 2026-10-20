@@ -10,8 +10,16 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { processarPlanilha } from "./lib/processar.mjs";
 
-const URL_BASE = process.env.SUPABASE_URL;
-const CHAVE = process.env.SUPABASE_KEY;
+/* Os nomes do projeto, com os antigos ainda aceitos. */
+for (const linha of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
+  const corte = linha.trim();
+  const i = corte.indexOf("=");
+  if (i > 0 && !corte.startsWith("#") && !process.env[corte.slice(0, i)]) {
+    process.env[corte.slice(0, i)] = corte.slice(i + 1).trim();
+  }
+}
+const URL_BASE = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const CHAVE = process.env.SUPABASE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!URL_BASE || !CHAVE) {
   console.error("faltam SUPABASE_URL/SUPABASE_KEY");
   process.exit(1);

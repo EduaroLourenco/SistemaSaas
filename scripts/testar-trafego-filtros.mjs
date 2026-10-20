@@ -27,7 +27,7 @@ try {
   assert.equal(conferirInvestimento([{ data: "2026-10-01", investimento_ads: 0 }], "2026-10-01", "2026-10-02", 10).diario, 0);
 
   const vazio = await stub("vazio", "module.exports={}");
-  const banco = await stub("banco", `exports.clienteServidor=async()=>({from(t){return {select(){return this},order(){return this},range:async(a,b)=>({data:globalThis.__trafego.tabelas[t].slice(a,b+1),error:null})}}});`);
+  const banco = await stub("banco", `exports.clienteServidor=async()=>({from(t){return {select(){return this},order(){return this},eq(){return this},in(){return this},gte(){return this},lte(){return this},not(){return this},limit(){return this},range:async(a,b)=>({data:(globalThis.__trafego.tabelas[t]??[]).slice(a,b+1),error:null})}}});`);
   const margem = await stub("margem", `exports.carregarBaseMargem=async(f)=>{globalThis.__trafego.filtro=f;return {itens:globalThis.__trafego.margens[f.canalId??'todos']}};exports.agregar=b=>b.itens;`);
   const contas = await stub("contas", `exports.carregarContasRecorte=async()=>globalThis.__trafego.contas;`);
   const jiti = createJiti(import.meta.url, { moduleCache: false, alias: {

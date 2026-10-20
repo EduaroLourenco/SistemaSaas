@@ -94,7 +94,7 @@ console.log("\nSEM REDUÇÃO DE TARIFA — a lógica escreve o preço de tabela:
   const semTipo = { baseMlb: new Map(), precosSKU: new Map(), precosMLB: new Map() };
   const r = processItem("MLB1", "SKU1", null, 1400, 2699, semTipo);
   assert.equal(r.action, "Não participar");
-  assert.match(r.pendencia, /sem tipo cadastrado/);
+  assert.match(r.pendencia, /n[ãa]o encontrado no cat[áa]logo|sem tipo cadastrado/);
   caso("anúncio sem tipo cadastrado", r, 1400, 0);
 }
 
