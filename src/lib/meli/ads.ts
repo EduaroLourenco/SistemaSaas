@@ -49,6 +49,13 @@ export type AnuncioAds = {
   emCatalogo: boolean;
   ganhandoCatalogo: boolean;
   logistica: string | null;
+  /**
+   * Estado do anúncio dentro da campanha, como o canal informa.
+   *
+   * Null quando a resposta não traz o campo — é o que acontecia até
+   * agora, e a tela trata como "não sei", nunca como "está no ar".
+   */
+  status: string | null;
   metricas: MetricasAds;
 };
 
@@ -157,6 +164,11 @@ export async function anuncios(conta: Conta, adv: Anunciante, de: string, ate: s
     item_id: string; campaign_id: number; title?: string; price?: number;
     catalog_listing?: boolean; buy_box_winner?: boolean; logistic_type?: string;
     metrics?: MetricasBrutas;
+    /* O estado do anúncio DENTRO da campanha. O canal já mudou o nome
+       deste campo uma vez; ler os três evita perder de novo. */
+    status?: string | null;
+    ad_status?: string | null;
+    item_status?: string | null;
   };
   const lista = await paginado<Bruto>(
     `/marketplace/advertising/${adv.site}/advertisers/${adv.id}/product_ads/ads/search` +
@@ -172,6 +184,7 @@ export async function anuncios(conta: Conta, adv: Anunciante, de: string, ate: s
     emCatalogo: Boolean(a.catalog_listing),
     ganhandoCatalogo: Boolean(a.buy_box_winner),
     logistica: a.logistic_type ?? null,
+    status: a.status ?? a.ad_status ?? a.item_status ?? null,
     metricas: metricasDe(a.metrics),
   }));
 }
@@ -307,7 +320,7 @@ export async function sincronizarAds(
     campanha: nomeCampanha.get(a.campanhaId) ?? `Campanha ${a.campanhaId}`,
     inicio: de,
     fim: ate,
-    status: null,
+    status: a.status,
     impressoes: Math.round(a.metricas.impressoes),
     cliques: Math.round(a.metricas.cliques),
     investimento: Number(a.metricas.investimento.toFixed(2)),

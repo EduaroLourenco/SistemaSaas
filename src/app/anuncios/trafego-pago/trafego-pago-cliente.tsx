@@ -98,6 +98,23 @@ const TOM_ACAO: Record<AcaoAds, "up" | "down" | "warn" | "neutral"> = {
   manter: "neutral",
 };
 
+/**
+ * O estado da mídia, quando ele muda a leitura da linha.
+ *
+ * "ativa" não ganha etiqueta: é o esperado numa aba de tráfego pago, e
+ * marcar todo mundo faz a marca parar de ser lida. O que precisa saltar
+ * é o gasto de um anúncio cuja mídia JÁ está parada — ele aparece na
+ * lista pelo histórico da janela, não porque haja algo a fazer.
+ */
+function EtiquetaMidia({ midia }: { midia?: LinhaAnuncioAds["midia"] }) {
+  if (midia !== "parada") return null;
+  return (
+    <span title="o canal diz que o anúncio está pausado ou desativado na campanha">
+      <Badge tone="neutral">mídia já parada</Badge>
+    </span>
+  );
+}
+
 const SITUACAO: Record<
   LinhaAnuncioAds["situacao"],
   { rotulo: string; tom: "up" | "down" | "warn" | "neutral" } | null
@@ -183,6 +200,9 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
     tipo: string;
     catalogo?: string | null;
     status?: string | null;
+    /* Nem toda lista que usa esta célula vem com mídia (a de oportunidades
+       é por anúncio, não por campanha). Sem a etiqueta, nada muda. */
+    midia?: LinhaAnuncioAds["midia"];
   }) => (
     <div className="flex items-start gap-2 min-w-0">
       <FotoAnuncio mlb={l.mlb} alt={l.titulo} tamanho={34} />
@@ -195,6 +215,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         {/* Pausado no meio de uma lista que manda desligar ou escalar: a
             ação já não cabe, e sem a etiqueta ele parece igual aos outros. */}
         <TagAnuncio status={l.status} />
+        <EtiquetaMidia midia={l.midia} />
       </div>
       <p className="text-[12px] text-ink-2 break-words max-w-[280px]">
         {l.titulo || "—"}
