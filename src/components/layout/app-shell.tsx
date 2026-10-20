@@ -219,6 +219,30 @@ function NavTree({
 
 /* ══ Barra inferior do mobile ════════════════════════════════ */
 
+/**
+ * A barra do telefone: uma pílula que flutua, não um rodapé colado.
+ *
+ * ── Por que mudou ──
+ *
+ * Era uma faixa branca grudada na borda, com cinco colunas iguais e
+ * rótulo embaixo de cada ícone. Funciona e é esquecível — a mesma barra
+ * de qualquer painel administrativo. O dono trabalha no telefone andando,
+ * e pediu a estética dos aplicativos que ele usa todo dia: Instagram,
+ * iFood. Lá a barra é uma peça escura que flutua sobre o conteúdo, e só o
+ * item ativo ganha fundo e nome.
+ *
+ * ── As decisões ──
+ *
+ * Escura sobre uma interface clara, porque ela precisa se destacar do
+ * conteúdo sem roubar a atenção com cor de marca — o roxo fica reservado
+ * para o que é dado.
+ *
+ * Só o ativo mostra o rótulo. Cinco rótulos permanentes é o que faz a
+ * barra parecer formulário; um só diz onde você está sem poluir.
+ *
+ * Alvo de toque de 44px mesmo no ícone sozinho, que é o mínimo para
+ * acertar andando.
+ */
 function MobileTabBar({
   pathname,
   onMore,
@@ -226,12 +250,23 @@ function MobileTabBar({
   pathname: string;
   onMore: () => void;
 }) {
+  const itemBase =
+    "relative flex items-center justify-center gap-2 h-11 rounded-full transition-all duration-200 select-none";
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-panel border-t border-line"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      aria-label="Navegação"
+      className="md:hidden fixed inset-x-0 bottom-0 z-40 flex justify-center pointer-events-none px-3"
+      style={{ paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}
     >
-      <div className="grid grid-cols-5">
+      <div
+        className="pointer-events-auto flex items-center gap-1 rounded-full p-1.5 max-w-full overflow-x-auto"
+        style={{
+          background: "color-mix(in srgb, var(--ink) 94%, transparent)",
+          backdropFilter: "saturate(140%) blur(12px)",
+          WebkitBackdropFilter: "saturate(140%) blur(12px)",
+          boxShadow: "0 10px 30px -8px rgba(10,22,56,.45), 0 2px 8px -2px rgba(10,22,56,.3)",
+        }}
+      >
         {MOBILE_TABS.map((t) => {
           const Icon = t.icon;
           const active = pathname === t.href;
@@ -239,22 +274,21 @@ function MobileTabBar({
             <Link
               key={t.href}
               href={t.href}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 h-14 transition-colors",
-                active ? "text-brand" : "text-ink-3"
-              )}
+              aria-current={active ? "page" : undefined}
+              aria-label={t.label}
+              className={cn(itemBase, active ? "bg-white/[.16] px-4 text-white" : "w-11 text-white/65 active:text-white")}
             >
-              <Icon className="w-[18px] h-[18px]" strokeWidth={active ? 2.2 : 1.8} />
-              <span className="text-[12px] font-medium">{t.label}</span>
+              <Icon className="h-[21px] w-[21px] shrink-0" strokeWidth={active ? 2.3 : 1.9} />
+              {active && <span className="text-[13px] font-semibold whitespace-nowrap">{t.label}</span>}
             </Link>
           );
         })}
         <button
           onClick={onMore}
-          className="flex flex-col items-center justify-center gap-1 h-14 text-ink-3"
+          aria-label="Mais telas"
+          className={cn(itemBase, "w-11 text-white/65 active:text-white")}
         >
-          <Menu className="w-[18px] h-[18px]" strokeWidth={1.8} />
-          <span className="text-[12px] font-medium">Mais</span>
+          <Menu className="h-[21px] w-[21px]" strokeWidth={1.9} />
         </button>
       </div>
     </nav>
@@ -434,7 +468,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         id="conteudo"
         tabIndex={-1}
-        className={cn("min-w-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 transition-[padding] duration-200", menu.aberto && "md:pl-[var(--rail)]")}
+        className={cn("min-w-0 pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0 transition-[padding] duration-200", menu.aberto && "md:pl-[var(--rail)]")}
         style={{ paddingTop: "var(--topbar)" }}
       >
         {children}
