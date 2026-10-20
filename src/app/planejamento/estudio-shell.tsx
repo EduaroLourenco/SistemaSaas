@@ -20,6 +20,17 @@ import {
 } from "lucide-react";
 import { type Dados, type Item, formatarData } from "@/lib/planejamento/modelo";
 import type { Oportunidade } from "@/lib/planejamento/sazonal";
+import Hoje from "./hoje";
+
+/** Quanto falta da campanha, em palavras. */
+function restante(c: Item, hoje: string) {
+  const d = (a: string, b: string) =>
+    Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 864e5);
+  if (c.fim < hoje) return `encerrada há ${d(c.fim, hoje)} dias`;
+  if (c.inicio > hoje) return `começa em ${d(hoje, c.inicio)} dias`;
+  const resta = d(hoje, c.fim);
+  return resta === 0 ? "último dia" : `faltam ${resta} dia${resta > 1 ? "s" : ""}`;
+}
 
 /* A confirmação vive no topo da campanha: excluir leva junto as ações dela. */
 export default function EstudioShell({
@@ -46,6 +57,8 @@ export default function EstudioShell({
   excluir,
   proximas,
   planejar,
+  hoje,
+  abrirItem,
   children,
 }: {
   dados: Dados;
@@ -71,6 +84,8 @@ export default function EstudioShell({
   excluir: (i: Item) => Promise<void>;
   proximas: Oportunidade[];
   planejar: (o: Oportunidade) => void;
+  hoje: string;
+  abrirItem: (i: Item) => void;
   children: ReactNode;
 }) {
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null);
@@ -94,18 +109,15 @@ export default function EstudioShell({
   return (
     <>
       <header className="st-topbar">
-        <div className="st-brand-icon">
-          <Layers size={20} />
-        </div>
-        <div>
-          <span>MARKETING & OPERAÇÃO</span>
-          <h1>Estúdio de campanhas</h1>
-        </div>
+        {/* "MARKETING & OPERAÇÃO / Estúdio de campanhas" saiu: sobrescrito
+            com um nome que o menu não usa, e duas linhas de chapéu antes
+            do primeiro dado. */}
+        <h1>Planejamento</h1>
         <div className="st-top-actions">
           <span className="st-company">{dados.empresa}</span>
           <button className="st-secondary" onClick={datas}>
             <Sparkles size={15} />
-            Explorar datas
+            Datas
           </button>
           <button
             className="st-primary"
@@ -119,17 +131,6 @@ export default function EstudioShell({
       </header>
       <div className="st-layout">
         <aside className="st-sidebar">
-          <div className="st-sidebar-label">
-            SEU ESPAÇO{" "}
-            <button
-              className="st-icon"
-              onClick={criarCampanha}
-              aria-label="Criar campanha"
-              disabled={ocupado}
-            >
-              <Plus size={16} />
-            </button>
-          </div>
           <button
             className={`st-project-nav ${!selecionada ? "selected" : ""}`}
             onClick={() => selecionar("")}
@@ -143,7 +144,10 @@ export default function EstudioShell({
             onClick={() => selecionar("soltas")}
           >
             <FolderOpen size={16} />
-            <span>Ideias avulsas</span>
+            <span>Ações soltas</span>
+            <small>
+              {dados.itens.filter((i) => i.natureza === "acao" && !i.campanha_id).length}
+            </small>
           </button>
           <div className="st-sidebar-label">CAMPANHAS</div>
           <div className="st-project-list">
@@ -158,6 +162,10 @@ export default function EstudioShell({
                   style={{ background: c.cor }}
                 />
                 <span>{c.titulo}</span>
+                {c.inicio <= hoje &&
+                  c.fim >= hoje &&
+                  c.status !== "Concluída" &&
+                  c.status !== "Cancelada" && <em className="st-no-ar">no ar</em>}
                 <small>
                   {dados.itens.filter((i) => i.campanha_id === c.id).length}
                 </small>
@@ -165,11 +173,7 @@ export default function EstudioShell({
             ))}
           </div>
           {!campanhas.length && (
-            <p className="st-sidebar-empty">
-              Sua próxima campanha
-              <br />
-              começa por aqui.
-            </p>
+            <p className="st-sidebar-empty">Nenhuma campanha ainda.</p>
           )}
           <button
             className="st-sidebar-add"
@@ -179,31 +183,26 @@ export default function EstudioShell({
             <Plus size={14} />
             Adicionar campanha
           </button>
-          <div className="st-sidebar-label">BIBLIOTECA</div>
           <button
             className={`st-project-nav ${aba === "Grupos de produtos" ? "selected" : ""}`}
             onClick={grupos}
           >
             <Layers size={16} />
-            <span>Mixes de produtos</span>
+            <span>Grupos de produtos</span>
           </button>
           <button className="st-project-nav" onClick={tipos}>
             <Settings2 size={16} />
-            <span>Seus tipos de ação</span>
+            <span>Tipos de ação</span>
           </button>
           {proximas[0] && (
-            <div className="st-season-note">
-              <span>
-                <Sparkles size={14} />
-                NO HORIZONTE
-              </span>
+            <button
+              className="st-season-note"
+              onClick={() => planejar(proximas[0])}
+            >
               <small>{formatarData(proximas[0].data)}</small>
               <strong>{proximas[0].nome}</strong>
-              <p>Uma oportunidade para a sua próxima campanha.</p>
-              <button onClick={() => planejar(proximas[0])}>
-                Desenvolver ideia <ArrowUpRight size={14} />
-              </button>
-            </div>
+              <ArrowUpRight size={14} />
+            </button>
           )}
         </aside>
         <section className="st-workspace" aria-label="Área de planejamento">
@@ -218,15 +217,11 @@ export default function EstudioShell({
               { "--project-color": campanha?.cor ?? "#9381ba" } as CSSProperties
             }
           >
-            <div className="st-project-eyebrow">
-              <span className="st-project-orbit">
-                <Layers size={20} />
-              </span>
-              <span>{campanha ? "CAMPANHA" : "VISÃO DO SEU PLANEJAMENTO"}</span>
-              {campanha && (
+            {campanha && (
+              <div className="st-project-eyebrow">
                 <span className="st-project-status">{campanha.status}</span>
-              )}
-            </div>
+              </div>
+            )}
             {campanha && confirmarExclusao === campanha.id && (
               <div className="pl-delete-confirm" role="alert" style={{ position: "static", borderRadius: 12, marginBottom: 12 }}>
                 <p>
@@ -258,18 +253,15 @@ export default function EstudioShell({
               <div>
                 <h2>
                   {aba === "Grupos de produtos"
-                    ? "Mixes que combinam"
+                    ? "Grupos de produtos"
                     : (campanha?.titulo ??
                       (selecionada === "soltas"
-                        ? "Ideias para colocar no mundo"
-                        : "Seu próximo movimento"))}
+                        ? "Ações soltas"
+                        : "Planejamento"))}
                 </h2>
-                <p>
-                  {campanha?.detalhes.objetivo ||
-                    (selecionada === "soltas"
-                      ? "Nem toda boa ideia precisa nascer dentro de uma campanha."
-                      : "Um espaço para conectar ideias, produtos e canais.")}
-                </p>
+                {campanha?.detalhes.objetivo && (
+                  <p>{campanha.detalhes.objetivo}</p>
+                )}
               </div>
               {campanha ? (
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -290,21 +282,7 @@ export default function EstudioShell({
                     <Trash2 size={14} /> Excluir campanha
                   </button>
                 </div>
-              ) : (
-                <div className="st-mini-progress">
-                  <div>
-                    <span>{acoes.length} ações</span>
-                    <span>{feitas} concluídas</span>
-                  </div>
-                  <i>
-                    <b
-                      style={{
-                        width: `${acoes.length ? (feitas / acoes.length) * 100 : 0}%`,
-                      }}
-                    />
-                  </i>
-                </div>
-              )}
+              ) : null}
             </div>
             {campanha && (
               <div className="st-project-details">
@@ -313,7 +291,12 @@ export default function EstudioShell({
                   {formatarData(campanha.inicio)} — {formatarData(campanha.fim)}
                 </span>
                 <span>·</span>
-                <span>{acoes.length} ações conectadas</span>
+                <span>{restante(campanha, hoje)}</span>
+                <span>·</span>
+                <span>
+                  {acoes.length} ações
+                  {feitas ? `, ${feitas} concluídas` : ""}
+                </span>
                 {campanha.detalhes.responsavel && (
                   <>
                     <span>·</span>
@@ -323,6 +306,9 @@ export default function EstudioShell({
               </div>
             )}
           </div>
+          {!campanha && selecionada !== "soltas" && aba !== "Grupos de produtos" && (
+            <Hoje dados={dados} hoje={hoje} abrir={abrirItem} />
+          )}
           <div className="st-toolbar">
             <nav aria-label="Visualizações do planejamento">
               {tabs.map(({ nome, titulo, icon: Icon }) => (

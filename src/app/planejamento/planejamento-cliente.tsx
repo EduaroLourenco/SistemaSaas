@@ -399,6 +399,8 @@ export default function Planejamento({
         }}
         proximas={proximas}
         planejar={planejar}
+        hoje={hoje}
+        abrirItem={abrirFicha}
       >
         {mostrarFiltros && aba !== "Grupos de produtos" && (
           <div className="pl-filters">
