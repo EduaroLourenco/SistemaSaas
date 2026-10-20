@@ -1,0 +1,247 @@
+===============================================================
+ COMO USAR A ABA ANÚNCIOS
+ Mercado Livre > Anúncios
+===============================================================
+
+Em uma frase: esta tela responde "qual produto meu está com problema
+de preço ou de anúncio, e quanto isso está custando".
+
+Ela NÃO é a tela de "quanto vendi" (isso é Vendas) nem de "por que
+caiu" (isso é Vendas > Queda). Aqui é preço e anúncio.
+
+
+---------------------------------------------------------------
+ 1. O QUE VOCÊ VÊ AO ABRIR
+---------------------------------------------------------------
+
+Em cima, um número grande em vermelho:
+
+    DEIXOU DE GANHAR
+    R$ 35.464
+    156 anúncios vendidos abaixo da sua tabela, em 8 semanas
+
+Leia assim: nas últimas 8 semanas, somando tudo que você vendeu mais
+barato do que diz a sua Fórmula base, deixaram de entrar R$ 35.464.
+
+NÃO é prejuízo. É a diferença entre o que você cobrou e o que a sua
+própria tabela de preço manda cobrar. Pode ter sido de propósito
+(campanha, queima de estoque) — a tela não sabe o motivo, só o valor.
+
+Do lado, quatro números de contexto do período: receita, unidades,
+visitas e conversão.
+
+
+---------------------------------------------------------------
+ 2. OS CINCO BOTÕES — É POR AQUI QUE SE COMEÇA
+---------------------------------------------------------------
+
+Logo abaixo tem uma fila de botões. Cada um é um problema diferente.
+Clique num deles e a tabela de baixo passa a mostrar SÓ os anúncios
+daquele problema. Clique de novo para voltar a ver todos.
+
+Quando você clica, aparece embaixo "Como calculei" e "O que fazer".
+
+  VENDENDO ABAIXO DA TABELA
+    O preço médio que o cliente pagou ficou 3% ou mais abaixo do
+    preço da sua Fórmula base.
+    -> Subir o preço, ou aceitar o desconto sabendo quanto ele custa.
+
+  PREÇO ACIMA DA TABELA
+    O contrário: o preço pago ficou 3% ou mais acima da tabela.
+    Sobra margem, mas pode estar perdendo venda pro concorrente.
+    -> Conferir o preço do concorrente antes de manter.
+
+  MUITA VISITA, POUCA VENDA
+    O anúncio está no ar, recebe mais visita que a média da sua
+    carteira, e converte abaixo da média.
+    Chega gente e ela não compra.
+    -> Olhar foto, título, ficha técnica e preço.
+
+  VENDE BEM, FALTA VISITA
+    O contrário: recebe pouca visita e converte acima da média,
+    com pelo menos duas vendas no período.
+    Quem chega compra; falta chegar gente.
+    -> Vale mídia paga e posição. É o melhor lugar pra colocar verba.
+
+  SEM PREÇO DE TABELA
+    O anúncio não está na Fórmula base. A tela não consegue dizer
+    nada sobre o preço dele.
+    -> Cadastrar o SKU na Fórmula base. Enquanto não cadastrar, esse
+       anúncio fica fora de toda análise de preço.
+
+Um anúncio pode estar em mais de um botão ao mesmo tempo. É normal:
+"muita visita, pouca venda" e "vendendo abaixo da tabela" podem ser o
+mesmo anúncio — e aí o diagnóstico é mais forte, não mais confuso.
+
+
+---------------------------------------------------------------
+ 3. A TABELA — UMA LINHA POR PRODUTO
+---------------------------------------------------------------
+
+A linha é o PRODUTO (o SKU), não o anúncio. Você tem em média 4
+anúncios por produto (clássico e premium, duas contas), e ler um por
+um dividiria a venda do mesmo colchão em quatro pedaços.
+
+Na primeira coluna: a foto de capa, o código do SKU, o nome, quantos
+anúncios ele tem, e etiquetas coloridas com os problemas dele.
+
+As etiquetas são a versão curta dos botões:
+    barato demais   = vendendo abaixo da tabela
+    caro demais     = preço acima da tabela
+    não fecha       = muita visita, pouca venda
+    falta visita    = vende bem, falta visita
+    sem tabela      = não está na Fórmula base
+    fora do ar      = nenhum anúncio desse produto está ativo
+
+Mostra no máximo duas etiquetas por linha, as mais caras primeiro.
+
+Depois vêm as colunas. Se esquecer o que alguma significa, tem um
+link no rodapé da tabela: "O que cada coluna quer dizer".
+
+    8 SEMANAS
+      Uma curvinha com o formato das últimas semanas. Verde subindo,
+      vermelho descendo. Ela mostra o FORMATO, não o valor.
+      Buraco no traço = semana sem leitura. Não é zero: é que
+      ninguém mediu aquela semana.
+      Em cima da tabela dá pra trocar o que a curva desenha:
+      Receita, Visitas ou Preço pago.
+
+    VISITAS       quantas pessoas abriram o anúncio
+    VENDAS        unidades vendidas
+    CONVERSÃO     de cada 100 visitas, quantas viraram venda
+    RECEITA       quanto entrou
+
+    PREÇO PAGO
+      O que o cliente pagou em média (receita ÷ unidades).
+      Já vem com desconto de campanha e cupom embutidos.
+      Travessão = não vendeu nada no período.
+
+    DIFERENÇA DA TABELA
+      Quanto o preço pago ficou acima (+) ou abaixo (-) da sua
+      Fórmula base.
+      Cinza = menos de 3%, que é ruído de arredondamento.
+      Vermelho = abaixo. Amarelo = acima.
+      Travessão = não vendeu, ou o produto não está na tabela.
+
+    DEIXOU DE GANHAR
+      (preço da tabela - preço pago) x unidades, só nas semanas em
+      que vendeu abaixo. É a parcela desse produto no número
+      vermelho lá de cima.
+
+    ESTOQUE
+      Saldo da última sincronização.
+      "sob encomenda" = o canal não controla estoque desse anúncio
+      (você declarou um número alto pra não ficar sem anúncio).
+      Travessão = o canal não informou.
+
+
+---------------------------------------------------------------
+ 4. ABRINDO UM PRODUTO
+---------------------------------------------------------------
+
+Clique na linha do produto: ela abre e mostra os anúncios dele, um
+por linha, cada um com os próprios números. É aqui que você descobre
+QUAL dos quatro anúncios do mesmo colchão está puxando o resultado.
+
+Cada anúncio mostra o MLB, se é Clássico ou Premium, a conta, e
+etiqueta se estiver pausado.
+
+Os anúncios que não tiveram nenhuma visita nem venda no período não
+abrem linha: eles viram um resumo tipo "3 sem visita nem venda no
+período · 2 fora do ar". É de propósito — oito linhas de zero
+enterrariam os dois que venderam.
+
+Clique no ANÚNCIO (não no produto) e abre o raio-X dele: histórico
+semana a semana, gráfico de preço e de unidades, linha do tempo do
+que aconteceu, e elasticidade.
+
+
+---------------------------------------------------------------
+ 5. COMPARAR DOIS OU TRÊS ANÚNCIOS
+---------------------------------------------------------------
+
+Com o produto aberto, marque a caixinha de 2 ou 3 anúncios. Aparece
+um botão "Comparar" no topo da tabela, que põe eles lado a lado.
+
+Serve pra responder: clássico ou premium vende melhor? São Paulo ou
+a conta a prazo?
+
+
+---------------------------------------------------------------
+ 6. OS FILTROS DE CIMA
+---------------------------------------------------------------
+
+    CONTA     filtra por conta do Mercado Livre
+    SEMANAS   o período da análise (4, 8, 12... até tudo)
+    BUSCA     SKU, título ou MLB
+
+Atenção numa coisa: mudar o período MUDA as médias. "Acima da média"
+quer dizer acima da média daquele recorte. Se você olhar 4 semanas e
+depois 12, os mesmos anúncios podem mudar de botão. Isso é certo, não
+é bug.
+
+Os filtros de conta e tipo NÃO mudam as médias — elas são sempre da
+carteira inteira. Senão "acima da média" viraria "acima da média do
+filtro", que não significa nada.
+
+
+---------------------------------------------------------------
+ 7. DE ONDE VEM CADA NÚMERO
+---------------------------------------------------------------
+
+    Visitas, vendas, receita
+      Do relatório semanal de desempenho do Mercado Livre.
+
+    Preço pago
+      Receita ÷ unidades, dos pedidos. Histórico completo.
+
+    Preço de tabela
+      Da sua Fórmula base: o preço daquele SKU na comissão padrão
+      daquele anúncio. Usa a versão mais recente da tabela.
+
+    Estoque e situação do anúncio
+      Da sincronização diária com o canal.
+
+    Foto
+      Da capa do anúncio no Mercado Livre.
+
+
+---------------------------------------------------------------
+ 8. O QUE A TELA AINDA NÃO SABE
+---------------------------------------------------------------
+
+Vale saber pra não cobrar dela o que ela não tem:
+
+  - A Probel cobre 100% dos anúncios ativos na Fórmula base.
+    Bom de Compras cobre 67 de 129 ativos.
+    Chopeiras Memo não tem Fórmula base nenhuma — lá a tela mostra
+    visitas, vendas e receita, e travessão em tudo que é preço.
+
+  - O preço de vitrine (o que está publicado, mesmo sem venda) só
+    existe a partir de outubro de 2026. Semana anterior a isso fica
+    com travessão.
+
+  - A comparação com a tabela usa a versão de hoje da Fórmula base
+    para todas as semanas do período. Se a tabela mudou no meio, a
+    semana antiga está sendo comparada com a tabela nova.
+
+
+---------------------------------------------------------------
+ ROTEIRO RÁPIDO (5 MINUTOS POR SEMANA)
+---------------------------------------------------------------
+
+  1. Olhe o número vermelho de cima. Subiu em relação à semana
+     passada?
+
+  2. Clique em VENDENDO ABAIXO DA TABELA e ordene pela coluna
+     "Deixou de ganhar". Os três primeiros são onde está o dinheiro.
+     Abra cada um e veja se foi um anúncio específico.
+
+  3. Clique em VENDE BEM, FALTA VISITA. Essa lista é curta e é onde
+     mídia paga rende mais.
+
+  4. Clique em MUITA VISITA, POUCA VENDA. Pegue os de maior visita e
+     abra o anúncio no Mercado Livre pra olhar foto e título.
+
+  5. Clique em SEM PREÇO DE TABELA. Se a lista estiver crescendo,
+     tem SKU novo que ninguém cadastrou na Fórmula base.

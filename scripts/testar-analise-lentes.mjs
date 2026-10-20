@@ -75,10 +75,10 @@ function anuncio(mlb, { status = "ativo", semanas = [] } = {}) {
   assert.equal(a.metricas.preco, 0, "sem venda e sem vitrine, não há preço medido");
   assert.equal(a.metricas.desvio, 0, "desvio sem preço medido é zero, não -100%");
   assert.ok(
-    !a.lentes.includes("fora_do_preco"),
-    "não pode acusar fora do preço um anúncio cujo preço ninguém leu",
+    !a.lentes.includes("abaixo_tabela"),
+    "não pode acusar preço fora da tabela num anúncio cujo preço ninguém leu",
   );
-  assert.ok(!a.lentes.includes("sangrando"), "nem sangrando");
+  assert.ok(!a.lentes.includes("acima_tabela"), "nem acima da tabela");
 }
 
 /* ══ 2. Com leitura de vitrine, o desvio existe ══ */
@@ -96,7 +96,7 @@ function anuncio(mlb, { status = "ativo", semanas = [] } = {}) {
   const a = itens[0];
   assert.equal(a.metricas.preco, 850, "vale a última semana COM leitura");
   assert.ok(a.metricas.desvio < -14, `esperava ~-15%, veio ${a.metricas.desvio}`);
-  assert.ok(a.lentes.includes("fora_do_preco"), "15% abaixo da tabela é fora do preço");
+  assert.ok(a.lentes.includes("abaixo_tabela"), "15% abaixo da tabela acende a lente");
 }
 
 /* ══ 3. A joia precisa de duas vendas ══
@@ -117,11 +117,11 @@ function anuncio(mlb, { status = "ativo", semanas = [] } = {}) {
   const por = new Map(itens.map((i) => [i.mlb, i]));
 
   assert.ok(
-    por.get("MLB_JOIA").lentes.includes("joias"),
+    por.get("MLB_JOIA").lentes.includes("converte_bem"),
     "três vendas em nove visitas, com tráfego abaixo da média, é joia",
   );
   assert.ok(
-    !por.get("MLB_SORTE").lentes.includes("joias"),
+    !por.get("MLB_SORTE").lentes.includes("converte_bem"),
     "uma venda em três visitas é sorte, não diagnóstico",
   );
 }
@@ -144,11 +144,11 @@ function anuncio(mlb, { status = "ativo", semanas = [] } = {}) {
   const { itens } = analisar([parado, vivo, pequeno], SEMANAS);
   const por = new Map(itens.map((i) => [i.mlb, i]));
   assert.ok(
-    por.get("MLB_VIVO").lentes.includes("desperdicio"),
+    por.get("MLB_VIVO").lentes.includes("nao_fecha"),
     "o anúncio no ar com tráfego alto e conversão baixa é desperdício",
   );
   assert.ok(
-    !por.get("MLB_PARADO").lentes.includes("desperdicio"),
+    !por.get("MLB_PARADO").lentes.includes("nao_fecha"),
     "anúncio pausado não recebe visita: mandar revisar a foto é trabalho à toa",
   );
 }

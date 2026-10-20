@@ -698,7 +698,11 @@ function RaioX({
                   className="w-1 rounded-full shrink-0"
                   style={{
                     background:
-                      l.id === "joias" ? "var(--up)" : l.id === "fora_do_preco" ? "var(--warn)" : "var(--down)",
+                      l.id === "converte_bem"
+                        ? "var(--up)"
+                        : l.id === "acima_tabela" || l.id === "sem_tabela"
+                          ? "var(--warn)"
+                          : "var(--down)",
                   }}
                 />
                 <span className="min-w-0">

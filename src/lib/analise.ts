@@ -85,11 +85,11 @@ export type Anuncio = {
 
 export type Lente =
   | "todos"
-  | "sangrando"
-  | "joias"
-  | "falsa_tracao"
-  | "desperdicio"
-  | "fora_do_preco";
+  | "abaixo_tabela"
+  | "acima_tabela"
+  | "nao_fecha"
+  | "converte_bem"
+  | "sem_tabela";
 
 export type Metricas = {
   visitas: number;
@@ -302,11 +302,52 @@ export function analisar(
       const lentes: Lente[] = ["todos"];
       const motivos: Partial<Record<Lente, string>> = {};
 
-      if (subsidio > 0 && !elasticidadePositiva) {
-        lentes.push("sangrando");
-        motivos.sangrando = `Vendeu abaixo do preço ideal e o volume não reagiu — ${fmtBrl(
-          subsidio
-        )} de margem deixada na mesa.`;
+      /*
+       * Três pontos de folga antes de chamar de desvio. A tabela é
+       * arredondada e o preço pago embute frete e cupom; abaixo disso é
+       * ruído de cálculo, não decisão de preço.
+       */
+      const FOLGA = 3;
+      const temPreco = precoIdeal > 0 && preco > 0;
+
+      if (!precoIdeal) {
+        lentes.push("sem_tabela");
+        motivos.sem_tabela =
+          "Este anúncio não está na Fórmula base, então não dá para comparar o preço dele com nada.";
+      }
+
+      if (temPreco && desvio <= -FOLGA) {
+        lentes.push("abaixo_tabela");
+        /* O quanto o desconto pesa na receita era a antiga "falsa
+           tração". É o tamanho do problema, não outro problema. */
+        const pesado = vendas > 0 && metricas.subsidioPct >= 3;
+        motivos.abaixo_tabela =
+          `Vendeu a ${fmtBrl(preco)}, e a sua tabela diz ${fmtBrl(precoIdeal)} — ` +
+          `${fmtPct(Math.abs(desvio))}% abaixo.` +
+          (subsidio > 0 ? ` São ${fmtBrl(subsidio)} que deixaram de entrar.` : "") +
+          (pesado
+            ? ` O desconto já é ${fmtPct(metricas.subsidioPct)}% da receita deste anúncio.`
+            : "") +
+          (elasticidadePositiva
+            ? " Em compensação, a venda reagiu ao preço menor."
+            : subsidio > 0
+              ? " E o volume não reagiu ao preço menor."
+              : "");
+      }
+
+      if (temPreco && desvio >= FOLGA) {
+        lentes.push("acima_tabela");
+        motivos.acima_tabela =
+          `Vendeu a ${fmtBrl(preco)}, e a sua tabela diz ${fmtBrl(precoIdeal)} — ` +
+          `${fmtPct(desvio)}% acima. Sobra margem, mas pode estar perdendo venda para o concorrente.`;
+      }
+
+      if (desperdicioTrafego) {
+        lentes.push("nao_fecha");
+        motivos.nao_fecha =
+          `Recebeu ${visitas.toLocaleString("pt-BR")} visitas e fechou ${vendas} — ` +
+          `${fmtPct(conversao)}% contra ${fmtPct(mediaConversao)}% da média. ` +
+          "Chega gente e ela não compra: o problema está no anúncio, não no alcance.";
       }
 
       if (
@@ -315,31 +356,11 @@ export function analisar(
         conversao > mediaConversao &&
         vendas > 0
       ) {
-        lentes.push("joias");
-        motivos.joias = `Converte a ${fmtPct(conversao)}% contra a média de ${fmtPct(
-          mediaConversao
-        )}% — ${vendas} vendas em ${visitas.toLocaleString("pt-BR")} visitas — e recebe menos tráfego que a média.`;
-      }
-
-      if (vendas > 0 && subsidio > 0 && metricas.subsidioPct >= 3) {
-        lentes.push("falsa_tracao");
-        motivos.falsa_tracao = `O subsídio consome ${fmtPct(
-          metricas.subsidioPct
-        )}% da receita do item — o volume está sendo comprado com desconto.`;
-      }
-
-      if (desperdicioTrafego) {
-        lentes.push("desperdicio");
-        motivos.desperdicio =
-          "Recebe tráfego acima da média e converte abaixo dela. O problema está na página, não no alcance.";
-      }
-
-      if (precoIdeal > 0 && preco > 0 && Math.abs(desvio) >= 6) {
-        lentes.push("fora_do_preco");
-        motivos.fora_do_preco =
-          desvio > 0
-            ? `Está ${fmtPct(desvio)}% acima do preço ideal — risco de perder conversão.`
-            : `Está ${fmtPct(Math.abs(desvio))}% abaixo do preço ideal — margem sendo entregue.`;
+        lentes.push("converte_bem");
+        motivos.converte_bem =
+          `${vendas} vendas em ${visitas.toLocaleString("pt-BR")} visitas — ` +
+          `${fmtPct(conversao)}% contra ${fmtPct(mediaConversao)}% da média — mas recebe ` +
+          "menos visita que a média da carteira. Quem chega compra; falta chegar gente.";
       }
 
       return { ...anuncio, semanas, metricas, lentes, motivos };
@@ -365,7 +386,15 @@ export function analisar(
   };
 }
 
-/** Definição de cada lente, para a interface explicar o critério ao usuário. */
+/**
+ * O catálogo das lentes, em português do dia a dia.
+ *
+ * `rotulo` é o que aparece no botão; `regra` é como o número foi
+ * calculado, para dar para conferir; `acao` é o que fazer com ele. Os
+ * três são frases que o dono da operação diria — "falsa tração" e
+ * "margem subsidiada" eram vocabulário meu, e ele não tinha como saber
+ * o que significavam.
+ */
 export const LENTES: {
   id: Lente;
   rotulo: string;
@@ -375,40 +404,40 @@ export const LENTES: {
   {
     id: "todos",
     rotulo: "Todos",
-    regra: "Todos os anúncios do recorte selecionado.",
-    acao: "Use as lentes ao lado para isolar um problema específico.",
+    regra: "Todos os anúncios do período escolhido.",
+    acao: "Escolha um dos problemas ao lado para filtrar.",
   },
   {
-    id: "sangrando",
-    rotulo: "Sangrando margem",
+    id: "abaixo_tabela",
+    rotulo: "Vendendo abaixo da tabela",
     regra:
-      "Vendeu abaixo do preço ideal sem ganho de conversão — desconto que não comprou volume.",
-    acao: "Voltar ao preço ideal e observar o efeito por duas semanas.",
+      "O preço médio pago ficou 3% ou mais abaixo do preço da sua Fórmula base.",
+    acao: "Subir o preço, ou aceitar o desconto sabendo quanto ele custa.",
   },
   {
-    id: "joias",
-    rotulo: "Joias escondidas",
+    id: "acima_tabela",
+    rotulo: "Preço acima da tabela",
+    regra: "O preço médio pago ficou 3% ou mais acima do preço da sua Fórmula base.",
+    acao: "Conferir se o concorrente está mais barato antes de manter.",
+  },
+  {
+    id: "nao_fecha",
+    rotulo: "Muita visita, pouca venda",
     regra:
-      "Tráfego abaixo da média e conversão acima da média, com pelo menos duas vendas no recorte — vende bem para quem chega.",
-    acao: "Investir em mídia e posicionamento; o funil já está afiado.",
+      "Anúncio no ar, com mais visitas que a média da carteira e conversão abaixo da média.",
+    acao: "Olhar foto, título, ficha e preço — a gente chega e não compra.",
   },
   {
-    id: "falsa_tracao",
-    rotulo: "Falsa tração",
-    regra: "Tem volume, mas o subsídio já consome 3% ou mais da receita do item.",
-    acao: "Rever a participação em campanha antes de comemorar o volume.",
-  },
-  {
-    id: "desperdicio",
-    rotulo: "Desperdício de tráfego",
+    id: "converte_bem",
+    rotulo: "Vende bem, falta visita",
     regra:
-      "Anúncio no ar com visitas acima da média e conversão abaixo da média — recebe gente e não fecha.",
-    acao: "Revisar preço, título, fotos e ficha técnica antes de investir mais.",
+      "Menos visitas que a média e conversão acima dela, com pelo menos duas vendas no período.",
+    acao: "Vale mídia e posição: quem chega já compra.",
   },
   {
-    id: "fora_do_preco",
-    rotulo: "Fora do preço ideal",
-    regra: "Desvio de 6% ou mais entre o preço praticado e o preço ideal.",
-    acao: "Corrigir o preço ou revisar a premissa de custo que gerou o ideal.",
+    id: "sem_tabela",
+    rotulo: "Sem preço de tabela",
+    regra: "O anúncio não está na Fórmula base, então não há com o que comparar.",
+    acao: "Cadastrar o SKU na Fórmula base para ele entrar na análise.",
   },
 ];

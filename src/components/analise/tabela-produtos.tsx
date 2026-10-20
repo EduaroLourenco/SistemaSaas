@@ -45,13 +45,18 @@ const CURVAS: { value: Curva; label: string }[] = [
   { value: "preco", label: "Preço pago" },
 ];
 
-/** As lentes que viram etiqueta na linha, da mais cara para a menos. */
+/**
+ * As lentes que viram etiqueta na linha, da mais cara para a menos.
+ *
+ * Texto curto porque cabe numa etiqueta, mas sem apelido: "barato
+ * demais" diz o que é; "sangrando" exigia saber a convenção.
+ */
 const ETIQUETA: { id: Lente; texto: string; tom: "down" | "warn" | "neutral" | "up" }[] = [
-  { id: "sangrando", texto: "sangrando", tom: "down" },
-  { id: "falsa_tracao", texto: "falsa tração", tom: "warn" },
-  { id: "desperdicio", texto: "desperdício", tom: "warn" },
-  { id: "fora_do_preco", texto: "fora do preço", tom: "neutral" },
-  { id: "joias", texto: "joia", tom: "up" },
+  { id: "abaixo_tabela", texto: "barato demais", tom: "down" },
+  { id: "nao_fecha", texto: "não fecha", tom: "warn" },
+  { id: "acima_tabela", texto: "caro demais", tom: "warn" },
+  { id: "converte_bem", texto: "falta visita", tom: "up" },
+  { id: "sem_tabela", texto: "sem tabela", tom: "neutral" },
 ];
 
 /**
@@ -61,6 +66,36 @@ const ETIQUETA: { id: Lente; texto: string; tom: "down" | "warn" | "neutral" | "
  * anúncios assim aparecia com 160.004 unidades.
  */
 const SOB_ENCOMENDA = 40000;
+
+/**
+ * As colunas e o que cada uma quer dizer.
+ *
+ * A mesma frase serve de `title` no cabeçalho e de linha na legenda —
+ * duas explicações diferentes para a mesma coluna é como elas começam
+ * a divergir.
+ */
+const COLUNAS = [
+  { nome: "Visitas", ajuda: "Quantas pessoas abriram o anúncio no período." },
+  { nome: "Vendas", ajuda: "Unidades vendidas no período." },
+  { nome: "Conversão", ajuda: "De cada 100 visitas, quantas viraram venda." },
+  { nome: "Receita", ajuda: "Quanto entrou, somando os anúncios do produto." },
+  {
+    nome: "Preço pago",
+    ajuda: "O que o cliente pagou em média: receita dividida por unidades. Inclui desconto de campanha e cupom.",
+  },
+  {
+    nome: "Diferença da tabela",
+    ajuda: "Quanto o preço pago ficou acima ou abaixo do preço da sua Fórmula base. Travessão = sem venda, ou produto fora da tabela.",
+  },
+  {
+    nome: "Deixou de ganhar",
+    ajuda: "A diferença entre a tabela e o preço pago, multiplicada pelas unidades, nas semanas em que vendeu abaixo.",
+  },
+  {
+    nome: "Estoque",
+    ajuda: "Saldo da última sincronização. \"Sob encomenda\" é anúncio que o canal não controla estoque.",
+  },
+] as const;
 
 type Semanas = Map<string, { receita: number; vendas: number; visitas: number }>;
 
@@ -326,16 +361,27 @@ export function TabelaProdutos({
               <th className="sticky left-0 z-20 bg-panel text-left px-3 py-2 border-r border-line min-w-[200px] sm:min-w-[260px]">
                 <span className="label">Produto</span>
               </th>
-              <th className="px-2 py-2 min-w-[88px]">
-                <span className="label">Curva</span>
+              <th className="px-3 py-2 min-w-[92px] border-r border-line/60">
+                <span className="label" title={`${CURVAS.find((c) => c.value === curva)!.label}, semana a semana`}>
+                  {semanas.length} semanas
+                </span>
               </th>
-              {["Visitas", "Vendas", "Conversão", "Receita", "Preço pago", "vs. tabela", "Deixado na mesa", "Estoque"].map(
-                (h) => (
-                  <th key={h} className="px-3 py-2 text-right whitespace-nowrap">
-                    <span className="label">{h}</span>
-                  </th>
-                ),
-              )}
+              {COLUNAS.map((c) => (
+                <th
+                  key={c.nome}
+                  /* O fio fecha cada grupo: quem é o produto, quanta
+                     gente chegou, quanto dinheiro deu. */
+                  className={cn(
+                    "px-3 py-2 text-right whitespace-nowrap",
+                    (c.nome === "Conversão" || c.nome === "Deixou de ganhar") &&
+                      "border-r border-line/60",
+                  )}
+                >
+                  <span className="label" title={c.ajuda}>
+                    {c.nome}
+                  </span>
+                </th>
+              ))}
             </tr>
           </thead>
 
@@ -351,7 +397,7 @@ export function TabelaProdutos({
                   >
                     <th
                       scope="row"
-                      className="sticky left-0 z-10 bg-panel text-left px-3 py-2
+                      className="sticky left-0 z-10 bg-panel text-left px-3 py-3
                                  border-r border-line font-normal max-w-[230px] sm:max-w-[320px]"
                     >
                       <span className="flex items-start gap-2">
@@ -360,7 +406,7 @@ export function TabelaProdutos({
                         ) : (
                           <ChevronRight className="w-3.5 h-3.5 text-ink-3 mt-1 shrink-0" />
                         )}
-                        <FotoAnuncio mlb={p.mlbPrincipal} alt={p.titulo} tamanho={34} />
+                        <FotoAnuncio mlb={p.mlbPrincipal} alt={p.titulo} tamanho={40} />
                         <span className="min-w-0">
                           <span className="num text-[12px] font-semibold text-ink block">
                             {p.sku}
@@ -387,21 +433,21 @@ export function TabelaProdutos({
                       </span>
                     </th>
 
-                    <td className="px-2 py-2">
+                    <td className="px-3 py-3 border-r border-line/60">
                       <Tracado porSemana={p.porSemana} semanas={semanas} curva={curva} />
                     </td>
-                    <td className="num px-3 py-2 text-right text-ink-2">{count(p.visitas)}</td>
-                    <td className="num px-3 py-2 text-right text-ink">{count(p.vendas)}</td>
-                    <td className="num px-3 py-2 text-right text-ink-2">
+                    <td className="num px-3 py-3 text-right text-ink-2">{count(p.visitas)}</td>
+                    <td className="num px-3 py-3 text-right text-ink">{count(p.vendas)}</td>
+                    <td className="num px-3 py-3 text-right text-ink-2 border-r border-line/60">
                       {p.visitas ? pct((p.vendas / p.visitas) * 100, 2) : "—"}
                     </td>
-                    <td className="num px-3 py-2 text-right text-ink font-medium">
+                    <td className="num px-3 py-3 text-right text-ink font-medium">
                       {money(p.receita)}
                     </td>
-                    <td className="num px-3 py-2 text-right text-ink-2">
+                    <td className="num px-3 py-3 text-right text-ink-2">
                       {p.preco ? money(p.preco) : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-3 text-right">
                       {desvio == null ? (
                         <span
                           className="text-ink-3"
@@ -416,14 +462,14 @@ export function TabelaProdutos({
                         </Badge>
                       )}
                     </td>
-                    <td className="num px-3 py-2 text-right">
+                    <td className="num px-3 py-3 text-right border-r border-line/60">
                       {p.subsidio > 0 ? (
-                        <span className="text-down">{money(p.subsidio)}</span>
+                        <span className="font-medium text-down">{money(p.subsidio)}</span>
                       ) : (
                         <span className="text-ink-3">—</span>
                       )}
                     </td>
-                    <td className="num px-3 py-2 text-right text-ink-2">
+                    <td className="num px-3 py-3 text-right text-ink-2">
                       {/* Com parte do SKU sob encomenda, um "0 +" na frente
                           só atrapalha: o zero ali é dos irmãos com controle. */}
                       {p.estoque != null && (p.estoque > 0 || !p.sobEncomenda) && count(p.estoque)}
@@ -479,7 +525,7 @@ export function TabelaProdutos({
                                 }
                                 className="mt-1.5 w-3.5 h-3.5 shrink-0 accent-brand cursor-pointer"
                               />
-                              <FotoAnuncio mlb={a.mlb} alt={a.mlb} tamanho={26} />
+                              <FotoAnuncio mlb={a.mlb} alt={a.mlb} tamanho={30} />
                               <span className="min-w-0">
                                 <span className="flex items-center gap-1.5 flex-wrap">
                                   <span className="num text-[12px] text-ink-2">{a.mlb}</span>
@@ -574,6 +620,34 @@ export function TabelaProdutos({
           {filtrados.length - limite}
         </button>
       )}
+
+      <details className="border-t border-line group">
+        <summary className="px-4 py-2.5 text-[12.5px] text-ink-3 hover:text-ink cursor-pointer list-none marker:hidden">
+          O que cada coluna quer dizer
+          <span className="group-open:hidden"> ›</span>
+          <span className="hidden group-open:inline"> ⌄</span>
+        </summary>
+        <dl className="grid gap-x-6 gap-y-2 px-4 pb-4 sm:grid-cols-2">
+          {COLUNAS.map((c) => (
+            <div key={c.nome} className="flex gap-2 text-[12.5px]">
+              <dt className="font-semibold text-ink shrink-0">{c.nome}</dt>
+              <dd className="m-0 text-ink-2">{c.ajuda}</dd>
+            </div>
+          ))}
+          <div className="flex gap-2 text-[12.5px]">
+            <dt className="font-semibold text-ink shrink-0">{semanas.length} semanas</dt>
+            <dd className="m-0 text-ink-2">
+              O formato da curva, não o valor. Buraco no traço é semana sem leitura.
+            </dd>
+          </div>
+          <div className="flex gap-2 text-[12.5px]">
+            <dt className="font-semibold text-ink shrink-0">Abrir o produto</dt>
+            <dd className="m-0 text-ink-2">
+              Mostra os anúncios dele, um por linha. Clicar no anúncio abre o histórico completo.
+            </dd>
+          </div>
+        </dl>
+      </details>
 
       {!filtrados.length && (
         <p className={cn("px-4 py-10 text-center text-[13px] text-ink-3")}>

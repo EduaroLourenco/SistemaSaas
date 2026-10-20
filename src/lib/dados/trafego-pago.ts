@@ -48,6 +48,26 @@ import { situacaoDeCatalogo, type SituacaoDisputa } from "./disputa-catalogo";
  */
 
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
+
+/**
+ * O estado da mídia a partir dos status das campanhas do anúncio.
+ *
+ * "Movido" é o anúncio que trocou de campanha: no destino ele aparece
+ * de novo, com o status de lá. Aqui ele não conta como ativo nem como
+ * parado — quem decide é a linha da campanha onde ele está agora.
+ */
+function estadoDaMidia(porCampanha: Map<string, string>) {
+  const vistos = [...porCampanha.values()];
+  const ativas = vistos.filter((s) => s.toLowerCase() === "ativo").length;
+  if (ativas > 0) return { midia: "ativa" as const, campanhasAtivas: ativas };
+  const parou = vistos.some((s) =>
+    ["pausado", "desativada", "pausada", "desativado"].includes(s.toLowerCase()),
+  );
+  return {
+    midia: parou ? ("parada" as const) : ("desconhecida" as const),
+    campanhasAtivas: 0,
+  };
+}
 const r2 = (v: number) => Number(v.toFixed(2));
 
 export type Periodo = { inicio: string; fim: string; rotulo: string };
@@ -81,6 +101,20 @@ export type LinhaAnuncioAds = {
   sobraAposMidia: number | null;
   /** Sem receita atribuída: vendeu por fora, ou não vendeu nada? */
   situacao: "ok" | "sem_retorno" | "vendeu_sem_ads" | "prejuizo";
+  /**
+   * A mídia deste anúncio ainda está no ar?
+   *
+   * Vem de `anuncio_ads.status`, por campanha. A janela do relatório é
+   * de 30 dias corridos, então o investimento de um anúncio pausado
+   * hoje continua aparecendo por mais um mês — sem isto, a tela mandava
+   * desligar o que já tinha sido desligado.
+   *
+   * `desconhecida` é linha sem status: veio de planilha, não da API.
+   * Não é "ativa" nem "parada", e a tela não promete nenhuma das duas.
+   */
+  midia: "ativa" | "parada" | "desconhecida";
+  /** Em quantas campanhas ele ainda está ativo. */
+  campanhasAtivas: number;
   /**
    * Situação na disputa de catálogo; null quando o anúncio não disputa.
    *
@@ -217,7 +251,7 @@ export async function carregarTrafegoPago(
       sb
         .from("anuncio_ads")
         .select(
-          "codigo_externo,conta_canal_id,campanha,inicio,fim,impressoes,cliques,investimento,receita,receita_direta,receita_indireta"
+          "codigo_externo,conta_canal_id,campanha,inicio,fim,impressoes,cliques,investimento,receita,receita_direta,receita_indireta,status"
         )
         .order("inicio")
     ),
@@ -273,6 +307,8 @@ export async function carregarTrafegoPago(
     receita: string | number;
     receita_direta: string | number;
     receita_indireta: string | number;
+    /** Estado do anúncio dentro da campanha, da API do canal. Nulo em linha vinda de planilha. */
+    status: string | null;
   };
   const todas = adsRaw as unknown as Ads[];
   if (!todas.length) {
@@ -433,6 +469,8 @@ export async function carregarTrafegoPago(
     imp: number; cli: number; inv: number;
     rec: number; recD: number; recI: number;
     campanhas: Set<string>;
+    /* Um status por campanha: basta uma ativa para a mídia estar no ar. */
+    statusCampanha: Map<string, string>;
   };
   const porMlb = new Map<string, Ac>();
   const porCampanha = new Map<string, Ac & { nome: string; conta: string; mlbs: Set<string> }>();
@@ -457,7 +495,13 @@ export async function carregarTrafegoPago(
   for (const a of ads) {
     const at =
       porMlb.get(a.codigo_externo) ??
-      { imp: 0, cli: 0, inv: 0, rec: 0, recD: 0, recI: 0, campanhas: new Set<string>() };
+      {
+        imp: 0, cli: 0, inv: 0, rec: 0, recD: 0, recI: 0,
+        campanhas: new Set<string>(),
+        /* Um status por campanha: basta uma ativa para a mídia estar no ar. */
+        statusCampanha: new Map<string, string>(),
+      };
+    if (a.status) at.statusCampanha.set(a.campanha, String(a.status));
     at.imp += a.impressoes;
     at.cli += a.cliques;
     at.inv += n(a.investimento);
@@ -470,7 +514,7 @@ export async function carregarTrafegoPago(
     const chaveCampanha = `${contaDoAnuncio.get(a.codigo_externo) ?? a.codigo_externo}|${a.campanha}`;
     const c =
       porCampanha.get(chaveCampanha) ??
-      { nome: a.campanha, conta: nomeConta(a.codigo_externo), imp: 0, cli: 0, inv: 0, rec: 0, recD: 0, recI: 0, campanhas: new Set<string>(), mlbs: new Set<string>() };
+      { nome: a.campanha, conta: nomeConta(a.codigo_externo), imp: 0, cli: 0, inv: 0, rec: 0, recD: 0, recI: 0, campanhas: new Set<string>(), statusCampanha: new Map<string, string>(), mlbs: new Set<string>() };
     c.imp += a.impressoes;
     c.cli += a.cliques;
     c.inv += n(a.investimento);
@@ -530,6 +574,7 @@ export async function carregarTrafegoPago(
       roas: a.inv > 0 && a.rec > 0 ? r2(a.rec / a.inv) : null,
       sobraAposMidia: sobra,
       situacao,
+      ...estadoDaMidia(a.statusCampanha),
       catalogo: catalogoPorMlb.get(mlb) ?? null,
     });
   }
