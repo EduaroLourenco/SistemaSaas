@@ -112,7 +112,17 @@ console.log("\nCOM REDUÇÃO DE TARIFA — o preço é o do canal, e só se acei
   const tabela = 1563.02, proposta = 1200;   // bem abaixo do piso
   const r = processItem("MLB1", "SKU1", 90, proposta, 2699, base(tabela));
   assert.equal(r.action, "Não participar", "abaixo do piso tem de recusar");
-  assert.equal(r.pendencia, "", "tem de recusar pela tolerância, não por falta de tabela");
+  /* O motivo deixou de ser vazio: a recusa por preço passou a dizer os
+     números que a decidiram, que é o que o histórico precisa gravar.
+     Continua valendo que NÃO pode ser recusa por falta de dado. */
+  assert.ok(
+    /abaixo do mínimo de/.test(r.pendencia),
+    `recusa por preço tem de explicar o preço, veio: ${r.pendencia}`
+  );
+  assert.ok(
+    !/sem preço de tabela|não está na aba/.test(r.pendencia),
+    "tem de recusar pela tolerância, não por falta de tabela"
+  );
   caso("proposta abaixo do piso", r, proposta, tabela);
 }
 

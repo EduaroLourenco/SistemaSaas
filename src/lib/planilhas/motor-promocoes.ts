@@ -395,12 +395,20 @@ export function processItem(
 
     // Tolerância do canal: aceita a oferta que chega até o desconto mínimo
     // abaixo da tabela. No Meli são os 5% de sempre.
-    const aprovado =
-      tabela - finalPrice < 0 ||
-      finalPrice >= tabela * (1 - tolerancia(data, config.descontoMinimo));
+    const folgaAceita = tolerancia(data, config.descontoMinimo);
+    const limite = tabela * (1 - folgaAceita);
+    const aprovado = tabela - finalPrice < 0 || finalPrice >= limite;
     return {
       action: aprovado ? positiveAction : negativeAction,
-      pendencia: "",
+      /*
+       * A recusa por preço precisa dizer os números que a decidiram.
+       * Sem isto ela ia para o histórico como "reprovado" e nada mais —
+       * 4.063 das 4.509 recusas gravadas estavam assim.
+       */
+      pendencia: aprovado
+        ? ""
+        : `proposta de ${reais(finalPrice)} abaixo do mínimo de ${reais(limite)} ` +
+          `(tabela ${reais(tabela)} na tarifa reduzida, menos ${(folgaAceita * 100).toFixed(1)}% de tolerância)`,
       newPrice: null, // Caso A não altera preço
       tabelaCalculada: tabela
     };

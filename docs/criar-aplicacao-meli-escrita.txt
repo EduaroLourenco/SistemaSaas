@@ -1,0 +1,196 @@
+===============================================================
+ CRIAR A APLICAÇÃO DE ESCRITA NO MERCADO LIVRE
+ Para o sistema poder alterar promoções e tráfego pago
+===============================================================
+
+POR QUE UMA SEGUNDA APLICAÇÃO
+
+No Mercado Livre a permissão é configurada NA APLICAÇÃO, não pedida na
+hora que o cliente autoriza. Então uma aplicação = um nível de
+permissão para todo mundo que conectar nela.
+
+Hoje a plataforma usa a MESMA aplicação dos seus dois agentes
+(Meli+ e apis/Mercado Livre Principal). Dar escrita nela significaria:
+  - todo cliente que conectar passa a conceder escrita, queira ou não
+  - reautorizar rotaciona o refresh token e PARA os seus dois agentes
+  - um bug meu vira estrago no que não pode parar
+
+Com uma aplicação separada: quem só quer os painéis conecta a de
+leitura e pronto. Quem quiser que o sistema altere coisas conecta
+também a de escrita, sabendo o que está autorizando.
+
+
+---------------------------------------------------------------
+ ANTES DE COMEÇAR — CONFIRME SEU DOMÍNIO
+---------------------------------------------------------------
+
+Preciso saber qual é o endereço de produção hoje. O último que vi foi:
+
+    https://sistema-saas-one.vercel.app
+
+Se você já apontou um domínio próprio (gerizo.com.br ou parecido), é
+esse que vale. Me diga qual antes de cadastrar, porque ele entra num
+campo que precisa bater EXATAMENTE.
+
+
+---------------------------------------------------------------
+ PASSO 1 — ENTRAR NO DEVCENTER
+---------------------------------------------------------------
+
+  1. Abra:  https://developers.mercadolivre.com.br/devcenter
+  2. Entre com a conta Mercado Livre que é DONA das aplicações
+     (a mesma que você usou pra criar a de hoje).
+  3. Clique em "Criar aplicação" (ou "Criar nova aplicação").
+
+OBSERVAÇÃO: o DevCenter muda de layout de vez em quando. Se algum
+campo abaixo estiver com outro nome, me manda print que eu te digo
+qual é o equivalente.
+
+
+---------------------------------------------------------------
+ PASSO 2 — PREENCHER O CADASTRO
+---------------------------------------------------------------
+
+  Nome da aplicação
+      gerizo — alterações
+
+  Nome curto / short name
+      gerizo-escrita
+      (precisa ser único no Mercado Livre inteiro; se der erro de
+      já existe, tente gerizo-escrita-br)
+
+  Descrição
+      Aplicação da plataforma gerizo para alterar promoções e
+      campanhas de publicidade a pedido do vendedor.
+
+  Logo
+      Opcional. Pode pular.
+
+  URIs de redirect  <<< O CAMPO MAIS IMPORTANTE
+      https://SEUDOMINIO/api/meli/callback
+
+      Trocando SEUDOMINIO pelo que confirmamos no começo. Exemplo:
+      https://sistema-saas-one.vercel.app/api/meli/callback
+
+      Tem que ser HTTPS, tem que bater caractere por caractere, e
+      não pode ter parte variável. Se errar, a conexão falha com
+      "invalid redirect_uri" e é chato de achar.
+
+  Fluxos / Grant types
+      Marque:  Authorization Code
+               Refresh Token
+      Pode deixar "Client Credentials" desmarcado — não usamos.
+
+
+---------------------------------------------------------------
+ PASSO 3 — AS PERMISSÕES  <<< O PONTO DA APLICAÇÃO
+---------------------------------------------------------------
+
+Procure a seção de permissões funcionais (ou "escopos"). Cada uma tem
+duas opções: SOMENTE LEITURA e LEITURA E ESCRITA.
+
+  MARQUE COMO "LEITURA E ESCRITA":
+
+    [x] Publicidade
+        É o que libera mexer em tráfego pago: lance, orçamento,
+        pausar e ativar campanha e anúncio dentro da campanha.
+
+    [x] Ofertas / Promoções
+        É o que libera aderir e sair de promoção pelo sistema.
+
+  DEIXE DE FORA POR ENQUANTO:
+
+    [ ] Publicação e sincronização
+        Essa dá poder de alterar PREÇO e pausar o anúncio em si.
+        É a mais perigosa das três. Quando você quiser isso, a gente
+        ativa separado e com confirmação dupla na tela.
+
+  As outras permissões pode deixar em somente leitura ou desmarcadas
+  — a aplicação de escrita não precisa ler nada, quem lê é a de hoje.
+
+  Também marque, se o formulário pedir:
+    [x] offline_access
+        Sem isso não vem refresh token, e a conexão morre em 6 horas.
+
+
+---------------------------------------------------------------
+ PASSO 4 — SALVAR E COPIAR AS CREDENCIAIS
+---------------------------------------------------------------
+
+Depois de salvar, o Mercado Livre mostra:
+
+    App ID / Client ID      um número, tipo 1234567890123456
+    Secret Key              um texto longo
+
+COPIE OS DOIS. A Secret costuma aparecer uma vez só — se perder, dá
+pra gerar outra, mas aí a antiga morre.
+
+Me mande:
+    1. o App ID
+    2. a Secret
+    3. a redirect URI exata que você cadastrou
+
+Eu coloco nas variáveis de ambiente da Vercel (vão como
+MELI_ESCRITA_APP_ID e MELI_ESCRITA_SECRET) e construo o resto.
+
+
+---------------------------------------------------------------
+ PASSO 5 — UMA CONFERÊNCIA NA APLICAÇÃO ANTIGA
+---------------------------------------------------------------
+
+Sem relação com a nova, mas vale fazer agora que você está lá dentro.
+
+O Mercado Livre exigiu, a partir de 30/08/2026, aplicações separadas
+para Mercado Livre e Mercado Pago. Quem não adequou perde acesso às
+APIs.
+
+Como conferir: com um token válido da aplicação ANTIGA, chame
+
+    GET https://api.mercadolibre.com/applications/SEU_APP_ID_ANTIGO
+
+e veja a lista de escopos. Se aparecer algum começando com
+
+    urn:mp:
+
+a aplicação está misturada e precisa ser separada. Nos escopos que eu
+li das suas duas contas não apareceu nenhum urn:mp:, então acho que
+está tudo certo — mas conferir custa um minuto.
+
+
+---------------------------------------------------------------
+ O QUE EU FAÇO DEPOIS QUE VOCÊ ME MANDAR
+---------------------------------------------------------------
+
+  1. Segundo botão "Conectar para alterar" em Integrações > Canais.
+     A conexão entra como provedor "mercado_livre_escrita" — não
+     mexe em nada da conexão de leitura que já existe.
+
+  2. Abrir no limite.ts só os endpoints necessários, um a um. Hoje
+     ele recusa qualquer coisa que não seja GET, e isso continua
+     valendo para a aplicação de leitura.
+
+  3. Confirmação na tela antes de CADA escrita, mostrando o que vai
+     mudar e de quanto pra quanto. Nada automático.
+
+  4. Registro de quem mandou e quando, para dar pra auditar depois.
+
+  5. Primeiro as promoções (aderir / sair), depois tráfego pago
+     (lance e orçamento) — nessa ordem, porque promoção é reversível
+     e lance mexe em dinheiro correndo.
+
+
+---------------------------------------------------------------
+ SE DER ERRADO
+---------------------------------------------------------------
+
+  "invalid redirect_uri"
+      A URI cadastrada não bate com a que o sistema manda. Confira
+      caractere por caractere, inclusive barra no final.
+
+  "invalid_scope" ou a tela de autorização não lista as permissões
+      A aplicação foi salva sem as permissões funcionais. Volte nas
+      configurações dela e ative.
+
+  Conecta mas a primeira alteração volta 403
+      A permissão ficou em somente leitura. Dá pra corrigir nas
+      configurações, mas exige reautorizar a conta depois.
