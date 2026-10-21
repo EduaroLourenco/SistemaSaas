@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -55,6 +56,11 @@ function ler(s: string): number {
 }
 
 export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
+  /* `router.refresh()` continua sendo do router: recarregar o dado do
+     servidor depois de gravar é outra coisa que navegar. */
   const router = useRouter();
   const { ano, mes, canais, dias, janela } = dados;
 
@@ -207,6 +213,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
         description="Defina o mês; o sistema divide por canal e por dia"
       />
 
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
@@ -228,7 +235,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
               <Select
                 value={String(mes)}
                 onChange={(e) =>
-                  router.push(`/vendas/metas?ano=${ano}&mes=${e.target.value}`)
+                  navegarSuave(`/vendas/metas?ano=${ano}&mes=${e.target.value}`)
                 }
               >
                 {MESES.map((m, i) => (
@@ -242,7 +249,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
               <Select
                 value={String(ano)}
                 onChange={(e) =>
-                  router.push(`/vendas/metas?ano=${e.target.value}&mes=${mes}`)
+                  navegarSuave(`/vendas/metas?ano=${e.target.value}&mes=${mes}`)
                 }
               >
                 {[ano - 1, ano, ano + 1].map((a) => (

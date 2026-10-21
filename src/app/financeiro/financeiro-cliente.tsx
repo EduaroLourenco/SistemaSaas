@@ -3,7 +3,7 @@
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import type { GrupoRecorte } from "@/lib/recorte";
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
@@ -150,7 +150,9 @@ export default function FinanceiroCliente({
   fim: string;
   canalId: string;
 }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
   const [dim, setDim] = React.useState<Dimensao>("mes");
   const [filtro, setFiltro] = React.useState({ inicio, fim, canal: canalId });
 
@@ -164,7 +166,7 @@ export default function FinanceiroCliente({
       fim: filtro.fim,
       ...(filtro.canal ? { canal: filtro.canal } : {}),
     });
-    router.push(`/financeiro?${q}`);
+    navegarSuave(`/financeiro?${q}`);
   }
 
   const linhas = visoes[dim] ?? [];
@@ -223,6 +225,7 @@ export default function FinanceiroCliente({
         }
       />
 
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         {/*
           A cobertura vem ANTES dos números, e não depois.

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -99,6 +100,11 @@ function LinhaAlavanca({
 }
 
 export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
+  /* `router.refresh()` continua sendo do router: recarregar o dado do
+     servidor depois de gravar é outra coisa que navegar. */
   const router = useRouter();
   const [salvando, setSalvando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
@@ -115,7 +121,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
     if (novos.length && novos.length < d.canais.length) {
       q.set("canais", novos.join(","));
     }
-    router.push(`/vendas/mtd?${q}`);
+    navegarSuave(`/vendas/mtd?${q}`);
   }
 
   /**
@@ -174,7 +180,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
   function irPara(ano: number, mes: number) {
     const q = new URLSearchParams({ ano: String(ano), mes: String(mes) });
     if (sel.length < d.canais.length) q.set("canais", sel.join(","));
-    router.push(`/vendas/mtd?${q}`);
+    navegarSuave(`/vendas/mtd?${q}`);
   }
 
   const semMeta = d.metaMes === 0;
@@ -230,6 +236,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
         }
       />
 
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">

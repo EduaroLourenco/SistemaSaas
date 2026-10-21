@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -52,6 +53,11 @@ function ler(s: string): number | null {
 }
 
 export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
+  /* `router.refresh()` continua sendo do router: recarregar o dado do
+     servidor depois de gravar é outra coisa que navegar. */
   const router = useRouter();
   const { linhas, comissoes, canais, canalId, tipos } = dados;
 
@@ -122,6 +128,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
         badge={<Badge tone="warn">Em desenvolvimento</Badge>}
       />
 
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
@@ -136,7 +143,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
             <Field label="Canal">
               <Select
                 value={canalId ?? ""}
-                onChange={(e) => router.push(`/anuncios/preco-alvo?canal=${e.target.value}`)}
+                onChange={(e) => navegarSuave(`/anuncios/preco-alvo?canal=${e.target.value}`)}
               >
                 {canais.map((c) => (
                   <option key={c.id} value={c.id}>

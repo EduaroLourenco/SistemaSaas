@@ -2,7 +2,7 @@
 
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
@@ -72,7 +72,9 @@ export default function PerformancePrecoCliente({
 }: {
   dados: DadosPerformancePreco;
 }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
   const { linhas, canais, dias, periodo, resumo } = dados;
 
   const [busca, setBusca] = React.useState("");
@@ -129,7 +131,7 @@ export default function PerformancePrecoCliente({
   function ir(novoDias: number, canal: string | null) {
     const q = new URLSearchParams({ dias: String(novoDias) });
     if (canal) q.set("canal", canal);
-    router.push(`/anuncios/preco-performance?${q}`);
+    navegarSuave(`/anuncios/preco-performance?${q}`);
   }
 
   const visiveis = React.useMemo(() => {
@@ -235,6 +237,7 @@ export default function PerformancePrecoCliente({
         }
       />
 
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">

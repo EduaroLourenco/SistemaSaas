@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Bar,
@@ -97,7 +97,9 @@ function Var({ v, inverso }: { v: number | null; inverso?: boolean }) {
 }
 
 export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
   const [busca, setBusca] = React.useState("");
   const [mostrar, setMostrar] = React.useState<Mostrar>(dados.skuFiltro ? "todos" : "quedas");
   const [causa, setCausa] = React.useState<string>("");
@@ -116,7 +118,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
     const canais = mudar.canais ?? dados.recorte;
     if (canais.length) q.set("canais", canais.join(","));
     if (dados.skuFiltro) q.set("sku", dados.skuFiltro);
-    router.push(`/vendas/queda?${q}`);
+    navegarSuave(`/vendas/queda?${q}`);
   };
 
   const periodoAtual = PERIODOS.find((p) => Number(p.value) === dados.dias)?.value ?? "";
@@ -328,6 +330,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
           </BarraFiltros>
         }
       />
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         {dados.vazio ? (
           <Panel>

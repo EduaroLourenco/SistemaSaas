@@ -536,6 +536,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         }
       />
 
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         {pendente && <p role="status" className="text-[12px] text-ink-3">Atualizando seleção…</p>}
         {/* ── O gasto dia a dia, no período do calendário ──

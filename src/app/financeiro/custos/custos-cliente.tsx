@@ -3,7 +3,7 @@
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import type { GrupoRecorte } from "@/lib/recorte";
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select, Field } from "@/components/ui/controls";
@@ -186,7 +186,9 @@ export default function CustosCliente({
   canalId: string;
   margemConfiguravel?: boolean;
 }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
 
   /*
    * O recorte vai para a URL, e a página recarrega do servidor.
@@ -201,7 +203,7 @@ export default function CustosCliente({
     if (canalId) q.set("canal", canalId);
     if (valor) q.set(campo, valor);
     else q.delete(campo);
-    router.push("/financeiro/custos?" + q.toString());
+    navegarSuave("/financeiro/custos?" + q.toString());
   }
 
   /* ── Seleção e preenchimento em lote ── */
@@ -397,6 +399,7 @@ export default function CustosCliente({
         actions={<CadastroProdutos aoMudar={setAviso} />}
       />
 
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         {aviso && (
           <Panel className="px-4 py-3 mb-3 border-brand/30">

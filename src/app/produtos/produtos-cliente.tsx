@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Download, ArrowRight } from "lucide-react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
@@ -50,7 +51,9 @@ function Vitrine({ valor, catalogo }: { valor?: CelulaPrecos["vitrine"]; catalog
 }
 
 export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
   const parametros = useSearchParams();
   const [busca, setBusca] = React.useState("");
   const [semVenda, setSemVenda] = React.useState(false);
@@ -112,7 +115,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
   function aplicarPeriodo() {
     const q = new URLSearchParams(parametros.toString());
     q.set("de", datas.de); q.set("ate", datas.ate);
-    transicao(() => router.push(`/produtos?${q}`, { scroll: false }));
+    transicao(() => navegarSuave(`/produtos?${q}`));
   }
   const linhas = React.useMemo(() => {
     const termo = busca.trim().toLocaleLowerCase("pt-BR");
@@ -159,7 +162,8 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
         <label className="min-w-0 text-xs text-ink-3">Até<input aria-label="Data final" className={`${controle} mt-1 block`} type="date" min={datas.de} value={datas.ate} onChange={e => setDatas({ ...datas, ate: e.target.value })} /></label>
         <Button className="min-h-11" disabled={pendente || !datas.de || !datas.ate || datas.de > datas.ate} onClick={aplicarPeriodo}>{pendente ? "Carregando…" : "Aplicar período"}</Button>
       </div>} />
-    <PageBody>
+    <BarraCarregando ativo={atualizando} />
+      <PageBody>
       <div role="group" aria-label="Canais na tabela" className="flex max-w-full flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-ink-2">Canais na tabela</span>
         <div className="max-w-full"><SeletorCanais grupos={dados.opcoes} selecionados={selecionados} aoAplicar={mudarCanais} /></div>

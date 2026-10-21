@@ -2,11 +2,11 @@
 
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { Button, Panel, PanelHeader, Delta, Badge } from "@/components/ui/primitives";
 import { Select, Segmented } from "@/components/ui/controls";
-import { useRouter } from "next/navigation";
 import { PainelExclusoes } from "@/components/ui/exclusoes";
 import { SERIES, AXIS, GRID, ChartTooltip, Legend } from "@/components/ui/chart";
 import {
@@ -237,11 +237,13 @@ export default function ComparativoDiario({
   dados: DadosDiario;
   canalAtual: string;
 }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
 
   function trocarCanal(id: string) {
     const url = id ? `/vendas/diario?canal=${encodeURIComponent(id)}` : "/vendas/diario";
-    router.push(url);
+    navegarSuave(url);
   }
 
   const PERIODOS = dados.periodos;
@@ -404,6 +406,7 @@ export default function ComparativoDiario({
         }
       />
 
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         <div className="mb-3">
           <PainelExclusoes

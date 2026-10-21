@@ -2,8 +2,8 @@
 
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select, Segmented } from "@/components/ui/controls";
@@ -112,7 +112,9 @@ function Variacao({ agora, antes }: { agora: number; antes: number }) {
 }
 
 export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
   const { linhas, meses, canais, periodo, limites, totais, concentracao } = dados;
 
   const [aba, setAba] = React.useState<Aba>("mes");
@@ -195,7 +197,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
     // A comparação sobrevive à troca de período principal: quem montou
     // três janelas não quer perdê-las ao corrigir uma data.
     if (cmp) q.set("cmp", cmp);
-    router.push(`/vendas/skus?${q}`);
+    navegarSuave(`/vendas/skus?${q}`);
   }
 
   /**
@@ -213,14 +215,14 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
     const cmpDe = menos(cmpFim, dias - 1);
     const q = new URLSearchParams({ de, ate: fim, cmp: `${cmpDe}~${cmpFim}` });
     if (filtro.canal) q.set("canal", filtro.canal);
-    router.push(`/vendas/skus?${q}`);
+    navegarSuave(`/vendas/skus?${q}`);
   }
 
   /** Tira todas as comparações e volta a uma janela só. */
   function limparComparacao() {
     const q = new URLSearchParams({ de: periodo.inicio, ate: periodo.fim });
     if (dados.canalId) q.set("canal", dados.canalId);
-    router.push(`/vendas/skus?${q}`);
+    navegarSuave(`/vendas/skus?${q}`);
   }
 
   const visiveis = React.useMemo(() => {
@@ -378,6 +380,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
         }
       />
 
+      <BarraCarregando ativo={atualizando} />
       <PageBody>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">

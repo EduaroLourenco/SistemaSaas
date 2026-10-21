@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, EmptyState, Delta } from "@/components/ui/primitives";
 import { Segmented, Checkbox } from "@/components/ui/controls";
@@ -56,7 +56,9 @@ function rotuloPeriodo(p: Periodo) {
 }
 
 export default function TipoAnuncio({ dados }: { dados: DadosTipo }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
 
   function ir(campos: { dias?: number; canal?: string; comparar?: boolean }) {
     const dias = campos.dias ?? dados.dias;
@@ -67,7 +69,7 @@ export default function TipoAnuncio({ dados }: { dados: DadosTipo }) {
     // Comparar com "tudo" não faz sentido: não existe janela anterior a
     // todo o histórico.
     if (comparar && dias > 0) q.set("comparar", "1");
-    router.push(`/anuncios/tipo?${q}`);
+    navegarSuave(`/anuncios/tipo?${q}`);
   }
 
   const filtros = (
@@ -111,7 +113,8 @@ export default function TipoAnuncio({ dados }: { dados: DadosTipo }) {
           breadcrumb="Anúncios"
           filters={filtros}
         />
-        <PageBody>
+        <BarraCarregando ativo={atualizando} />
+      <PageBody>
           <div className="flex flex-col gap-3">
             <Panel>
               <EmptyState
