@@ -6,8 +6,7 @@
  * escrito por cima da proposta do Mercado Livre — GP331 virou R$ 28,90
  * onde o canal pedia R$ 27,86, 2GP304 virou R$ 10,78 onde ele pedia
  * R$ 10,24. O retorno foi "Devido a um erro, não foi possível programar
- * este produto" em todas. As outras oito linhas do mesmo arquivo, que não
- * são automáticas, mantiveram o preço e entraram.
+ * este produto" em todas.
  *
  * A planilha não dá pista: ela diz "Você pode alterar esta coluna" em
  * todas as linhas, sem bloqueio por célula. O único sinal é a coluna
@@ -17,7 +16,14 @@
  *   · proposta acima do mínimo  → participa NO PREÇO DO CANAL, sem reescrever
  *   · proposta igual ao mínimo  → participa, ainda sem reescrever
  *   · proposta abaixo do mínimo → fica de fora, com o motivo
- * e confere que a linha não-automática continua sendo recalculada.
+ *
+ * E confere o que sobrou de reescrita na linha NÃO automática: ela desce
+ * ao nosso mínimo quando o canal pede menos desconto do que a margem
+ * aguenta, e fica de fora quando o canal pede mais — porque subir o preço
+ * nenhuma campanha do canal aceita. Este arquivo dizia o contrário até
+ * 21/10/2026, e dizia por suposição: as oito linhas não automáticas dele
+ * voltaram com erro também, e não houve uma única linha de preço elevado
+ * aceita em nenhum retorno medido. Ver `testar-teto-do-canal.mjs`.
  */
 import assert from "node:assert/strict";
 import path from "node:path";
@@ -47,7 +53,8 @@ const LINHAS = [
   { mlb: "MLB1", sub: "AUTOMATIC", proposta: 30.0, espera: "Participar", escreve: false, nota: "proposta acima do mínimo" },
   { mlb: "MLB2", sub: "AUTOMATIC", proposta: 28.9, espera: "Participar", escreve: false, nota: "proposta exatamente no mínimo" },
   { mlb: "MLB3", sub: "AUTOMATIC", proposta: 27.86, espera: "Não participar", escreve: false, nota: "proposta abaixo do mínimo — o caso real" },
-  { mlb: "MLB4", sub: "LIGHTNING", proposta: 27.86, espera: "Participar", escreve: true, nota: "não é automática: continua recalculando" },
+  { mlb: "MLB4", sub: "LIGHTNING", proposta: 27.86, espera: "Não participar", escreve: false, nota: "não é automática, mas o preço subiria" },
+  { mlb: "MLB5", sub: "LIGHTNING", proposta: 31.0, espera: "Participar", escreve: true, nota: "não é automática e o preço desce: recalcula" },
 ];
 
 const wb = new ExcelJS.Workbook();
@@ -87,8 +94,10 @@ for (const l of LINHAS) {
 /* O preço que vai para o canal na linha automática é o DELE, não o nosso. */
 assert.equal(porMlb.get("MLB1").precoOferta, 30.0, "a automática aprovada mantém o preço do canal");
 assert.equal(porMlb.get("MLB2").precoOferta, 28.9);
-/* E a não-automática recebe o nosso mínimo por cima, como sempre. */
-assert.equal(porMlb.get("MLB4").precoOferta, TABELA, "a não-automática continua recebendo o preço de tabela");
+/* A não-automática que subiria fica com o preço do canal, intacto. */
+assert.equal(porMlb.get("MLB4").precoOferta, 27.86, "a linha recusada não é contraproposta");
+/* E a que desce recebe o nosso mínimo por cima, como sempre. */
+assert.equal(porMlb.get("MLB5").precoOferta, TABELA, "a não-automática que desce recebe o preço de tabela");
 
 /* A recusa tem que dizer POR QUE, senão vira um "não" sem recurso. */
 const motivo = r.itensRelatorio.find((i) => i.mlb === "MLB3")?.motivo ?? "";
@@ -96,4 +105,4 @@ assert.match(motivo, /autom[áa]tica/i, "a recusa precisa citar a campanha autom
 assert.match(motivo, /27,86/, "a recusa precisa citar o preço proposto pelo canal");
 assert.match(motivo, /28,90/, "a recusa precisa citar o nosso mínimo");
 
-console.log("OK: automática aprovada não reescreve preço, abaixo do mínimo fica de fora com motivo, não-automática segue recalculando.");
+console.log("OK: a automática participa no preço do canal, abaixo do mínimo fica de fora com motivo, e o preço nunca sobe.");

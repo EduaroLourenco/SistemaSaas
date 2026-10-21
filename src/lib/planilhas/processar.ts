@@ -611,6 +611,46 @@ export async function processarPlanilha(
     }
 
     /*
+     * O preço que o canal propõe é TETO, não sugestão.
+     *
+     * Promoção é desconto: dá para oferecer mais barato que o canal pediu,
+     * nunca mais caro. Quem escreve um preço acima da proposta está
+     * contrapropondo um desconto MENOR, e o canal devolve a linha com "O
+     * preço final que você configurou para a oferta não é confiável".
+     *
+     * A Imprimil tentou duas vezes na campanha 11.11, em 20 e 21/10/2026.
+     * Nas catorze linhas da primeira o preço de tabela foi escrito por cima
+     * da proposta — 16,03 onde o canal propunha 15,58. Recusadas, todas.
+     *
+     * A segunda tentativa saiu de um palpite meu que estava errado: supus
+     * que o problema era a porcentagem ter ficado desencontrada do preço, e
+     * passei a escrever as duas juntas. Recusadas de novo, todas as treze —
+     * e a proposta do próprio canal mostra por que o palpite não colava:
+     * 25,90 com 40% daria 15,54, e o canal propõe 15,58. A porcentagem da
+     * planilha é informativa, arredondada; o preço final é o que vale.
+     *
+     * O que as duas tentativas tinham em comum era o preço ter SUBIDO. É
+     * isso que o canal recusa, e é só isso que este guarda impede.
+     *
+     * Quando a proposta não alcança o nosso mínimo, a linha fica de fora
+     * com o motivo escrito — que é a informação que interessa: nesta
+     * campanha, por este preço, não dá.
+     */
+    if (
+      !campanhaPropria &&
+      result.newPrice !== null &&
+      finalPrice != null &&
+      result.newPrice > finalPrice + 0.01
+    ) {
+      result = {
+        ...result,
+        action: acaoNegativa,
+        newPrice: null,
+        pendencia: `o canal propõe ${brl(finalPrice)} e o nosso mínimo é ${brl(result.newPrice)} — nesta campanha o preço não pode subir`,
+      };
+    }
+
+    /*
      * SÓ SE ESCREVE NA LINHA QUE AINDA ESTÁ EM ABERTO.
      *
      * Duas portas, e as duas precisam estar abertas:
