@@ -183,6 +183,10 @@ export default function ProcessarPromocoes() {
      de ONDE vem o mínimo, e se ele é alvo a propor ou piso a respeitar. */
   const [comoPiso, setComoPiso] = React.useState(false);
   const [tolerancia, setTolerancia] = React.useState("5");
+  /* Por processamento, não cadastro da empresa: trocar margem por volume é
+     decisão de uma campanha, não regra permanente.
+     ponytail: enquanto o painel de regras não existe. */
+  const [reescrever, setReescrever] = React.useState(false);
   const [pisoSalvo, setPisoSalvo] = React.useState<"nada" | "salvando" | "ok" | "erro">("nada");
   const [erroPiso, setErroPiso] = React.useState<string | null>(null);
 
@@ -340,6 +344,7 @@ export default function ProcessarPromocoes() {
     fd.append("descontoExtra", String(d > 1 ? d / 100 : d));
     fd.append("regra", regra);
     fd.append("comoUsar", comoPiso ? "piso" : "alvo");
+    fd.append("reescrever", reescrever ? "1" : "0");
     /* Com a vírgula trocada, como nos dois campos acima. Sem isso "2,5"
        chegava na rota e o `parseFloat` dela parava na vírgula: virava 2, e
        a meia casa sumia sem aviso. O botão de salvar já trocava — o mesmo
@@ -737,6 +742,23 @@ export default function ProcessarPromocoes() {
                     {pisoSalvo === "ok" && <span className="text-[12px] text-up">Salvo.</span>}
                     {erroPiso && <span role="alert" className="text-[12px] text-down">{erroPiso}</span>}
                   </div>
+                </div>
+
+                {/* Fora da caixa do piso porque NÃO é cadastro da empresa: vale
+                    só neste processamento. Trocar margem por volume é decisão
+                    de uma campanha. */}
+                <div className="rounded-r1 border border-line bg-panel-2 px-3 py-3">
+                  <Toggle
+                    checked={reescrever}
+                    onChange={setReescrever}
+                    label="Ofertar no nosso mínimo"
+                    hint="quando o canal pede menos desconto do que o mínimo permite"
+                  />
+                  <p className="mt-2 text-[12px] leading-relaxed text-ink-2">
+                    Desligado, a linha entra no preço do canal — a maior margem da campanha. Ligado, o sistema
+                    reescreve com o mínimo: preço mais baixo, margem menor, aposta no volume. Nunca sobe o preço,
+                    que é o que o canal recusa.
+                  </p>
                 </div>
                 {regra !== "tabela" && (
                   <Field

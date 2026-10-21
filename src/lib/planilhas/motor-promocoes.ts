@@ -84,6 +84,23 @@ export interface RegraPreco {
    * "piso".
    */
   toleranciaPct?: number;
+  /**
+   * Ofertar NO NOSSO MÍNIMO quando a proposta do canal fica acima dele.
+   *
+   * Desligado (padrão) a linha entra no preço do canal: é a maior margem
+   * que a campanha permite. Ligado, o sistema reescreve com o mínimo — um
+   * preço mais baixo, margem menor, e a aposta de que o volume compensa.
+   *
+   * Descer o canal aceita; o que ele recusa é subir (ver o teto em
+   * `processar.ts`). Então isto é sempre ofertável, ao contrário do que o
+   * Caso B fazia antes, que escrevia o mínimo até quando ele era MAIOR
+   * que a proposta e levava a planilha inteira à recusa.
+   *
+   * ponytail: é um interruptor de uma campanha por vez, e o Eduardo quer
+   * um painel de regras — por anúncio, por curva, por margem. Quando ele
+   * existir, isto vira uma das regras dele.
+   */
+  reescrever?: boolean;
 }
 
 /**
@@ -527,7 +544,15 @@ export function processItem(
 
       if (finalPrice != null && finalPrice > 0) {
         if (finalPrice >= minimo - 0.01) {
-          return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: minimo };
+          /* Ofertar no mínimo é desCER o preço: o canal aceita. Só quando
+             de fato é mais baixo — igual ou acima não há o que reescrever. */
+          const reescreve = data.regra?.reescrever && minimo < finalPrice - 0.01;
+          return {
+            action: positiveAction,
+            pendencia: "",
+            newPrice: reescreve ? minimo : null,
+            tabelaCalculada: minimo,
+          };
         }
         return {
           action: negativeAction,
@@ -586,7 +611,16 @@ export function processItem(
       const folga = tolerancia(data, config.descontoMinimo);
       const minimo = r2(p * (1 - folga));
       if (finalPrice >= minimo - 0.01) {
-        return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: p };
+        /* Ofertar no mínimo é desCER o preço, e descer o canal aceita. Só
+           quando de fato é mais baixo — igual ou acima não há o que
+           reescrever, e escrever acima é a recusa que o teto impede. */
+        const reescreve = data.regra?.reescrever && minimo < finalPrice - 0.01;
+        return {
+          action: positiveAction,
+          pendencia: "",
+          newPrice: reescreve ? minimo : null,
+          tabelaCalculada: p,
+        };
       }
       return {
         action: negativeAction,

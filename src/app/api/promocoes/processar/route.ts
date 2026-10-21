@@ -49,6 +49,12 @@ export async function POST(req: NextRequest) {
     const bruta = formData.get("toleranciaPct");
     const toleranciaPct =
       bruta == null || String(bruta).trim() === "" ? undefined : Math.min(50, Math.max(0, parseFloat(String(bruta)) || 0));
+    /*
+     * Ofertar no nosso mínimo quando a proposta do canal fica acima dele.
+     * Decisão por processamento, não cadastro da empresa: é a aposta de
+     * trocar margem por volume numa campanha específica.
+     */
+    const reescrever = String(formData.get("reescrever") ?? "") === "1";
     const modo: RegraPreco["modo"] = pedida === "margem" || pedida === "maior" ? pedida : "tabela";
     const margemMinima = Math.min(60, Math.max(0, parseFloat((formData.get("margemMinima") as string) || "0") || 0));
 
@@ -118,10 +124,10 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      formulaData = { ...formulaData, custos, regra: { modo, margemMinima, comoUsar, toleranciaPct } };
+      formulaData = { ...formulaData, custos, regra: { modo, margemMinima, comoUsar, toleranciaPct, reescrever } };
     }
     // A tolerância salva também deve valer para tabela usada como alvo.
-    formulaData = { ...formulaData, regra: { modo, margemMinima, comoUsar, toleranciaPct } };
+    formulaData = { ...formulaData, regra: { modo, margemMinima, comoUsar, toleranciaPct, reescrever } };
 
     const resumoBase = resumoFormulaBase(formulaData);
 
