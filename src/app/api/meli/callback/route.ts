@@ -140,16 +140,31 @@ export async function GET(req: NextRequest) {
   }
 
   /* 3. Cofre. A partir daqui a renovação é sozinha, a cada 6 horas. */
+  /* O provedor separa as duas conexões da mesma conta no cofre:
+     conectar a de escrita não toca no token da de leitura. */
   await vincularIntegracao({
     operacaoId: conta.operacao_id,
     canalId: conta.canal_id,
     contaCanalId: conta.id,
+    provedor: alvo.provedor,
   });
-  await gravarToken(conta.id, {
-    access_token: t.access_token,
-    refresh_token: t.refresh_token,
-    expira_em: new Date(Date.now() + t.expires_in * 1000),
-  });
+  await gravarToken(
+    conta.id,
+    {
+      access_token: t.access_token,
+      refresh_token: t.refresh_token,
+      expira_em: new Date(Date.now() + t.expires_in * 1000),
+    },
+    alvo.provedor
+  );
+
+  if (alvo.app === "escrita") {
+    return pagina(
+      "Alterações liberadas",
+      `A partir de agora o sistema pode alterar promoções e campanhas de publicidade da conta ${conta.nome}, quando você mandar. Nada acontece sozinho.`,
+      true
+    );
+  }
 
   return pagina(
     "Conta conectada",

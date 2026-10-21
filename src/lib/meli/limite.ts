@@ -136,6 +136,42 @@ const PERMITIDOS = [
   /^\/marketplace\/advertising\/[A-Z]{3}\/advertisers\/\d+\/product_ads\/(campaigns|ads)\/search$/,
 ];
 
+/**
+ * Os caminhos que a plataforma pode ALTERAR no canal.
+ *
+ * Lista curta de propósito, e separada da de leitura. Cada entrada
+ * aqui é uma ação que o Eduardo pediu, com confirmação na tela antes
+ * de sair — nenhuma é automática.
+ *
+ * O que NÃO está e não entra sem conversa: `/items/{id}`, que muda
+ * preço e pausa anúncio. A aplicação de escrita nem pede essa
+ * permissão ao Mercado Livre ("Publicação e sincronização" ficou como
+ * "sem acesso"), então uma chamada dessas morre dos dois lados.
+ */
+const ESCRITAS_PERMITIDAS: { metodo: string; caminho: RegExp }[] = [
+  /*
+   * Entrar e sair de promoção.
+   *
+   * O id da promoção vem com prefixo de letras e hífen — C-MLB6017095,
+   * P-MLB18061018, LGH-MLB1000 — e é o mesmo formato que a leitura de
+   * `/seller-promotions` já aceita.
+   */
+  { metodo: "POST", caminho: /^\/seller-promotions\/items\/[A-Z]{3}\d+$/i },
+  { metodo: "DELETE", caminho: /^\/seller-promotions\/items\/[A-Z]{3}\d+$/i },
+  /*
+   * Publicidade: lance e orçamento da campanha, e ligar ou desligar o
+   * anúncio dentro dela. Exige `api-version: 2`, como a leitura.
+   */
+  {
+    metodo: "PUT",
+    caminho: /^\/marketplace\/advertising\/[A-Z]{3}\/advertisers\/\d+\/product_ads\/campaigns\/\d+$/,
+  },
+  {
+    metodo: "PUT",
+    caminho: /^\/marketplace\/advertising\/[A-Z]{3}\/advertisers\/\d+\/product_ads\/ads\/[A-Z]{3}\d+$/i,
+  },
+];
+
 export class MeliBloqueado extends Error {
   constructor(motivo: string) {
     super(motivo);
@@ -154,6 +190,34 @@ export class MeliBloqueado extends Error {
  * Por isso o corte é no cliente, e não na disciplina de quem escreve as
  * rotas. Disciplina esquece; guarda não.
  */
+/**
+ * Recusa a escrita que não estiver prevista.
+ *
+ * O corte é no cliente, e não na disciplina de quem escreve as rotas,
+ * pelo mesmo motivo do portão de leitura: disciplina esquece, guarda
+ * não. A diferença é que aqui o estrago é maior — o que passa daqui
+ * muda alguma coisa na conta de alguém.
+ */
+export function autorizarEscrita(caminho: string, metodo: string) {
+  const limpo = caminho.split("?")[0];
+  const m = metodo.toUpperCase();
+  if (m === "GET") {
+    throw new MeliBloqueado(
+      `GET em ${limpo} não passa pelo portão de escrita — use meliGet.`
+    );
+  }
+  const permitido = ESCRITAS_PERMITIDAS.some(
+    (p) => p.metodo === m && p.caminho.test(limpo)
+  );
+  if (!permitido) {
+    throw new MeliBloqueado(
+      `Bloqueado: ${m} ${limpo} não está na lista de escrita permitida. ` +
+        "Se for uma ação legítima, acrescente em src/lib/meli/limite.ts — " +
+        "e confira se a aplicação de escrita pede a permissão dela no DevCenter."
+    );
+  }
+}
+
 export function autorizarLeitura(caminho: string, metodo = "GET") {
   if (metodo.toUpperCase() !== "GET") {
     throw new MeliBloqueado(

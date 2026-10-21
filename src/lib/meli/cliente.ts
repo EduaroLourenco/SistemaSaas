@@ -11,7 +11,8 @@
  *  3. nunca é importado de componente de cliente. Só de rota de API.
  */
 
-import { aguardarVez, autorizarLeitura, MeliBloqueado } from "./limite";
+import { aguardarVez, autorizarEscrita, autorizarLeitura, MeliBloqueado } from "./limite";
+import { dadosDoApp } from "./apps";
 import {
   lerToken,
   gravarToken,
@@ -312,6 +313,120 @@ export async function meliGet<T>(
     throw new Error(`Mercado Livre respondeu HTTP ${r.status} em ${caminho}`);
   }
   return (await r.json()) as T;
+}
+
+/** A conta não conectou a aplicação que pode alterar coisas. */
+export class MeliSemEscrita extends Error {
+  constructor(public readonly contaCanalId: string) {
+    super(
+      "Esta conta ainda não autorizou o sistema a alterar coisas no Mercado Livre. " +
+        "Em Integrações > Canais, clique em \"Permitir alterações\" na conta."
+    );
+    this.name = "MeliSemEscrita";
+  }
+}
+
+/**
+ * O access token da aplicação de ESCRITA, para uma conta de canal.
+ *
+ * Sem cache em memória, ao contrário da leitura: escrita é rara — uma
+ * por clique do usuário — e guardar token de escrita em variável
+ * global é guardar poder de alteração mais tempo do que o necessário.
+ */
+async function tokenDeEscrita(contaCanalId: string): Promise<string> {
+  const app = dadosDoApp("escrita");
+  if (!app.appId || !app.segredo) {
+    throw new MeliBloqueado(
+      `A aplicação de escrita não está configurada neste servidor (${app.variaveis}).`
+    );
+  }
+
+  const salvo = await lerToken(contaCanalId, app.provedor);
+  if (!salvo?.refresh_token) throw new MeliSemEscrita(contaCanalId);
+
+  const vale =
+    salvo.access_token &&
+    salvo.expira_em &&
+    new Date(salvo.expira_em).getTime() > Date.now() + 60_000;
+  if (vale) return salvo.access_token!;
+
+  const r = await fetch(`${API}/oauth/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: app.appId,
+      client_secret: app.segredo,
+      refresh_token: salvo.refresh_token,
+    }),
+  });
+  if (!r.ok) {
+    throw new MeliSemEscrita(contaCanalId);
+  }
+  const j = (await r.json()) as { access_token: string; refresh_token: string; expires_in: number };
+
+  /* O refresh do Meli é de uso único: o novo tem que ser gravado antes
+     de a chamada seguir, senão a próxima execução fica sem nada. */
+  await gravarToken(
+    contaCanalId,
+    {
+      access_token: j.access_token,
+      refresh_token: j.refresh_token,
+      expira_em: new Date(Date.now() + j.expires_in * 1000),
+    },
+    app.provedor
+  );
+  return j.access_token;
+}
+
+/**
+ * Altera algo no Mercado Livre. É o único ponto do sistema que faz isso.
+ *
+ * Quem chama já tem de ter a confirmação do usuário em mãos: esta
+ * função não pergunta nada, ela executa.
+ */
+export async function meliEscrever<T>(
+  metodo: "POST" | "PUT" | "DELETE",
+  caminho: string,
+  contaCanalId: string,
+  corpo?: unknown,
+  cabecalhos: Record<string, string> = {}
+): Promise<T> {
+  autorizarEscrita(caminho, metodo);
+  const token = await tokenDeEscrita(contaCanalId);
+  await aguardarVez();
+
+  const r = await fetch(`${API}${caminho}`, {
+    method: metodo,
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: "application/json",
+      ...(corpo === undefined ? {} : { "content-type": "application/json" }),
+      ...cabecalhos,
+    },
+    body: corpo === undefined ? undefined : JSON.stringify(corpo),
+  });
+
+  if (!r.ok) {
+    /* O corpo do erro do Meli costuma dizer o motivo em português
+       técnico ("item_not_eligible", "promotion_finished"). Levar ele
+       junto evita a tela dizer só "deu erro". */
+    const detalhe = await r.text().catch(() => "");
+    if (r.status === 403) {
+      throw new MeliBloqueado(
+        `O Mercado Livre recusou ${metodo} ${caminho} com 403. ` +
+          "A aplicação de escrita provavelmente não tem a permissão funcional " +
+          `necessária no DevCenter. ${detalhe.slice(0, 200)}`
+      );
+    }
+    throw new Error(
+      `Mercado Livre respondeu HTTP ${r.status} em ${metodo} ${caminho}. ${detalhe.slice(0, 300)}`
+    );
+  }
+
+  /* DELETE costuma voltar 204 sem corpo. */
+  const texto = await r.text();
+  return (texto ? JSON.parse(texto) : null) as T;
 }
 
 /* ══════════════════════════════════════════════════════════════

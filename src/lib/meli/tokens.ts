@@ -35,9 +35,17 @@ const g = globalThis as unknown as {
   __meliPendente?: Record<string, TokenSalvo>;
 };
 
-/** A integração da conta de canal, se já existe. */
-export function integracaoDa(contaCanalId: string) {
-  return integracaoDaConta(PROVEDOR, contaCanalId);
+/**
+ * A integração da conta de canal, se já existe.
+ *
+ * `provedor` escolhe de QUAL das duas aplicações do Meli — a de
+ * leitura, que é a de sempre, ou a de escrita, que o vendedor conecta
+ * à parte quando quer que o sistema altere coisas no canal. São duas
+ * linhas de `integracoes` para a mesma conta, com tokens
+ * independentes: reconectar uma não mexe na outra.
+ */
+export function integracaoDa(contaCanalId: string, provedor: string = PROVEDOR) {
+  return integracaoDaConta(provedor, contaCanalId);
 }
 
 /** Toda integração do Meli que existe, de todas as operações. */
@@ -45,15 +53,23 @@ export function integracoesMeli() {
   return integracoesDoProvedor(PROVEDOR);
 }
 
-export async function lerToken(contaCanalId: string): Promise<TokenSalvo | null> {
-  const integ = await integracaoDa(contaCanalId);
+export async function lerToken(
+  contaCanalId: string,
+  provedor: string = PROVEDOR
+): Promise<TokenSalvo | null> {
+  const integ = await integracaoDa(contaCanalId, provedor);
   const salvo = await lerSegredo<TokenSalvo>(integ);
-  return salvo ?? g.__meliPendente?.[contaCanalId] ?? null;
+  /* O pendente é só da conexão de leitura: ele existe para o caso de a
+     renovação acontecer antes de a integração ser criada, e isso só
+     acontece no fluxo antigo. */
+  if (salvo) return salvo;
+  return g.__meliPendente?.[`${provedor}|${contaCanalId}`] ?? null;
 }
 
 export async function gravarToken(
   contaCanalId: string,
-  t: { refresh_token: string; access_token: string; expira_em: Date }
+  t: { refresh_token: string; access_token: string; expira_em: Date },
+  provedor: string = PROVEDOR
 ): Promise<void> {
   const salvo: TokenSalvo = {
     refresh_token: t.refresh_token,
@@ -61,11 +77,17 @@ export async function gravarToken(
     expira_em: t.expira_em.toISOString(),
   };
 
-  const integ = await integracaoDa(contaCanalId);
+  const integ = await integracaoDa(contaCanalId, provedor);
   if (!integ) {
-    // A conta de canal existe mas a integração ainda não. Fica pendente
-    // até `vincularIntegracao` criá-la, logo em seguida.
-    g.__meliPendente = { ...(g.__meliPendente ?? {}), [contaCanalId]: salvo };
+    /*
+     * A conta de canal existe mas a integração ainda não. Fica pendente
+     * até `vincularIntegracao` criá-la, logo em seguida.
+     *
+     * A chave leva o provedor junto: sem isso, conectar a aplicação de
+     * escrita logo depois da de leitura sobrescreveria o pendente da
+     * outra, e uma das duas nasceria sem token.
+     */
+    g.__meliPendente = { ...(g.__meliPendente ?? {}), [`${provedor}|${contaCanalId}`]: salvo };
     return;
   }
 
@@ -96,14 +118,18 @@ export async function vincularIntegracao(ctx: {
   canalId: string;
   contaCanalId: string;
   semente?: string | null;
+  /** Qual das duas aplicações do Meli está sendo conectada. */
+  provedor?: string;
 }): Promise<Integracao | null> {
-  const integ = await garantirIntegracao(PROVEDOR, {
+  const provedor = ctx.provedor ?? PROVEDOR;
+  const integ = await garantirIntegracao(provedor, {
     ...ctx,
     config: ctx.semente ? { conta: ctx.semente } : {},
   });
   if (!integ) return null;
 
-  const pendente = g.__meliPendente?.[ctx.contaCanalId];
+  const chave = `${provedor}|${ctx.contaCanalId}`;
+  const pendente = g.__meliPendente?.[chave];
   if (pendente) {
     const erro = await gravarSegredo(integ, pendente, pendente.expira_em);
     if (erro) {
@@ -111,7 +137,7 @@ export async function vincularIntegracao(ctx: {
         `[meli] Token da conta ${ctx.contaCanalId} NÃO gravado no cofre: ${erro.message}`
       );
     } else {
-      delete g.__meliPendente![ctx.contaCanalId];
+      delete g.__meliPendente![chave];
     }
   }
   return integ;
