@@ -712,7 +712,7 @@ export default function ProcessarPromocoes() {
                     hint={
                       regra === "tabela"
                         ? "só muda a regra de margem — na tabela, quem decide é a tolerância"
-                        : "ligado, a margem pedida é o fundo; desligado, a tolerância cai em cima dela"
+                        : "desligado, a tolerância nunca fura a margem pedida; ligado, fura"
                     }
                   />
                   <Field

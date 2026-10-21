@@ -248,11 +248,18 @@ export function getPrecoTabela(data: FormulaBaseData, sku: string, mlb: string, 
 /**
  * O "preço de tabela" que a margem pede.
  *
- * A convenção do motor é que a tabela × PISO (95% no Meli) é o menor preço
- * que preserva a margem — é por isso que ele aceita oferta até 5% abaixo
- * da tabela. Para a regra de margem caber na mesma convenção, a "tabela"
- * dela é o preço da margem mínima dividido pelo piso: os 5% de tolerância
- * caem exatamente em cima da margem pedida, nunca abaixo.
+ * A convenção do motor é que a tabela é o preço PRETENDIDO e a tolerância
+ * diz quanto dele se aceita abrir. A regra de margem não dá um preço
+ * pretendido — ela calcula o FUNDO, o preço que deixa exatamente a margem
+ * mínima. Para o mesmo campo de tolerância significar a mesma coisa nas
+ * duas réguas, a "tabela" da margem é o preço que, abrindo a tolerância
+ * inteira, para exatamente no fundo.
+ *
+ * Daí a divisão. Ela era por PISO fixo (95%), o que só acertava quando a
+ * tolerância era exatamente 5%: com 10% cadastrados, a referência subia 5%
+ * e a oferta descia 10%, e o item entrava 4 pontos abaixo da margem pedida
+ * — o oposto do que esta divisão existe para garantir. Agora divide pela
+ * tolerância que está valendo, e aí qualquer valor cai em cima da margem.
  */
 export function precoDaMargem(data: FormulaBaseData, sku: string, comissao: number): number | null {
   const c = data.custos?.get(sku.trim().toUpperCase());
@@ -261,13 +268,19 @@ export function precoDaMargem(data: FormulaBaseData, sku: string, comissao: numb
   if (restante <= 0) return null;
   const precoMargem = ((c.mercadoria + c.embalagem + c.frete) * 100) / restante;
   /*
-   * Usado como PISO, o número já é o mínimo: dividir pelo piso de novo o
-   * empurraria 5% para cima e recusaria oferta que cobre a margem pedida.
-   * A divisão existe só na leitura "alvo", para que a tolerância de 5% do
-   * canal caia exatamente em cima da margem e nunca abaixo dela.
+   * Usado como PISO, o número já é o mínimo: subir a referência
+   * recusaria oferta que cobre a margem pedida. A tolerância, se houver,
+   * desce dele — e aí ela fura a margem de propósito, que é o que esse
+   * modo quer dizer.
    */
   if (data.regra.comoUsar === "piso") return Math.round(precoMargem * 100) / 100;
-  return Math.round((precoMargem / PISO) * 100) / 100;
+
+  /* Como ALVO, a referência é o preço que, abrindo a tolerância inteira,
+     chega exatamente no fundo. Tolerância de 100% não tem referência
+     possível — cai no fundo, que é o mais perto do pedido. */
+  const folga = tolerancia(data, 1 - PISO);
+  if (folga >= 1) return Math.round(precoMargem * 100) / 100;
+  return Math.round((precoMargem / (1 - folga)) * 100) / 100;
 }
 
 /** Por que não há preço mínimo — muda conforme a regra. */
