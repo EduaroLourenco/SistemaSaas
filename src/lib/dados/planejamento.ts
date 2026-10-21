@@ -3,6 +3,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "./operacao";
 import { paginar } from "./paginar";
 import { ultimosPrecosDeVenda } from "./preco-atual";
+import { semControleDeEstoque } from "@/lib/estoque-sem-controle";
 import {
   detalhesVazios,
   type Dados,
@@ -276,7 +277,7 @@ async function enriquecer(
     const ativo = a.status === "ativo" || a.status === "active";
     if (ativo && preco && (x.preco == null || preco < x.preco)) x.preco = preco;
     // 40.000+ é o marcador de "sem controle" (sob encomenda): disponível, não quantidade.
-    if (ativo && a.estoque != null && a.estoque >= 40_000) x.semControle = true;
+    if (ativo && semControleDeEstoque(a.estoque)) x.semControle = true;
     else x.estoque += a.estoque ?? 0;
     anuncio.set(chave, x);
   }

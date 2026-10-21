@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { paginar } from "./paginar";
+import { SOB_ENCOMENDA } from "@/lib/estoque-sem-controle";
 
 /**
  * O que ACONTECEU na semana, dia a dia.
@@ -32,7 +33,7 @@ import { paginar } from "./paginar";
  */
 
 /** Acima disto o canal não controla estoque: é venda sob encomenda. */
-const SOB_ENCOMENDA = 40000;
+
 
 /** Variação de preço que vale como acontecimento. */
 const PRECO_MINIMO_PCT = 10;

@@ -1,6 +1,7 @@
 import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { paginar } from "@/lib/dados/paginar";
+import { semControleDeEstoque } from "@/lib/estoque-sem-controle";
 
 /**
  * O relatório da operação, montado inteiro no servidor.
@@ -1034,7 +1035,7 @@ export async function montarRelatorio(
       g.ativos += 1;
       // 40 mil é o marcador de "sem controle de estoque" do canal, e somar
       // isso daria 160 mil peças de um colchão.
-      if ((inst.estoque ?? 0) >= 40_000) g.semControle = true;
+      if (semControleDeEstoque(inst.estoque)) g.semControle = true;
       else g.estoque += inst.estoque ?? 0;
       const p = inst.precoVisivel ?? inst.precoVitrine;
       if (p != null) g.preco = g.preco == null ? p : Math.min(g.preco, p);

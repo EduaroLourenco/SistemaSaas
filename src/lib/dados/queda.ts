@@ -4,6 +4,7 @@ import { paginar } from "./paginar";
 import { carregarContasRecorte } from "./contas-recorte";
 import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
 import { diagnosticar, repartir } from "./queda-causa";
+import { SOB_ENCOMENDA } from "../estoque-sem-controle";
 import { carregarVitrineAtual, type PrecoVitrineAtual } from "./vitrine-atual";
 
 /**
@@ -250,6 +251,54 @@ async function precosDeVitrine(
 
 /* ══ Carga ══════════════════════════════════════════════════ */
 
+/**
+ * O estoque de um grupo de anúncios: o maior de cada conta, somado entre
+ * contas.
+ *
+ * Clássico e premium do mesmo item na mesma conta compartilham o estoque
+ * físico do canal, então somá-los duplicaria. Contas diferentes têm
+ * inventário próprio, então o maior de cada uma, somados, é o que existe
+ * para vender — e nunca inventa unidade que não há.
+ *
+ * Antes disso, só um anúncio ISOLADO tinha número: no nível de produto,
+ * que é o padrão da tela, quase todo SKU tem vários anúncios e a coluna
+ * "Estoque agora" saía vazia na planilha inteira. Quem recebe `null` aqui
+ * é SKU cujos anúncios todos declaram "sem controle de estoque", e aí não
+ * há número a mostrar mesmo.
+ *
+ * Recebe o estoque JÁ agrupado por conta, com os "sem controle" de fora —
+ * quem monta o mapa é `carregarQueda`, que tem o anúncio na mão.
+ */
+export function somarEstoque(porConta: Map<string, number>): number | null {
+  if (!porConta.size) return null;
+  let total = 0;
+  for (const v of porConta.values()) total += v;
+  return total;
+}
+
+/**
+ * A situação de um grupo de anúncios, em duas leituras.
+ *
+ *   status   vai para o diagnóstico, onde a pergunta é se AINDA HÁ anúncio
+ *            no ar: um irmão ativo basta para a queda não ser "pausado".
+ *   situacao vai para a tela e para a planilha, onde interessa a mistura —
+ *            clássico pausado e premium ativo explica muita coisa que
+ *            "ativo" sozinho esconde. Na Probel são 40 SKUs assim.
+ *
+ * O canal escreve "ativo" em português e "active" em inglês conforme o
+ * endpoint; os dois contam.
+ */
+export function resumirSituacao(
+  vistas: (string | null)[],
+): { status: string | null; situacao: string | null } {
+  if (!vistas.length) return { status: null, situacao: null };
+  const ativos = vistas.filter((v) => v === "ativo" || v === "active").length;
+  const primeira = vistas.find((v) => v) ?? null;
+  if (ativos === 0) return { status: primeira, situacao: primeira };
+  if (ativos === vistas.length) return { status: "ativo", situacao: "ativo" };
+  return { status: "ativo", situacao: `${ativos} de ${vistas.length} ativos` };
+}
+
 export async function carregarQueda(opcoes: {
   de?: string;
   ate?: string;
@@ -396,6 +445,18 @@ export async function carregarQueda(opcoes: {
     semEstoque: Set<string>;
     comEstoque: Set<string>;
     status: string | null;
+    /*
+     * Situação e estoque de cada anúncio do grupo.
+     *
+     * No nível de produto um SKU junta vários anúncios — clássico e
+     * premium, e as duas contas da Probel. Guardar só um número perdia os
+     * dois: a situação ficava nula e o estoque também, e as colunas
+     * "Situação" e "Estoque agora" saíam vazias na planilha inteira.
+     */
+    situacoes: Map<string, string | null>;
+    estoquePorConta: Map<string, number>;
+    /* Algum anúncio do grupo declara o número de "sem controle de estoque"? */
+    temSobEncomenda: boolean;
     precoAtual: number | null;
     precoAtualMeta?: PrecoVitrineAtual;
     /* Dias-anúncio, não dias: produto com dois anúncios de catálogo tem dois
@@ -411,6 +472,7 @@ export async function carregarQueda(opcoes: {
       g = {
         chave, ...base, onde: new Set(), anuncios: new Set(), antes: novoAcc(), agora: novoAcc(),
         semEstoque: new Set(), comEstoque: new Set(), status: null, precoAtual: null,
+        situacoes: new Map(), estoquePorConta: new Map(), temSobEncomenda: false,
         catAntes: { ganhando: 0, dias: 0 }, catAgora: { ganhando: 0, dias: 0 }, partes: new Map(),
       };
       grupos.set(chave, g);
@@ -475,7 +537,25 @@ export async function carregarQueda(opcoes: {
     if (!g) continue; // sem venda nos dois períodos: não há queda para explicar
     g.anuncios.add(a.id);
     g.onde.add(nomeConta.get(a.conta_canal_id ?? "") ?? "Outros");
-    if (nivel === "anuncio") g.status = a.status;
+    g.situacoes.set(a.id, a.status);
+    /*
+     * Estoque: o MAIOR por conta, somado entre contas.
+     *
+     * Clássico e premium do mesmo item na mesma conta compartilham o
+     * estoque físico, então somar duplicaria. Contas diferentes têm
+     * inventário próprio no canal, então o maior de cada uma, somados, é o
+     * que existe para vender — e nunca inventa unidade que não há.
+     */
+    if (a.estoque != null) {
+      if (Number(a.estoque) >= SOB_ENCOMENDA) {
+        /* 747 dos 1.667 anúncios declaram isso. Somá-lo afogaria o estoque
+           real dos irmãos e a coluna viraria ruído de cinco dígitos. */
+        g.temSobEncomenda = true;
+      } else {
+        const conta = a.conta_canal_id ?? "sem-conta";
+        g.estoquePorConta.set(conta, Math.max(g.estoquePorConta.get(conta) ?? 0, Number(a.estoque)));
+      }
+    }
     const preco: PrecoVitrineAtual | undefined = vitrineAtual.get(a.id) ?? (n(a.preco_atual) > 0 ? { preco: n(a.preco_atual), data: a.sincronizado_em?.slice(0,10) ?? null, origem: "cadastro" } : undefined);
     if (preco && (!g.precoAtualMeta || (preco.origem === "oferta" && g.precoAtualMeta.origem !== "oferta") || (preco.origem === g.precoAtualMeta.origem && preco.preco < g.precoAtualMeta.preco))) {
       g.precoAtual = preco.preco; g.precoAtualMeta = preco;
@@ -547,20 +627,9 @@ export async function carregarQueda(opcoes: {
       for (const [id, pt] of g.partes) if (acompanhados.has(id) && pt.agora < pt.antes) q += pt.antes - pt.agora;
       pesoAcompanhado = q / -quedaTotal;
     }
-    /*
-     * Estoque de hoje. Só soma o que foi lido: anúncio nunca sincronizado
-     * tem estoque nulo, e tratá-lo como zero diria "faltou produto" de um
-     * anúncio sobre o qual não se sabe nada.
-     *
-     * Acima de 40 mil é anúncio sob encomenda — o vendedor declara um
-     * número alto para não ficar sem anúncio, e somá-lo afogaria o estoque
-     * real dos irmãos.
-     */
-    // Anúncios podem compartilhar o mesmo User Product. Sem uma identificação
-    // de depósito, somá-los produziria um total duplicado. O detalhe por origem
-    // fica em Estoques; aqui só um anúncio isolado tem quantidade comparável.
-    const estoqueAtual = g.anuncios.size === 1 ? anuncioPorId.get([...g.anuncios][0])?.estoque ?? null : null;
-    const sobEncomenda = false;
+    const estoqueAtual = somarEstoque(g.estoquePorConta);
+    const { status, situacao } = resumirSituacao([...g.situacoes.values()]);
+    const sobEncomenda = g.temSobEncomenda;
     /* Sem registro nos DOIS lados não há comparação: um período sem dado é
        "não sei", e dizer "perdeu o catálogo" por isso seria inventar. */
     const catalogo =
@@ -571,7 +640,7 @@ export async function carregarQueda(opcoes: {
     const efeito = repartir(antes, agora, delta);
     const { causa, explicacao } = diagnosticar({
       antes, agora, delta, efeito, diasSemEstoque: g.semEstoque.size,
-      diasObservados: g.semEstoque.size + g.comEstoque.size, pesoAcompanhado, status: g.status,
+      diasObservados: g.semEstoque.size + g.comEstoque.size, pesoAcompanhado, status,
       estoqueAtual, sobEncomenda, catalogo,
     });
     return {
@@ -589,7 +658,7 @@ export async function carregarQueda(opcoes: {
       efeito,
       diasSemEstoque: g.semEstoque.size,
       diasComEstoque: g.comEstoque.size,
-      status: g.status,
+      status: situacao,
       precoAtual: g.precoAtual,
       precoAtualData: g.precoAtualMeta?.data,
       precoAtualOrigem: g.precoAtualMeta?.origem,
