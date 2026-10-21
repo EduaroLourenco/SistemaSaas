@@ -17,13 +17,13 @@
  *   · proposta igual ao mínimo  → participa, ainda sem reescrever
  *   · proposta abaixo do mínimo → fica de fora, com o motivo
  *
- * E confere o que sobrou de reescrita na linha NÃO automática: ela desce
- * ao nosso mínimo quando o canal pede menos desconto do que a margem
- * aguenta, e fica de fora quando o canal pede mais — porque subir o preço
- * nenhuma campanha do canal aceita. Este arquivo dizia o contrário até
- * 21/10/2026, e dizia por suposição: as oito linhas não automáticas dele
- * voltaram com erro também, e não houve uma única linha de preço elevado
- * aceita em nenhum retorno medido. Ver `testar-teto-do-canal.mjs`.
+ * E confere que a linha NÃO automática decide igual: entra no preço do
+ * canal quando a proposta cobre o mínimo, fica de fora quando não cobre.
+ * Este arquivo dizia outra coisa até 21/10/2026 — que a não automática
+ * entrava com o nosso preço escrito por cima — e dizia por suposição: as
+ * oito linhas não automáticas daquele retorno voltaram com erro também, e
+ * não houve uma única linha de preço elevado aceita em nenhum retorno
+ * medido. Ver `testar-teto-do-canal.mjs`.
  */
 import assert from "node:assert/strict";
 import path from "node:path";
@@ -54,7 +54,7 @@ const LINHAS = [
   { mlb: "MLB2", sub: "AUTOMATIC", proposta: 28.9, espera: "Participar", escreve: false, nota: "proposta exatamente no mínimo" },
   { mlb: "MLB3", sub: "AUTOMATIC", proposta: 27.86, espera: "Não participar", escreve: false, nota: "proposta abaixo do mínimo — o caso real" },
   { mlb: "MLB4", sub: "LIGHTNING", proposta: 27.86, espera: "Não participar", escreve: false, nota: "não é automática, mas o preço subiria" },
-  { mlb: "MLB5", sub: "LIGHTNING", proposta: 31.0, espera: "Participar", escreve: true, nota: "não é automática e o preço desce: recalcula" },
+  { mlb: "MLB5", sub: "LIGHTNING", proposta: 31.0, espera: "Participar", escreve: false, nota: "não é automática e a proposta cobre o mínimo" },
 ];
 
 const wb = new ExcelJS.Workbook();
@@ -74,6 +74,11 @@ const formula = {
   baseMlb: new Map(LINHAS.map((l) => [l.mlb, { padrao: 0.115, tipo: "classico" }])),
   precosSKU: new Map([["SKU1", { 0.115: TABELA, 0.165: TABELA }]]),
   precosMLB: new Map(),
+  /* Tolerância zero de propósito: aqui o assunto é a trava de preço da
+     campanha automática, e com os 5% padrão as propostas deste arquivo
+     cairiam todas dentro da folga — a folga tem teste próprio, em
+     `testar-piso-promocao.mjs`. */
+  regra: { modo: "tabela", margemMinima: 0, toleranciaPct: 0 },
 };
 
 const r = await processarPlanilha(entrada, "Participe da oferta relâmpago.xlsx", formula);
@@ -96,12 +101,11 @@ assert.equal(porMlb.get("MLB1").precoOferta, 30.0, "a automática aprovada mant�
 assert.equal(porMlb.get("MLB2").precoOferta, 28.9);
 /* A não-automática que subiria fica com o preço do canal, intacto. */
 assert.equal(porMlb.get("MLB4").precoOferta, 27.86, "a linha recusada não é contraproposta");
-/* E a que desce recebe o nosso mínimo por cima, como sempre. */
-assert.equal(porMlb.get("MLB5").precoOferta, TABELA, "a não-automática que desce recebe o preço de tabela");
+/* E a que cobre o mínimo entra no preço do canal, sem contraproposta. */
+assert.equal(porMlb.get("MLB5").precoOferta, 31.0, "a não-automática aprovada mantém o preço do canal");
 
 /* A recusa tem que dizer POR QUE, senão vira um "não" sem recurso. */
 const motivo = r.itensRelatorio.find((i) => i.mlb === "MLB3")?.motivo ?? "";
-assert.match(motivo, /autom[áa]tica/i, "a recusa precisa citar a campanha automática");
 assert.match(motivo, /27,86/, "a recusa precisa citar o preço proposto pelo canal");
 assert.match(motivo, /28,90/, "a recusa precisa citar o nosso mínimo");
 

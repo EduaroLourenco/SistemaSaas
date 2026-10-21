@@ -10,8 +10,14 @@
  * formato da Central de Promoções, roda o processamento REAL e confere, por
  * célula, que a linha aceita saiu idêntica à que entrou — com o contraste
  * que torna a prova decisiva: quatro linhas com os MESMOS números, duas
- * aceitas e duas em aberto. As em aberto vão de 80 para 60; as aceitas
+ * aceitas e duas em aberto. As em aberto vão de 80 para 54,15; as aceitas
  * ficam em 80.
+ *
+ * O que faz as em aberto descerem é o DESCONTO EXTRA de 5%. Sem ele, desde
+ * 21/10/2026, nenhuma delas seria reescrita: a proposta do canal cobre o
+ * mínimo e quem entra entra no preço dele (ver `testar-teto-do-canal.mjs`).
+ * O desconto extra é um pedido explícito de descer, e é o que mantém este
+ * teste com um preço novo para comparar.
  */
 import assert from "node:assert/strict";
 import path from "node:path";
@@ -74,7 +80,9 @@ const LINHAS = [
 const PROPOSTA = 80;
 const PUBLICADO = 100;
 const TABELA = 60;
-const RECALCULADO = 60;
+const EXTRA = 0.05; // fração, como a tela manda ("5 ou 0,05")
+/* O extra parte do PISO: 60 − 5% = 57, e 57 − 5% = 54,15. */
+const RECALCULADO = 54.15;
 
 const wb = new ExcelJS.Workbook();
 const ws = wb.addWorksheet("Promoções");
@@ -97,7 +105,7 @@ const formula = {
   precosMLB: new Map(),
 };
 
-const r = await processarPlanilha(entrada, "Campanha de teste.xlsx", formula);
+const r = await processarPlanilha(entrada, "Campanha de teste.xlsx", formula, EXTRA);
 const porMlb = new Map(r.linhas.map((l) => [l.mlb, l]));
 const relatorio = new Map(r.itensRelatorio.map((i) => [i.mlb, i]));
 assert.equal(r.linhas.length, LINHAS.length, "todas as linhas aparecem no relatório");
@@ -144,4 +152,4 @@ for (const [indice, l] of LINHAS.entries()) {
   }
 }
 
-console.log("ok: oferta aceita sai idêntica; linha em aberto com os mesmos números vai de 80 para 60.");
+console.log("ok: oferta aceita sai idêntica; linha em aberto com os mesmos números vai de 80 para 54,15.");

@@ -61,22 +61,41 @@ function caso(nome, r, proposta, tabela) {
   );
 }
 
-console.log("\nSEM REDUÇÃO DE TARIFA — a lógica escreve o preço de tabela:");
+console.log("\nSEM REDUÇÃO DE TARIFA — a decisão é sobre a proposta do canal:");
 
-/* O caso que gerou a dúvida: o canal pede menos do que a tabela permite. */
+/*
+ * O caso que gerou a dúvida: o canal pede 10% abaixo da tabela, fora dos
+ * 5% de tolerância. Até 21/10/2026 a lógica escrevia a tabela por cima — e
+ * o canal recusava a linha, porque contrapropor preço mais alto que o dele
+ * ele não aceita. Agora a linha fica de fora, e o invariante deste arquivo
+ * (nada entra abaixo do piso) passa a valer de verdade, em vez de valer
+ * num arquivo que o canal devolve.
+ */
 {
   const tabela = 1563.02, proposta = 1406.71;
   const r = processItem("MLB1", "SKU1", null, proposta, 2699, base(tabela));
-  assert.equal(r.action, "Participar");
-  assert.equal(r.newPrice, tabela, "devia escrever a tabela por cima da proposta");
-  assert.notEqual(aplicado(r, proposta), proposta, "o aplicado não pode ser a proposta");
-  caso("canal pede abaixo da tabela", r, proposta, tabela);
+  assert.equal(r.action, "Não participar");
+  assert.equal(r.newPrice, null, "recusa não escreve preço");
+  assert.match(r.pendencia, /1\.484,87/, "o motivo precisa citar o mínimo com tolerância");
+  caso("canal pede 10% abaixo da tabela", r, proposta, tabela);
 }
 
-/* O canal pede mais do que a tabela: continua valendo a tabela. */
+/* Dentro dos 5%: entra, e NO PREÇO DO CANAL — que é mais alto que o nosso
+   mínimo, logo a melhor margem que a campanha permite. */
+{
+  const tabela = 1563.02, proposta = 1500;
+  const r = processItem("MLB1", "SKU1", null, proposta, 2699, base(tabela));
+  assert.equal(r.action, "Participar");
+  assert.equal(r.newPrice, null, "não contrapropõe");
+  assert.equal(aplicado(r, proposta), proposta, "o aplicado é a proposta do canal");
+  caso("canal pede dentro dos 5%", r, proposta, tabela);
+}
+
+/* O canal pede mais do que a tabela: entra no preço dele. */
 {
   const tabela = 1563.02, proposta = 1800;
   const r = processItem("MLB1", "SKU1", null, proposta, 2699, base(tabela));
+  assert.equal(aplicado(r, proposta), proposta);
   caso("canal pede acima da tabela", r, proposta, tabela);
 }
 

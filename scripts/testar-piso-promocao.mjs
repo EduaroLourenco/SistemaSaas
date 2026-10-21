@@ -1,16 +1,21 @@
 /**
- * "Tabela como piso": a decisão é sobre a proposta do canal.
+ * O mínimo é piso de ACEITAÇÃO, não preço a propor.
  *
  *   node --experimental-strip-types scripts/testar-piso-promocao.mjs
  *
- * O que este arquivo protege é a diferença entre as duas leituras do mesmo
- * número. Com `comoUsar: "alvo"` (o padrão, a Fórmula base do Mercado
- * Livre) o motor PROPÕE o preço da tabela. Com `comoUsar: "piso"` ele não
- * mexe no preço: compara o que o canal propôs com o mínimo.
+ * O caso real é um skate da Bom de Compras publicado a R$ 399, com o canal
+ * propondo R$ 379,05 e mínimo de R$ 251,13. O motor devolvia "participar em
+ * R$ 251,13" — R$ 128 de desconto que ninguém pediu, e um preço que o canal
+ * recusaria de todo modo se fosse mais alto que o dele.
  *
- * Trocar um pelo outro sem perceber foi o que fez o motor devolver
- * "participar em R$ 251,13" num skate publicado a R$ 399 com o canal
- * propondo R$ 379,05. É um caso real da Bom de Compras, e é o caso 1.
+ * Em 21/10/2026 as duas leituras do número convergiram, porque o canal não
+ * aceita contraproposta de preço mais alto: o mínimo decide ENTRAR ou não,
+ * e quem entra entra no preço do canal. O que `comoUsar` ainda muda é de
+ * onde o mínimo sai e quanta folga ele tem por padrão — "alvo" é a Fórmula
+ * base com 5% de tolerância, "piso" é o custo com zero.
+ *
+ * Sem proposta na planilha não há o que comparar, e aí o mínimo ainda é
+ * escrito: é o caso 5.
  */
 import assert from "node:assert/strict";
 import { processItem } from "../src/lib/planilhas/motor-promocoes.ts";
@@ -29,20 +34,21 @@ const rodar = (comoUsar, propostaDoCanal, publicado = 399, saleFee = null) =>
 let n = 0;
 const vale = (nome, cond, r) => { n++; assert.ok(cond, `${nome} — veio ${JSON.stringify(r)}`); };
 
-/* 1. O prejuízo que a regra nova evita, com os números reais do skate. */
+/* 1. O prejuízo que a regra evita, com os números reais do skate: a
+      proposta do canal está muito acima do mínimo, nas duas leituras. */
 const alvo = rodar("alvo", 379.05);
-vale("como ALVO o motor propõe o piso", alvo.action === "Participar" && alvo.newPrice === PISO, alvo);
+vale("como ALVO participa", alvo.action === "Participar", alvo);
+vale("e NÃO contrapropõe o mínimo", alvo.newPrice === null, alvo);
 const piso = rodar("piso", 379.05);
 vale("como PISO participa", piso.action === "Participar", piso);
-/* Onde o preço é editável, a régua "preço mínimo" escreve o mínimo: é a
-   maior exposição possível sem vender no prejuízo. */
-vale("como PISO escreve o mínimo", piso.newPrice === PISO, piso);
+vale("e também não contrapropõe", piso.newPrice === null, piso);
 
-/* 2. A proposta do canal não decide nada quando o preço é editável: o
-      mínimo é escrito por cima, mais alto ou mais baixo que ela. */
+/* 2. Proposta ABAIXO do mínimo: fica de fora. Escrever o mínimo por cima
+      seria subir o preço, e nenhuma campanha do canal aceita isso. */
 const abaixo = rodar("piso", 250);
-vale("proposta abaixo do piso vira o piso", abaixo.newPrice === PISO, abaixo);
-vale("e participa", abaixo.action === "Participar", abaixo);
+vale("proposta abaixo do piso recusa", abaixo.action === "Não participar", abaixo);
+vale("e não escreve preço", abaixo.newPrice === null, abaixo);
+vale("dizendo de quanto foi", /abaixo do piso/.test(abaixo.pendencia), abaixo);
 
 /* 3. Piso ACIMA do preço publicado: participar exigiria aumentar o preço,
       e promoção é desconto. Recusa, e não toca no preço. */
@@ -55,23 +61,24 @@ vale("dizendo o porquê", /acima do preço publicado/.test(caro.pendencia), caro
 const semPiso = processItem("MLB1", "OUTRO", null, 300, 399, base("piso"));
 vale("SKU sem piso tem pendência própria", /sem piso cadastrado/.test(semPiso.pendencia), semPiso);
 
-/* 5. Sem proposta do canal, o mínimo vale do mesmo jeito: a régua é
-      nossa, não dele. */
+/* 5. Sem proposta do canal não há comparação a fazer, e o mínimo vale do
+      mesmo jeito: a régua é nossa, não dele. */
 const semProposta = rodar("piso", null);
 vale("sem proposta, escreve o mínimo", semProposta.newPrice === PISO, semProposta);
 
 /* 6. Com redução de tarifa (Caso A) o motor já validava a proposta e nunca
-      mexeu no preço — a regra nova não pode ter mudado isso. */
+      mexeu no preço — nada disso pode ter mudado isso. */
 const comReducao = rodar("piso", 300, 399, 10);
 vale("Caso A segue sem escrever preço", comReducao.newPrice === null, comReducao);
 
 console.log(`${n} verificações, todas certas.`);
 
-/* ── 7. A tolerância é cadastro da empresa, e move o mínimo escrito ──
-   db/36: com o preço editável, a folga não decide entrar ou não — ela
-   decide QUAL número vai para a planilha. */
-const comFolga = (pct) =>
-  processItem("MLB1", "SK1", null, 379.05, 399, {
+/* ── 7. A tolerância é cadastro da empresa, e move o PISO DE ACEITAÇÃO ──
+   db/36: ela decide até onde a proposta do canal pode furar o mínimo e
+   ainda entrar. Antes de 21/10/2026 decidia qual número ia para a
+   planilha, o que só fazia sentido enquanto o motor contrapropunha. */
+const comFolga = (pct, proposta) =>
+  processItem("MLB1", "SK1", null, proposta, 399, {
     ...base("piso"),
     regra: { modo: "tabela", margemMinima: 0, comoUsar: "piso", toleranciaPct: pct },
   });
@@ -80,8 +87,11 @@ const diz = (nome, cond, r) => {
   m++;
   assert.ok(cond, `${nome} — veio ${JSON.stringify(r)}`);
 };
-diz("sem folga, escreve o piso cheio", comFolga(0).newPrice === PISO, comFolga(0));
-// 251,13 × 0,95 = 238,57
-diz("com 5% de folga, escreve 5% abaixo", comFolga(5).newPrice === 238.57, comFolga(5));
-diz("e o campo do piso acompanha o escrito", comFolga(5).tabelaCalculada === comFolga(5).newPrice, comFolga(5));
+/* 251,13 × 0,95 = 238,57 — uma proposta de 240 fura o piso cheio e cabe
+   nos 5%, então a folga é a única coisa que decide entre os dois casos. */
+diz("sem folga, 240 fica de fora", comFolga(0, 240).action === "Não participar", comFolga(0, 240));
+diz("com 5% de folga, 240 entra", comFolga(5, 240).action === "Participar", comFolga(5, 240));
+diz("e entra no preço do canal", comFolga(5, 240).newPrice === null, comFolga(5, 240));
+/* Abaixo de 238,57 nem a folga salva. */
+diz("238,00 fica de fora mesmo com 5%", comFolga(5, 238).action === "Não participar", comFolga(5, 238));
 console.log(`${m} verificações da tolerância, todas certas.`);

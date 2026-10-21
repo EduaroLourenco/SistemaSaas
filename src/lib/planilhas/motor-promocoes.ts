@@ -288,7 +288,10 @@ function tolerancia(data: FormulaBaseData, padrao: number): number {
 }
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
-const reais = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
+/* Com separador de milhar: estes textos vão para a tela de revisão, e
+   "R$ 1484,87" ao lado de "R$ 1.563,02" se lê como outro número. */
+const reais = (v: number) =>
+  `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function precoDaFormula(data: FormulaBaseData, sku: string, mlb: string, comissao: number): number | null {
   const k = Math.round(comissao * 1000) / 1000;
@@ -459,18 +462,23 @@ export function processItem(
     if (p === null) return { action: negativeAction, pendencia: semPreco(data), newPrice: null };
 
     /*
-     * Base de PISO, e aqui o preço PODE ser mudado: escreve o mínimo.
+     * Base de PISO: o mínimo é o menor preço que a operação aguenta.
      *
-     * É a diferença entre as duas planilhas do canal. Na de redução de
-     * tarifa (Caso A) a coluna de preço é travada, então só cabe aceitar
-     * ou recusar a proposta. Aqui a coluna é editável, e quem escolheu a
-     * régua "preço mínimo" quer participar NELE: é o menor preço que a
-     * operação aguenta, e descer até ele é a maior exposição possível sem
-     * vender no prejuízo.
+     * Quem escolheu esta régua quer descer até lá para ganhar exposição —
+     * mas só até lá, e só quando precisa. Se o canal já propõe um preço
+     * acima do mínimo, escrever o mínimo é abrir desconto que ninguém
+     * pediu: na 11.11 da Imprimil seriam 35 centavos por unidade no
+     * REV_PACK10, onde o canal já oferecia 15,58 contra um mínimo de
+     * 15,23. A proposta dele é a melhor margem disponível na campanha.
      *
-     * Não escrever era o que esta função fazia antes, e deixava a planilha
-     * voltar com a proposta do canal intacta — ou seja, com o desconto que
-     * o canal quis, não com o que a régua permite.
+     * Então o mínimo é PISO de aceitação, não preço a propor:
+     *
+     *   proposta no piso ou acima → participa no preço do canal
+     *   proposta abaixo do piso   → fica de fora, dizendo de quanto foi
+     *
+     * Escrever o mínimo por cima de uma proposta mais alta, além de
+     * entregar margem, era recusado: subir o preço nenhuma campanha do
+     * canal aceita (ver o guarda em `processar.ts`).
      */
     if (data.regra?.comoUsar === "piso") {
       const minimo = r2(p * (1 - tolerancia(data, 0)));
@@ -489,6 +497,20 @@ export function processItem(
         };
       }
 
+      if (finalPrice != null && finalPrice > 0) {
+        if (finalPrice >= minimo - 0.01) {
+          return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: minimo };
+        }
+        return {
+          action: negativeAction,
+          pendencia: `proposta de ${reais(finalPrice)} abaixo do piso de ${reais(minimo)}`,
+          newPrice: null,
+          tabelaCalculada: minimo,
+        };
+      }
+
+      /* Sem proposta na planilha não há o que comparar: escreve o mínimo,
+         que é o comportamento de quando esta régua foi criada. */
       return { action: positiveAction, pendencia: "", newPrice: minimo, tabelaCalculada: minimo };
     }
 
@@ -504,6 +526,49 @@ export function processItem(
       extraDiscount > 0
         ? precoComExtra(p, extraDiscount, config.descontoMinimo)
         : Math.round((p + 1e-9) * 100) / 100;
+
+    /*
+     * A TOLERÂNCIA VALE AQUI TAMBÉM.
+     *
+     * É o que a documentação da leitura "alvo" sempre disse: o motor
+     * propõe o preço-alvo "e aceita a contraproposta do canal até 5%
+     * abaixo dele". A parte da aceitação nunca tinha sido escrita neste
+     * caso — a tolerância só agia onde a tarifa vinha reduzida. Sem
+     * redução, o preço-alvo era escrito por cima da proposta sem nenhuma
+     * comparação, e a tolerância que a tela promete ficava sem efeito.
+     *
+     * Foi o que aconteceu na 11.11 da Imprimil: tolerância de 5%
+     * configurada, e as catorze linhas saíram com a tabela cheia por cima
+     * de uma proposta que estava dentro dos 5%. O canal recusou todas,
+     * porque propor preço mais alto que o dele é contrapropor um desconto
+     * menor.
+     *
+     * Então a ordem passa a ser a que o número descreve:
+     *
+     *   proposta dentro da tolerância → participa NO PREÇO DO CANAL. É o
+     *     melhor desfecho possível: entra na campanha e com a margem mais
+     *     alta que ela permite, porque a proposta dele é maior que a nossa.
+     *
+     *   proposta fora da tolerância → fica de fora, dizendo de quanto foi.
+     *
+     * O desconto extra continua escrevendo: ele é um pedido explícito de
+     * descer mais, e descer o canal aceita.
+     */
+    if (extraDiscount <= 0 && finalPrice != null && finalPrice > 0) {
+      const folga = tolerancia(data, config.descontoMinimo);
+      const minimo = r2(p * (1 - folga));
+      if (finalPrice >= minimo - 0.01) {
+        return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: p };
+      }
+      return {
+        action: negativeAction,
+        pendencia:
+          `proposta de ${reais(finalPrice)} abaixo do mínimo de ${reais(minimo)} ` +
+          `(tabela ${reais(p)} menos ${(folga * 100).toFixed(1)}% de tolerância)`,
+        newPrice: null,
+        tabelaCalculada: p,
+      };
+    }
 
     // Preço de tabela ACIMA do preço já publicado: participar exigiria
     // AUMENTAR o preço, e promoção é desconto. O canal recusa qualquer

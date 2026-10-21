@@ -711,8 +711,8 @@ export default function ProcessarPromocoes() {
                     label="Tolerância abaixo do piso (%)"
                     hint={
                       comoPiso
-                        ? "Quanto a oferta do canal pode furar o piso e ainda ser aceita. Zero recusa qualquer centavo abaixo."
-                        : "Quanto a oferta do canal pode ficar abaixo do preço de tabela e ainda ser aceita. 5% é o que o sistema sempre usou."
+                        ? "quanto a oferta do canal pode furar o piso e ainda entrar"
+                        : "quanto a oferta pode ficar abaixo da tabela e ainda entrar"
                     }
                   >
                     <Input
@@ -797,8 +797,8 @@ export default function ProcessarPromocoes() {
                   só se aceita ou recusa, comparando com o preço mínimo da comissão que sobrou.
                 </li>
                 <li>
-                  <strong>Sem redução de tarifa</strong>: comissão cheia. O sistema escreve o preço mínimo por cima do
-                  proposto, e recusa quando ele fica acima do preço publicado.
+                  <strong>Sem redução de tarifa</strong>: comissão cheia. Também se aceita ou recusa — o canal não aceita
+                  contraproposta de preço mais alto que o dele. Quem entra entra no preço do canal.
                 </li>
                 <li>
                   <strong>Criada por nós</strong>: a alavanca é a porcentagem, e o sistema busca o maior desconto que o
