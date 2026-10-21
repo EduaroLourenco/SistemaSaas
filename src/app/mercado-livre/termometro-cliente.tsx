@@ -142,7 +142,6 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
       <PageHeader
         title="Termômetro"
         breadcrumb="Mercado Livre"
-        description={`Semana de ${dataBr(dados.semana.inicio)} a ${dataBr(dados.semana.fim)} contra ${dataBr(dados.semanaAnterior.inicio)} a ${dataBr(dados.semanaAnterior.fim)} · ${dados.diasCorridos} ${dados.diasCorridos === 1 ? "dia completo" : "dias completos"}`}
         filters={
           <BarraFiltros>
             <Filtro rotulo="Conta">
@@ -249,6 +248,29 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
               </div>
             </div>
           </div>
+        </Panel>
+
+        {/* ── O que fazer hoje, antes de qualquer gráfico ─────────── */}
+        <Panel className="overflow-hidden">
+          <PanelHeader title="Precisa de olho hoje" hint={`${dados.atencao.length} ponto(s), do mais grave para o menos.`} />
+          {dados.atencao.length === 0 ? (
+            <p className="px-4 py-6 text-[13px] text-ink-3">Nada fora do esperado nas regras que a tela checa.</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {dados.atencao.map((a) => (
+                <li key={a.chave} className="flex items-start gap-2.5 px-4 py-3">
+                  <TriangleAlert
+                    className={cn("w-4 h-4 shrink-0 mt-0.5", a.gravidade === "alta" ? "text-down" : a.gravidade === "media" ? "text-warn" : "text-ink-3")}
+                    strokeWidth={2}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-ink">{a.titulo}</p>
+                    <p className="text-[12px] text-ink-2">{a.detalhe}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
 
         {/* ── Dia a dia ──────────────────────────────────────────── */}
@@ -420,30 +442,8 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           </div>
         </Panel>
 
-        {/* ── Atenção + no ar ────────────────────────────────────── */}
-        <div className="grid gap-3 lg:grid-cols-2">
-          <Panel className="overflow-hidden">
-            <PanelHeader title="Precisa de olho hoje" hint={`${dados.atencao.length} ponto(s), do mais grave para o menos.`} />
-            {dados.atencao.length === 0 ? (
-              <p className="px-4 py-6 text-[13px] text-ink-3">Nada fora do esperado nas regras que a tela checa.</p>
-            ) : (
-              <ul className="divide-y divide-line">
-                {dados.atencao.map((a) => (
-                  <li key={a.chave} className="flex items-start gap-2.5 px-4 py-3">
-                    <TriangleAlert
-                      className={cn("w-4 h-4 shrink-0 mt-0.5", a.gravidade === "alta" ? "text-down" : a.gravidade === "media" ? "text-warn" : "text-ink-3")}
-                      strokeWidth={2}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-ink">{a.titulo}</p>
-                      <p className="text-[12px] text-ink-2">{a.detalhe}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-
+        {/* ── O que o Planejamento diz que está no ar ─────────────── */}
+        <div className="grid gap-3">
           <Panel className="overflow-hidden">
             <PanelHeader
               title="No ar nas duas semanas"
