@@ -1,6 +1,14 @@
 /* eslint-disable */
 import ExcelJS from "exceljs";
-import { precoPiso, precoComExtra, processItem, norm, FormulaBaseData } from "./motor-promocoes";
+import {
+  precoPiso,
+  precoComExtra,
+  processItem,
+  norm,
+  melhorPorcentagem,
+  precoDaPorcentagem,
+  FormulaBaseData,
+} from "./motor-promocoes";
 import { surgicallyEditExcel } from "./editor-xlsx";
 import { ReportItem } from "./relatorio-gerencial";
 
@@ -611,6 +619,56 @@ export async function processarPlanilha(
     }
 
     /*
+     * A porcentagem e o preço final andam JUNTOS.
+     *
+     * A planilha do canal diz, na própria coluna de preço final: "o preço
+     * final deve corresponder ao desconto que você adicionar na coluna
+     * anterior". Reescrever só o preço deixa o par inconsistente, e o canal
+     * recusa a linha com "O preço final que você configurou para a oferta
+     * não é confiável" — sem dizer qual das duas colunas está errada.
+     *
+     * Aconteceu em 20/10/2026 na Imprimil: catorze linhas de uma campanha
+     * TIERS voltaram todas com esse erro. O preço de tabela estava escrito
+     * no lugar certo; a porcentagem continuava sendo a do canal, e nenhuma
+     * das duas descrevia a outra.
+     *
+     * Então a porcentagem é a alavanca aqui também: a mais agressiva que
+     * ainda cobre o nosso mínimo, em ponto inteiro, e o preço final sai
+     * DELA — não o contrário. Assim o par fecha e o preço cai no mínimo ou
+     * acima dele, nunca abaixo.
+     *
+     * Teto de 80% porque é o que o canal aceita. Cortar ali só deixa a
+     * oferta menos agressiva, o que é sempre seguro: o preço sobe.
+     *
+     * Quando nem o desconto mínimo de 5% alcança o nosso mínimo, a linha
+     * fica de fora — participar exigiria vender abaixo dele.
+     */
+    if (
+      !campanhaPropria &&
+      result.newPrice !== null &&
+      descontoPctColIndex !== -1 &&
+      originalPrice
+    ) {
+      const par = melhorPorcentagem(originalPrice, result.newPrice);
+      if (par) {
+        const pct = Math.min(80, par.pct);
+        result = {
+          ...result,
+          newPercentage: pct,
+          newPrice: precoDaPorcentagem(originalPrice, pct),
+        };
+      } else {
+        result = {
+          ...result,
+          action: acaoNegativa,
+          newPrice: null,
+          newPercentage: null,
+          pendencia: `o mínimo é ${brl(result.newPrice)} e o desconto mínimo de 5% sobre ${brl(originalPrice)} já leva a ${brl(precoDaPorcentagem(originalPrice, 5))}`,
+        };
+      }
+    }
+
+    /*
      * SÓ SE ESCREVE NA LINHA QUE AINDA ESTÁ EM ABERTO.
      *
      * Duas portas, e as duas precisam estar abertas:
@@ -657,7 +715,7 @@ export async function processarPlanilha(
        * a alavanca, e o preço para a planilha mostrar o mesmo número que o
        * canal vai calcular.
        */
-      if (campanhaPropria && result.newPercentage != null) {
+      if (result.newPercentage != null && descontoPctColIndex !== -1) {
         xmlUpdates.push({
           rowIndex: i,
           colLetter: getColLetter(descontoPctColIndex),
