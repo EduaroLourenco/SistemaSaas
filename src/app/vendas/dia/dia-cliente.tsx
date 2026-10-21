@@ -215,7 +215,15 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
         <div ref={detalhe} className="scroll-mt-[calc(var(--topbar)+12px)]">
           <p className="mb-2 text-[17px] font-semibold text-ink">
             {nomeDoDia(h.diaSemana)}, {br(h.data)}
-            {h.parcial && <span className="ml-2 text-[13px] font-normal text-ink-3">sem movimento registrado</span>}
+            {h.parcial ? (
+              <span className="ml-2 text-[13px] font-normal text-ink-3">
+                sem movimento registrado
+              </span>
+            ) : h.emAndamento ? (
+              <span className="ml-2 text-[13px] font-normal text-warn">
+                dia em andamento
+              </span>
+            ) : null}
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden mb-3">
@@ -228,13 +236,16 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
               k="Meta do dia"
               v={h.meta > 0 ? money(h.meta) : "—"}
               sub={
-                h.meta > 0
-                  ? h.sobraMeta >= 0
-                    ? `sobrou ${moneyShort(h.sobraMeta)}`
-                    : `faltou ${moneyShort(-h.sobraMeta)}`
-                  : dados.metaPorConta
+                h.meta <= 0
+                  ? dados.metaPorConta
                     ? "meta do canal"
                     : "sem meta"
+                  : h.emAndamento
+                    ? /* O dia não acabou: falta é previsão, não resultado. */
+                      `${moneyShort(Math.max(0, -h.sobraMeta))} até fechar`
+                    : h.sobraMeta >= 0
+                      ? `sobrou ${moneyShort(h.sobraMeta)}`
+                      : `faltou ${moneyShort(-h.sobraMeta)}`
               }
               tom={h.bateu === null ? undefined : h.bateu ? "up" : "down"}
             />

@@ -56,6 +56,14 @@ export type DiaLinha = {
   bateu: boolean | null;
   /** O dia ainda não terminou ou não foi importado. */
   parcial: boolean;
+  /**
+   * O dia ainda está correndo.
+   *
+   * Diferente de `parcial`, que é dia sem movimento nenhum. Este tem
+   * venda, só não terminou — e por isso não se diz que ele bateu ou
+   * deixou de bater a meta do dia inteiro.
+   */
+  emAndamento: boolean;
 };
 
 export type Comparacao = {
@@ -329,9 +337,15 @@ export async function carregarDia(
         ? (doMesPedido[doMesPedido.length - 1] ?? `${mesPedido}-01`)
         : ultimaData;
 
+  /* O hoje de São Paulo, que é onde a operação vive. */
+  const hojeIso = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Sao_Paulo",
+  });
+
   const montar = (data: string): DiaLinha => {
     const a = porDia.get(data);
     const meta = metas.get(data) ?? 0;
+    const emAndamento = data === hojeIso;
     /*
      * Dia sem movimento registrado é PARCIAL, não é dia ruim.
      *
@@ -364,8 +378,13 @@ export async function carregarDia(
         visitas > 0 ? r2(((a?.pedidosComVisita ?? 0) / visitas) * 100) : null,
       meta: r2(meta),
       sobraMeta: r2(liquida - meta),
-      bateu: meta > 0 && !parcial ? liquida >= meta : null,
+      /*
+       * Enquanto o dia corre não há veredito: comparar o acumulado das
+       * dez da manhã com a meta de 24 horas só produz vermelho.
+       */
+      bateu: meta > 0 && !parcial && !emAndamento ? liquida >= meta : null,
       parcial,
+      emAndamento,
     };
   };
 
