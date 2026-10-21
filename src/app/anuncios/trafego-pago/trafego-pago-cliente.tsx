@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { SemFonte } from "@/components/ui/sem-fonte";
@@ -170,7 +171,9 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
   const [situacao, setSituacao] = React.useState("");
   const [acao, setAcao] = React.useState<string>("");
   const { totais, periodos, campanhas, linhas, conferencia, oportunidades, referencias } = dados;
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
 
   /* Canal e janela andam juntos na URL: trocar de conta pode mudar quais
      relatórios existem, e perder a janela escolhida é melhor que mostrar
@@ -202,7 +205,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
     desejados.current = proximo;
     iniciarNavegacao(() => {
       atualizarFiltros(mudar);
-      router.push(urlTrafego(proximo, {}), { scroll: false });
+      navegarSuave(urlTrafego(proximo, {}));
     });
   };
 

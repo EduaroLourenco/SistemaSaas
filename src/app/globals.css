@@ -419,3 +419,15 @@ button:disabled { cursor: not-allowed; }
   animation: gerizo-some 300ms ease-out 20s forwards;
 }
 @keyframes gerizo-some { to { opacity: 0; visibility: hidden; } }
+
+/*
+ * A faixa de progresso de `BarraCarregando`.
+ *
+ * Um traço que atravessa, em vez de um spinner no meio do painel: o
+ * spinner centralizado tapa justamente o número que a pessoa está
+ * esperando aparecer.
+ */
+@keyframes desliza {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}

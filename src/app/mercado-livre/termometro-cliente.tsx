@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -90,7 +91,9 @@ function leitura(v: number | undefined) {
 }
 
 export default function TermometroCliente({ dados }: { dados: DadosTermometro }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
   const [metrica, setMetrica] = React.useState<"receita" | "unidades" | "visitas">("receita");
   const [diaAberto, setDiaAberto] = React.useState<string | null>(null);
 
@@ -100,7 +103,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
     const semana = mudar.semana ?? dados.semana.inicio;
     if (conta) q.set("conta", conta);
     if (semana) q.set("semana", semana);
-    router.push(`/mercado-livre${q.size ? `?${q}` : ""}`, { scroll: false });
+    navegarSuave(`/mercado-livre${q.size ? `?${q}` : ""}`);
   }
   const somarSemana = (passo: number) => {
     const d = new Date(Date.parse(dados.semana.inicio + "T12:00:00Z") + passo * 7 * 86400000);
@@ -139,7 +142,8 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
     return (
       <>
         <PageHeader title="Termômetro" breadcrumb="Mercado Livre" description="A leitura operacional do dia." />
-        <PageBody>
+        <BarraCarregando ativo={atualizando} />
+      <PageBody>
           <Panel>
             <PanelHeader
               title="Nenhuma conta do Mercado Livre nesta empresa"

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
@@ -85,7 +86,9 @@ function somarMes(mes: string, n: number) {
 }
 
 export default function DiaCliente({ dados }: { dados: DadosDia }) {
-  const router = useRouter();
+  /* A navegação entra numa transição: a tela antiga fica visível e
+     interativa enquanto a nova carrega, em vez de congelar inteira. */
+  const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
   const detalhe = React.useRef<HTMLDivElement>(null);
   const rolarParaDia = React.useRef(false);
 
@@ -100,7 +103,7 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
     else if (p.mes) q.set("mes", p.mes);
     const canais = p.canais ?? dados.canaisSelecionados;
     if (canais.length) q.set("canal", canais.join(","));
-    router.push(`/vendas/dia${q.toString() ? "?" + q : ""}`, { scroll: false });
+    navegarSuave(`/vendas/dia${q.toString() ? "?" + q : ""}`);
   }
   const abrirDia = (data: string) => {
     rolarParaDia.current = true;
@@ -129,7 +132,8 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
     return (
       <>
         <PageHeader title="Dia" breadcrumb="Vendas" filters={filtros || undefined} />
-        <PageBody>
+        <BarraCarregando ativo={atualizando} />
+      <PageBody>
           <Panel className="p-6">
             <EmptyState
               icon={CalendarDays}
