@@ -679,7 +679,7 @@ export default function ProcessarPromocoes() {
               <div className="p-4">
                 <SectionTitle
                   title="Exportação do canal"
-                  hint="Pode enviar várias de uma vez. Cada arquivo sai processado separadamente."
+                  hint="uma ou várias"
                 />
                 <div className="mt-3">
                   <FileDrop
@@ -705,7 +705,7 @@ export default function ProcessarPromocoes() {
                     checked={comoPiso}
                     onChange={(v) => { setComoPiso(v); setPisoSalvo("nada"); }}
                     label="Usar como preço mínimo"
-                    hint="Ligado: em ofertas fixas, aceita ou recusa o preço do canal; em campanhas editáveis, propõe o mínimo calculado. Desligado: usa o preço-alvo. O processamento gera a planilha; não altera o canal."
+                    hint="ligado usa o mínimo calculado; desligado, o preço-alvo"
                   />
                   <Field
                     label="Tolerância abaixo do piso (%)"
@@ -760,7 +760,7 @@ export default function ProcessarPromocoes() {
               <div className="p-4">
                 <SectionTitle
                   title="Planilha interna"
-                  hint="Opcional — sem arquivo, usa a base guardada no banco. Envie só para atualizá-la."
+                  hint="sem arquivo, usa a base do banco"
                 />
                 <div className="mt-3 space-y-3">
                   <FileDrop
@@ -771,7 +771,7 @@ export default function ProcessarPromocoes() {
                   />
                   <Field
                     label="Desconto extra"
-                    hint="Aplicado sobre o preço de tabela nas campanhas sem redução de tarifa e nas criadas por nós. Aceita 5 ou 0,05."
+                    hint="5 ou 0,05"
                   >
                     <Input
                       inputMode="decimal"
@@ -791,7 +791,6 @@ export default function ProcessarPromocoes() {
               lógica. Um botão criaria um jeito de errar que hoje não existe.
             */}
             <Disclosure title="Como o sistema decide cada planilha" className="lg:col-span-2">
-              <p>O tipo de planilha é reconhecido pelas colunas, e cada um segue uma regra:</p>
               <ul className="mt-2 flex flex-col gap-1.5 pl-4 list-disc">
                 <li>
                   <strong>Com redução de tarifa</strong>: o canal propõe o preço e abate parte da comissão. O preço não muda;
@@ -979,10 +978,6 @@ export default function ProcessarPromocoes() {
                     {resultado.arquivos.length}{" "}
                     {resultado.arquivos.length === 1 ? "planilha" : "planilhas"}
                   </p>
-                  <p className="text-[12px] text-ink-2 mt-0.5">
-                    Só as células de decisão e de preço foram alteradas. Fórmulas,
-                    formatação e as demais abas do arquivo do canal ficaram intactas.
-                  </p>
                 </div>
               </div>
 
@@ -1066,8 +1061,7 @@ export default function ProcessarPromocoes() {
               </div>
 
               <p className="text-[12px] text-ink-3 mt-3">
-                O pacote inclui uma planilha processada por campanha mais o relatório
-                gerencial. Fica disponível por 15 minutos e sai depois de baixado — se precisar de novo, é só processar outra vez.
+                disponível por 15 minutos
               </p>
 
               {resultado.resumo.pendencias > 0 && (
