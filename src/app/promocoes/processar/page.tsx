@@ -340,7 +340,11 @@ export default function ProcessarPromocoes() {
     fd.append("descontoExtra", String(d > 1 ? d / 100 : d));
     fd.append("regra", regra);
     fd.append("comoUsar", comoPiso ? "piso" : "alvo");
-    fd.append("toleranciaPct", tolerancia);
+    /* Com a vírgula trocada, como nos dois campos acima. Sem isso "2,5"
+       chegava na rota e o `parseFloat` dela parava na vírgula: virava 2, e
+       a meia casa sumia sem aviso. O botão de salvar já trocava — o mesmo
+       campo era lido de dois jeitos dependendo de onde o número ia. */
+    fd.append("toleranciaPct", tolerancia.replace(",", "."));
     fd.append("margemMinima", String(parseFloat(margemMinima.replace(",", ".")) || 0));
 
     try {
@@ -705,14 +709,18 @@ export default function ProcessarPromocoes() {
                     checked={comoPiso}
                     onChange={(v) => { setComoPiso(v); setPisoSalvo("nada"); }}
                     label="Usar como preço mínimo"
-                    hint="desligado, a tolerância desconta do número; ligado, ele já é o fundo"
+                    hint={
+                      regra === "tabela"
+                        ? "só muda a regra de margem — na tabela, quem decide é a tolerância"
+                        : "ligado, a margem pedida é o fundo; desligado, a tolerância cai em cima dela"
+                    }
                   />
                   <Field
                     label="Tolerância abaixo do piso (%)"
                     hint={
                       comoPiso
-                        ? "quanto a oferta do canal pode furar o piso e ainda entrar"
-                        : "quanto a oferta pode ficar abaixo da tabela e ainda entrar"
+                        ? "quanto a oferta pode furar o piso e ainda entrar — 0 a 50"
+                        : "quanto a oferta pode ficar abaixo da tabela e ainda entrar — 0 a 50"
                     }
                   >
                     <Input
