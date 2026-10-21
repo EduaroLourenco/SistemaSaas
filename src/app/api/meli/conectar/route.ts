@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { appDe, dadosDoApp } from "@/lib/meli/apps";
 
 export const runtime = "nodejs";
 
@@ -27,10 +28,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ erro: "Entre no sistema primeiro." }, { status: 401 });
   }
 
-  const appId = process.env.MELI_APP_ID;
-  if (!appId) {
+  /*
+   * Qual aplicação. `?app=escrita` leva à que pode alterar promoção e
+   * publicidade; sem o parâmetro, à de leitura de sempre. O valor não é
+   * confiado: qualquer coisa que não seja "escrita" vira leitura, que é
+   * o lado que não altera nada.
+   */
+  const alvo = dadosDoApp(appDe(req.nextUrl.searchParams.get("app")));
+  if (!alvo.appId) {
     return NextResponse.json(
-      { erro: "Defina MELI_APP_ID e MELI_CLIENT_SECRET antes de conectar." },
+      { erro: `Defina ${alvo.variaveis} antes de conectar.` },
       { status: 503 }
     );
   }
@@ -81,9 +88,11 @@ export async function GET(req: NextRequest) {
   const nonce = randomBytes(16).toString("hex");
   const destino = new URL("https://auth.mercadolivre.com.br/authorization");
   destino.searchParams.set("response_type", "code");
-  destino.searchParams.set("client_id", appId);
+  destino.searchParams.set("client_id", alvo.appId);
   destino.searchParams.set("redirect_uri", `${req.nextUrl.origin}/api/meli/callback`);
-  destino.searchParams.set("state", `${nonce}.${conta.id}`);
+  /* A aplicação vai no state porque o endereço de retorno é o mesmo nas
+     duas — é o que o callback lê para saber qual segredo usar. */
+  destino.searchParams.set("state", `${nonce}.${conta.id}.${alvo.app}`);
 
   const resposta = NextResponse.redirect(destino.toString());
   resposta.cookies.set(COOKIE_OAUTH, nonce, {

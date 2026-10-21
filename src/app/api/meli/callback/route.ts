@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { gravarToken, vincularIntegracao } from "@/lib/meli/tokens";
+import { appDe, dadosDoApp } from "@/lib/meli/apps";
 import { COOKIE_OAUTH } from "../conectar/route";
 
 export const runtime = "nodejs";
@@ -55,7 +56,10 @@ export async function GET(req: NextRequest) {
 
   const codigo = req.nextUrl.searchParams.get("code");
   const estado = req.nextUrl.searchParams.get("state") ?? "";
-  const [nonce, contaId] = estado.split(".");
+  const [nonce, contaId, qualApp] = estado.split(".");
+  /* Sem sufixo é conexão de leitura começada antes de a de escrita
+     existir: continua valendo. */
+  const alvo = dadosDoApp(appDe(qualApp));
   const esperado = req.cookies.get(COOKIE_OAUTH)?.value ?? "";
 
   if (!codigo || !nonce || !contaId) {
@@ -88,10 +92,8 @@ export async function GET(req: NextRequest) {
     return pagina("Sem permissão", "Seu acesso é de leitura. Peça a um administrador.", false);
   }
 
-  const appId = process.env.MELI_APP_ID;
-  const segredo = process.env.MELI_CLIENT_SECRET;
-  if (!appId || !segredo) {
-    return pagina("Falta configurar", "Defina MELI_APP_ID e MELI_CLIENT_SECRET.", false);
+  if (!alvo.appId || !alvo.segredo) {
+    return pagina("Falta configurar", `Defina ${alvo.variaveis}.`, false);
   }
 
   /* 1. O código vira o par de tokens. */
@@ -100,8 +102,8 @@ export async function GET(req: NextRequest) {
     headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
     body: new URLSearchParams({
       grant_type: "authorization_code",
-      client_id: appId,
-      client_secret: segredo,
+      client_id: alvo.appId,
+      client_secret: alvo.segredo,
       code: codigo,
       redirect_uri: `${req.nextUrl.origin}/api/meli/callback`,
     }),

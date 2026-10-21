@@ -37,6 +37,12 @@ export type ContaCanal = {
   apelidos: string[];
   /** Tem credencial de API guardada no cofre. */
   conectada: boolean;
+  /**
+   * A segunda aplicação do Meli, a que pode alterar promoção e
+   * publicidade. Null = a conta nunca conectou, e o sistema continua
+   * somente leitura nela.
+   */
+  escrita: { conectada: boolean; erro: string | null } | null;
   /** Última sincronização registrada, quando houver integração. */
   sincronizadaEm: string | null;
   ultimoErro: string | null;
@@ -123,11 +129,24 @@ export async function carregarCanais(): Promise<{
    * conectada — ou o contrário.
    */
   const comConta = ((integs ?? []) as Integ[]).filter((i) => i.conta_canal_id);
+  /*
+   * `mercado_livre_escrita` é a segunda aplicação do Meli, a que pode
+   * alterar promoção e publicidade. Ela tem linha própria em
+   * `integracoes` para a mesma conta de canal, e precisa sair daqui
+   * pelo mesmo motivo que o ga4: no balde comum, a última lida venceria
+   * e uma conexão faria a outra parecer conectada.
+   */
+  const AVULSOS = new Set(["ga4", "mercado_livre_escrita"]);
   const porConta = new Map(
-    comConta.filter((i) => i.provedor !== "ga4").map((i) => [i.conta_canal_id as string, i])
+    comConta.filter((i) => !AVULSOS.has(i.provedor)).map((i) => [i.conta_canal_id as string, i])
   );
   const ga4PorConta = new Map(
     comConta.filter((i) => i.provedor === "ga4").map((i) => [i.conta_canal_id as string, i])
+  );
+  const escritaPorConta = new Map(
+    comConta
+      .filter((i) => i.provedor === "mercado_livre_escrita")
+      .map((i) => [i.conta_canal_id as string, i])
   );
 
   const linhas: ContaCanal[] = (contas ?? []).map((c) => {
@@ -151,6 +170,14 @@ export async function carregarCanais(): Promise<{
       sincronizadaEm: integ?.ultima_sincronizacao ?? null,
       ultimoErro: integ?.ultimo_erro ?? null,
       canalTipo: canal?.tipo ?? "",
+      /* Null quando a conta nunca conectou a aplicação de escrita — que
+         é o esperado: ela só é conectada por quem quer que o sistema
+         altere coisas no canal. */
+      escrita: (() => {
+        const e = escritaPorConta.get(c.id as string);
+        if (!e) return null;
+        return { conectada: Boolean(e.credencial_ref), erro: e.ultimo_erro };
+      })(),
       ga4: (() => {
         const g = ga4PorConta.get(c.id as string);
         if (!g) return null;
