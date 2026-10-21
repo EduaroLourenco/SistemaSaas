@@ -223,11 +223,36 @@ export async function consolidarSemanais(
    * nenhum, e apontar para uma importação antiga faria a tela de origem
    * dos dados mentir sobre de onde o número veio.
    */
+  /* O MLB de cada linha, para a mensagem de erro poder nomear o
+     anúncio: o registro gravado só tem o uuid. */
+  const mlbPorAnuncio = new Map([...porChave.values()].map((a) => [a.anuncioId, a.mlb]));
+
   await emLotes(registros, 500, async (lote) => {
     const { error } = await sb
       .from("anuncio_desempenho_semanal")
       .upsert(lote, { onConflict: "anuncio_id,ano_iso,semana_iso" });
-    if (error) throw new Error(`Falha ao gravar o desempenho semanal: ${error.message}`);
+    if (!error) return;
+
+    /*
+     * O lote caiu e o Postgres não diz por qual linha. Reenvia uma a
+     * uma só agora, no caminho de erro, para a mensagem poder nomear o
+     * anúncio, a semana e os números — sem isso o diagnóstico exige
+     * refazer a conta do sync por fora.
+     */
+    for (const r of lote) {
+      const { error: e1 } = await sb
+        .from("anuncio_desempenho_semanal")
+        .upsert([r], { onConflict: "anuncio_id,ano_iso,semana_iso" });
+      if (!e1) continue;
+      throw new Error(
+        `Falha ao gravar o desempenho semanal: ${e1.message}. ` +
+          `Linha: ${mlbPorAnuncio.get(r.anuncio_id) ?? r.anuncio_id}, ` +
+          `semana ${r.inicio}, ${r.vendas} unidades em ${r.visitas} visitas, ` +
+          `receita ${r.receita}.`
+      );
+    }
+    /* Todas passaram sozinhas: o erro era do lote, não de uma linha. */
+    throw new Error(`Falha ao gravar o desempenho semanal: ${error.message}`);
   });
 
   return registros.length;

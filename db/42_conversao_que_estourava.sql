@@ -1,0 +1,39 @@
+-- ─────────────────────────────────────────────────────────────────────
+--  Duas colunas geradas que só sabiam derrubar a sincronização
+--
+--  Sintoma: "Falha ao gravar o desempenho semanal: numeric field
+--  overflow" ao sincronizar a Bom de Compras, em 20/10/2026.
+--
+--  A causa: `anuncio_desempenho_semanal.conversao` é uma coluna GERADA
+--  como `vendas * 100 / visitas`, declarada `numeric(7,4)` — teto de
+--  999,9999. Mas `vendas` guarda UNIDADES, não pedidos. O anúncio
+--  MLB3746548843 vendeu 40 unidades num pedido só, na semana de 19/10,
+--  com 3 visitas: 40 × 100 ÷ 3 = 1333%, e o INSERT inteiro do lote de
+--  500 linhas falhou por causa dessa uma.
+--
+--  Num vendedor de pacote isso é rotina, não exceção: um pedido leva
+--  trinta livrinhos. Alargar a coluna adiaria o problema para o dia do
+--  pedido de mil.
+--
+--  Por que APAGAR em vez de alargar: ninguém lê nenhuma das duas. As
+--  views de `03_views.sql` recalculam a conversão a partir de
+--  `d.visitas` e `d.vendas`, e as telas também. A coluna era uma
+--  terceira definição de "conversão" no sistema — e com outro
+--  numerador, o que a fazia discordar das outras duas de propósito.
+--
+--  `desvio_preco` vai junto pelo mesmo motivo, e tem a mesma fragilidade
+--  latente: `(praticado − ideal) × 100 ÷ ideal` em `numeric(7,4)`
+--  estoura em qualquer produto de preço de tabela baixo. Hoje ela nunca
+--  estourou só porque `preco_ideal` está nulo nas 10.452 linhas da
+--  tabela — ou seja, ela nunca calculou nada.
+--
+--  Para voltar atrás, se um dia alguma tela precisar delas, é só
+--  recriar com precisão maior:
+--
+--    alter table anuncio_desempenho_semanal
+--      add column conversao numeric(9,4)
+--        generated always as (round((vendas::numeric*100)/nullif(visitas,0),4)) stored;
+-- ─────────────────────────────────────────────────────────────────────
+
+alter table anuncio_desempenho_semanal drop column if exists conversao;
+alter table anuncio_desempenho_semanal drop column if exists desvio_preco;

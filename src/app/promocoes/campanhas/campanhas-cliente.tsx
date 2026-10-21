@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { PromocoesPorSku } from "@/components/promocoes/por-sku";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Segmented } from "@/components/ui/controls";
@@ -295,6 +296,9 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
           adesão baixa com muitos itens "quase" significa que faltou pouco,
           e um desconto extra na próxima rodada resolveria.
         */}
+        {/* O inverso da adesão: por produto, não por campanha. */}
+        <PromocoesPorSku historico={dados.historico} totalCampanhas={dados.campanhas.length} />
+
         <Panel className="overflow-hidden">
           <PanelHeader
             title="Ficaram fora por pouco"
