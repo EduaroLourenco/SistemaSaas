@@ -510,6 +510,21 @@ export function processItem(
         };
       }
 
+      /*
+       * O desconto extra é um pedido explícito de descer abaixo do piso, e
+       * vale aqui também. Este ramo devolvia antes de chegar ao cálculo
+       * dele: quem ligava o interruptor e pedia 10% de desconto extra não
+       * recebia aviso nenhum e a planilha saía sem desconto nenhum.
+       *
+       * Parte do piso já com a tolerância aplicada — não de `precoComExtra`,
+       * que desconta o mínimo do canal primeiro: aqui o número JÁ é o
+       * fundo, e descontá-lo de novo tiraria 5% que ninguém pediu.
+       */
+      if (extraDiscount > 0) {
+        const comExtra = r2(minimo * (1 - extraDiscount));
+        return { action: positiveAction, pendencia: "", newPrice: comExtra, tabelaCalculada: minimo };
+      }
+
       if (finalPrice != null && finalPrice > 0) {
         if (finalPrice >= minimo - 0.01) {
           return { action: positiveAction, pendencia: "", newPrice: null, tabelaCalculada: minimo };

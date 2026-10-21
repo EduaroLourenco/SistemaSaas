@@ -95,3 +95,24 @@ diz("e entra no preço do canal", comFolga(5, 240).newPrice === null, comFolga(5
 /* Abaixo de 238,57 nem a folga salva. */
 diz("238,00 fica de fora mesmo com 5%", comFolga(5, 238).action === "Não participar", comFolga(5, 238));
 console.log(`${m} verificações da tolerância, todas certas.`);
+
+/* ── 8. O desconto extra vale com o interruptor LIGADO ──
+   Era um não-operação silencioso: este ramo devolvia antes de calcular o
+   extra, e quem ligava o interruptor e pedia 10% recebia a planilha sem
+   desconto nenhum e sem aviso. Achado em 21/10/2026, quando o Eduardo
+   perguntou se a tolerância servia para reescrever preço. */
+const comExtra = (extra, tol = 0) =>
+  processItem("MLB1", "SK1", null, 379.05, 399, {
+    ...base("piso"),
+    regra: { modo: "tabela", margemMinima: 0, comoUsar: "piso", toleranciaPct: tol },
+  }, "Participar", "Não participar", extra);
+
+let k = 0;
+const prende = (nome, cond, r) => { k++; assert.ok(cond, `${nome} — veio ${JSON.stringify(r)}`); };
+/* Sem extra, nada é escrito: a proposta de 379,05 cobre o piso de 251,13. */
+prende("sem extra, não escreve", comExtra(0).newPrice === null, comExtra(0));
+/* Com 10% de extra, desce do piso: 251,13 × 0,90 = 226,02. */
+prende("com 10% de extra, escreve 226,02", comExtra(0.1).newPrice === 226.02, comExtra(0.1));
+/* E o extra parte do piso JÁ com a tolerância: 251,13 × 0,95 = 238,57, e 238,57 × 0,90 = 214,71. */
+prende("a tolerância entra antes do extra", comExtra(0.1, 5).newPrice === 214.71, comExtra(0.1, 5));
+console.log(`${k} verificações do desconto extra com o interruptor ligado, todas certas.`);
