@@ -106,6 +106,40 @@ const TOM_ACAO: Record<AcaoAds, "up" | "down" | "warn" | "neutral"> = {
  * é o gasto de um anúncio cuja mídia JÁ está parada — ele aparece na
  * lista pelo histórico da janela, não porque haja algo a fazer.
  */
+/**
+ * Quantos irmãos o anúncio tem na família do canal.
+ *
+ * Só aparece quando há irmão: etiqueta em toda linha vira ruído. O
+ * tom muda com o que os irmãos faturaram, porque é isso que decide se
+ * desligar custa venda.
+ */
+function EtiquetaFamilia({
+  nome,
+  anuncios,
+  receita,
+}: {
+  nome?: string | null;
+  anuncios?: number;
+  receita?: number;
+}) {
+  const n = anuncios ?? 1;
+  if (n <= 1) return null;
+  const faturou = receita ?? 0;
+  return (
+    <span
+      title={
+        (nome ?? "Mesma família no Mercado Livre") +
+        " · " +
+        n +
+        " anúncios" +
+        (faturou > 0 ? ", os outros faturaram " + money(faturou) : "")
+      }
+    >
+      <Badge tone={faturou > 0 ? "warn" : "neutral"}>+{n - 1} na família</Badge>
+    </span>
+  );
+}
+
 function EtiquetaMidia({ midia }: { midia?: LinhaAnuncioAds["midia"] }) {
   if (midia !== "parada") return null;
   return (
@@ -122,6 +156,9 @@ const SITUACAO: Record<
   ok: null,
   prejuizo: { rotulo: "mídia > margem", tom: "down" },
   sem_retorno: { rotulo: "sem venda nenhuma", tom: "down" },
+  /* O anúncio não vendeu, mas o irmão dele sim. No canal o patrocínio
+     é da família: desligar este derruba o que está vendendo. */
+  familia_vende: { rotulo: "quem vendeu foi o irmão", tom: "warn" },
   vendeu_sem_ads: { rotulo: "venda sem atribuição", tom: "warn" },
 };
 
@@ -200,6 +237,9 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
     tipo: string;
     catalogo?: string | null;
     status?: string | null;
+    familiaNome?: string | null;
+    familiaAnuncios?: number;
+    familiaReceita?: number;
     /* Nem toda lista que usa esta célula vem com mídia (a de oportunidades
        é por anúncio, não por campanha). Sem a etiqueta, nada muda. */
     midia?: LinhaAnuncioAds["midia"];
@@ -216,6 +256,14 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
             ação já não cabe, e sem a etiqueta ele parece igual aos outros. */}
         <TagAnuncio status={l.status} />
         <EtiquetaMidia midia={l.midia} />
+        {/* O anúncio não está sozinho. No canal o patrocínio é da
+            família: desligar este mexe nos irmãos. Amarelo quando os
+            irmãos faturaram — aí desligar tira venda. */}
+        <EtiquetaFamilia
+          nome={l.familiaNome}
+          anuncios={l.familiaAnuncios}
+          receita={l.familiaReceita}
+        />
       </div>
       <p className="text-[12px] text-ink-2 break-words max-w-[280px]">
         {l.titulo || "—"}

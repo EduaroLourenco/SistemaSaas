@@ -1,6 +1,8 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { resolverFamilias } from "./familia-anuncio";
+import { temColunaFamilia } from "./coluna-familia";
 import { carregarBaseMargem, agregar } from "./margem";
 import { carregarContasRecorte } from "./contas-recorte";
 import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
@@ -99,8 +101,21 @@ export type LinhaAnuncioAds = {
   roas: number | null;
   /** Margem menos a mídia. Negativo = a mídia comeu mais do que sobrou. */
   sobraAposMidia: number | null;
-  /** Sem receita atribuída: vendeu por fora, ou não vendeu nada? */
-  situacao: "ok" | "sem_retorno" | "vendeu_sem_ads" | "prejuizo";
+  /**
+   * Sem receita atribuída: vendeu por fora, não vendeu nada, ou quem
+   * vendeu foi outro anúncio da mesma família?
+   *
+   * `familia_vende` é o caso que mais enganava: o anúncio não vendeu,
+   * mas o irmão dele sim — e como o patrocínio no canal é da família,
+   * desligar este derruba o do irmão junto.
+   */
+  situacao: "ok" | "sem_retorno" | "vendeu_sem_ads" | "prejuizo" | "familia_vende";
+  /** A família do canal, quando o anúncio está em catálogo. */
+  familia: string | null;
+  familiaNome: string | null;
+  /** Quantos anúncios da mesma família, e quanto ELES faturaram. */
+  familiaAnuncios: number;
+  familiaReceita: number;
   /**
    * A mídia deste anúncio ainda está no ar?
    *
@@ -246,6 +261,12 @@ export async function carregarTrafegoPago(
   const sb = await clienteServidor();
 
   const r = lerRecorte(recorte);
+  /* A família só entra na consulta quando a coluna existe: antes de
+     db/43_familia_do_anuncio.sql o PostgREST recusaria a consulta
+     inteira e a tela ficaria sem lista. */
+  const temFamilia = await temColunaFamilia(sb);
+  const familia = temFamilia ? ",catalogo_produto_id,familia_id,familia_nome" : "";
+
   const [adsRaw, anunciosRaw, diariasRaw, contasRecorte] = await Promise.all([
     paginar(() =>
       sb
@@ -258,7 +279,10 @@ export async function carregarTrafegoPago(
     paginar(() =>
       sb
         .from("anuncios")
-        .select("id,codigo_externo,sku_canal,titulo,tipo,status,estoque,canal_id,conta_canal_id")
+        .select(
+          "id,codigo_externo,sku_canal,titulo,tipo,status,estoque,canal_id,conta_canal_id" +
+            familia
+        )
         .order("codigo_externo")
     ),
     paginar(() =>
@@ -432,6 +456,44 @@ export async function carregarTrafegoPago(
   const margemPorMlb = new Map(agregar(base, "anuncio").map((l) => [l.chave, l]));
 
   /*
+   * ── A família de cada anúncio, e o que ela faturou ──
+   *
+   * No Mercado Livre o patrocínio é da família, não do anúncio: os
+   * tamanhos do mesmo colchão dividem a mesma página e a mesma verba.
+   * Sem isto a tela manda desligar o anúncio que não vendeu e derruba
+   * o irmão que está vendendo.
+   *
+   * Só o que o canal declarou entra. O encaixe por título fica de
+   * fora: aqui a conclusão é "desligue isto", e juntar duas famílias
+   * por semelhança de nome faria desligar o que não devia.
+   */
+  const familias = resolverFamilias(
+    ((anunciosRaw ?? []) as unknown as (Anun & {
+      familia_id?: string | null;
+      familia_nome?: string | null;
+    })[]).map((a) => ({
+      codigoExterno: String(a.codigo_externo),
+      sku: a.sku_canal as string | null,
+      titulo: String(a.titulo ?? ""),
+      familiaId: a.familia_id ?? null,
+      familiaNome: a.familia_nome ?? null,
+    }))
+  );
+  const familiaDoMlb = familias.porAnuncio;
+  const nomeFamilia = familias.nome;
+
+  const anunciosPorFamilia = new Map<string, number>();
+  for (const f of familiaDoMlb.values())
+    anunciosPorFamilia.set(f, (anunciosPorFamilia.get(f) ?? 0) + 1);
+
+  const receitaPorFamilia = new Map<string, number>();
+  for (const [mlb, l] of margemPorMlb) {
+    const f = familiaDoMlb.get(String(mlb).toUpperCase());
+    if (!f) continue;
+    receitaPorFamilia.set(f, (receitaPorFamilia.get(f) ?? 0) + (l.receita ?? 0));
+  }
+
+  /*
    * ── Visitas da MESMA janela da mídia ──
    *
    * Sem elas não há conversão, e sem conversão não há como separar
@@ -546,9 +608,25 @@ export async function carregarTrafegoPago(
      * opostas: um se desliga, o outro mostra que a mídia estava sobrando
      * num anúncio que já vendia.
      */
+    /*
+     * O que a FAMÍLIA faturou, tirando este anúncio. É o que separa
+     * "não vendeu nada" de "quem vendeu foi o irmão".
+     */
+    const fam = familiaDoMlb.get(mlb) ?? null;
+    const daFamilia = fam ? receitaPorFamilia.get(fam) ?? 0 : 0;
+    const familiaReceita = r2(Math.max(0, daFamilia - receitaReal));
+    const familiaAnuncios = fam ? (anunciosPorFamilia.get(fam) ?? 1) : 1;
+
     let situacao: LinhaAnuncioAds["situacao"] = "ok";
     if (a.inv > 0 && a.rec === 0) {
-      situacao = receitaReal > 0 ? "vendeu_sem_ads" : "sem_retorno";
+      if (receitaReal > 0) situacao = "vendeu_sem_ads";
+      /*
+       * O anúncio não vendeu, mas a família vendeu. No canal o
+       * patrocínio é da família — desligar este derruba o irmão que
+       * está vendendo. Foi o caso do MLB5382536864.
+       */
+      else if (familiaReceita > 0) situacao = "familia_vende";
+      else situacao = "sem_retorno";
     } else if (sobra != null && sobra < 0) {
       situacao = "prejuizo";
     }
@@ -574,6 +652,10 @@ export async function carregarTrafegoPago(
       roas: a.inv > 0 && a.rec > 0 ? r2(a.rec / a.inv) : null,
       sobraAposMidia: sobra,
       situacao,
+      familia: fam,
+      familiaNome: fam ? nomeFamilia.get(fam) ?? null : null,
+      familiaAnuncios,
+      familiaReceita,
       ...estadoDaMidia(a.statusCampanha),
       catalogo: catalogoPorMlb.get(mlb) ?? null,
     });
