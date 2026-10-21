@@ -705,7 +705,7 @@ export default function ProcessarPromocoes() {
                     checked={comoPiso}
                     onChange={(v) => { setComoPiso(v); setPisoSalvo("nada"); }}
                     label="Usar como preço mínimo"
-                    hint="ligado usa o mínimo calculado; desligado, o preço-alvo"
+                    hint="desligado, a tolerância desconta do número; ligado, ele já é o fundo"
                   />
                   <Field
                     label="Tolerância abaixo do piso (%)"
