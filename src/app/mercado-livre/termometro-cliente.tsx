@@ -45,7 +45,21 @@ import type { CatalogoSemana } from "@/lib/dados/catalogo-semana";
  */
 
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
 const dataBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
+/**
+ * Os acontecimentos agrupados por data, do mais recente ao mais antigo.
+ *
+ * Agrupar na tela e não no carregador porque o carregador devolve uma
+ * lista plana, que é o formato que também serve para contar e filtrar.
+ */
+function agruparPorDia(lista: DadosTermometro["acontecimentos"]) {
+  const porDia = new Map<string, DadosTermometro["acontecimentos"]>();
+  for (const a of lista) porDia.set(a.data, [...(porDia.get(a.data) ?? []), a]);
+  return [...porDia.entries()].sort((x, y) => y[0].localeCompare(x[0]));
+}
+
 const varPct = (agora: number | null, antes: number | null) =>
   agora != null && antes != null && antes !== 0 ? ((agora - antes) / Math.abs(antes)) * 100 : undefined;
 
@@ -380,6 +394,46 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
             ajuda="Quantas visitas o canal entrega por pedido fechado. Subir significa que está custando mais tráfego para vender o mesmo."
           />
         </div>
+
+        {/* ── O que aconteceu, no mesmo eixo do gráfico de cima ──── */}
+        {dados.acontecimentos.length > 0 && (
+          <Panel className="overflow-hidden">
+            <PanelHeader
+              title="O que aconteceu"
+              hint="campanha, preço acima de 10% e estoque"
+            />
+            <ul className="divide-y divide-line">
+              {agruparPorDia(dados.acontecimentos).map(([data, itens]) => (
+                <li key={data} className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:gap-4">
+                  <span className="shrink-0 sm:w-[112px]">
+                    <span className="num text-[12.5px] font-semibold text-ink">
+                      {dataBr(data)}
+                    </span>
+                    <span className="ml-1.5 text-[12px] text-ink-3 sm:ml-0 sm:block">
+                      {DIAS[new Date(`${data}T12:00:00Z`).getUTCDay()]}
+                    </span>
+                  </span>
+                  <ul className="flex min-w-0 flex-col gap-1">
+                    {itens.map((a, i) => (
+                      <li key={i} className="flex items-baseline gap-2">
+                        {/* Um ponto, não um ícone: são três tipos e a cor
+                            já diz se puxa a venda para cima ou para baixo. */}
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
+                            a.tom === "up" ? "bg-up" : a.tom === "down" ? "bg-down" : "bg-ink-3",
+                          )}
+                        />
+                        <span className="text-[12.5px] text-ink-2">{a.texto}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
 
         {/* ── Catálogo na semana ─────────────────────────────────── */}
         {dados.catalogo && <CatalogoDaSemana dados={dados.catalogo} />}

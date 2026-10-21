@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarCatalogoSemana, type CatalogoSemana } from "./catalogo-semana";
+import { carregarAcontecimentos, type Acontecimento } from "./acontecimentos-semana";
 
 /**
  * Termômetro do Mercado Livre — a leitura operacional do dia.
@@ -137,6 +138,13 @@ export type DadosTermometro = {
   reputacao: ReputacaoConta[];
   /** Disputa de catálogo nesta semana contra a mesma fatia da anterior. */
   catalogo: CatalogoSemana | null;
+  /**
+   * O que aconteceu na semana, dia a dia: campanha que começou ou
+   * terminou, preço que mudou mais de 10%, estoque que acabou ou
+   * voltou. É o que faz a queda da quarta encostar no que houve na
+   * quarta, em vez de deixar a causa por conta de quem lê.
+   */
+  acontecimentos: Acontecimento[];
   maisVistos: ProdutoDoDia[];
   /** De qual dia é o ranking de visitas. */
   diaDoRanking: string;
@@ -200,7 +208,7 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
       vazio: true, hoje, semana: { inicio, fim }, semanaAnterior: { inicio: inicioAnt, fim: fimAnt },
       diasCorridos, parcial, contas, contaSelecionada: "", dias: [], diasAnteriores: [], diaDoRanking: ate, campanhas: [],
       ritmo: { receita: 0, receitaAnterior: 0, pedidos: 0, pedidosAnterior: 0, unidades: 0, unidadesAnterior: 0, visitas: null, visitasAnterior: null, investimento: 0, investimentoAnterior: 0, conversao: null, conversaoAnterior: null, ticket: null, ticketAnterior: null },
-      dia: null, reputacao: [], catalogo: null, maisVistos: [], atencao: [],
+      dia: null, reputacao: [], catalogo: null, acontecimentos: [], maisVistos: [], atencao: [],
       frescor: { vendas: null, visitas: null, ads: null, reputacao: null },
     };
   }
@@ -443,6 +451,10 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     .slice(0, 20);
 
   /* ── Catálogo: o estado da vitrine nas duas semanas ── */
+  /* A semana inteira, não só os dias completos: o que aconteceu hoje
+     explica o que está acontecendo hoje. */
+  const acontecimentos = await carregarAcontecimentos(sb, inicioAnt, fim);
+
   const catalogo = await carregarCatalogoSemana(sb, {
     contas: contaSelecionada ? contas.filter((c) => c.id === contaSelecionada) : contas,
     anuncios: anuncios.map((a) => ({
@@ -649,6 +661,7 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     dia: hojeDia,
     reputacao: [...repPorConta.values()],
     catalogo,
+    acontecimentos,
     maisVistos,
     diaDoRanking,
     campanhas,
