@@ -118,7 +118,7 @@ export function DisputaPainel({ disputa }: { disputa: DadosDisputa }) {
       sortValue: (l) => l.sku || l.mlb,
       cell: (l) => (
         <div className="flex items-start gap-2 min-w-0">
-          <FotoAnuncio mlb={l.mlb} alt={l.titulo} tamanho={34} />
+          <FotoAnuncio src={l.foto} mlb={l.mlb} alt={l.titulo} tamanho={34} />
           <div className="min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="num text-[12.5px] font-medium text-ink">{l.sku || "sem SKU"}</span>

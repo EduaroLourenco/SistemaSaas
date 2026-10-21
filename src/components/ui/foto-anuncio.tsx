@@ -41,13 +41,33 @@ const ouvintes = new Set<() => void>();
 
 function carregar() {
   promessa ??= fetch("/api/anuncios/fotos")
-    .then((r) => (r.ok ? r.json() : { fotos: {} }))
-    .then((j: { fotos?: Record<string, string> }) => j.fotos ?? {})
-    .catch(() => ({}))
+    .then(async (r) => {
+      if (!r.ok) throw new Error(String(r.status));
+      const j = (await r.json()) as { fotos?: Record<string, string> };
+      return j.fotos ?? {};
+    })
     .then((f) => {
       mapa = f;
       for (const o of ouvintes) o();
       return f;
+    })
+    .catch(() => {
+      /*
+       * Resposta ruim NÃO fica memorizada.
+       *
+       * A promessa é guardada no módulo para as dezoito telas dividirem
+       * uma busca só. Guardar também o fracasso — um 401 durante a
+       * renovação da sessão, uma queda de rede na primeira tela aberta —
+       * deixava a aba inteira sem foto até recarregar, e sem nada na tela
+       * dizendo por quê: o quadrado vazio é o mesmo de "este anúncio não
+       * tem capa".
+       *
+       * Mapa vazio com resposta 200 é resposta de verdade (empresa sem
+       * foto sincronizada) e continua valendo, senão cada linha da tabela
+       * pediria de novo.
+       */
+      promessa = null;
+      return {};
     });
   return promessa;
 }

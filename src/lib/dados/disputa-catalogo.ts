@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { temColunaFamilia } from "./coluna-familia";
+import { temColunaFoto } from "./coluna-foto";
 
 /**
  * Disputa de catálogo: estou ganhando, e por quanto.
@@ -42,6 +43,16 @@ export type LinhaDisputa = {
   mlb: string;
   sku: string;
   titulo: string;
+  /**
+   * A capa do anúncio, na própria linha.
+   *
+   * As outras telas pegam a foto de um mapa MLB→URL buscado à parte, para
+   * não repetir o campo em dezoito carregamentos. Aqui não precisa: este
+   * carregamento já lê a tabela `anuncios`, e uma coluna a mais não custa
+   * consulta nenhuma. Vindo na linha, a foto não depende de uma segunda
+   * requisição dar certo — e era ela que estava faltando na tela.
+   */
+  foto: string | null;
   conta: string;
   tipo: string;
   /** Ativo, pausado, encerrado. Anúncio fora do ar não aceita a ação. */
@@ -161,6 +172,7 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
      db/43_familia_do_anuncio.sql o PostgREST recusaria a consulta
      inteira e a tela ficaria sem lista. */
   const temFamilia = await temColunaFamilia(sb);
+  const temFoto = await temColunaFoto(sb);
 
   type Dia = {
     anuncio_id: string;
@@ -200,6 +212,7 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
         .from("anuncios")
         .select(
           "id,codigo_externo,sku_canal,titulo,tipo,status,estoque,contas_canal(nome,canais(nome))" +
+            (temFoto ? ",foto" : "") +
             (temFamilia ? ",catalogo_produto_id" : "")
         )
         .order("codigo_externo")
@@ -301,6 +314,7 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
       mlb: a.codigo_externo,
       sku: a.sku_canal ?? "",
       titulo: a.titulo,
+      foto: (a as { foto?: string | null }).foto ?? null,
       conta: a.contas_canal ? `${a.contas_canal.canais?.nome ?? "Canal"} · ${a.contas_canal.nome}` : "Conta principal",
       tipo: a.tipo === "premium" ? "Premium" : "Clássico",
       status: a.status ?? "",
