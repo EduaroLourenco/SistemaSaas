@@ -55,13 +55,34 @@ type Linha = {
   descontoMedio: number | null;
 };
 
-/** O rótulo curto de uma campanha: o nome do arquivo é ilegível. */
-function nomeCurto(nome: string) {
-  /* "1_Com_reducao_de_tarifas-d0149a47-2b14-..." → "Com redução de tarifas".
-     O prefixo numérico e o uuid vêm do nome do arquivo baixado do canal. */
-  const semUuid = nome.replace(/-[0-9a-f-]{8,}$/i, "");
-  const semData = semUuid.replace(/-\d{4}_\d{2}_\d{2}.*$/, "");
-  return semData.replace(/^\d+_/, "").replace(/_/g, " ");
+/**
+ * O nome do arquivo da Central de Promoções, partido em nome e período.
+ *
+ *   1_Com_reducao_de_tarifas-<uuid>-2026_10_19-16_31 | De 1 a 31 de Outubro
+ *   └ prefixo                      └ carimbo          └ período
+ *
+ * O uuid fica no MEIO, antes do carimbo do download — não no fim. Uma
+ * regra ancorada no fim da string não o alcança, e ele acaba na tela.
+ *
+ * O período volta como segunda linha porque é o que distingue a mesma
+ * campanha rodada em meses diferentes: "Com redução de tarifas" aparece
+ * oito vezes no histórico da Probel.
+ */
+function nomeCurto(nome: string): { nome: string; periodo: string | null } {
+  const [arquivo, ...resto] = nome.split(" | ");
+  const periodo = resto.join(" | ").trim() || null;
+
+  const limpo = arquivo
+    /* carimbo do download: _2026_10_19-16_31 ou -2026_10_19-16_31 */
+    .replace(/[-_]\d{4}_\d{2}_\d{2}-\d{2}_\d{2}$/, "")
+    /* uuid da campanha, agora que ele é o fim da string */
+    .replace(/-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i, "")
+    /* o "1_" que o canal põe em todo arquivo baixado */
+    .replace(/^\d+_/, "")
+    .replace(/_/g, " ")
+    .trim();
+
+  return { nome: limpo || arquivo, periodo };
 }
 
 export function PromocoesPorSku({
@@ -296,12 +317,23 @@ export function PromocoesPorSku({
                           className="sticky left-0 z-10 bg-panel-2 text-left px-3 py-2
                                      border-r border-line font-normal"
                         >
-                          <span className="block pl-7 text-[12.5px] text-ink">
-                            {nomeCurto(c.nome)}
-                          </span>
-                          <span className="block pl-7 num text-[11.5px] text-ink-3">
-                            {c.data.slice(8, 10)}/{c.data.slice(5, 7)} · {c.tipoCampanha}
-                          </span>
+                          {(() => {
+                            const r = nomeCurto(c.nome);
+                            return (
+                              <>
+                                <span className="block pl-7 text-[12.5px] text-ink">
+                                  {r.nome}
+                                </span>
+                                <span className="block pl-7 text-[11.5px] text-ink-3">
+                                  <span className="num">
+                                    {c.data.slice(8, 10)}/{c.data.slice(5, 7)}
+                                  </span>{" "}
+                                  · {c.tipoCampanha}
+                                  {r.periodo ? ` · ${r.periodo}` : ""}
+                                </span>
+                              </>
+                            );
+                          })()}
                         </th>
                         <td colSpan={4} className="px-3 py-2">
                           <span className="flex flex-wrap items-center justify-end gap-2 text-[12px]">
