@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { temColunaFamilia } from "./coluna-familia";
 
 /**
  * Disputa de catálogo: estou ganhando, e por quanto.
@@ -64,6 +65,16 @@ export type LinhaDisputa = {
   motivos: string[];
   /** Alavancas que o canal marca como oportunidade, já traduzidas. */
   alavancas: string[];
+  /**
+   * Outro anúncio NOSSO já ganha este produto no catálogo.
+   *
+   * Quando é verdade, "competindo" não é perda: é o premium perdendo
+   * para o clássico da própria casa, porque custa mais. Baixar o
+   * preço aqui é competir contra si mesmo.
+   */
+  casaJaGanha: boolean;
+  /** Qual anúncio nosso ganha, para a tela poder apontar. */
+  vencedorDaCasa: string | null;
 };
 
 export type DadosDisputa = {
@@ -146,6 +157,10 @@ export async function situacaoDeCatalogo(sb: Sb): Promise<Map<string, SituacaoDi
 
 export async function carregarDisputa(): Promise<DadosDisputa> {
   const sb = await clienteServidor();
+  /* A coluna só entra na consulta se existir: antes de
+     db/43_familia_do_anuncio.sql o PostgREST recusaria a consulta
+     inteira e a tela ficaria sem lista. */
+  const temFamilia = await temColunaFamilia(sb);
 
   type Dia = {
     anuncio_id: string;
@@ -183,7 +198,10 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
     paginar(() =>
       sb
         .from("anuncios")
-        .select("id,codigo_externo,sku_canal,titulo,tipo,status,estoque,contas_canal(nome,canais(nome))")
+        .select(
+          "id,codigo_externo,sku_canal,titulo,tipo,status,estoque,contas_canal(nome,canais(nome))" +
+            (temFamilia ? ",catalogo_produto_id" : "")
+        )
         .order("codigo_externo")
     ),
   ]);
@@ -228,6 +246,27 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
     if (String(d.data) >= String(atual.ultimo.data)) atual.ultimo = d;
   }
 
+  /*
+   * ── Quem já ganha cada produto de catálogo ──
+   *
+   * Ganhar o catálogo é por PRODUTO, e a Probel tem duas contas com o
+   * mesmo produto anunciado. Dos 169 produtos com alguém disputando,
+   * todos os 169 têm outro anúncio nosso ganhando: é o premium
+   * perdendo para o clássico da casa, porque custa mais.
+   *
+   * Sem isto a tela manda baixar preço contra o próprio anúncio.
+   */
+  const vencedorDoProduto = new Map<string, string>();
+  for (const [anuncioId, ac] of porAnuncio) {
+    const a = info.get(anuncioId) as (typeof info extends Map<string, infer T> ? T : never) & {
+      catalogo_produto_id?: string | null;
+    };
+    const produto = a?.catalogo_produto_id;
+    if (!produto) continue;
+    const s = SITUACOES[ac.ultimo.situacao] ?? "fora";
+    if (s === "ganhando" || s === "dividindo") vencedorDoProduto.set(produto, a.codigo_externo);
+  }
+
   const linhas: LinhaDisputa[] = [];
   for (const [anuncioId, ac] of porAnuncio) {
     const a = info.get(anuncioId);
@@ -243,8 +282,20 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
      * R$ 60" para quem ganha seria convidar a baixar preço de graça.
      */
     const ganha = situacao === "ganhando" || situacao === "dividindo";
+
+    /*
+     * A casa já ganha este produto por outro anúncio? Então não há
+     * nada a fazer aqui, e "falta R$ 1,26" viraria um convite a
+     * baixar preço contra o próprio clássico.
+     */
+    const produto = (a as { catalogo_produto_id?: string | null }).catalogo_produto_id ?? null;
+    const vencedor = produto ? vencedorDoProduto.get(produto) ?? null : null;
+    const casaJaGanha = Boolean(vencedor) && vencedor !== a.codigo_externo;
+
     const falta =
-      !ganha && meuPreco != null && paraGanhar != null && meuPreco > paraGanhar ? r2(meuPreco - paraGanhar) : null;
+      !ganha && !casaJaGanha && meuPreco != null && paraGanhar != null && meuPreco > paraGanhar
+        ? r2(meuPreco - paraGanhar)
+        : null;
 
     linhas.push({
       mlb: a.codigo_externo,
@@ -270,6 +321,8 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
       alavancas: (u.alavancas ?? [])
         .filter((l) => l?.situacao === "opportunity" && l.id)
         .map((l) => ALAVANCAS[l.id!] ?? l.id!),
+      casaJaGanha,
+      vencedorDaCasa: casaJaGanha ? vencedor : null,
     });
   }
 
@@ -279,6 +332,9 @@ export async function carregarDisputa(): Promise<DadosDisputa> {
   const peso: Record<SituacaoDisputa, number> = { competindo: 0, listado: 1, fora: 2, dividindo: 3, ganhando: 4 };
   linhas.sort(
     (x, y) =>
+      /* Quem já tem o catálogo em casa desce: não é perda, e ocupando
+         o topo esconde quem de fato está perdendo para fora. */
+      Number(x.casaJaGanha) - Number(y.casaJaGanha) ||
       peso[x.situacao] - peso[y.situacao] ||
       (x.faltaPct ?? Infinity) - (y.faltaPct ?? Infinity) ||
       x.titulo.localeCompare(y.titulo, "pt-BR")

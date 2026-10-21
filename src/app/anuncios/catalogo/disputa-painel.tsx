@@ -93,8 +93,16 @@ export function DisputaPainel({ disputa }: { disputa: DadosDisputa }) {
       sortValue: (l) => ORDEM[l.situacao],
       cell: (l) => (
         <div className="min-w-0">
-          <Badge tone={TOM[l.situacao]}>{ROTULO[l.situacao]}</Badge>
-          {l.situacao === "dividindo" && l.dividindoCom != null && (
+          {/* Perder para o próprio anúncio não é perder. O premium do
+              mesmo produto custa mais (comissão 16,5% contra 11,5%) e
+              por isso aparece atrás do clássico da casa. */}
+          <Badge tone={l.casaJaGanha ? "neutral" : TOM[l.situacao]}>
+            {l.casaJaGanha ? "a casa já ganha" : ROTULO[l.situacao]}
+          </Badge>
+          {l.casaJaGanha && l.vencedorDaCasa && (
+            <p className="num text-[11px] text-ink-3 mt-0.5">por {l.vencedorDaCasa}</p>
+          )}
+          {!l.casaJaGanha && l.situacao === "dividindo" && l.dividindoCom != null && (
             <p className="text-[11px] text-ink-3 mt-0.5">com {l.dividindoCom} vendedor(es)</p>
           )}
           {l.dia !== disputa.ultimoDia && (
@@ -209,7 +217,11 @@ export function DisputaPainel({ disputa }: { disputa: DadosDisputa }) {
       width: "116px",
       sortValue: (l) => l.faltaPct ?? -1,
       cell: (l) =>
-        l.faltaReais == null ? (
+        l.casaJaGanha ? (
+          <span className="text-[12px] text-ink-3" title="Baixar aqui é competir com o próprio anúncio">
+            nada a fazer
+          </span>
+        ) : l.faltaReais == null ? (
           <span className="text-[12px] text-ink-3">—</span>
         ) : (
           <div className="flex flex-col items-end leading-tight">
