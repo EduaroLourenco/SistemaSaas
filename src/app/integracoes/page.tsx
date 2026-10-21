@@ -11,6 +11,7 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { SaudeDados } from "@/components/painel/saude-dados";
 import { BotaoAtualizar } from "@/components/painel/botao-atualizar";
 import { carregarSaude } from "@/lib/dados/saude";
+import { escritaConfigurada } from "@/lib/meli/apps";
 import { MapaFontes } from "@/components/painel/mapa-fontes";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 
@@ -37,7 +38,10 @@ export default async function Integracoes() {
     clientePrivilegiado()
       .from("integracoes")
       .select("status,ultima_sincronizacao,ultimo_erro,conta_canal_id")
-      .eq("provedor", "mercado_livre").eq("operacao_id", op.id),
+      /* As duas aplicações do Meli: a de leitura, de sempre, e a de
+         escrita, que o vendedor conecta à parte para o sistema poder
+         alterar promoção e publicidade. */
+      .in("provedor", ["mercado_livre", "mercado_livre_escrita"]).eq("operacao_id", op.id),
     lojasVtex(op.id),
     carregarSaude(),
     clientePrivilegiado().from("integracoes").select("status,ultima_sincronizacao,ultimo_erro,config").eq("provedor", "bling").eq("operacao_id", op.id).maybeSingle(),
@@ -55,11 +59,27 @@ export default async function Integracoes() {
     ultima_sincronizacao: string | null;
     ultimo_erro: string | null;
     conta_canal_id: string | null;
+    provedor: string;
+    credencial_ref: string | null;
   };
   // Indexado pela conta de canal: é o que amarra integração e conta desde
   // que o apelido global deixou de identificar nada.
+  /* Sem as variáveis da aplicação de escrita no servidor, o link
+     levaria a um 503 — melhor não existir. */
+  const escritaDisponivel = escritaConfigurada();
+
+  const todas = (integracoes.data ?? []) as Linha[];
   const porConta = new Map(
-    ((integracoes.data ?? []) as Linha[]).map((l) => [l.conta_canal_id ?? "", l])
+    todas
+      .filter((l) => l.provedor === "mercado_livre")
+      .map((l) => [l.conta_canal_id ?? "", l])
+  );
+  /* Conectada é ter credencial guardada, não o `status` da linha: o
+     status fica "conectada" mesmo depois de o token morrer. */
+  const escritaPorConta = new Map(
+    todas
+      .filter((l) => l.provedor === "mercado_livre_escrita")
+      .map((l) => [l.conta_canal_id ?? "", Boolean(l.credencial_ref)])
   );
 
   const quando = (iso: string) =>
@@ -125,14 +145,31 @@ export default async function Integracoes() {
                           ? "Ainda sem sincronização registrada"
                           : "Enquanto não conectada, os números desta conta entram por planilha"}
                     </p>
-                    <a
-                      href={`/api/meli/conectar?conta=${c.id}`}
-                      /* <a> e não <Link>: o Link pré-carrega o endereço, e pré-carregar uma
-                         rota de conexão OAuth dispara a rota sem ninguém clicar. */
-                      className="text-[12px] font-medium text-brand hover:underline shrink-0"
-                    >
-                      {conectada ? "Reconectar" : "Conectar"}
-                    </a>
+                    <span className="flex items-center gap-3 shrink-0">
+                      <a
+                        href={`/api/meli/conectar?conta=${c.id}`}
+                        /* <a> e não <Link>: o Link pré-carrega o endereço, e pré-carregar uma
+                           rota de conexão OAuth dispara a rota sem ninguém clicar. */
+                        className="text-[12px] font-medium text-brand hover:underline"
+                      >
+                        {conectada ? "Reconectar" : "Conectar"}
+                      </a>
+                      {escritaDisponivel && (
+                        <a
+                          href={`/api/meli/conectar?conta=${c.id}&app=escrita`}
+                          className="text-[12px] text-ink-3 hover:text-ink hover:underline"
+                          title={
+                            escritaPorConta.get(c.id)
+                              ? "O sistema pode alterar promoções e campanhas de publicidade desta conta, quando você mandar."
+                              : "Autoriza o sistema a alterar promoções e campanhas de publicidade. Todos os painéis funcionam sem isto."
+                          }
+                        >
+                          {escritaPorConta.get(c.id)
+                            ? "Alterações liberadas"
+                            : "Permitir alterações"}
+                        </a>
+                      )}
+                    </span>
                   </div>
                   {comErro && reg?.ultimo_erro && (
                     <p className="text-[12px] text-down mt-1.5 break-words">{reg.ultimo_erro}</p>

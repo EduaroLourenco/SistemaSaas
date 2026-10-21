@@ -24,12 +24,20 @@ export default function CanaisCliente({
   erp,
   abaInicial,
   faltaMigracao,
+  escritaDisponivel,
 }: {
   canais: Canal[];
   contas: ContaCanal[];
   erp: Erp | null;
   abaInicial: "contas" | "canais" | "erp" | "google";
   faltaMigracao: string | null;
+  /**
+   * O servidor tem as credenciais da aplicação de escrita do Meli.
+   *
+   * Sem elas o botão "Permitir alterações" levaria a um 503, que não
+   * explica nada a quem clicou — melhor não existir.
+   */
+  escritaDisponivel: boolean;
 }) {
   const [aba, setAba] = React.useState<"contas" | "canais" | "erp" | "google">(abaInicial);
 
@@ -178,6 +186,30 @@ export default function CanaisCliente({
                 {c.conectada ? "Reconectar" : "Conectar"}
               </a>
             )}
+            {c.canalCodigo === "mercado_livre" &&
+              escritaDisponivel &&
+              (c.escrita?.conectada ? (
+                <span
+                  className="flex items-center gap-1.5"
+                  title="O sistema pode alterar promoções e campanhas de publicidade desta conta, quando você mandar."
+                >
+                  <Badge tone="up">alterações liberadas</Badge>
+                  <a
+                    href={`/api/meli/conectar?conta=${c.id}&app=escrita`}
+                    className="text-[11.5px] text-ink-3 hover:text-ink hover:underline"
+                  >
+                    refazer
+                  </a>
+                </span>
+              ) : (
+                <a
+                  href={`/api/meli/conectar?conta=${c.id}&app=escrita`}
+                  className="text-[12px] text-ink-2 hover:text-ink hover:underline"
+                  title="Autoriza o sistema a alterar promoções e campanhas de publicidade. Todos os painéis funcionam sem isto."
+                >
+                  Permitir alterações
+                </a>
+              ))}
             {quando(c.sincronizadaEm) && (
               <span className="num text-[12px] text-ink-3">
                 sync {quando(c.sincronizadaEm)}

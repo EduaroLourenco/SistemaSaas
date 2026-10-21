@@ -1,6 +1,7 @@
 import { carregarCanais } from "@/lib/dados/canais";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import CanaisCliente from "./canais-cliente";
+import { escritaConfigurada } from "@/lib/meli/apps";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function Pagina({
             aba === "erp" ? "erp" : aba === "google" ? "google" : aba === "canais" ? "canais" : "contas"
           }
           faltaMigracao={faltaMigracao}
+          escritaDisponivel={escritaConfigurada()}
         />
       </PageBody>
     </>
