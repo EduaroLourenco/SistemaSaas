@@ -97,6 +97,14 @@ const PERMITIDOS = [
    */
   /^\/items\/[A-Z]{3}\d+\/price_to_win$/i,
   /*
+   * O produto de catálogo, para saber a FAMÍLIA do anúncio.
+   *
+   * `parent_id` é o que une os tamanhos do mesmo colchão, e é por ele
+   * que o canal agrupa o patrocínio. Sem isto o sistema manda desligar
+   * a mídia do tamanho que não vendeu e derruba a do irmão que vende.
+   */
+  /^\/products\/[A-Z]{3}\d+$/i,
+  /*
    * O preço que o comprador paga. `/items` devolve o preço CHEIO: o desconto
    * das campanhas da Central de Promoções só aparece aqui.
    */

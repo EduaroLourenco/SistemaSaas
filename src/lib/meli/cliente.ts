@@ -1084,6 +1084,12 @@ export type AnuncioCompleto = {
   link: string | null;
   catalogo: boolean;
   /**
+   * O produto de catálogo do anúncio. Une os anúncios do MESMO
+   * produto — clássico e premium da mesma medida caem aqui juntos.
+   * Null quando o anúncio está fora do catálogo.
+   */
+  catalogoProdutoId: string | null;
+  /**
    * Miniatura de capa, em https.
    *
    * Vem junto no /items, sem chamada a mais. `secure_thumbnail` e não
@@ -1110,6 +1116,7 @@ type ItemBruto = {
   attributes?: { id?: string; value_name?: string | null }[];
   secure_thumbnail?: string | null;
   thumbnail?: string | null;
+  catalog_product_id?: string | null;
 };
 
 /**
@@ -1214,11 +1221,50 @@ export async function catalogoCompleto({
         motivoPausa: b.sub_status ?? [],
         link: b.permalink ?? null,
         catalogo: Boolean(b.catalog_listing),
+        catalogoProdutoId: b.catalog_product_id ?? null,
         foto: fotoDoItem(b),
       });
     }
   }
 
+  return saida;
+}
+
+/**
+ * A família de cada produto de catálogo.
+ *
+ * O `parent_id` do produto é o que une os TAMANHOS do mesmo modelo:
+ * solteiro, viúva, casal e queen do Turim compartilham
+ * MLB28677351, "Colchão Probel Guarda Costas Turim Springs". É esse
+ * agrupamento que a tela de publicidade do canal mostra, e é por ele
+ * que o patrocínio funciona.
+ *
+ * Uma chamada por produto distinto, não por anúncio: na Probel são 70
+ * produtos para 1.036 anúncios. Produto que o canal não devolver fica
+ * de fora do mapa, e quem lê trata como anúncio sem família.
+ */
+export async function familiasDoCatalogo(
+  produtos: string[],
+  conta: Conta
+): Promise<Map<string, { familiaId: string; familiaNome: string }>> {
+  const saida = new Map<string, { familiaId: string; familiaNome: string }>();
+  for (const p of [...new Set(produtos)].filter(Boolean)) {
+    try {
+      const b = await meliGet<{ id?: string; parent_id?: string; family_name?: string; name?: string }>(
+        `/products/${p}`,
+        conta
+      );
+      saida.set(p, {
+        /* Sem parent, o próprio produto é a família: é o caso do
+           produto que só tem um tamanho. */
+        familiaId: b.parent_id ?? p,
+        familiaNome: b.family_name ?? b.name ?? p,
+      });
+    } catch {
+      /* Produto recusado ou removido do catálogo: segue sem família.
+         Derrubar a sincronização inteira por um produto seria pior. */
+    }
+  }
   return saida;
 }
 

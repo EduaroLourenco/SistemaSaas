@@ -11,6 +11,7 @@ import {
   vendedor,
   disputaCatalogo,
   perguntasSemResposta,
+  familiasDoCatalogo,
   type Conta,
   type AnuncioCompleto,
   type Pedido,
@@ -124,6 +125,16 @@ async function gravarCatalogo(
 ) {
   const sb = clientePrivilegiado();
 
+  /*
+   * A família de cada produto de catálogo, antes de montar as linhas.
+   * Uma chamada por produto distinto — na Probel, 70 para 1.036
+   * anúncios.
+   */
+  const familias = await familiasDoCatalogo(
+    itens.map((a) => a.catalogoProdutoId).filter((x): x is string => Boolean(x)),
+    ctx.conta
+  );
+
   const linhas = itens.map((a) => ({
     operacao_id: ctx.operacaoId,
     canal_id: ctx.canalId,
@@ -153,6 +164,9 @@ async function gravarCatalogo(
     logistica: a.logistica,
     url: a.link,
     foto: a.foto,
+    catalogo_produto_id: a.catalogoProdutoId,
+    familia_id: familias.get(a.catalogoProdutoId ?? "")?.familiaId ?? null,
+    familia_nome: familias.get(a.catalogoProdutoId ?? "")?.familiaNome ?? null,
     sincronizado_em: new Date().toISOString(),
   }));
 
