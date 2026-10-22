@@ -35,6 +35,18 @@ import { surgicallyEditExcel } from "../lib/editor-xlsx.mjs";
 const OPERACAO = "123c2f3c-c4ed-48ba-b4c4-753d78265946";
 const FOLGA = { classico: 1.15, premium: 1.10 };
 const TOLERANCIA_ANTIGOS = 0.05;
+
+/**
+ * Anúncios que fogem da régua da idade, com a folga que o Eduardo deu.
+ *
+ * MLB7762590790 é antigo, mas o canal ofereceu 3% nele — igual aos novos,
+ * e não os 26% a 52% que deu aos outros antigos. Pela idade ele aceitaria
+ * 59,95 e entraria praticamente sem desconto. Vai no mínimo cravado, sem
+ * folga nenhuma: 31,84 sobre um preço cheio de 61,80, 48% de desconto.
+ *
+ * A chave é "quanto multiplicar o piso", então 1 é o piso exato.
+ */
+const EXCECOES = new Map([["MLB7762590790", 1]]);
 const ENTRADA = process.argv.slice(2).find((a) => a.endsWith(".xlsx"));
 if (!ENTRADA) throw new Error("Passe o caminho da planilha da Central de Promoções.");
 
@@ -117,9 +129,10 @@ for (let i = 2; i <= ws.rowCount; i++) {
   const nao = opcoes[1] || "Não participar";
 
   let acao = nao, escreve = null, motivo = "";
+  const excecao = EXCECOES.get(mlb);
   if (piso == null) motivo = "sem piso cadastrado";
-  else if (ehNovo) {
-    const alvo = r2(piso * FOLGA[tipo === "premium" ? "premium" : "classico"]);
+  else if (ehNovo || excecao != null) {
+    const alvo = r2(piso * (excecao ?? FOLGA[tipo === "premium" ? "premium" : "classico"]));
     if (canal != null && alvo > canal + 0.01) motivo = `alvo ${reais(alvo)} acima da proposta ${reais(canal)} — o canal não aceita subir`;
     else { acao = sim; escreve = alvo; }
   } else {
@@ -138,7 +151,7 @@ for (const l of linhas) {
   const final = l.escreve ?? l.canal;
   const desc = l.cheio && final ? `${(((l.cheio - final) / l.cheio) * 100).toFixed(0)}%` : "—";
   console.log(
-    `${l.mlb} ${l.sku.padEnd(16)} ${l.tipo.slice(0, 4).padEnd(5)} ${(l.ehNovo ? "NOVO" : "velho").padEnd(6)} ` +
+    `${l.mlb} ${l.sku.padEnd(16)} ${l.tipo.slice(0, 4).padEnd(5)} ${(l.ehNovo ? "NOVO" : EXCECOES.has(l.mlb) ? "exc." : "velho").padEnd(6)} ` +
     `${String(l.cheio ?? "—").padStart(6)} ${String(l.canal ?? "—").padStart(8)} ${String(l.piso ?? "—").padStart(7)} ` +
     `${String(l.escreve ?? "—").padStart(7)} ${desc.padStart(8)}  ${l.acao === l.sim ? "" : "FORA · " + l.motivo}`
   );
