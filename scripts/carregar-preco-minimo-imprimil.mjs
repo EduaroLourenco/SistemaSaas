@@ -32,7 +32,21 @@
  * ficam de fora de propósito: voltam com "sem piso cadastrado", que é
  * visível, em vez de um piso errado, que não é.
  *
- * Uso: node scripts/carregar-preco-minimo-imprimil.mjs [--aplicar]
+ * ── Repetir a carga quando entram anúncios novos ──
+ *
+ * `formula_base_itens` é montada a partir da tabela `anuncios`: anúncio
+ * que o sistema não conhece não ganha linha, e sem linha o motor não sabe
+ * se ele é clássico ou premium — recusa tudo com "MLB não está na aba Base
+ * MLB". Então a ordem é: primeiro importar o catálogo do canal pela tela
+ * Importar, depois rodar isto de novo com uma vigência nova.
+ *
+ * Em 22/10/2026 entraram 23 anúncios de uma vez, e o mesmo SKU passou a
+ * aparecer em até quatro deles com preços bem diferentes — REV_PACK30_RELI
+ * está publicado a 42,80, 62,80, 66,90 e 72,80. O piso continua sendo um
+ * por SKU, que é o que a planilha dá: ele é do produto, não do anúncio.
+ *
+ * Uso: node scripts/carregar-preco-minimo-imprimil.mjs [vigência] [--aplicar]
+ *      a vigência é AAAA-MM-DD; sem ela, hoje.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -40,7 +54,11 @@ import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 const OPERACAO = "123c2f3c-c4ed-48ba-b4c4-753d78265946"; // Imprimil
-const VIGENTE_DE = "2026-10-19";
+/* A vigência pode vir no comando: carga nova não sobrescreve a antiga, e
+   dá para reprocessar uma campanha velha com a base que valia na época. */
+const VIGENTE_DE =
+  process.argv.slice(2).find((a) => /^d{4}-d{2}-d{2}$/.test(a)) ??
+  new Date().toISOString().slice(0, 10);
 const APLICAR = process.argv.includes("--aplicar");
 const CLASSICO = 0.115;
 const PREMIUM = 0.165;
@@ -70,15 +88,19 @@ const TABELA = [
   { codigo: "REV_PACK100_RELI", nome: "100 Livrinhos De Colorir Historias Biblicas", classico: 50, premium: 55.77 },
   { codigo: "IMP_06101", nome: "Caderneta com Suporte de Celular", classico: 31.84, premium: 34.75 },
   /* Sem código na planilha; o vínculo sai do catálogo do canal. */
-  { nome: "Moleskine Copa", classico: 25, premium: 27, familia: /^MOLCOPA\d+$/ },
-  { nome: "Moleskine full — unidade", classico: 29, premium: 29.9, familia: /^MOL-FLORAL-\d+$/, porAnuncio: /^Caderno /i },
   /*
-   * O kit de 10 não estava na planilha: o Eduardo definiu R$ 299,00 em
-   * 19/10, que é dez vezes o piso do avulso. Na prática o kit fica fora de
-   * promoção — ele é publicado a R$ 299,35, ou seja, R$ 29,94 por caderno,
-   * quatro centavos acima do piso da unidade. Nasceu com o desconto dentro.
+   * As duas linhas de moleskine, revisadas pelo Eduardo em 22/10/2026:
+   * R$ 16,90 o caderno avulso e R$ 168,00 o kit de dez, nas duas
+   * alíquotas. Antes eram 25/27 a Copa, 29/29,90 o floral avulso e
+   * R$ 299,00 o kit — este último um piso que deixava o kit fora de
+   * qualquer promoção, porque ele é publicado a R$ 299,35.
+   *
+   * Um número só para clássico e premium porque foi o que ele deu: é o
+   * mínimo que a operação aguenta, e esse não muda com o tipo do anúncio.
    */
-  { nome: "Moleskine full — kit de 10", classico: 299, premium: 299, familia: /^MOL-FLORAL-\d+$/, porAnuncio: /^Kit 10 /i },
+  { nome: "Moleskine Copa", classico: 16.9, premium: 16.9, familia: /^MOLCOPA\d+$/ },
+  { nome: "Moleskine full — unidade", classico: 16.9, premium: 16.9, familia: /^MOL-FLORAL-\d+$/, porAnuncio: /^Caderno /i },
+  { nome: "Moleskine full — kit de 10", classico: 168, premium: 168, familia: /^MOL-FLORAL-\d+$/, porAnuncio: /^Kit 10 /i },
 ];
 
 const { data: anuncios, error: ea } = await sb
