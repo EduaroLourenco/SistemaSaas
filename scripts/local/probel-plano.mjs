@@ -14,12 +14,12 @@
 import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
 
-const d = JSON.parse(readFileSync("scratchpad/ef.json", "utf8"));
+const d = JSON.parse(readFileSync("scratchpad/pz.json", "utf8"));
 const nm = (s) => String(s ?? "").trim().toUpperCase();
 const r2 = (v) => Math.round(v * 100) / 100;
 const r0 = (v) => Math.round(v);
 const nmConta = new Map(d.contas.map((c) => [c.id, c.nome]));
-const extra = new Map(d.titulos.map((t) => [t.id, t]));
+const extra = new Map(d.anuncios.map((t) => [t.id, t]));
 const curto = (n) => (String(n).includes("São Paulo") ? "São Paulo" : String(n).includes("prazo") ? "A prazo" : String(n));
 const tipoPromo = new Map(d.promocoes.map((x) => [x.id, x.tipo]));
 
@@ -122,17 +122,35 @@ for (const [sku, ans] of porSku) {
   const linhas = at.map((a) => L.find((l) => l.mlb === a.codigo_externo)).filter(Boolean).sort((a, b) => b.visitas - a.visitas);
   const vis = soma(linhas, (l) => l.visitas);
   if (vis < 100 || !linhas.length) continue;
-  const comP = linhas.filter((l) => l.promoDesc != null);
-  const melhor = comP.length ? [...comP].sort((a, b) => b.promoDesc - a.promoDesc)[0] : null;
-  const descMv = linhas[0].promoDesc ?? 0;
+  /*
+   * A comparação é pelo PREÇO FINAL, não pela porcentagem de desconto.
+   *
+   * Segunda correção do Eduardo: "vc utilizou a maior porcentagem de
+   * desconto, porém quem teve mais visitas é justamente o menor preço
+   * promocional". O percentual é calculado sobre o preço cheio de cada
+   * anúncio, e os cheios diferem — 46% sobre 4.212 dá 2.274, enquanto
+   * 55% sobre 5.230 dá 2.331. Pelo percentual o segundo parecia o mais
+   * agressivo; pelo preço, o primeiro é mais barato.
+   *
+   * Com a conta certa os casos caem de 79 para 36, e dos 36 só 10 têm o
+   * anúncio mais barato na MESMA conta — nos outros 26 ele está na conta
+   * a prazo, que converte 0,23% e não resolveria nada.
+   */
+  const maisVisto = linhas[0];
+  const maisBarato = [...linhas].filter((l) => l.preco).sort((a, b) => a.preco - b.preco)[0];
+  const mesmaConta = maisBarato && maisBarato.conta === maisVisto.conta;
+  const diferente = maisBarato && maisVisto.preco && maisBarato.preco < maisVisto.preco * 0.98;
   grupos.push({
     sku, titulo: extra.get(at[0].id)?.titulo ?? "", n: at.length, vis,
-    ven: soma(linhas, (l) => l.vendas), linhas, melhor,
-    gap: melhor ? r2(melhor.promoDesc - descMv) : null, descMv,
+    ven: soma(linhas, (l) => l.vendas), linhas, melhor: maisBarato,
+    acionavel: Boolean(diferente && mesmaConta),
+    noutraConta: Boolean(diferente && !mesmaConta),
+    dif: diferente ? r2(((maisVisto.preco - maisBarato.preco) / maisVisto.preco) * 100) : null,
   });
 }
 grupos.sort((a, b) => b.vis - a.vis);
-const deslocados = grupos.filter((x) => x.gap != null && x.gap >= 5);
+const deslocados = grupos.filter((x) => x.acionavel);
+const noutra = grupos.filter((x) => x.noutraConta);
 
 /* ── Estilo ── */
 const AZUL = "FF1F3864", CLARO = "FFD9E2F3", FAIXA = "FFF2F2F2";
@@ -160,7 +178,7 @@ const txt = (ws, linhas, n) => { for (const t of linhas) { const r = ws.addRow([
   secao(ws, "COMO USAR CADA ABA", 7);
   cab(ws, ["Aba", "Para quê", "Quantas linhas", "", "", "", ""]);
   for (const [a, b, c] of [
-    ["2 Mover promoção", "A ação de maior impacto. Produtos onde o desconto está no anúncio errado.", `${deslocados.length} produtos`],
+    ["2 Preço entre irmãos", "Produtos onde outro anúncio da MESMA conta já está mais barato que o que recebe a visita.", `${deslocados.length} produtos`],
     ["3 Trazer visita", "Anúncios que convertem bem e não têm verba. Abrir Ads aqui.", `${A.length} anúncios`],
     ["4 Arrumar a oferta", "Têm 50% das visitas da conta e convertem 0,29%. Não comprar visita.", `${B.length} anúncios`],
     ["5 Visita sem venda", "Receberam visita e não venderam nada. Consertar ou tirar.", `${C.length} anúncios`],
@@ -234,30 +252,34 @@ const txt = (ws, linhas, n) => { for (const t of linhas) { const r = ws.addRow([
 
 /* ═══ 2. MOVER PROMOÇÃO ═══ */
 {
-  const ws = wb.addWorksheet("2 Mover promoção");
+  const ws = wb.addWorksheet("2 Preço entre irmãos");
   const cols = ["SKU", "Produto", "Anúncios", "Visitas do SKU", "Vendas do SKU", "MLB", "CONTA", "Tipo", "Preço cheio", "Promoção", "Preço na promoção", "Desconto", "Visitas", "Vendas", "Conversão", "Piso", "Catálogo", "Ads", "LEITURA"];
   ws.columns = [{ width: 11 }, { width: 26 }, { width: 9 }, { width: 11 }, { width: 11 }, { width: 15 }, { width: 11 }, { width: 9 }, { width: 11 }, { width: 15 }, { width: 12 }, { width: 10 }, { width: 9 }, { width: 8 }, { width: 10 }, { width: 11 }, { width: 12 }, { width: 9 }, { width: 48 }];
-  titulo(ws, "ONDE A PROMOÇÃO ESTÁ NO ANÚNCIO ERRADO", cols.length);
+  titulo(ws, "O PREÇO ENTRE OS ANÚNCIOS DO MESMO PRODUTO", cols.length);
   txt(ws, [
-    `Uma faixa por produto, uma linha por anúncio, ordenadas pela visita. A primeira linha de cada faixa é o anúncio que o Mercado Livre está mostrando. Em ${deslocados.length} dos ${grupos.length} produtos o desconto mais fundo não está nele.`,
-    "Atenção: nem toda promoção é transferível. A coluna 'Promoção' diz o tipo — SMART e SELLER_CAMPAIGN costumam ser escolha nossa, PRE_NEGOTIATED é acordo com o canal.",
+    "Uma faixa por produto, uma linha por anúncio, ordenadas pela visita. A primeira linha de cada faixa é o anúncio que o Mercado Livre está mostrando.",
+    `A comparação é pelo PREÇO FINAL, não pela porcentagem de desconto: o percentual é calculado sobre o preço cheio de cada anúncio, e os cheios diferem. 46% sobre R$ 4.212 dá R$ 2.274; 55% sobre R$ 5.230 dá R$ 2.331. Pelo percentual o segundo parecia mais agressivo; pelo preço, é o primeiro que está mais barato.`,
+    `Em ${deslocados.length} dos ${grupos.length} produtos existe outro anúncio da MESMA conta mais barato que o mais visitado — são esses que vêm primeiro. Em outros ${noutra.length} o mais barato está na conta a prazo, que converte 0,23%: igualar lá não resolve.`,
   ], cols.length);
   cab(ws, cols);
   let linha = ws.lastRow.number, zebra = false;
   const ordenados = [...grupos].sort((a, b) => {
-    const da = a.gap != null && a.gap >= 5 ? 1 : 0, db = b.gap != null && b.gap >= 5 ? 1 : 0;
+    const da = a.acionavel ? 2 : a.noutraConta ? 1 : 0;
+    const db = b.acionavel ? 2 : b.noutraConta ? 1 : 0;
     return db - da || b.vis - a.vis;
   });
   for (const x of ordenados) {
     const inicio = linha + 1;
-    const desl = x.gap != null && x.gap >= 5;
+    const desl = x.acionavel;
     for (const [i, a] of x.linhas.entries()) {
       const primeiro = i === 0;
-      const leitura = !desl
-        ? primeiro ? "Recebe a visita e tem o melhor desconto do grupo." : ""
-        : primeiro
-          ? `MOVER PARA CÁ: ${a.visitas} visitas com ${x.descMv}% de desconto, enquanto o ${x.melhor.mlb} tem ${x.melhor.promoDesc}% e só ${x.melhor.visitas} visitas.`
-          : a.mlb === x.melhor.mlb ? `O desconto de ${a.promoDesc}% está aqui, e traz só ${a.visitas} visitas.` : "";
+      const leitura = desl
+        ? primeiro
+          ? `BAIXAR PARA R$ ${x.melhor.preco}: este recebe ${a.visitas} visitas a R$ ${a.preco}, e o ${x.melhor.mlb} — mesma conta — já está ${x.dif}% mais barato com só ${x.melhor.visitas} visitas.`
+          : a.mlb === x.melhor.mlb ? `É o mais barato do grupo, e traz só ${a.visitas} visitas.` : ""
+        : x.noutraConta
+          ? primeiro ? `O mais barato do produto está na conta ${x.melhor.conta}, que converte 0,23%. Igualar lá não resolve; se quiser o preço menor, é neste aqui.` : ""
+          : primeiro ? "Recebe a visita E tem o menor preço do grupo. Nada a mover." : "";
       const r = ws.addRow([
         x.sku, String(x.titulo).slice(0, 24), x.n, x.vis, x.ven,
         a.mlb, a.conta, a.tipo, a.preco, a.promoTipo ?? "—", a.promoPreco,
