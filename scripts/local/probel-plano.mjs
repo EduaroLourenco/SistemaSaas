@@ -67,14 +67,34 @@ const praticado = new Map();
 for (const x of [...d.diario].sort((a, b) => String(a.data).localeCompare(String(b.data))))
   if (Number(x.preco) > 0) praticado.set(x.anuncio_id, Number(x.preco));
 
+/*
+ * A promoção que está VALENDO, não a mais barata cadastrada.
+ *
+ * Terceira correção do Eduardo, olhando o PA85369: a coluna dizia
+ * "promoção R$ 4.065,57" e a leitura falava em R$ 4.495,05. As duas
+ * saíam de fontes diferentes e só uma era o preço no ar.
+ *
+ * O anúncio tem até SETE promoções com status "started" ao mesmo tempo,
+ * com preços diferentes — são campanhas distintas, e só uma vale. Pegar
+ * a menor inventava um preço que ninguém vê: errava em 66 anúncios.
+ *
+ * O retrato diário é a verdade (é o preço que o canal mostrou naquele
+ * dia), e ele casa com UMA das promoções started em 1.002 dos 1.019
+ * anúncios que têm promoção. Então a promoção exibida é a que bate com
+ * o preço do dia.
+ */
 const promo = new Map();
 for (const p of d.promo) {
   if (p.status !== "started" || !p.anuncio_id) continue;
   const orig = Number(p.preco_original) || 0, pro = Number(p.preco_promocional) || 0;
   if (!(orig > 0 && pro > 0)) continue;
-  const desc = r2(((orig - pro) / orig) * 100);
+  const noAr = praticado.get(p.anuncio_id);
+  const casa = noAr != null && Math.abs(pro - noAr) < 0.02;
   const atual = promo.get(p.anuncio_id);
-  if (!atual || desc > atual.desc) promo.set(p.anuncio_id, { tipo: tipoPromo.get(p.promocao_id) ?? "?", pro, desc });
+  /* A que casa com o preço do dia ganha de qualquer outra. */
+  if (!atual || (casa && !atual.casa)) {
+    promo.set(p.anuncio_id, { tipo: tipoPromo.get(p.promocao_id) ?? "?", pro, desc: r2(((orig - pro) / orig) * 100), casa });
+  }
 }
 
 /* ── Linha por anúncio ── */
@@ -253,7 +273,7 @@ const txt = (ws, linhas, n) => { for (const t of linhas) { const r = ws.addRow([
 /* ═══ 2. MOVER PROMOÇÃO ═══ */
 {
   const ws = wb.addWorksheet("2 Preço entre irmãos");
-  const cols = ["SKU", "Produto", "Anúncios", "Visitas do SKU", "Vendas do SKU", "MLB", "CONTA", "Tipo", "Preço cheio", "Promoção", "Preço na promoção", "Desconto", "Visitas", "Vendas", "Conversão", "Piso", "Catálogo", "Ads", "LEITURA"];
+  const cols = ["SKU", "Produto", "Anúncios", "Visitas do SKU", "Vendas do SKU", "MLB", "CONTA", "Tipo", "PREÇO NO AR", "Preço de tabela", "Campanha", "Desconto sobre a tabela", "Visitas", "Vendas", "Conversão", "Piso", "Catálogo", "Ads", "LEITURA"];
   ws.columns = [{ width: 11 }, { width: 26 }, { width: 9 }, { width: 11 }, { width: 11 }, { width: 15 }, { width: 11 }, { width: 9 }, { width: 11 }, { width: 15 }, { width: 12 }, { width: 10 }, { width: 9 }, { width: 8 }, { width: 10 }, { width: 11 }, { width: 12 }, { width: 9 }, { width: 48 }];
   titulo(ws, "O PREÇO ENTRE OS ANÚNCIOS DO MESMO PRODUTO", cols.length);
   txt(ws, [
@@ -262,7 +282,8 @@ const txt = (ws, linhas, n) => { for (const t of linhas) { const r = ws.addRow([
     `Em ${deslocados.length} dos ${grupos.length} produtos existe outro anúncio da MESMA conta mais barato que o mais visitado — são esses que vêm primeiro. Em outros ${noutra.length} o mais barato está na conta a prazo, que converte 0,23%: igualar lá não resolve.`,
   ], cols.length);
   cab(ws, cols);
-  let linha = ws.lastRow.number, zebra = false;
+  const linhaCab = ws.lastRow.number;
+  let linha = linhaCab, zebra = false;
   const ordenados = [...grupos].sort((a, b) => {
     const da = a.acionavel ? 2 : a.noutraConta ? 1 : 0;
     const db = b.acionavel ? 2 : b.noutraConta ? 1 : 0;
@@ -282,8 +303,8 @@ const txt = (ws, linhas, n) => { for (const t of linhas) { const r = ws.addRow([
           : primeiro ? "Recebe a visita E tem o menor preço do grupo. Nada a mover." : "";
       const r = ws.addRow([
         x.sku, String(x.titulo).slice(0, 24), x.n, x.vis, x.ven,
-        a.mlb, a.conta, a.tipo, a.preco, a.promoTipo ?? "—", a.promoPreco,
-        a.promoDesc != null ? a.promoDesc / 100 : null,
+        a.mlb, a.conta, a.tipo, a.preco, a.precoCheio, a.promoTipo ?? "—",
+        a.precoCheio && a.preco ? (a.precoCheio - a.preco) / a.precoCheio : null,
         a.visitas, a.vendas, a.conv != null ? a.conv / 100 : null,
         a.piso, a.catalogo || "—", a.adsInv, leitura,
       ]);
@@ -309,36 +330,39 @@ const txt = (ws, linhas, n) => { for (const t of linhas) { const r = ws.addRow([
     }
     zebra = !zebra;
   }
-  ws.views = [{ state: "frozen", xSplit: 2, ySplit: 4 }];
-  ws.autoFilter = { from: { row: 4, column: 6 }, to: { row: 4, column: cols.length } };
+  /* A linha do cabeçalho é a que o `cab()` acabou de criar — contar à
+     mão quebra toda vez que um parágrafo entra ou sai acima dela. */
+  ws.views = [{ state: "frozen", xSplit: 2, ySplit: linhaCab }];
+  ws.autoFilter = { from: { row: linhaCab, column: 6 }, to: { row: linhaCab, column: cols.length } };
 }
 
 /* ═══ 3 a 5. GRUPOS ═══ */
 const abaGrupo = (nome, lista, descricao, acaoFn) => {
   const ws = wb.addWorksheet(nome);
-  const cols = ["MLB", "SKU", "CONTA", "Tipo", "Visitas 12sem", "Vendas", "Conversão", "Receita 12sem", "Preço", "Promoção", "Desconto", "Piso", "Espaço", "Mais barato da casa", "Anúncios do SKU", "Catálogo", "Ads", "O QUE FAZER"];
+  const cols = ["MLB", "SKU", "CONTA", "Tipo", "Visitas 12sem", "Vendas", "Conversão", "Receita 12sem", "PREÇO NO AR", "Preço de tabela", "Campanha", "Piso", "Espaço", "Mais barato da casa", "Anúncios do SKU", "Catálogo", "Ads", "O QUE FAZER"];
   ws.columns = [{ width: 15 }, { width: 11 }, { width: 11 }, { width: 9 }, { width: 11 }, { width: 8 }, { width: 10 }, { width: 12 }, { width: 11 }, { width: 15 }, { width: 10 }, { width: 11 }, { width: 9 }, { width: 12 }, { width: 10 }, { width: 12 }, { width: 9 }, { width: 44 }];
   titulo(ws, nome.toUpperCase(), cols.length);
   txt(ws, descricao, cols.length);
   cab(ws, cols);
+  const linhaCab = ws.lastRow.number;
   for (const l of lista) {
     const r = ws.addRow([
       l.mlb, l.sku, l.conta, l.tipo, l.visitas, l.vendas,
       l.conv != null ? l.conv / 100 : null, l.receita, l.preco,
-      l.promoTipo ?? "—", l.promoDesc != null ? l.promoDesc / 100 : null,
+      l.precoCheio, l.promoTipo ?? "—",
       l.piso, l.espaco != null ? l.espaco / 100 : null, l.maisBarato, l.irmaos,
       l.catalogo || "—", l.adsInv, acaoFn(l),
     ]);
-    r.getCell(7).numFmt = "0.00%"; r.getCell(11).numFmt = "0.0%"; r.getCell(13).numFmt = "0%";
-    [8, 9, 12, 14, 17].forEach((c) => (r.getCell(c).numFmt = brl));
+    r.getCell(7).numFmt = "0.00%"; r.getCell(13).numFmt = "0%";
+    [8, 9, 10, 12, 14, 17].forEach((c) => (r.getCell(c).numFmt = brl));
     r.alignment = { wrapText: true, vertical: "top" };
     r.getCell(3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: l.conta === "São Paulo" ? CLARO : AMARELO } };
     if (l.conv != null && l.conv / 100 >= MEDIA) r.getCell(7).fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERDE } };
     else if (l.visitas >= 100) r.getCell(7).fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERMELHO } };
     if (l.irmaos >= 6) r.getCell(15).fill = { type: "pattern", pattern: "solid", fgColor: { argb: AMARELO } };
   }
-  ws.views = [{ state: "frozen", xSplit: 3, ySplit: 4 }];
-  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: cols.length } };
+  ws.views = [{ state: "frozen", xSplit: 3, ySplit: linhaCab }];
+  ws.autoFilter = { from: { row: linhaCab, column: 1 }, to: { row: linhaCab, column: cols.length } };
 };
 
 abaGrupo("3 Trazer visita", A, [
@@ -370,14 +394,14 @@ abaGrupo("5 Visita sem venda", C, [
 /* ═══ 6. TODOS ═══ */
 {
   const ws = wb.addWorksheet("6 Todos os anúncios");
-  const cols = ["Grupo", "MLB", "SKU", "CONTA", "Tipo", "Status", "Visitas", "Vendas", "Conversão", "Receita", "Preço", "Promoção", "Desconto", "Piso", "Irmãos", "Catálogo", "Ads"];
+  const cols = ["Grupo", "MLB", "SKU", "CONTA", "Tipo", "Status", "Visitas", "Vendas", "Conversão", "Receita", "PREÇO NO AR", "Preço de tabela", "Campanha", "Piso", "Irmãos", "Catálogo", "Ads"];
   ws.columns = [{ width: 28 }, { width: 15 }, { width: 11 }, { width: 11 }, { width: 9 }, { width: 9 }, { width: 9 }, { width: 8 }, { width: 10 }, { width: 11 }, { width: 11 }, { width: 15 }, { width: 10 }, { width: 11 }, { width: 8 }, { width: 12 }, { width: 9 }];
   titulo(ws, `OS ${L.length} ANÚNCIOS MEDIDOS`, cols.length);
   cab(ws, cols);
   for (const l of [...L].sort((a, b) => a.grupo.localeCompare(b.grupo) || b.visitas - a.visitas)) {
-    const r = ws.addRow([l.grupo, l.mlb, l.sku, l.conta, l.tipo, l.status, l.visitas, l.vendas, l.conv != null ? l.conv / 100 : null, l.receita, l.preco, l.promoTipo ?? "—", l.promoDesc != null ? l.promoDesc / 100 : null, l.piso, l.irmaos, l.catalogo || "—", l.adsInv]);
-    r.getCell(9).numFmt = "0.00%"; r.getCell(13).numFmt = "0.0%";
-    [10, 11, 14, 17].forEach((c) => (r.getCell(c).numFmt = brl));
+    const r = ws.addRow([l.grupo, l.mlb, l.sku, l.conta, l.tipo, l.status, l.visitas, l.vendas, l.conv != null ? l.conv / 100 : null, l.receita, l.preco, l.precoCheio, l.promoTipo ?? "—", l.piso, l.irmaos, l.catalogo || "—", l.adsInv]);
+    r.getCell(9).numFmt = "0.00%";
+    [10, 11, 12, 14, 17].forEach((c) => (r.getCell(c).numFmt = brl));
     r.getCell(4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: l.conta === "São Paulo" ? CLARO : AMARELO } };
   }
   ws.views = [{ state: "frozen", xSplit: 4, ySplit: 2 }];
