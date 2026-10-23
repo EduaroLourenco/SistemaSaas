@@ -14,11 +14,12 @@
 import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
 
-const d = JSON.parse(readFileSync("scratchpad/un.json", "utf8"));
+const d = JSON.parse(readFileSync("scratchpad/ef.json", "utf8"));
 const nm = (s) => String(s ?? "").trim().toUpperCase();
 const r2 = (v) => Math.round(v * 100) / 100;
 const r0 = (v) => Math.round(v);
 const nmConta = new Map(d.contas.map((c) => [c.id, c.nome]));
+const extra = new Map(d.titulos.map((t) => [t.id, t]));
 const curto = (n) => (String(n).includes("São Paulo") ? "São Paulo" : String(n).includes("prazo") ? "A prazo" : String(n));
 const tipoPromo = new Map(d.promocoes.map((x) => [x.id, x.tipo]));
 
@@ -50,6 +51,22 @@ for (const s of d.semanal) {
   fun.set(s.anuncio_id, g);
 }
 /* Promoção ativa de cada anúncio: a de maior desconto. */
+/*
+ * O PREÇO QUE O CLIENTE VÊ, não o de vitrine.
+ *
+ * O Eduardo pegou isto: "o PA85351 na conta de São Paulo tá promocionado
+ * a 2272". Estava — 2.274,48 — e eu comparava o piso com os 4.212 do
+ * cadastro, que é o preço riscado. Pelo cheio o anúncio parecia ter 46%
+ * de espaço; pelo praticado ele está R$ 2,66 acima do piso.
+ *
+ * O retrato diário traz o preço efetivo e a promoção confirma. Com o
+ * número certo, 567 dos 1.033 anúncios ativos vendem ABAIXO do piso e só
+ * 13 têm mais de 15% de espaço — contra 422 pela leitura errada.
+ */
+const praticado = new Map();
+for (const x of [...d.diario].sort((a, b) => String(a.data).localeCompare(String(b.data))))
+  if (Number(x.preco) > 0) praticado.set(x.anuncio_id, Number(x.preco));
+
 const promo = new Map();
 for (const p of d.promo) {
   if (p.status !== "started" || !p.anuncio_id) continue;
@@ -69,16 +86,18 @@ for (const a of d.anuncios) {
   const irmaos = (porSku.get(nm(a.sku_canal)) ?? []).filter((x) => x.status === "ativo" && x.preco_atual);
   const pr = promo.get(a.id), c = cat.get(a.id), ad = ads.get(a.id);
   L.push({
-    mlb: a.codigo_externo, sku: nm(a.sku_canal), titulo: a.titulo, tipo: a.tipo, status: a.status,
+    mlb: a.codigo_externo, sku: nm(a.sku_canal), titulo: extra.get(a.id)?.titulo ?? "", tipo: a.tipo, status: a.status,
     conta: curto(nmConta.get(a.conta_canal_id) ?? "?"),
     visitas: f.vis, vendas: f.ven, receita: r2(f.rec),
     conv: f.vis ? r2((f.ven / f.vis) * 100) : null,
-    preco: Number(a.preco_atual) || null, piso: pisoDe(a),
+    precoCheio: Number(a.preco_atual) || null,
+    preco: praticado.get(a.id) ?? pr?.pro ?? (Number(a.preco_atual) || null),
+    piso: pisoDe(a),
     promoTipo: pr?.tipo ?? null, promoPreco: pr?.pro ?? null, promoDesc: pr?.desc ?? null,
     catalogo: c?.situacao ?? "", paraGanhar: c?.preco_para_ganhar ?? null,
-    estoque: a.estoque, adsInv: ad ? r2(Number(ad.investimento)) : null,
+    estoque: extra.get(a.id)?.estoque ?? null, adsInv: ad ? r2(Number(ad.investimento)) : null,
     irmaos: irmaos.length,
-    maisBarato: irmaos.length ? Math.min(...irmaos.map((x) => Number(x.preco_atual))) : null,
+    maisBarato: irmaos.length ? Math.min(...irmaos.map((x) => praticado.get(x.id) ?? Number(x.preco_atual))) : null,
   });
 }
 for (const l of L) l.espaco = l.preco && l.piso ? r2(((l.preco - l.piso) / l.preco) * 100) : null;
@@ -107,7 +126,7 @@ for (const [sku, ans] of porSku) {
   const melhor = comP.length ? [...comP].sort((a, b) => b.promoDesc - a.promoDesc)[0] : null;
   const descMv = linhas[0].promoDesc ?? 0;
   grupos.push({
-    sku, titulo: at[0].titulo, n: at.length, vis,
+    sku, titulo: extra.get(at[0].id)?.titulo ?? "", n: at.length, vis,
     ven: soma(linhas, (l) => l.vendas), linhas, melhor,
     gap: melhor ? r2(melhor.promoDesc - descMv) : null, descMv,
   });
@@ -134,6 +153,8 @@ const txt = (ws, linhas, n) => { for (const t of linhas) { const r = ws.addRow([
   txt(ws, [
     "Este arquivo substitui os dois que mandei antes. Use as abas na ordem: 1 é o diagnóstico, 2 a 5 são as listas de trabalho, 6 é a base inteira.",
     "Dados de 23/10/2026, janela de 12 semanas medidas (S32 a S43).",
+    "",
+    "IMPORTANTE — a coluna Preço é o PREÇO PRATICADO, o que o cliente vê depois da promoção, não o preço riscado do cadastro. A versão anterior deste arquivo usava o preço cheio e por isso dizia que havia espaço de desconto onde não há: o PA85351 em São Paulo aparecia a R$ 4.212 quando está sendo vendido a R$ 2.274,48, R$ 2,66 acima do piso.",
   ], 7);
 
   secao(ws, "COMO USAR CADA ABA", 7);
@@ -156,7 +177,7 @@ const txt = (ws, linhas, n) => { for (const t of linhas) { const r = ws.addRow([
     "",
     "2. Não é falta de visita, é conversão. Em julho as visitas SUBIRAM para 44.606 e os pedidos caíram. A conversão foi de 1,56% para 0,70%.",
     "",
-    "3. Não é preço. O mesmo produto está até 56% mais barato na 2ª conta e não vende: no PA69847 são R$ 1.330 contra R$ 2.523, com 1 venda contra 20. O que muda entre as contas é o prazo de entrega.",
+    "3. Não é preço, por dois caminhos independentes. Primeiro: o preço que o cliente VÊ já está no fundo — dos 1.033 anúncios ativos com piso cadastrado, 567 vendem ABAIXO do piso da Fórmula base e 451 estão a menos de 3% dele. Só 13 têm mais de 15% de espaço. Segundo: o mesmo produto está até 56% mais barato na 2ª conta e mesmo assim não vende — no PA69847 são R$ 1.330 contra R$ 2.523, com 1 venda contra 20. O que muda entre as contas é o prazo de entrega.",
     "",
     `4. A promoção está no anúncio errado em ${deslocados.length} dos ${grupos.length} produtos com mais de um anúncio. São ${soma(deslocados, (x) => x.linhas[0].visitas).toLocaleString("pt-BR")} visitas caindo no anúncio de desconto menor.`,
   ], 7);
@@ -305,7 +326,7 @@ abaGrupo("3 Trazer visita", A, [
 
 abaGrupo("4 Arrumar a oferta", B, [
   `${B.length} anúncios concentram ${soma(B, (l) => l.visitas).toLocaleString("pt-BR")} visitas (50% da conta) e convertem 0,29%.`,
-  `NÃO comprar visita aqui. Veja a coluna "mais barato da casa": em vários o mesmo produto já está mais barato noutro anúncio e mesmo assim não vende — nesses, preço não resolve.`,
+  `NÃO comprar visita aqui. E preço também não resolve: a coluna Preço é a praticada, e ${B.filter((l) => l.espaco != null && l.espaco < 0).length} destes ${B.length} já vendem ABAIXO do piso. Os outros estão colados nele.`,
 ], (l) => {
   if (l.maisBarato != null && l.preco && l.maisBarato < l.preco * 0.85) return `A casa já tem por R$ ${l.maisBarato} e não vende: o problema NÃO é preço. Ver prazo, foto e título.`;
   if (l.espaco != null && l.espaco < 0) return "Já abaixo do piso. Ver prazo, foto e título.";
