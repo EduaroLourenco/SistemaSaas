@@ -46,7 +46,10 @@ O corpo muda conforme quem define o preço. Três famílias:
 `top_deal_price` é o preço só para comprador Mercado Puntos nível 3 a 6.
 
 **b) O canal define, a gente aceita** — não se manda preço, manda-se o
-`offer_id` do candidato.
+`offer_id` do candidato. Aqui a tolerância continua valendo: ela não escreve
+preço nenhum, mas é ela que decide se um preço agressivo do canal cabe. É a
+mesma regra da planilha — a tolerância entra quando o que o canal propõe é
+menor que o nosso mínimo.
 
 | Tipo | Corpo do POST |
 |---|---|
@@ -155,8 +158,14 @@ Rota `/automacoes`, grupo próprio no menu, duas abas: **Promoções** e **Ads**
    situação — aceito, candidato, agendado. Com opção de mudar antes de enviar.
 3. **Aba "não aceitos"** dentro da promoção: só o que ficou de fora, com o
    motivo. Ali: aceitar na mão, arrastar valor para baixo como no Excel, e um
-   campo de tolerância a mais — digita a folga, ele refaz a conta e aceita o
-   que passar a caber.
+   campo de tolerância a mais — digita a folga, ele refaz a conta e devolve
+   quem passou a caber.
+
+   A tolerância vale nas duas famílias, e é a mesma `RegraPreco` do motor de
+   planilha. O que muda é o que ela decide: onde nós definimos o preço, ela
+   diz **quanto abaixo do piso escrever**; onde o canal define, ela diz
+   **se aceita** a proposta agressiva dele. Em nenhuma das duas ela sobe
+   preço — o canal recusa contraproposta mais cara.
 4. **Publicar e sincronizar**, botão fixo no topo. Mostra o que vai ser
    enviado antes de enviar, e o resultado item a item depois.
 

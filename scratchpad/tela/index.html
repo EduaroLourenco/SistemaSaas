@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automações</title>
+<style>
+:root{
+  --ground:#f7f9fc; --panel:#fff; --panel-2:#fafbfd; --panel-3:#f0f3f8;
+  --line:#e6eaf1; --line-2:#d7dde8;
+  --ink:#0a1638; --ink-2:#55627c; --ink-3:#63718b;
+  --brand:#7a4dd8; --brand-2:#673bc4; --brand-ink:#fff; --brand-wash:#f1eaff; --brand-edge:#dfd2f6;
+  --teal:#10bfa0;
+  --up:#087d6b; --up-wash:#e4f9f1; --warn:#94600a; --warn-wash:#fff4d9;
+  --down:#c12e4b; --down-wash:#ffe8ed; --info:#2563c4; --info-wash:#eaf2ff;
+  --sh-1:0 1px 2px rgba(16,24,40,.025);
+  --sh-2:0 1px 3px rgba(16,24,40,.08),0 8px 24px -12px rgba(16,24,40,.18);
+  --sh-3:0 16px 48px -16px rgba(16,24,40,.28);
+  --r1:9px; --r2:14px; --r3:18px;
+  --f-ui:"Inter",ui-sans-serif,"Segoe UI",Roboto,system-ui,sans-serif;
+  --f-num:ui-monospace,"SF Mono","Cascadia Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --ground:#0b0d12; --panel:#14171f; --panel-2:#1b1f29; --panel-3:#232834;
+  --line:#262b36; --line-2:#384150; --ink:#e9edf4; --ink-2:#a3adbe; --ink-3:#9aa7bd;
+  --brand:#ae8aef; --brand-2:#bfa1f6; --brand-ink:#170c31; --brand-wash:#2c2341; --brand-edge:#574174;
+  --teal:#50d1b3; --up:#50d1b3; --up-wash:#11332e; --warn:#f4bd59; --warn-wash:#382c17;
+  --down:#ff8ca1; --down-wash:#3b202a; --info:#8bb6ff; --info-wash:#1c2c49;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);font:400 14px/1.45 var(--f-ui);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left,0px)) 120px}
+h1{font-size:26px;letter-spacing:-.02em;margin:18px 0 2px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+
+/* ── topo ── */
+.topo{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:4px}
+.abas{display:flex;gap:4px;background:var(--panel-3);padding:3px;border-radius:var(--r1)}
+.abas button{border:0;background:none;padding:7px 14px;border-radius:7px;font-weight:600;font-size:13px;color:var(--ink-2)}
+.abas button[aria-selected=true]{background:var(--panel);color:var(--ink);box-shadow:var(--sh-1)}
+
+/* ── placar ── */
+.placar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px;box-shadow:var(--sh-1)}
+.kpi b{display:block;font:700 30px/1.05 var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.kpi span{display:block;font-size:11.5px;color:var(--ink-2);margin-top:3px;letter-spacing:.01em}
+.kpi.ok b{color:var(--up)} .kpi.esp b{color:var(--brand)} .kpi.nao b{color:var(--down)}
+
+/* ── filtros ── */
+.filtros{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.filtros::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;border:1px solid var(--line-2);background:var(--panel);border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:600;color:var(--ink-2);min-height:36px;display:inline-flex;align-items:center;gap:6px;transition:.15s}
+.chip:hover{border-color:var(--brand-edge)}
+.chip[aria-pressed=true]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.chip i{font-style:normal;opacity:.75;font-family:var(--f-num)}
+.sep{width:1px;background:var(--line);flex:0 0 1px;margin:4px 2px}
+.tolchip{gap:5px;padding-right:9px}
+.tolchip input{width:52px;padding:4px 6px;border:1px solid var(--line-2);border-radius:6px;background:var(--panel-2);color:var(--ink);font:700 12.5px var(--f-num);text-align:right}
+.tolchip input:focus{outline:2px solid var(--brand-edge);border-color:var(--brand)}
+select.chip{appearance:none;padding-right:26px;background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);background-position:calc(100% - 15px) 16px,calc(100% - 10px) 16px;background-size:5px 5px;background-repeat:no-repeat}
+
+/* ── carrossel ── */
+.trilho{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 16px;scroll-snap-type:x mandatory;scrollbar-width:thin}
+.card{scroll-snap-align:start;flex:0 0 272px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r3);padding:14px;box-shadow:var(--sh-1);position:relative;transition:transform .18s cubic-bezier(.2,.9,.3,1.2),box-shadow .18s,border-color .18s;text-align:left}
+.card:hover{transform:translateY(-3px);box-shadow:var(--sh-2);border-color:var(--brand-edge)}
+.card[data-sel=true]{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-wash),var(--sh-2)}
+.card[data-aberto=true]{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-wash),var(--sh-2)}
+.card .linha1{display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.tag{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:5px;background:var(--panel-3);color:var(--ink-2);white-space:nowrap}
+.tag.deal{background:var(--brand-wash);color:var(--brand-2)}
+.tag.smart{background:var(--info-wash);color:var(--info)}
+.tag.cupom{background:var(--warn-wash);color:var(--warn)}
+.tag.rel{background:var(--down-wash);color:var(--down)}
+.tag.pre{background:var(--up-wash);color:var(--up)}
+.conta{font-size:11px;color:var(--ink-3);margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px}
+.prazo{display:flex;align-items:baseline;gap:7px}
+.prazo b{font:800 34px/1 var(--f-num);letter-spacing:-.04em}
+.prazo em{font-style:normal;font-size:12px;color:var(--ink-2);font-weight:600}
+.prazo.urgente b{color:var(--down)}
+.prazo.calmo b{color:var(--ink)}
+.nomepromo{font-weight:650;font-size:13.5px;margin:8px 0 2px;line-height:1.3;min-height:35px}
+.janela{font-size:11.5px;color:var(--ink-3);font-family:var(--f-num)}
+.barra{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--panel-3);margin:11px 0 7px;gap:1.5px}
+.barra i{display:block}
+.barra .b-dentro{background:var(--up)} .barra .b-agend{background:var(--info)} .barra .b-cabe{background:var(--brand)} .barra .b-nao{background:var(--down)}
+.alerta{color:var(--down);font-weight:700}
+.conta-itens{display:flex;gap:10px;font-size:11.5px;color:var(--ink-2);flex-wrap:wrap}
+.conta-itens span{display:inline-flex;align-items:center;gap:4px}
+.pt{width:7px;height:7px;border-radius:2px;display:inline-block}
+.acoes{display:flex;gap:6px;margin-top:12px}
+.btn{border:1px solid var(--line-2);background:var(--panel-2);border-radius:var(--r1);padding:8px 11px;font-size:12.5px;font-weight:650;min-height:38px;display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:1;transition:.15s}
+.btn:hover{background:var(--panel-3)}
+.btn.primario{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.primario:hover{background:var(--brand-2)}
+.btn.sel{background:var(--brand-wash);border-color:var(--brand-edge);color:var(--brand-2)}
+.btn[disabled]{opacity:.42;cursor:default}
+
+/* ── detalhe ── */
+.detalhe{background:var(--panel);border:1px solid var(--line);border-radius:var(--r3);box-shadow:var(--sh-2);overflow:hidden;margin-top:4px;animation:sobe .22s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes sobe{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.dcab{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.dcab h2{margin:0;font-size:17px;letter-spacing:-.015em}
+.dcab .sub{font-size:12px;color:var(--ink-3);font-family:var(--f-num)}
+.dabas{display:flex;gap:2px;padding:10px 16px 0;overflow-x:auto;scrollbar-width:none}
+.dabas::-webkit-scrollbar{display:none}
+.dabas button{border:0;background:none;padding:9px 12px;font-weight:650;font-size:13px;color:var(--ink-2);border-bottom:2.5px solid transparent;white-space:nowrap;min-height:42px}
+.dabas button[aria-selected=true]{color:var(--brand-2);border-color:var(--brand)}
+.dabas button b{font-family:var(--f-num);opacity:.8;margin-left:5px}
+.ferramentas{display:flex;gap:8px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--panel-2);flex-wrap:wrap}
+.tol{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);font-weight:600}
+.tol input{width:62px;padding:7px 9px;border:1px solid var(--line-2);border-radius:var(--r1);background:var(--panel);color:var(--ink);font:600 13px var(--f-num);text-align:right}
+.tol input:focus{outline:2px solid var(--brand-edge);border-color:var(--brand)}
+
+/* ── tabela ── */
+.quadro{overflow:auto;max-height:62vh}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+thead th{position:sticky;top:0;z-index:3;background:var(--panel-2);border-bottom:1px solid var(--line-2);padding:9px 10px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-2);letter-spacing:.02em;white-space:nowrap;cursor:pointer;user-select:none}
+thead th:first-child,thead th:nth-child(2){text-align:left}
+thead th:hover{color:var(--ink)}
+thead th .ord{opacity:.45;font-size:9px;margin-left:3px}
+tbody td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+tbody td:nth-child(2){text-align:left;font-family:var(--f-ui)}
+tbody tr:hover td{background:var(--panel-2)}
+tbody tr[data-sel=true] td{background:var(--brand-wash)}
+th.fix,td.fix{position:sticky;left:0;z-index:2;background:var(--panel)}
+thead th.fix{z-index:4;background:var(--panel-2)}
+tbody tr:hover td.fix{background:var(--panel-2)}
+tbody tr[data-sel=true] td.fix{background:var(--brand-wash)}
+.prod{display:flex;align-items:center;gap:9px;min-width:230px;max-width:330px}
+.prod img{width:34px;height:34px;border-radius:7px;object-fit:cover;background:var(--panel-3);flex:0 0 34px}
+.prod .tt{font-size:12.5px;line-height:1.25;font-weight:550;white-space:normal}
+.prod .mm{font-size:10.5px;color:var(--ink-3);font-family:var(--f-num);margin-top:1px}
+.vazio{color:var(--ink-3)}
+.pill{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10.5px;font-weight:750;letter-spacing:.02em;font-family:var(--f-ui)}
+.p-dentro{background:var(--up-wash);color:var(--up)}
+.p-cand{background:var(--brand-wash);color:var(--brand-2)}
+.p-agend{background:var(--info-wash);color:var(--info)}
+.p-furo{background:var(--down-wash);color:var(--down)}
+.p-aviso{background:var(--warn-wash);color:var(--warn)}
+td.oferta{font-weight:700;color:var(--brand-2)}
+.sobra-pos{color:var(--up);font-weight:650}
+.sobra-neg{color:var(--down);font-weight:650}
+.chk{width:17px;height:17px;accent-color:var(--brand);cursor:pointer}
+.motivo{font-family:var(--f-ui);font-size:11.5px;color:var(--ink-3);text-align:left;white-space:normal;max-width:180px}
+
+/* ── barra de publicar ── */
+.publicar{position:fixed;left:0;right:0;bottom:0;z-index:40;padding:10px max(16px,env(safe-area-inset-left,0px)) calc(10px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;transform:translateY(130%);transition:transform .28s cubic-bezier(.2,.9,.3,1.1)}
+.publicar[data-on=true]{transform:none}
+.publicar .cnt{font:800 20px/1 var(--f-num);letter-spacing:-.02em}
+.publicar .txt{font-size:12px;color:var(--ink-2);line-height:1.25}
+.publicar .btn{flex:0 0 auto;padding:11px 18px;min-height:44px}
+
+/* ── animação dos correios ── */
+.voo{position:fixed;z-index:60;pointer-events:none;width:30px;height:21px;border-radius:3px;background:var(--brand);box-shadow:var(--sh-2);overflow:hidden}
+.voo::before{content:"";position:absolute;left:0;top:0;width:100%;height:100%;
+  background:linear-gradient(135deg,transparent 48%,rgba(255,255,255,.95) 49%,rgba(255,255,255,.95) 51%,transparent 52%),
+             linear-gradient(45deg,transparent 48%,rgba(255,255,255,.95) 49%,rgba(255,255,255,.95) 51%,transparent 52%)}
+.pacote{position:fixed;z-index:61;display:flex;align-items:center;gap:9px;background:var(--brand);color:var(--brand-ink);border-radius:999px;padding:10px 18px;font-weight:750;font-size:14px;box-shadow:var(--sh-3);white-space:nowrap}
+.pacote .num{font-family:var(--f-num);font-size:17px;font-weight:800}
+.rastro{position:fixed;z-index:59;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--brand-edge),var(--brand));transform-origin:left center;pointer-events:none}
+tr.indo td{animation:some .34s forwards cubic-bezier(.5,0,.75,0)}
+@keyframes some{to{opacity:0;transform:translateX(26px)}}
+tr.voltou td{animation:pisca .7s}
+@keyframes pisca{0%{background:var(--up-wash)}100%{background:transparent}}
+
+/* ── telefone ── */
+@media (max-width:760px){
+  h1{font-size:22px}
+  .wrap{padding-bottom:150px}
+  .placar{grid-template-columns:repeat(2,1fr);gap:8px}
+  .kpi b{font-size:25px}
+  .card{flex-basis:84vw;max-width:310px}
+  .quadro{max-height:none}
+  .dcab h2{font-size:15px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topo">
+    <div>
+      <h1>Automações</h1>
+    </div>
+    <div class="abas" role="tablist">
+      <button role="tab" aria-selected="true">Promoções</button>
+      <button role="tab" aria-selected="false">Ads</button>
+    </div>
+  </div>
+
+  <div class="placar" id="placar"></div>
+  <div class="filtros" id="filtros"></div>
+  <div class="trilho" id="trilho"></div>
+  <div id="detalhe"></div>
+</div>
+
+<div class="publicar" id="publicar">
+  <div><span class="cnt" id="pubN">0</span></div>
+  <div class="txt" id="pubTxt"></div>
+  <button class="btn" id="pubLimpa" style="flex:0 0 auto;padding:11px 14px">Limpar</button>
+  <button class="btn primario" id="pubVai">Publicar e sincronizar</button>
+</div>
+
+<script>
+const $ = (s,r=document)=>r.querySelector(s);
+const el = (t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n};
+const brl = v=>v==null?null:"R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct = v=>v==null?null:Number(v).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})+"%";
+const HOJE = new Date("2026-10-23T12:00:00Z");
+const dias = d=>d?Math.round((new Date(d)-HOJE)/86400000):null;
+const dDia = d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}):"—";
+
+const ROTULO = {DEAL:"Tradicional",SMART:"Automática",SMART_LIGHTNING:"Relâmpago auto",LIGHTNING:"Relâmpago",DOD:"Oferta do dia",
+  PRE_NEGOTIATED:"Pré-acordo",UNHEALTHY_STOCK:"Liquidar Full",SELLER_CAMPAIGN:"Nossa campanha",
+  SELLER_COUPON_CAMPAIGN:"Cupom",MARKETPLACE_CAMPAIGN:"Cofinanciada",PRICE_MATCHING:"Preço competitivo",PRICE_DISCOUNT:"Desconto avulso"};
+const CLASSE = {DEAL:"deal",SELLER_CAMPAIGN:"deal",SMART:"smart",MARKETPLACE_CAMPAIGN:"smart",PRICE_MATCHING:"smart",
+  SELLER_COUPON_CAMPAIGN:"cupom",LIGHTNING:"rel",SMART_LIGHTNING:"rel",DOD:"rel",PRE_NEGOTIATED:"pre",UNHEALTHY_STOCK:"pre"};
+/* Onde NÓS definimos o preço, a tolerância reescreve. Onde o canal define,
+   ela só decide se aceita. */
+const NOSSO_PRECO = new Set(["DEAL","SELLER_CAMPAIGN","PRICE_DISCOUNT"]);
+
+let D=null, filtro={conta:"",tipo:"",prazo:"",sit:""}, ordem={col:"pede",desc:true};
+let aberta=null, abaDet="cabem", tolerancia=5, selCards=new Set(), selItens=new Set();
+
+/** O preço que vale para decidir: o que o canal propõe, ou a sugestão dele. */
+const precoDecide = it => it.precoCanal ?? it.sugerido ?? null;
+
+/**
+ * O piso que vale para o item.
+ *
+ * Quando o canal põe parte do desconto, a comissão efetiva cai e o preço
+ * certo é o da faixa mais barata — é assim que o pré-acordo é negociado.
+ * `pisoComRebate` já vem calculado assim; sem rebate ele é o piso cheio.
+ */
+const pisoDo = it => it.pisoComRebate ?? it.piso ?? null;
+
+/**
+ * Em que faixa de comissão um preço ainda fecha.
+ *
+ * É a coluna que decide, e por isso é recalculada a cada mexida na folga:
+ * o preço que importa é o que a tela vai mandar, não o que o canal propôs.
+ * null = não cobre nem a faixa mais barata, ou o item não tem tabela.
+ */
+function faixaDe(it, preco){
+  if (!it.precos || preco == null) return null;
+  let f = null;
+  for (let i = 0; i < D.bandas.length; i++){
+    const v = it.precos[i];
+    if (v != null && preco >= v - 0.01) f = D.bandas[i];
+  }
+  return f;
+}
+
+/** Cabe no piso, com a folga pedida? null = não dá para dizer. */
+function cabe(it, tol){
+  const p = precoDecide(it), ps = pisoDo(it);
+  if (p == null || ps == null) return null;
+  return p >= ps * (1 - tol/100) - 0.01;
+}
+/**
+ * O que a tela faria com este item hoje.
+ *
+ * Em campanha onde o CANAL define o preço, cabe é aceitar a proposta dele.
+ * Onde NÓS definimos, a proposta dele é só sugestão: o que decide é se o
+ * nosso preço cabe embaixo do teto. Julgar os dois pela mesma régua punia
+ * o DEAL por uma sugestão que a gente nem ia seguir.
+ */
+function situacao(p, it){
+  if (it.status === "started") return "dentro";
+  if (it.status === "pending") return "agendado";
+  if (NOSSO_PRECO.has(p.tipo)) return nossaOferta(p, it)?.valor != null ? "cabe" : "nao";
+  return cabe(it, tolerancia) === false ? "nao" : "cabe";
+}
+/**
+ * Está no ar por um preço que nem a faixa mais barata da tabela cobre.
+ * Não é decisão a tomar — é dinheiro saindo agora.
+ */
+const furado = it => (it.status === "started" || it.status === "pending")
+  && it.temTabela && it.precoCanal != null && it.faixaDoPreco == null;
+
+/**
+ * O preço que nós escreveríamos, onde somos nós que definimos.
+ *
+ * É o piso com a folga, nunca abaixo do mínimo do canal. E nunca ACIMA do
+ * que ele propôs ou do teto dele: subir é contrapropor desconto menor, e
+ * ele devolve a linha recusada — foi o que derrubou a planilha da Imprimil
+ * inteira. Quando o piso não cabe embaixo do teto, a resposta é "bloqueado",
+ * não um número que vai voltar recusado.
+ */
+function nossaOferta(p, it){
+  if (!NOSSO_PRECO.has(p.tipo) || it.status !== "candidate") return null;
+  const ps = pisoDo(it);
+  if (ps == null) return null;
+  let v = ps * (1 - tolerancia/100);
+  if (it.minimoCanal != null) v = Math.max(v, it.minimoCanal);
+  const teto = Math.min(it.maximoCanal ?? Infinity, it.precoCanal ?? Infinity);
+  if (v > teto + 0.01) return { bloqueado: true, teto };
+  return { valor: Math.round(v * 100) / 100 };
+}
+
+fetch("dados.json?"+Date.now()).then(r=>r.json()).then(d=>{D=d;montar()});
+
+function promocoesFiltradas(){
+  return D.promocoes.filter(p=>{
+    if (filtro.conta && p.conta !== filtro.conta) return false;
+    if (filtro.tipo && p.tipo !== filtro.tipo) return false;
+    if (filtro.sit && p.status !== filtro.sit) return false;
+    if (filtro.prazo){
+      const n = dias(p.prazo ?? p.fim);
+      if (n == null) return false;
+      if (filtro.prazo === "7" && !(n >= 0 && n <= 7)) return false;
+      if (filtro.prazo === "30" && !(n >= 0 && n <= 30)) return false;
+      if (filtro.prazo === "venceu" && n >= 0) return false;
+    }
+    return true;
+  }).sort((a,b)=>{
+    const na = dias(a.prazo ?? a.fim) ?? 9999, nb = dias(b.prazo ?? b.fim) ?? 9999;
+    return na - nb;
+  });
+}
+const conta = p => {
+  const c = {dentro:0, cabe:0, nao:0, agendado:0, furados:0, foraTabela:0};
+  for (const it of p.itens){
+    c[situacao(p, it)]++;
+    if (furado(it)) c.furados++;
+    const preco = nossaOferta(p, it)?.valor ?? precoDecide(it);
+    if (it.temTabela && preco != null && faixaDe(it, preco) == null) c.foraTabela++;
+  }
+  return c;
+};
+
+function montar(){ placar(); filtros(); trilho(); detalhe(); barra(); }
+
+function placar(){
+  const ps = promocoesFiltradas();
+  let dentro=0, cabem=0, nao=0, fora=0;
+  for (const p of ps){ const c = conta(p); dentro+=c.dentro+c.agendado; cabem+=c.cabe; nao+=c.nao; fora+=c.foraTabela; }
+  const urg = ps.filter(p=>{const n=dias(p.prazo??p.fim); return n!=null&&n>=0&&n<=14}).length;
+  const box = $("#placar"); box.innerHTML="";
+  for (const [v,r,cl] of [[ps.length,"promoções abertas",""],[dentro,"itens já dentro","ok"],
+      [cabem,"cabem com "+tolerancia+"% de folga","esp"],[nao,"não cabem",""],[fora,"fora da tabela","nao"],
+      [urg,"vencem em 14 dias",""]]){
+    const k = el("div","kpi "+cl); k.append(el("b",null,v.toLocaleString("pt-BR")), el("span",null,r)); box.append(k);
+  }
+}
+
+function filtros(){
+  const box=$("#filtros"); box.innerHTML="";
+  const add=(rot,chave,val)=>{
+    const b=el("button","chip",rot);
+    b.setAttribute("aria-pressed", filtro[chave]===val);
+    b.onclick=()=>{filtro[chave]= filtro[chave]===val?"":val; aberta=null; montar()};
+    box.append(b);
+  };
+  for (const c of [...new Set(D.promocoes.map(p=>p.conta))]) add(c, "conta", c);
+  box.append(el("div","sep"));
+  for (const t of [...new Set(D.promocoes.map(p=>p.tipo))]) add(ROTULO[t]??t, "tipo", t);
+  box.append(el("div","sep"));
+  add("Vence em 7 dias","prazo","7"); add("Em 30 dias","prazo","30"); add("Já venceu","prazo","venceu");
+
+  /* A folga fica no topo porque reordena a tela inteira, não só uma tabela. */
+  box.append(el("div","sep"));
+  const tol = el("label","chip tolchip");
+  tol.append(document.createTextNode("folga"));
+  const inp = el("input"); inp.type="number"; inp.step="0.5"; inp.min="0"; inp.max="30"; inp.value=tolerancia;
+  inp.oninput = ()=>{tolerancia = Number(inp.value)||0; placar(); trilho(); if (aberta) detalhe();};
+  tol.append(inp, document.createTextNode("%"));
+  box.append(tol);
+}
+
+function trilho(){
+  const box=$("#trilho"); box.innerHTML="";
+  for (const p of promocoesFiltradas()){
+    const c = conta(p), n = p.itens.length || 1, d = dias(p.prazo ?? p.fim);
+    const card = el("button","card");
+    card.dataset.sel = selCards.has(p.contaId+p.id);
+    card.dataset.aberto = aberta === p.contaId+p.id;
+
+    const l1 = el("div","linha1");
+    l1.append(el("span","tag "+(CLASSE[p.tipo]??""), ROTULO[p.tipo] ?? p.tipo), el("span","conta",p.conta));
+    const pz = el("div","prazo " + (d!=null && d<=7 ? "urgente":"calmo"));
+    pz.append(el("b", null, d==null ? "—" : d < 0 ? "venceu" : String(d)),
+              el("em", null, d==null ? "sem prazo de aceite" : d < 0 ? "" : d===1?"dia para aceitar":"dias para aceitar"));
+    const nome = el("div","nomepromo", p.nome ?? "Sem nome");
+    const jan = el("div","janela", dDia(p.inicio)+"  →  "+dDia(p.fim));
+
+    const barra = el("div","barra");
+    for (const [k,cls] of [["dentro","b-dentro"],["agendado","b-agend"],["cabe","b-cabe"],["nao","b-nao"]]){
+      if (!c[k]) continue;
+      const i = el("i",cls); i.style.width = (c[k]/n*100)+"%"; barra.append(i);
+    }
+    const ci = el("div","conta-itens");
+    const linha=(cor,v,r)=>{const s=el("span");const pt=el("i","pt");pt.style.background=cor;s.append(pt,document.createTextNode(v+" "+r));return s};
+    if (c.dentro) ci.append(linha("var(--up)",c.dentro,"dentro"));
+    if (c.agendado) ci.append(linha("var(--info)",c.agendado,"agendados"));
+    if (c.cabe) ci.append(linha("var(--brand)",c.cabe,"cabem"));
+    if (c.nao) ci.append(linha("var(--down)",c.nao,"fora"));
+    if (!p.itens.length) ci.append(el("span","vazio","nenhum item convidado"));
+    if (c.foraTabela) ci.append(el("span","alerta","⚠ "+c.foraTabela+" fora da tabela"));
+
+    const ac = el("div","acoes");
+    const bAbrir = el("button","btn", aberta===p.contaId+p.id ? "Fechar" : "Ver produtos");
+    bAbrir.onclick = e=>{e.stopPropagation(); aberta = aberta===p.contaId+p.id ? null : p.contaId+p.id; abaDet="cabem"; montar();
+      if (aberta) setTimeout(()=>$("#detalhe").scrollIntoView({behavior:"smooth",block:"start"}),40)};
+    const bAceitar = el("button","btn primario", "Aceitar "+c.cabe);
+    bAceitar.disabled = !c.cabe;
+    bAceitar.onclick = e=>{e.stopPropagation();
+      for (const it of p.itens) if (situacao(p, it)==="cabe") selItens.add(p.contaId+p.id+"|"+it.mlb);
+      selCards.add(p.contaId+p.id); montar()};
+    ac.append(bAbrir,bAceitar);
+
+    card.append(l1,pz,nome,jan,barra,ci,ac);
+    card.onclick = ()=>{const k=p.contaId+p.id; selCards.has(k)?selCards.delete(k):selCards.add(k); montar()};
+    box.append(card);
+  }
+}
+
+const COLS = [
+  {k:"sel", r:"", fix:true},
+  {k:"titulo", r:"Produto", fix:true},
+  {k:"precoCheio", r:"Preço cheio"},
+  {k:"pede", r:"O Meli pede"},
+  {k:"faixaDoPreco", r:"Faixa que sobra"},
+  {k:"piso", r:"Nosso piso"},
+  {k:"oferta", r:"Nossa oferta"},
+  {k:"minimoCanal", r:"Mínimo dele"},
+  {k:"sugerido", r:"Sugestão dele"},
+  {k:"meliPct", r:"Meli põe"},
+  {k:"sellerPct", r:"Nós pomos"},
+  {k:"estoque", r:"Estoque"},
+  {k:"situacao", r:"Situação"},
+];
+const valor = (it,k,p)=>({
+  pede: precoDecide(it),
+  oferta: p ? (nossaOferta(p,it)?.valor ?? null) : null,
+  situacao: situacao(p, it),
+}[k] ?? it[k] ?? null);
+
+function detalhe(){
+  const box = $("#detalhe"); box.innerHTML="";
+  if (!aberta) return;
+  const p = D.promocoes.find(x=>x.contaId+x.id===aberta);
+  if (!p) return;
+  const c = conta(p);
+  const d = el("div","detalhe");
+
+  const cab = el("div","dcab");
+  const tit = el("div");
+  tit.append(el("h2",null,p.nome ?? "Sem nome"),
+             el("div","sub", p.conta+"  ·  "+p.id+"  ·  "+dDia(p.inicio)+" → "+dDia(p.fim)+(p.totalItens?"  ·  "+p.totalItens+" itens":"")));
+  cab.append(el("span","tag "+(CLASSE[p.tipo]??""), ROTULO[p.tipo] ?? p.tipo), tit);
+  d.append(cab);
+
+  const abas = el("div","dabas");
+  const mk=(k,r,n)=>{const b=el("button");b.setAttribute("aria-selected",abaDet===k);
+    b.append(document.createTextNode(r));const q=el("b",null,n);b.append(q);
+    b.onclick=()=>{abaDet=k;detalhe()};return b};
+  abas.append(mk("cabem","Cabem",c.cabe), mk("nao","Não cabem",c.nao), mk("dentro","Já dentro",c.dentro+c.agendado));
+  if (c.furados) abas.append(mk("furados","No ar abaixo do piso",c.furados));
+  abas.append(mk("todos","Todos",p.itens.length));
+  d.append(abas);
+
+  const fer = el("div","ferramentas");
+  const tol = el("label","tol");
+  tol.append(document.createTextNode(NOSSO_PRECO.has(p.tipo) ? "Escrever até" : "Aceitar até"));
+  const inp = el("input"); inp.type="number"; inp.step="0.5"; inp.min="0"; inp.max="30"; inp.value=tolerancia;
+  inp.oninput = ()=>{tolerancia = Number(inp.value)||0; placar(); trilho(); const v=inp.value;
+    detalhe(); const n=$(".tol input"); if(n){n.value=v;n.focus()}};
+  tol.append(inp, document.createTextNode("% abaixo do piso"));
+  fer.append(tol);
+  const quantos = p.itens.filter(it=>situacao(p, it)==="cabe").length;
+  const bTudo = el("button","btn sel","Selecionar os "+quantos+" que cabem");
+  bTudo.style.flex="0 0 auto"; bTudo.disabled = !quantos;
+  bTudo.onclick = ()=>{for (const it of p.itens) if (situacao(p, it)==="cabe") selItens.add(p.contaId+p.id+"|"+it.mlb); montar()};
+  fer.append(bTudo);
+  d.append(fer);
+
+  const lista = p.itens.filter(it=>{
+    const s = situacao(p, it);
+    if (abaDet==="furados") return furado(it);
+    return abaDet==="todos" || (abaDet==="cabem"&&s==="cabe") || (abaDet==="nao"&&s==="nao") || (abaDet==="dentro"&&(s==="dentro"||s==="agendado"));
+  }).sort((a,b)=>{
+    const va = valor(a,ordem.col,p), vb = valor(b,ordem.col,p);
+    if (va==null) return 1; if (vb==null) return -1;
+    const r = typeof va==="number" ? va-vb : String(va).localeCompare(String(vb),"pt-BR");
+    return ordem.desc ? -r : r;
+  });
+
+  const quadro = el("div","quadro");
+  const t = el("table"), thead = el("thead"), tr = el("tr");
+  for (const col of COLS){
+    const th = el("th", col.fix?"fix":"");
+    if (col.k==="sel"){
+      const cb = el("input"); cb.type="checkbox"; cb.className="chk";
+      cb.checked = lista.length>0 && lista.every(it=>selItens.has(p.contaId+p.id+"|"+it.mlb));
+      cb.onclick = ()=>{for (const it of lista){const k=p.contaId+p.id+"|"+it.mlb; cb.checked?selItens.add(k):selItens.delete(k)} montar()};
+      th.append(cb);
+    } else {
+      th.append(document.createTextNode(col.r));
+      if (ordem.col===col.k) th.append(el("span","ord", ordem.desc?"▼":"▲"));
+      th.onclick = ()=>{ordem = {col:col.k, desc: ordem.col===col.k ? !ordem.desc : true}; detalhe()};
+    }
+    tr.append(th);
+  }
+  thead.append(tr); t.append(thead);
+
+  const tb = el("tbody");
+  for (const it of lista){
+    const k = p.contaId+p.id+"|"+it.mlb;
+    const row = el("tr"); row.dataset.sel = selItens.has(k); row.dataset.mlb = it.mlb;
+    const tdSel = el("td","fix");
+    const cb = el("input"); cb.type="checkbox"; cb.className="chk"; cb.checked = selItens.has(k);
+    cb.onclick = ()=>{selItens.has(k)?selItens.delete(k):selItens.add(k); montar()};
+    tdSel.append(cb); row.append(tdSel);
+
+    const tdP = el("td","fix"); const prod = el("div","prod");
+    const img = el("img"); img.src = it.foto ?? ""; img.alt=""; img.loading="lazy";
+    const txt = el("div");
+    txt.append(el("div","tt", it.titulo ?? it.mlb), el("div","mm", (it.sku??"sem SKU")+"  ·  "+it.mlb));
+    prod.append(img,txt); tdP.append(prod); row.append(tdP);
+
+    const cel = (v, cls, vazio)=>{const td=el("td",cls);
+      if(v==null){td.append(el("span","vazio", vazio ?? "—"))}else{td.append(document.createTextNode(v))} return td};
+    row.append(cel(brl(it.precoCheio)));
+    row.append(cel(brl(precoDecide(it)), "", it.status==="candidate" ? "ele não propôs" : null));
+
+    /* A faixa sai do preço que a tela vai mandar: o nosso, onde somos nós
+       que definimos; o dele, onde é ele. */
+    const of0 = nossaOferta(p, it);
+    const precoQueVale = of0?.valor ?? precoDecide(it);
+    const f = faixaDe(it, precoQueVale), cheia = it.comissaoCheia ?? 0.115;
+    const tdF = el("td");
+    if (!it.temTabela) tdF.append(el("span","vazio","sem tabela"));
+    else if (precoQueVale == null) tdF.append(el("span","vazio","—"));
+    else if (f == null) tdF.append(el("span","pill p-furo","fora da tabela"));
+    else {
+      const perdeu = Math.round((cheia - f) * 1000) / 10;
+      const cls = perdeu <= 1 ? "p-dentro" : perdeu <= 4 ? "p-aviso" : "p-furo";
+      tdF.append(el("span","pill "+cls, (f*100).toLocaleString("pt-BR",{minimumFractionDigits:1})+"%"));
+    }
+    row.append(tdF);
+
+    row.append(cel(brl(pisoDo(it))));
+    const of = nossaOferta(p, it);
+    if (of?.bloqueado){
+      const td = el("td","bloq");
+      td.append(el("span","pill p-furo","não dá para subir"));
+      row.append(td);
+    } else {
+      row.append(cel(of ? brl(of.valor) : null, of?"oferta":"", NOSSO_PRECO.has(p.tipo) ? null : "ele define"));
+    }
+    row.append(cel(brl(it.minimoCanal)));
+    row.append(cel(brl(it.sugerido)));
+    row.append(cel(pct(it.meliPct)));
+    row.append(cel(pct(it.sellerPct)));
+    row.append(cel(it.estoque==null?null:(it.estoque>=40000?"sob enc.":it.estoque)));
+
+    const sit = situacao(p, it);
+    const tdS = el("td");
+    const fur = furado(it);
+    const rot = fur
+      ? [sit==="agendado" ? "Agendado abaixo do piso" : "No ar abaixo do piso", "p-furo"]
+      : {dentro:["Já dentro","p-dentro"],agendado:["Agendado","p-agend"],cabe:["Cabe","p-cand"],nao:["Abaixo do piso","p-furo"]}[sit];
+    tdS.append(el("span","pill "+rot[1], rot[0])); row.append(tdS);
+    tb.append(row);
+  }
+  if (!lista.length){
+    const tr2 = el("tr"), td = el("td"); td.colSpan = COLS.length;
+    td.style.cssText="text-align:center;padding:30px;color:var(--ink-3);font-family:var(--f-ui)";
+    td.textContent = abaDet==="nao" ? "nenhum item abaixo do piso" : abaDet==="dentro" ? "nenhum item dentro ainda" : "nenhum item";
+    tr2.append(td); tb.append(tr2);
+  }
+  t.append(tb); quadro.append(t); d.append(quadro);
+  box.append(d);
+}
+
+function barra(){
+  const b = $("#publicar");
+  const n = selItens.size;
+  b.dataset.on = n>0;
+  $("#pubN").textContent = n;
+  const contas = new Set([...selItens].map(k=>k.split("|")[0].slice(0,36)));
+  $("#pubTxt").textContent = n ? (n===1?"item selecionado":"itens selecionados") + " · " + contas.size + (contas.size===1?" promoção":" promoções") : "";
+  $("#pubLimpa").onclick = ()=>{selItens.clear(); selCards.clear(); montar()};
+  $("#pubVai").onclick = enviar;
+}
+
+/* ══ Os correios ══
+   As linhas selecionadas viram envelopes, os envelopes se juntam num
+   pacote, o pacote parte. Depois cada linha recebe de volta o que o canal
+   respondeu. */
+function enviar(){
+  const linhas = [...document.querySelectorAll('tbody tr[data-sel="true"]')];
+  const btn = $("#pubVai"); btn.disabled = true;
+  const alvo = btn.getBoundingClientRect();
+  /* O pacote se forma ACIMA da barra: em cima do botão ele tapa o que a
+     pessoa acabou de clicar. */
+  const destino = {x: alvo.left + alvo.width/2, y: alvo.top - 54};
+
+  const pacote = el("div","pacote");
+  pacote.append(el("span","num","0"), document.createTextNode("indo para o Mercado Livre"));
+  pacote.style.left = (destino.x - 118)+"px"; pacote.style.top = (destino.y - 21)+"px";
+  pacote.style.opacity = "0"; pacote.style.transition="opacity .2s, transform .5s cubic-bezier(.4,0,.2,1)";
+  document.body.append(pacote);
+  requestAnimationFrame(()=>{pacote.style.opacity="1"});
+  const contador = pacote.querySelector(".num");
+
+  let chegaram = 0;
+  const total = Math.max(linhas.length, selItens.size);
+  const mostrados = linhas.slice(0, 40);              // ninguém vê 400 envelopes
+
+  mostrados.forEach((tr,i)=>{
+    const r = tr.getBoundingClientRect();
+    setTimeout(()=>{
+      const env = el("div","voo");
+      env.style.left = (r.left + 40)+"px"; env.style.top = (r.top + r.height/2 - 9)+"px";
+      env.style.transition = "transform .52s cubic-bezier(.45,0,.3,1), opacity .52s";
+      document.body.append(env);
+      requestAnimationFrame(()=>{
+        env.style.transform = `translate(${destino.x - r.left - 53}px, ${destino.y - r.top - r.height/2}px) scale(.35)`;
+        env.style.opacity = ".2";
+      });
+      tr.classList.add("indo");
+      setTimeout(()=>{
+        env.remove(); chegaram++;
+        contador.textContent = Math.round(total * chegaram/mostrados.length);
+      }, 540);
+    }, i*34);
+  });
+
+  const partida = mostrados.length*34 + 700;
+  setTimeout(()=>{
+    contador.textContent = total;
+    const r = pacote.getBoundingClientRect();
+    const rastro = el("div","rastro");
+    rastro.style.left = r.right+"px"; rastro.style.top = (r.top + r.height/2)+"px";
+    rastro.style.width = "0px"; rastro.style.transition="width .5s ease-out, opacity .5s";
+    document.body.append(rastro);
+    requestAnimationFrame(()=>{rastro.style.width = (window.innerWidth - r.right + 60)+"px"});
+    pacote.style.transform = `translateX(${window.innerWidth - r.left + 40}px)`;
+    setTimeout(()=>{rastro.style.opacity="0"; setTimeout(()=>{rastro.remove();pacote.remove();responder(linhas)},400)},520);
+  }, partida);
+}
+
+/* A volta: o canal responde item a item, e é assim que a tela mostra. */
+function responder(linhas){
+  linhas.forEach((tr,i)=>setTimeout(()=>{
+    tr.classList.remove("indo"); tr.classList.add("voltou");
+    const td = tr.lastElementChild;
+    td.innerHTML = "";
+    const ok = Math.random() > .12;
+    const pill = el("span","pill "+(ok?"p-dentro":""), ok ? "Entrou" : "Recusado");
+    if (!ok){pill.style.background="var(--down-wash)";pill.style.color="var(--down)"}
+    td.append(pill);
+    if (!ok){
+      const m = el("div","motivo","o canal achou o desconto pouco crível");
+      td.append(m);
+    }
+  }, i*26));
+  setTimeout(()=>{selItens.clear(); selCards.clear(); barra(); $("#pubVai").disabled=false}, linhas.length*26 + 300);
+}
+</script>
+</body>
+</html>
