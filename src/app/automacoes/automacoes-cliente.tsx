@@ -7,11 +7,12 @@ import { Badge, Button, EmptyState, Panel, Skeleton } from "@/components/ui/prim
 import { StatTile } from "@/components/ui/stat-tile";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
-import { Sheet } from "@/components/ui/controls";
+import { Select, Sheet } from "@/components/ui/controls";
 import { money, count, pct } from "@/lib/format";
 import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
 import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 /**
  * Automações: o que o canal está oferecendo, e o que a gente faz com isso.
@@ -80,6 +81,22 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
    * tela em ordem de prazo, que é a que importa.
    */
   const [contagens, setContagens] = React.useState<Map<string, Contagem>>(new Map());
+  const [atualizando, iniciarAtualizacao] = React.useTransition();
+  const router = useRouter();
+
+  /*
+   * Puxar de novo do canal.
+   *
+   * A página é force-dynamic, então router.refresh() refaz a leitura no
+   * servidor — promoção nova aparece, promoção encerrada some. As
+   * contagens são zeradas junto: elas vêm de um efeito que depende da
+   * lista, e manter as velhas misturaria número de promoção que saiu.
+   */
+  const atualizar = () => {
+    setContagens(new Map());
+    setCabem(new Map());
+    iniciarAtualizacao(() => router.refresh());
+  };
   React.useEffect(() => {
     let vivo = true;
     const fila = [...dados.promocoes];
@@ -122,6 +139,7 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
     promocoes.reduce((t, p) => t + (contagens.get(p.contaId + p.codigo)?.[campo] ?? 0), 0);
   const participando = soma("participando");
   const pendentes = soma("pendentes");
+  const urgentes = promocoes.filter((p) => { const n = diasAte(p.prazo ?? p.fim); return n != null && n >= 0 && n <= 7; }).length;
   const vencendo = promocoes.filter((p) => {
     const n = diasAte(p.prazo ?? p.fim);
     return n != null && n >= 0 && n <= 14;
@@ -148,6 +166,11 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
         badge={<Badge tone="warn">envio com confirmação</Badge>}
         inlineFilters
         actions={
+          <div className="flex items-center gap-2">
+          <Button onClick={atualizar} disabled={atualizando} title="Puxar as promoções do canal de novo">
+            <RefreshCw size={15} className={atualizando ? "animate-spin" : undefined} />
+            {atualizando ? "Puxando…" : "Atualizar"}
+          </Button>
           <div className="flex gap-1 rounded-r1 bg-panel-3 p-[3px]">
             {([["promocoes", "Promoções"], ["ads", "Tráfego pago"]] as const).map(([k, r]) => (
               <button
@@ -161,39 +184,40 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
               </button>
             ))}
           </div>
+          </div>
         }
         filters={
           tema === "ads" ? undefined : (
           <BarraFiltros>
             <Filtro rotulo="Conta">
-              <select value={conta} onChange={(e) => setConta(e.target.value)} className="gerizo-select">
+              <Select value={conta} onChange={(e) => setConta(e.target.value)} className="min-w-[180px]">
                 <option value="">Todas</option>
                 {dados.contas.map((c) => (
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
-              </select>
+              </Select>
             </Filtro>
             <Filtro rotulo="Tipo">
-              <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="gerizo-select">
+              <Select value={tipo} onChange={(e) => setTipo(e.target.value)} className="min-w-[150px]">
                 <option value="">Todos</option>
                 {tipos.map((t) => (
                   <option key={t} value={t}>{ROTULO[t] ?? t}</option>
                 ))}
-              </select>
+              </Select>
             </Filtro>
             <Filtro rotulo="Prazo">
-              <select value={prazo} onChange={(e) => setPrazo(e.target.value)} className="gerizo-select">
+              <Select value={prazo} onChange={(e) => setPrazo(e.target.value)} className="min-w-[150px]">
                 <option value="">Qualquer</option>
                 <option value="7">Vence em 7 dias</option>
                 <option value="30">Em 30 dias</option>
                 <option value="venceu">Já venceu</option>
-              </select>
+              </Select>
             </Filtro>
             <Filtro rotulo="Folga abaixo do piso">
               <input
                 type="number" min={0} max={30} step={0.5} value={folga}
                 onChange={(e) => setFolga(Number(e.target.value) || 0)}
-                className="gerizo-select w-[86px] text-right font-mono"
+                className="h-10 w-[86px] rounded-r1 border border-line bg-panel px-2 text-right font-mono text-[13px] text-ink focus:border-brand"
               />
             </Filtro>
           </BarraFiltros>
@@ -203,11 +227,36 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
       <PageBody>
         {tema === "ads" && <Ads dados={ads} />}
         {tema === "promocoes" && (<>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatTile label="Promoções abertas" value={count(promocoes.length)} />
-          <StatTile label="Itens participando" value={count(participando)} />
-          <StatTile label="Pendentes de aceite" value={count(pendentes)} />
-          <StatTile label="Vencem em 14 dias" value={count(vencendo)} />
+        {/* Um número manda, o resto é contexto. Quatro cartões do mesmo
+            tamanho não dizem para onde olhar. */}
+        <div className="flex flex-wrap items-end gap-x-8 gap-y-3 border-b border-line pb-4">
+          <div>
+            <p className="font-mono text-[46px] font-extrabold leading-[0.95] tracking-[-0.045em] text-ink">
+              <Sobe valor={pendentes} />
+            </p>
+            <p className="mt-1 text-[13px] text-ink-2">
+              itens esperando a sua resposta
+              {urgentes > 0 && (
+                <span className="ml-2 rounded-r1 bg-down-wash px-2 py-0.5 text-[12px] font-semibold text-down">
+                  {count(urgentes)} vencem em até 7 dias
+                </span>
+              )}
+            </p>
+          </div>
+          <dl className="flex gap-7 pb-1">
+            <div>
+              <dd className="font-mono text-[19px] font-bold text-up"><Sobe valor={participando} /></dd>
+              <dt className="text-[11.5px] text-ink-3">já no ar</dt>
+            </div>
+            <div>
+              <dd className="font-mono text-[19px] font-bold text-ink"><Sobe valor={promocoes.length} /></dd>
+              <dt className="text-[11.5px] text-ink-3">promoções abertas</dt>
+            </div>
+            <div>
+              <dd className="font-mono text-[19px] font-bold text-ink">{count(dados.contas.length)}</dd>
+              <dt className="text-[11.5px] text-ink-3">contas</dt>
+            </div>
+          </dl>
         </div>
 
         {dados.falhas.length > 0 && (
@@ -246,6 +295,35 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
 }
 
 /* ══ O carrossel ══════════════════════════════════════════════ */
+
+/**
+ * O número subindo até o valor, em vez de pular.
+ *
+ * Os contadores chegam em fila, então a tela ficaria piscando número
+ * novo a cada resposta do canal. Subir conta a história: está carregando,
+ * e está crescendo.
+ */
+function Sobe({ valor }: { valor: number }) {
+  const [v, setV] = React.useState(valor);
+  const anterior = React.useRef(valor);
+  React.useEffect(() => {
+    const de = anterior.current;
+    anterior.current = valor;
+    if (de === valor) return;
+    const inicio = performance.now();
+    let vivo = true;
+    const passo = (agora: number) => {
+      if (!vivo) return;
+      const t = Math.min(1, (agora - inicio) / 420);
+      /* Desacelera no fim: o número assenta em vez de parar seco. */
+      setV(Math.round(de + (valor - de) * (1 - Math.pow(1 - t, 3))));
+      if (t < 1) requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+    return () => { vivo = false; };
+  }, [valor]);
+  return <>{count(v)}</>;
+}
 
 /** Um número do cartão: grande, com o rótulo pequeno embaixo. */
 function Conta({ rotulo, valor, cor, carregando }: {
@@ -319,9 +397,30 @@ function Carrossel({
   if (!promocoes.length) {
     return <div className="mt-4"><EmptyState title="Nenhuma promoção com esses filtros" /></div>;
   }
+  /* Em grupos por urgência: uma fila de 27 cartões iguais não diz o
+     que olhar primeiro, e o prazo é justamente o que decide a ordem. */
+  const grupos: { titulo: string; itens: PromocaoAberta[] }[] = [
+    { titulo: "Esta semana", itens: [] },
+    { titulo: "Este mês", itens: [] },
+    { titulo: "Sem pressa", itens: [] },
+  ];
+  for (const p of promocoes) {
+    const n = diasAte(p.prazo ?? p.fim);
+    grupos[n == null ? 2 : n <= 7 ? 0 : n <= 30 ? 1 : 2].itens.push(p);
+  }
+
   return (
-    <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 md:mx-0 md:px-0">
-      {promocoes.map((p) => {
+    <div className="mt-4 space-y-5">
+      {grupos.filter((g) => g.itens.length).map((g) => (
+        <section key={g.titulo}>
+          <h2 className="mb-2 flex items-baseline gap-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3">
+            {g.titulo}
+            <span className="font-mono text-[11px] font-normal normal-case tracking-normal">
+              {count(g.itens.length)}
+            </span>
+          </h2>
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 md:mx-0 md:px-0">
+          {g.itens.map((p) => {
         const n = diasAte(p.prazo ?? p.fim);
         const chave = p.contaId + p.codigo;
         const estaAberta = aberta?.codigo === p.codigo && aberta.contaId === p.contaId;
@@ -387,6 +486,9 @@ function Carrossel({
           </button>
         );
       })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
@@ -653,9 +755,9 @@ function Detalhe({ promocao, folga, onContar }: {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel-2 px-4 py-2.5 text-[12.5px]">
-        <span className="text-ink-2">
-          {nossoPreco ? "Nós definimos o preço nesta campanha." : "O canal define o preço; a folga decide se aceitamos."}
-        </span>
+        <Badge tone={nossoPreco ? "info" : "neutral"}>
+          {nossoPreco ? "preço nosso" : "preço do canal"}
+        </Badge>
         {contagem.fora > 0 && (
           <Badge tone="down">{count(contagem.fora)} fora da tabela</Badge>
         )}
