@@ -246,45 +246,57 @@ for (const m of montadas) {
   m.observacao = `Preço exclusivo ML · ${m.classe} — ${razao.join(" · ")}`;
 }
 
-/* ── A planilha ── */
-const AZUL = "FF1F3864", VERDE = "FFC6EFCE", VERMELHO = "FFFFC7CE", AMARELO = "FFFFEB9C", ROXO = "FFE4D9F5", CINZA = "FFF2F2F2";
+/* ── A planilha, na paleta da que o canal mandou ──
+   Teal na identificação, azul na campanha do mês, roxo no relâmpago,
+   preto na Black Week, cinza no Cyber Monday, e a faixa âmbar com
+   PREECHER em vermelho sobre as colunas que a gente preenche. Mesma
+   ordem de linhas também — faixa, cabeçalho, dado — para a aba poder ser
+   colada na dele sem reformatar nada. */
+const T_IDENT = "FF134F5C", T_EXTRA = "FF45818E", T_MES = "FF3C78D8", T_REL = "FF674EA7",
+      T_WEEK = "FF000000", T_CYBER = "FF666666", T_PREENCHER = "FFF1C232", VERMELHO_TXT = "FFCC0000";
+/* As tintas claras da mesma paleta, para marcar célula no corpo. */
+const L_VERMELHO = "FFF4CCCC", L_AMARELO = "FFFFF2CC", L_VERDE = "FFD9EAD3", L_ROXO = "FFD9D2E9";
 const brl = '"R$ "#,##0.00';
+const ARIAL = { name: "Arial", size: 10 };
+
 const wb = new ExcelJS.Workbook();
 wb.creator = "gerizo";
 const ws = wb.addWorksheet("BLACK FRIDAY 2026");
 
+/** [rótulo, largura, cor do bloco, leva a faixa PREECHER] */
 const COLS = [
-  ["ORIGEM", 15], ["MLB", 15], ["OBSERVAÇÃO", 52], ["ITEM ID", 13], ["CONTA", 11], ["TIPO", 10],
-  ["Título", 44], ["MODELO", 11], ["NMV (R$)", 13], ["Melhor preço vendido", 14], ["Preço De", 12], ["Preço no ar hoje", 13],
-  ["Campanha Mês (01/11 a 20/11)", 14], ["Rebate (R$)", 12], ["Rebate (%)", 10], ["Retorno Meli", 12],
-  ["Crível relâmpago", 13], ["11/11 relâmpago", 14], ["Crível × nosso 8%", 17], ["Rebate (R$)", 12], ["Rebate (%)", 10], ["Retorno Meli", 12],
-  ["Black Week (21/11 a 29/11)", 14], ["Rebate (R$)", 12], ["Rebate (%)", 10], ["Retorno Meli", 12],
-  ["Cyber Monday (30/11)", 14], ["Rebate (R$)", 12], ["Rebate (%)", 10], ["Retorno Meli", 12],
-  ["Unid. 8 meses", 11], ["Visitas", 10], ["Vendas 8 sem.", 11], ["Estoque", 9], ["Catálogo", 11], ["Preço p/ ganhar", 13],
+  ["ORIGEM", 15, T_IDENT], ["MLB", 15, T_IDENT], ["OBSERVAÇÃO", 52, T_IDENT, true],
+  ["ITEM ID", 13, T_IDENT], ["CONTA", 11, T_IDENT], ["TIPO", 10, T_IDENT],
+  ["Título", 46, T_IDENT], ["MODELO", 11, T_IDENT], ["NMV (R$)", 13, T_IDENT],
+  ["Melhor preço vendido", 14, T_IDENT], ["Preço De", 12, T_IDENT], ["Preço no ar hoje", 13, T_IDENT],
+  ["Campanha Mês (01/11 a 20/11)", 15, T_MES, true], ["Rebate (R$)", 12, T_MES], ["Rebate (%)", 10, T_MES], ["Retorno Meli", 12, T_MES],
+  ["Crível relampago", 14, T_REL], ["11/11", 14, T_REL, true], ["Crível × nosso 8%", 17, T_REL],
+  ["Rebate (R$)", 12, T_REL], ["Rebate (%)", 10, T_REL], ["Retorno Meli", 12, T_REL],
+  ["Black Week (21/11 a 29/11)", 15, T_WEEK, true], ["Rebate (R$)", 12, T_WEEK], ["Rebate (%)", 10, T_WEEK], ["Retorno Meli", 12, T_WEEK],
+  ["Cyber Monday (30/11)", 14, T_CYBER, true], ["Rebate (R$)", 12, T_CYBER], ["Rebate (%)", 10, T_CYBER], ["Retorno Meli", 12, T_CYBER],
+  ["Unid. 8 meses", 11, T_EXTRA], ["Visitas", 10, T_EXTRA], ["Vendas 8 sem.", 11, T_EXTRA],
+  ["Estoque", 9, T_EXTRA], ["Catálogo", 11, T_EXTRA], ["Preço p/ ganhar", 13, T_EXTRA],
 ];
 ws.columns = COLS.map(([, w]) => ({ width: w }));
 
-const t1 = ws.addRow(["PROBEL · BLACK FRIDAY 2026"]);
-t1.font = { bold: true, size: 15, color: { argb: "FFFFFFFF" } };
-t1.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL } };
-t1.height = 28; ws.mergeCells(1, 1, 1, COLS.length); t1.alignment = { vertical: "middle", indent: 1 };
+/* Linha 1: a faixa PREECHER, só sobre o que a gente preenche. */
+const faixa = ws.addRow(COLS.map(([, , , p]) => (p ? "PREECHER" : null)));
+COLS.forEach(([, , , p], i) => {
+  const c = faixa.getCell(i + 1);
+  c.font = { ...ARIAL, bold: true, color: { argb: p ? VERMELHO_TXT : "FF000000" } };
+  c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: p ? T_PREENCHER : "FFFFFFFF" } };
+  c.alignment = { horizontal: "center" };
+});
 
-for (const linha of [
-  "Campanha do mês = preço com 6% de rebate. Black Week = esse preço menos 5% nossos. Relâmpago 11/11 = preço com 8% de rebate. Tudo pela aba Preços por rebate.",
-  "No clássico a tabela não tem a coluna de 8% — 11,5% menos 8 pontos daria 3,5%, que não existe na Fórmula base. O passo entre as faixas é constante, então o 8% do clássico é a continuação da própria tabela, e vem marcado em amarelo.",
-  "Crível × nosso 8%: onde o nosso preço fica acima do crível do canal, aceitamos o crível até 5% de diferença (célula em vermelho). Acima disso fica o nosso preço, e a coluna diz quanto faltaria baixar.",
-]) {
-  const r = ws.addRow([linha]);
-  ws.mergeCells(r.number, 1, r.number, COLS.length);
-  r.alignment = { wrapText: true, vertical: "top" };
-  r.height = 15;
-}
-
+/* Linha 2: o cabeçalho, cada bloco na sua cor. */
 const hr = ws.addRow(COLS.map(([n]) => n));
-hr.font = { bold: true, color: { argb: "FFFFFFFF" } };
-hr.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL } };
-hr.alignment = { vertical: "middle", wrapText: true, horizontal: "center" };
-hr.height = 44;
+COLS.forEach(([, , cor], i) => {
+  const c = hr.getCell(i + 1);
+  c.font = { ...ARIAL, bold: true, color: { argb: "FFFFFFFF" } };
+  c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cor } };
+  c.alignment = { vertical: "middle", wrapText: true, horizontal: "center" };
+});
+hr.height = 42;
 const H = hr.number;
 
 const ordem = { "Mercado Livre": 0, "Nossa sugestão": 1, "Boa Forma": 2 };
@@ -302,29 +314,61 @@ for (const m of montadas) {
     null, null, null, "",
     m.unidades, m.visitas, m.venRecente, m.estoque >= 40000 ? "sob enc." : m.estoque, m.catalogo || "—", m.paraGanhar,
   ]);
+  r.font = ARIAL;
   for (const c of [9, 10, 11, 12, 13, 14, 17, 18, 20, 23, 24, 27, 28, 36]) r.getCell(c).numFmt = brl;
   for (const c of [15, 21, 25, 29]) r.getCell(c).numFmt = "0%";
   if (typeof r.getCell(19).value === "number") r.getCell(19).numFmt = "0.0%";
 
   if (m.origem === "Boa Forma") {
-    for (let c = 1; c <= COLS.length; c++) r.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: ROXO } };
-    /* Os que mais performaram da linha vêm em negrito — é o destaque
-       que ele pediu para saber onde apoiar. */
-    if (m.destaqueBoaForma) { r.font = { bold: true }; r.getCell(1).value = "Boa Forma ★"; }
+    for (let c = 1; c <= COLS.length; c++) r.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_ROXO } };
+    /* Os que mais performaram da linha vêm em negrito — é o destaque que
+       ele pediu para saber onde apoiar. */
+    if (m.destaqueBoaForma) { r.font = { ...ARIAL, bold: true }; r.getCell(1).value = "Boa Forma ★"; }
   }
-  if (m.aceitouCrivel) { r.getCell(18).fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERMELHO } }; r.getCell(19).fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERMELHO } }; }
-  else if (m.faltaPct != null) r.getCell(19).fill = { type: "pattern", pattern: "solid", fgColor: { argb: AMARELO } };
-  else if (m.rel?.extrapolado) r.getCell(18).fill = { type: "pattern", pattern: "solid", fgColor: { argb: AMARELO } };
-  if (m.classe === "SUPER KILLER") r.getCell(3).font = { bold: true, color: { argb: "FF087D6B" } };
+  if (m.aceitouCrivel) for (const c of [17, 19]) r.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERMELHO } };
+  else if (m.faltaPct != null) r.getCell(19).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_AMARELO } };
+  if (m.rel?.extrapolado) r.getCell(18).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_AMARELO } };
+  if (m.classe === "SUPER KILLER") r.getCell(3).font = { ...ARIAL, bold: true, color: { argb: "FF38761D" } };
   if (m.status !== "ativo" || !(Number(m.estoque) > 0)) {
-    r.getCell(3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERMELHO } };
-    r.getCell(34).fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERMELHO } };
+    r.getCell(3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERMELHO } };
+    r.getCell(3).font = { ...ARIAL, bold: true, color: { argb: VERMELHO_TXT } };
+    r.getCell(34).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERMELHO } };
   }
-  if (m.catalogo === "winning") r.getCell(35).fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERDE } };
+  if (m.catalogo === "winning") r.getCell(35).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERDE } };
 }
 
 ws.views = [{ state: "frozen", xSplit: 2, ySplit: H }];
 ws.autoFilter = { from: { row: H, column: 1 }, to: { row: H, column: COLS.length } };
+
+/* As explicações saem da aba principal: ela tem de poder ser colada na
+   planilha do canal sem nada em volta. */
+const notas = wb.addWorksheet("Como ler");
+notas.columns = [{ width: 28 }, { width: 108 }];
+const tn = notas.addRow(["PROBEL · BLACK FRIDAY 2026", ""]);
+tn.font = { ...ARIAL, bold: true, size: 14, color: { argb: "FFFFFFFF" } };
+tn.fill = { type: "pattern", pattern: "solid", fgColor: { argb: T_IDENT } };
+tn.height = 26;
+notas.mergeCells(1, 1, 1, 2);
+for (const [rotulo, texto] of [
+  ["Campanha do mês", "Preço com 6% de rebate, da aba Preços por rebate."],
+  ["Black Week", "O preço da campanha do mês menos 5% nossos."],
+  ["11/11 relâmpago", "Preço com 8% de rebate. É sempre o nosso preço — o crível não manda nesta coluna."],
+  ["Clássico a 8%", "A tabela não tem coluna de 8% no clássico: 11,5% menos 8 pontos daria 3,5%, que não existe na Fórmula base. O passo entre faixas é constante nas 1.256 linhas, então o 8% do clássico é a continuação da mesma reta. Essas células vêm em amarelo."],
+  ["Crível × nosso 8%", "Cabe no nosso preço = já estamos abaixo do crível. Dá para aceitar o crível (vermelho) = estamos acima dele, dentro dos 5% de tolerância. Um percentual (amarelo) = passou dos 5%, e é quanto faltaria baixar para alcançá-lo."],
+  ["Boa Forma", "Usa a Fórmula base de 10/09, a mais antiga que tem esses SKUs — a de 30/09 é cerca de 10% mais barata. Linhas em roxo; a estrela marca os cinco que mais venderam."],
+  ["Observação", "Preço exclusivo ML, a classificação e o motivo dela: se ganha o catálogo hoje, se o preço da campanha segura a posição, e quanto vendeu em oito meses."],
+  ["Super killer / killer / aposta", "Super killer: ganha o catálogo e está entre os que mais vendem. Killer: uma das duas. Aposta: nenhuma das duas."],
+  ["Vermelho na observação", "Anúncio pausado ou sem estoque. São sugestões do próprio canal, por isso ficaram na lista."],
+  ["Unidades e receita", "Pedidos não cancelados desde 27/02/2026. As visitas vêm do relatório semanal."],
+  ["Preço no ar hoje", "O preço do último dia medido, que não é o de cadastro — o Preço De é o cheio."],
+]) {
+  const r = notas.addRow([rotulo, texto]);
+  r.getCell(1).font = { ...ARIAL, bold: true };
+  r.getCell(1).alignment = { vertical: "top" };
+  r.getCell(2).font = ARIAL;
+  r.getCell(2).alignment = { wrapText: true, vertical: "top" };
+  r.height = Math.max(15, Math.ceil(texto.length / 100) * 14);
+}
 
 await wb.xlsx.writeFile("output/PROBEL-Black-Friday-2026.xlsx");
 const porOrigem = {};
@@ -334,7 +378,7 @@ for (const m of montadas) classes[m.classe] = (classes[m.classe] ?? 0) + 1;
 console.log("escrito: output/PROBEL-Black-Friday-2026.xlsx");
 console.log("  linhas por origem:", JSON.stringify(porOrigem));
 console.log("  classificação:", JSON.stringify(classes));
-console.log("  aceitaram o crível:", montadas.filter((m) => m.aceitouCrivel).length);
+console.log("  dá para aceitar o crível:", montadas.filter((m) => m.aceitouCrivel).length);
 console.log("  acima do crível por mais de 5%:", montadas.filter((m) => m.faltaPct != null).length);
 console.log("  8% extrapolado (clássico):", montadas.filter((m) => m.rel?.extrapolado).length);
 console.log("  pausados ou sem estoque:", montadas.filter((m) => m.status !== "ativo" || !(Number(m.estoque) > 0)).length);
