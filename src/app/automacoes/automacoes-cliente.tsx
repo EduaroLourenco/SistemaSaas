@@ -145,7 +145,7 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
     <>
       <PageHeader
         title="Automações"
-        badge={<Badge tone="warn">somente leitura</Badge>}
+        badge={<Badge tone="warn">envio com confirmação</Badge>}
         inlineFilters
         actions={
           <div className="flex gap-1 rounded-r1 bg-panel-3 p-[3px]">
@@ -299,6 +299,10 @@ type LinhaRevisao = {
   mlb: string; vai: boolean; motivo?: string;
   metodo?: string; caminho?: string; corpo?: Record<string, unknown>;
 };
+type RespostaEnvio = {
+  conta: string; entraram: number; recusados: number;
+  resultados: { mlb: string; ok: boolean; preco?: number | null; erro?: string }[];
+};
 type RespostaRevisao = {
   conta: string; escritaConectada: boolean; vao: number; ficam: number; linhas: LinhaRevisao[];
 };
@@ -402,6 +406,8 @@ function Detalhe({ promocao, folga, onContar }: {
   const [marcados, setMarcados] = React.useState<Set<string>>(new Set());
   const ultimaContagem = React.useRef<Cabem | null>(null);
   const [revisao, setRevisao] = React.useState<PedidoRevisao[] | null>(null);
+  /* Preço que a pessoa digitou, por MLB. Vazio = vale o que a folga propôs. */
+  const [precos, setPrecos] = React.useState<Map<string, number>>(new Map());
 
   React.useEffect(() => {
     let vivo = true;
@@ -520,6 +526,9 @@ function Detalhe({ promocao, folga, onContar }: {
     queueMicrotask(() => onContar(promocao.contaId + promocao.codigo, { cabem: contagem.cabe, nao: contagem.nao }));
   }
 
+  /** O que vai para o canal: o digitado ganha do proposto pela folga. */
+  const precoFinal = (i: ItemAutomacao) => precos.get(i.mlb) ?? nossaOferta(i)?.valor ?? null;
+
   const marcar = (mlb: string) =>
     setMarcados((a) => { const n = new Set(a); n.has(mlb) ? n.delete(mlb) : n.add(mlb); return n; });
 
@@ -567,13 +576,33 @@ function Detalhe({ promocao, folga, onContar }: {
       } },
     { key: "piso", header: "Nosso piso", align: "right", mobile: "hidden",
       sortValue: (i) => pisoDe(i) ?? 0, cell: (i) => (pisoDe(i) == null ? vazio() : money(pisoDe(i)!)) },
+    /* Editável, que é o que a planilha dava: a folga propõe o preço e a
+       pessoa ajusta a linha que quiser antes de mandar. */
     { key: "oferta", header: "Nossa oferta", align: "right", mobile: "hidden",
-      sortValue: (i) => nossaOferta(i)?.valor ?? 0,
+      sortValue: (i) => precoFinal(i) ?? 0,
       cell: (i) => {
         if (!nossoPreco) return vazio("ele define");
         const o = nossaOferta(i);
         if (o?.bloqueado) return <Badge tone="down">não dá para subir</Badge>;
-        return o?.valor == null ? vazio() : <b className="text-brand-2">{money(o.valor)}</b>;
+        if (o?.valor == null) return vazio();
+        const teto = Math.min(i.maximoCanal ?? Infinity, i.precoCanal ?? Infinity);
+        const v = precoFinal(i)!;
+        const acimaDoTeto = Number.isFinite(teto) && v > teto + 0.01;
+        return (
+          <input
+            type="number" step="0.01" min={0} value={v}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              setPrecos((a) => { const m = new Map(a); Number.isFinite(n) && n > 0 ? m.set(i.mlb, n) : m.delete(i.mlb); return m; });
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className={[
+              "w-[104px] rounded-r1 border bg-panel px-2 py-1 text-right font-mono text-[12.5px]",
+              acimaDoTeto ? "border-down text-down" : "border-line-2 text-brand-2 font-bold",
+            ].join(" ")}
+            title={acimaDoTeto ? `O canal propôs ${money(teto)} — acima disso ele recusa` : undefined}
+          />
+        );
       } },
     { key: "meli", header: "Meli põe", align: "right", mobile: "hidden",
       sortValue: (i) => i.meliPct ?? 0, cell: (i) => (i.meliPct == null ? vazio() : pct(i.meliPct, 1)) },
@@ -661,7 +690,7 @@ function Detalhe({ promocao, folga, onContar }: {
                     mlb: i.mlb,
                     promocao: promocao.codigo,
                     tipo: promocao.tipo,
-                    preco: nossoPreco ? nossaOferta(i)?.valor ?? null : null,
+                    preco: nossoPreco ? precoFinal(i) : null,
                     oferta: i.oferta,
                     estoque: i.estoqueMin ?? null,
                     tetoDoCanal: i.precoCanal ?? i.maximoCanal ?? null,
@@ -697,6 +726,28 @@ function Revisao({ conta, itens, porMlb, aoFechar }: {
 }) {
   const [r, setR] = React.useState<RespostaRevisao | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
+  const [enviando, setEnviando] = React.useState(false);
+  const [envio, setEnvio] = React.useState<RespostaEnvio | null>(null);
+
+  /* Só vai o que a revisão disse que vai: item recusado aqui nem sai. */
+  async function enviar() {
+    setEnviando(true);
+    try {
+      const vao = itens.filter((i) => r?.linhas.find((l) => l.mlb === i.mlb)?.vai);
+      const res = await fetch("/api/automacoes/enviar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ conta, itens: vao, confirmar: true }),
+      });
+      const j = await res.json();
+      if (res.ok) setEnvio(j);
+      else setErro(j.erro ?? "o envio falhou");
+    } catch (e) {
+      setErro(String(e));
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   React.useEffect(() => {
     let vivo = true;
@@ -758,9 +809,34 @@ function Revisao({ conta, itens, porMlb, aoFechar }: {
             })}
           </div>
 
-          <p className="text-[12px] text-ink-3">
-            Nada foi enviado. O botão de publicar entra depois do teste manual.
-          </p>
+          {envio ? (
+            <div className="rounded-r1 border border-line p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone="up">{count(envio.entraram)} entraram</Badge>
+                {envio.recusados > 0 && <Badge tone="down">{count(envio.recusados)} recusados</Badge>}
+              </div>
+              {/* O canal recusa linha por linha, com motivo próprio.
+                  Mostrar só o total esconderia qual produto ficou fora. */}
+              <ul className="mt-2 space-y-1">
+                {envio.resultados.filter((x) => !x.ok).map((x) => (
+                  <li key={x.mlb} className="text-[12px] text-down">
+                    <span className="font-mono">{x.mlb}</span> — {x.erro}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[12px] text-ink-3">Nada foi enviado ainda.</p>
+              <Button
+                className="ml-auto"
+                disabled={!r.escritaConectada || !r.vao || enviando}
+                onClick={enviar}
+              >
+                {enviando ? "Enviando…" : "Enviar " + count(r.vao) + " ao Mercado Livre"}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </Sheet>
