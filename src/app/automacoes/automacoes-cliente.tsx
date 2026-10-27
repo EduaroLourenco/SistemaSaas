@@ -1,0 +1,483 @@
+"use client";
+
+import * as React from "react";
+import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
+import { Badge, Button, EmptyState, Panel, Skeleton } from "@/components/ui/primitives";
+import { StatTile } from "@/components/ui/stat-tile";
+import { DataTable, type Column } from "@/components/ui/data-table";
+import { FotoAnuncio } from "@/components/ui/foto-anuncio";
+import { money, count, pct } from "@/lib/format";
+import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+
+/**
+ * Automações: o que o canal está oferecendo, e o que a gente faz com isso.
+ *
+ * ── O estado desta tela ──
+ *
+ * Ela LÊ. Os botões de aceite montam a seleção e mostram o que seria
+ * enviado, mas nada sai daqui para o Mercado Livre ainda: a escrita entra
+ * depois do teste manual, com o Eduardo junto, num item só. Até lá o
+ * rodapé diz isso com todas as letras, em vez de um botão que parece
+ * funcionar e não funciona.
+ *
+ * ── A coluna que decide ──
+ *
+ * Não é "acima ou abaixo do piso": é a FAIXA de comissão em que o preço
+ * ainda fecha. Quando o canal entra com rebate, a comissão efetiva cai e
+ * o preço certo é o de uma faixa mais barata — comparar com o piso cheio
+ * pintava o pré-acordo inteiro de vermelho, 96 linhas, todas erradas.
+ */
+
+const ROTULO: Record<string, string> = {
+  DEAL: "Tradicional", SMART: "Automática", SMART_LIGHTNING: "Relâmpago auto",
+  LIGHTNING: "Relâmpago", DOD: "Oferta do dia", PRE_NEGOTIATED: "Pré-acordo",
+  UNHEALTHY_STOCK: "Liquidar Full", SELLER_CAMPAIGN: "Nossa campanha",
+  SELLER_COUPON_CAMPAIGN: "Cupom", MARKETPLACE_CAMPAIGN: "Cofinanciada",
+  PRICE_MATCHING: "Preço competitivo", PRICE_MATCHING_MELI_ALL: "100% Meli",
+  PRICE_DISCOUNT: "Desconto avulso", VOLUME: "Leve mais",
+};
+const TOM: Record<string, "neutral" | "info" | "up" | "down" | "warn"> = {
+  DEAL: "info", SELLER_CAMPAIGN: "info", SMART: "neutral", MARKETPLACE_CAMPAIGN: "neutral",
+  LIGHTNING: "down", SMART_LIGHTNING: "down", DOD: "down",
+  PRE_NEGOTIATED: "up", UNHEALTHY_STOCK: "up", SELLER_COUPON_CAMPAIGN: "warn",
+};
+
+/* Onde NÓS definimos o preço, a folga reescreve. Onde o canal define, ela
+   só decide se aceita a proposta dele. */
+const NOSSO_PRECO = new Set(["DEAL", "SELLER_CAMPAIGN", "PRICE_DISCOUNT"]);
+
+type Situacao = "dentro" | "agendado" | "cabe" | "nao";
+
+const diasAte = (iso: string | null) =>
+  iso == null ? null : Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
+const dia = (iso: string | null) =>
+  iso == null ? "—" : new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+
+export default function Automacoes({ dados }: { dados: DadosAutomacoes }) {
+  const [conta, setConta] = React.useState("");
+  const [tipo, setTipo] = React.useState("");
+  const [prazo, setPrazo] = React.useState("");
+  const [folga, setFolga] = React.useState(5);
+  const [aberta, setAberta] = React.useState<PromocaoAberta | null>(null);
+
+  const promocoes = React.useMemo(
+    () =>
+      dados.promocoes.filter((p) => {
+        if (conta && p.contaId !== conta) return false;
+        if (tipo && p.tipo !== tipo) return false;
+        if (prazo) {
+          const n = diasAte(p.prazo ?? p.fim);
+          if (n == null) return false;
+          if (prazo === "7" && !(n >= 0 && n <= 7)) return false;
+          if (prazo === "30" && !(n >= 0 && n <= 30)) return false;
+          if (prazo === "venceu" && n >= 0) return false;
+        }
+        return true;
+      }),
+    [dados.promocoes, conta, tipo, prazo]
+  );
+
+  const tipos = React.useMemo(() => [...new Set(dados.promocoes.map((p) => p.tipo))], [dados.promocoes]);
+  const itensTotais = promocoes.reduce((s, p) => s + (p.itens ?? 0), 0);
+  const vencendo = promocoes.filter((p) => {
+    const n = diasAte(p.prazo ?? p.fim);
+    return n != null && n >= 0 && n <= 14;
+  }).length;
+
+  if (dados.semConexao) {
+    return (
+      <>
+        <PageHeader title="Automações" />
+        <PageBody>
+          <EmptyState
+            title="Nenhuma conta do Mercado Livre conectada"
+            description="Conecte uma conta em Canais e contas para ver as promoções abertas."
+          />
+        </PageBody>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="Automações"
+        badge={<Badge tone="warn">somente leitura</Badge>}
+        inlineFilters
+        filters={
+          <BarraFiltros>
+            <Filtro rotulo="Conta">
+              <select value={conta} onChange={(e) => setConta(e.target.value)} className="gerizo-select">
+                <option value="">Todas</option>
+                {dados.contas.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
+              </select>
+            </Filtro>
+            <Filtro rotulo="Tipo">
+              <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="gerizo-select">
+                <option value="">Todos</option>
+                {tipos.map((t) => (
+                  <option key={t} value={t}>{ROTULO[t] ?? t}</option>
+                ))}
+              </select>
+            </Filtro>
+            <Filtro rotulo="Prazo">
+              <select value={prazo} onChange={(e) => setPrazo(e.target.value)} className="gerizo-select">
+                <option value="">Qualquer</option>
+                <option value="7">Vence em 7 dias</option>
+                <option value="30">Em 30 dias</option>
+                <option value="venceu">Já venceu</option>
+              </select>
+            </Filtro>
+            <Filtro rotulo="Folga abaixo do piso">
+              <input
+                type="number" min={0} max={30} step={0.5} value={folga}
+                onChange={(e) => setFolga(Number(e.target.value) || 0)}
+                className="gerizo-select w-[86px] text-right font-mono"
+              />
+            </Filtro>
+          </BarraFiltros>
+        }
+      />
+      <PageBody>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatTile label="Promoções abertas" value={count(promocoes.length)} />
+          <StatTile label="Itens convidados" value={count(itensTotais)} />
+          <StatTile label="Vencem em 14 dias" value={count(vencendo)} />
+          <StatTile label="Contas" value={count(dados.contas.length)} />
+        </div>
+
+        {dados.falhas.length > 0 && (
+          <Panel className="mt-4 border-down/40 bg-down-wash/40">
+            <div className="flex items-start gap-2 p-4 text-[13px]">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-down" />
+              <div>
+                {dados.falhas.map((f) => (
+                  <p key={f.conta}><b>{f.conta}</b> não respondeu: {f.erro}</p>
+                ))}
+              </div>
+            </div>
+          </Panel>
+        )}
+
+        <Carrossel
+          promocoes={promocoes}
+          aberta={aberta}
+          onAbrir={(p) => setAberta(aberta?.codigo === p.codigo && aberta.contaId === p.contaId ? null : p)}
+        />
+
+        {aberta && <Detalhe key={aberta.contaId + aberta.codigo} promocao={aberta} folga={folga} />}
+      </PageBody>
+    </>
+  );
+}
+
+/* ══ O carrossel ══════════════════════════════════════════════ */
+
+function Carrossel({
+  promocoes, aberta, onAbrir,
+}: {
+  promocoes: PromocaoAberta[];
+  aberta: PromocaoAberta | null;
+  onAbrir: (p: PromocaoAberta) => void;
+}) {
+  if (!promocoes.length) {
+    return <div className="mt-4"><EmptyState title="Nenhuma promoção com esses filtros" /></div>;
+  }
+  return (
+    <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 md:mx-0 md:px-0">
+      {promocoes.map((p) => {
+        const n = diasAte(p.prazo ?? p.fim);
+        const estaAberta = aberta?.codigo === p.codigo && aberta.contaId === p.contaId;
+        return (
+          <button
+            key={p.contaId + p.codigo}
+            onClick={() => onAbrir(p)}
+            aria-expanded={estaAberta}
+            className={[
+              "w-[270px] shrink-0 snap-start rounded-r3 border bg-panel p-4 text-left transition",
+              "hover:-translate-y-0.5 hover:shadow-2",
+              estaAberta ? "border-brand shadow-2 ring-2 ring-brand-wash" : "border-line shadow-1",
+            ].join(" ")}
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <Badge tone={TOM[p.tipo] ?? "neutral"}>{ROTULO[p.tipo] ?? p.tipo}</Badge>
+              <span className="ml-auto truncate text-[11px] text-ink-3">{p.contaNome}</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className={[
+                "font-mono text-[32px] font-extrabold leading-none tracking-[-0.04em]",
+                n != null && n <= 7 ? "text-down" : "text-ink",
+              ].join(" ")}>
+                {n == null ? "—" : n < 0 ? "venceu" : n}
+              </span>
+              <span className="text-[12px] font-semibold text-ink-2">
+                {n == null ? "sem prazo de aceite" : n < 0 ? "" : n === 1 ? "dia para aceitar" : "dias para aceitar"}
+              </span>
+            </div>
+            <p className="mt-2 min-h-[34px] text-[13.5px] font-semibold leading-snug text-ink">
+              {p.nome ?? "Sem nome"}
+            </p>
+            <p className="font-mono text-[11.5px] text-ink-3">{dia(p.inicio)} → {dia(p.fim)}</p>
+            <div className="mt-3 flex items-center justify-between text-[12px] text-ink-2">
+              <span>{p.itens == null ? "itens não lidos" : `${count(p.itens)} ${p.itens === 1 ? "item" : "itens"}`}</span>
+              {p.meliPct != null && (
+                <span className="text-up">Meli {pct(p.meliPct / 100, 0)}</span>
+              )}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ══ O detalhe ════════════════════════════════════════════════ */
+
+type Aba = "cabem" | "nao" | "dentro" | "todos";
+
+function Detalhe({ promocao, folga }: { promocao: PromocaoAberta; folga: number }) {
+  const [dados, setDados] = React.useState<ItensDaPromocao | null>(null);
+  const [erro, setErro] = React.useState<string | null>(null);
+  const [aba, setAba] = React.useState<Aba>("cabem");
+  const [marcados, setMarcados] = React.useState<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    let vivo = true;
+    setDados(null); setErro(null);
+    const q = new URLSearchParams({ conta: promocao.contaId, promocao: promocao.codigo, tipo: promocao.tipo });
+    fetch(`/api/automacoes/itens?${q}`)
+      .then(async (r) => {
+        const j = await r.json();
+        if (!vivo) return;
+        if (!r.ok) setErro(j.erro ?? "o canal não respondeu");
+        else setDados(j as ItensDaPromocao);
+      })
+      .catch((e) => vivo && setErro(String(e)));
+    return () => { vivo = false; };
+  }, [promocao.contaId, promocao.codigo, promocao.tipo]);
+
+  const nossoPreco = NOSSO_PRECO.has(promocao.tipo);
+
+  /** O piso que vale: com rebate do canal a comissão efetiva cai. */
+  const pisoDe = React.useCallback(
+    (i: ItemAutomacao) => {
+      if (!dados || i.comissaoCheia == null || !i.precos.length) return i.piso;
+      const alvo = i.comissaoCheia - (i.meliPct ?? 0) / 100;
+      let melhor: number | null = null, dist = Infinity;
+      dados.bandas.forEach((b, k) => {
+        const d = Math.abs(b - alvo);
+        if (i.precos[k] != null && d < dist) { dist = d; melhor = i.precos[k]; }
+      });
+      return melhor ?? i.piso;
+    },
+    [dados]
+  );
+
+  const faixaDe = React.useCallback(
+    (i: ItemAutomacao, preco: number | null) => {
+      if (!dados || preco == null || !i.precos.length) return null;
+      let f: number | null = null;
+      dados.bandas.forEach((b, k) => {
+        const v = i.precos[k];
+        if (v != null && preco >= v - 0.01) f = b;
+      });
+      return f;
+    },
+    [dados]
+  );
+
+  const precoDecide = (i: ItemAutomacao) => i.precoCanal ?? i.sugerido ?? null;
+
+  /** Onde somos nós que definimos, a oferta é o piso com a folga — e
+      nunca acima do teto do canal, que devolve recusado. */
+  const nossaOferta = React.useCallback(
+    (i: ItemAutomacao) => {
+      if (!nossoPreco || i.status !== "candidate") return null;
+      const ps = pisoDe(i);
+      if (ps == null) return null;
+      let v = ps * (1 - folga / 100);
+      if (i.minimoCanal != null) v = Math.max(v, i.minimoCanal);
+      const teto = Math.min(i.maximoCanal ?? Infinity, i.precoCanal ?? Infinity);
+      if (v > teto + 0.01) return { bloqueado: true as const };
+      return { valor: Math.round(v * 100) / 100 };
+    },
+    [nossoPreco, pisoDe, folga]
+  );
+
+  const situacaoDe = React.useCallback(
+    (i: ItemAutomacao): Situacao => {
+      if (i.status === "started") return "dentro";
+      if (i.status === "pending") return "agendado";
+      if (nossoPreco) return nossaOferta(i)?.valor != null ? "cabe" : "nao";
+      const p = precoDecide(i), ps = pisoDe(i);
+      if (p == null || ps == null) return "cabe";
+      return p >= ps * (1 - folga / 100) - 0.01 ? "cabe" : "nao";
+    },
+    [nossoPreco, nossaOferta, pisoDe, folga]
+  );
+
+  if (erro) {
+    return (
+      <Panel className="mt-4">
+        <EmptyState
+          title="Não consegui ler os itens desta promoção"
+          description={erro}
+          action={<Button onClick={() => location.reload()}><RefreshCw size={15} />Tentar de novo</Button>}
+        />
+      </Panel>
+    );
+  }
+  if (!dados) {
+    return (
+      <Panel className="mt-4 p-4">
+        <Skeleton className="h-6 w-56" />
+        <div className="mt-3 space-y-2">
+          {Array.from({ length: 6 }, (_, k) => <Skeleton key={k} className="h-9 w-full" />)}
+        </div>
+      </Panel>
+    );
+  }
+
+  const contagem = { dentro: 0, agendado: 0, cabe: 0, nao: 0, fora: 0 };
+  for (const i of dados.itens) {
+    contagem[situacaoDe(i)]++;
+    const p = nossaOferta(i)?.valor ?? precoDecide(i);
+    if (i.precos.length && p != null && faixaDe(i, p) == null) contagem.fora++;
+  }
+
+  const lista = dados.itens.filter((i) => {
+    const s = situacaoDe(i);
+    return aba === "todos" || (aba === "cabem" && s === "cabe") || (aba === "nao" && s === "nao")
+      || (aba === "dentro" && (s === "dentro" || s === "agendado"));
+  });
+
+  const colunas: Column<ItemAutomacao>[] = [
+    {
+      key: "produto", header: "Produto", sticky: true, mobile: "title", width: "300px",
+      sortValue: (i) => i.titulo ?? i.mlb,
+      cell: (i) => (
+        <div className="flex items-center gap-2.5">
+          <FotoAnuncio src={i.foto} alt="" className="h-9 w-9 shrink-0 rounded-r1" />
+          <div className="min-w-0">
+            <p className="truncate text-[12.5px] font-medium text-ink">{i.titulo ?? i.mlb}</p>
+            <p className="font-mono text-[10.5px] text-ink-3">{i.sku ?? "sem SKU"} · {i.mlb}</p>
+          </div>
+        </div>
+      ),
+    },
+    { key: "cheio", header: "Preço cheio", align: "right", mobile: "hidden",
+      sortValue: (i) => i.precoCheio ?? 0, cell: (i) => (i.precoCheio == null ? vazio() : money(i.precoCheio)) },
+    { key: "pede", header: "O Meli pede", align: "right", mobile: "metric",
+      sortValue: (i) => precoDecide(i) ?? 0,
+      cell: (i) => (precoDecide(i) == null ? vazio(i.status === "candidate" ? "ele não propôs" : undefined) : money(precoDecide(i)!)) },
+    { key: "faixa", header: "Faixa que sobra", align: "right", mobile: "metric",
+      sortValue: (i) => faixaDe(i, nossaOferta(i)?.valor ?? precoDecide(i)) ?? -1,
+      cell: (i) => {
+        if (!i.precos.length) return vazio("sem tabela");
+        const p = nossaOferta(i)?.valor ?? precoDecide(i);
+        if (p == null) return vazio();
+        const f = faixaDe(i, p);
+        if (f == null) return <Badge tone="down">fora da tabela</Badge>;
+        const perdeu = (i.comissaoCheia ?? 0.115) - f;
+        return <Badge tone={perdeu <= 0.01 ? "up" : perdeu <= 0.04 ? "warn" : "down"}>{pct(f, 1)}</Badge>;
+      } },
+    { key: "piso", header: "Nosso piso", align: "right", mobile: "hidden",
+      sortValue: (i) => pisoDe(i) ?? 0, cell: (i) => (pisoDe(i) == null ? vazio() : money(pisoDe(i)!)) },
+    { key: "oferta", header: "Nossa oferta", align: "right", mobile: "hidden",
+      sortValue: (i) => nossaOferta(i)?.valor ?? 0,
+      cell: (i) => {
+        if (!nossoPreco) return vazio("ele define");
+        const o = nossaOferta(i);
+        if (o?.bloqueado) return <Badge tone="down">não dá para subir</Badge>;
+        return o?.valor == null ? vazio() : <b className="text-brand-2">{money(o.valor)}</b>;
+      } },
+    { key: "meli", header: "Meli põe", align: "right", mobile: "hidden",
+      sortValue: (i) => i.meliPct ?? 0, cell: (i) => (i.meliPct == null ? vazio() : pct(i.meliPct / 100, 1)) },
+    { key: "estoque", header: "Estoque", align: "right", mobile: "hidden",
+      sortValue: (i) => i.estoque ?? 0,
+      cell: (i) => (i.estoque == null ? vazio() : i.estoque >= 40_000 ? "sob enc." : count(i.estoque)) },
+    { key: "situacao", header: "Situação", align: "right", mobile: "subtitle",
+      sortValue: (i) => situacaoDe(i),
+      cell: (i) => {
+        const s = situacaoDe(i);
+        const r = { dentro: ["Já dentro", "up"], agendado: ["Agendado", "info"], cabe: ["Cabe", "neutral"], nao: ["Não cabe", "down"] } as const;
+        return <Badge tone={r[s][1]}>{r[s][0]}</Badge>;
+      } },
+  ];
+
+  const podeMarcar = lista.filter((i) => situacaoDe(i) === "cabe");
+
+  return (
+    <Panel className="mt-4">
+      <div className="flex flex-wrap items-center gap-3 border-b border-line p-4">
+        <Badge tone={TOM[promocao.tipo] ?? "neutral"}>{ROTULO[promocao.tipo] ?? promocao.tipo}</Badge>
+        <div className="min-w-0">
+          <h2 className="truncate text-[17px] font-bold tracking-[-0.015em] text-ink">{promocao.nome ?? "Sem nome"}</h2>
+          <p className="font-mono text-[12px] text-ink-3">
+            {promocao.contaNome} · {promocao.codigo} · {dia(promocao.inicio)} → {dia(promocao.fim)}
+          </p>
+        </div>
+        {dados.truncado && <Badge tone="warn">lista cortada em 2.000 itens</Badge>}
+      </div>
+
+      <div className="flex gap-1 overflow-x-auto border-b border-line px-3 pt-2">
+        {([
+          ["cabem", "Cabem", contagem.cabe],
+          ["nao", "Não cabem", contagem.nao],
+          ["dentro", "Já dentro", contagem.dentro + contagem.agendado],
+          ["todos", "Todos", dados.itens.length],
+        ] as const).map(([k, r, n]) => (
+          <button
+            key={k} onClick={() => setAba(k)} aria-selected={aba === k}
+            className={[
+              "min-h-[42px] whitespace-nowrap border-b-2 px-3 text-[13px] font-semibold transition",
+              aba === k ? "border-brand text-brand-2" : "border-transparent text-ink-2 hover:text-ink",
+            ].join(" ")}
+          >
+            {r} <span className="font-mono opacity-80">{count(n)}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel-2 px-4 py-2.5 text-[12.5px]">
+        <span className="text-ink-2">
+          {nossoPreco ? "Nós definimos o preço nesta campanha." : "O canal define o preço; a folga decide se aceitamos."}
+        </span>
+        {contagem.fora > 0 && (
+          <Badge tone="down">{count(contagem.fora)} fora da tabela</Badge>
+        )}
+        <Button
+          className="ml-auto"
+          disabled={!podeMarcar.length}
+          onClick={() => setMarcados(new Set(podeMarcar.map((i) => i.mlb)))}
+        >
+          Marcar os {count(podeMarcar.length)} que cabem
+        </Button>
+      </div>
+
+      <DataTable
+        columns={colunas}
+        rows={lista}
+        rowKey={(i) => i.mlb}
+        defaultSort={{ key: "pede", dir: "desc" }}
+        empty={aba === "nao" ? "nenhum item fora do piso" : aba === "dentro" ? "nenhum item dentro ainda" : "nenhum item"}
+      />
+
+      {marcados.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-line bg-panel-2 px-4 py-3">
+          <span className="font-mono text-[18px] font-extrabold text-ink">{count(marcados.size)}</span>
+          <span className="text-[12.5px] text-ink-2">
+            marcados — o envio para o Mercado Livre ainda não está ligado
+          </span>
+          <Button className="ml-auto" onClick={() => setMarcados(new Set())}>Limpar</Button>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+const vazio = (motivo?: string) => <span className="text-ink-3">{motivo ?? "—"}</span>;

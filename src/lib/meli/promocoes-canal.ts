@@ -51,6 +51,26 @@ export type ItemPromocaoCanal = {
   percentual: number | null;
   inicio: string | null;
   fim: string | null;
+  /*
+   * Daqui para baixo é o que a tela de Automações precisa e a gravação
+   * não usa. Vem junto porque é a mesma chamada: pedir de novo só para
+   * ter o piso do canal seria gastar cota duas vezes pelo mesmo dado.
+   */
+  /** O mais barato que o canal aceita — o desconto máximo do item. */
+  precoMinimo: number | null;
+  /** O mais caro que ele considera crível. Acima disso recusa a linha. */
+  precoMaximo: number | null;
+  /** A sugestão dele. Nula quando não tem histórico para sugerir. */
+  sugerido: number | null;
+  /** Quanto o canal põe e quanto nós pomos, em pontos. */
+  meliPct: number | null;
+  sellerPct: number | null;
+  /** `offer_id` ou `ref_id` — é o que identifica o candidato no aceite. */
+  oferta: string | null;
+  /** Só em relâmpago e oferta do dia: a faixa de unidades. */
+  estoqueMin: number | null;
+  estoqueMax: number | null;
+  subTipo: string | null;
 };
 
 type PromoBruta = {
@@ -75,6 +95,14 @@ type ItemBruto = {
   price?: number;
   deal_price?: number;
   suggested_discounted_price?: number;
+  min_discounted_price?: number;
+  max_discounted_price?: number;
+  meli_percentage?: number;
+  seller_percentage?: number;
+  offer_id?: string;
+  ref_id?: string;
+  sub_type?: string;
+  stock?: { min?: number; max?: number };
   fixed_percentage?: number;
   discount_percentage?: number;
   start_date?: string;
@@ -164,6 +192,15 @@ export async function lerItensDaPromocao(
         percentual: num(i.fixed_percentage ?? i.discount_percentage),
         inicio: data(i.start_date),
         fim: data(i.end_date),
+        precoMinimo: num(i.min_discounted_price),
+        precoMaximo: num(i.max_discounted_price),
+        sugerido: num(i.suggested_discounted_price),
+        meliPct: num(i.meli_percentage),
+        sellerPct: num(i.seller_percentage),
+        oferta: i.offer_id ?? i.ref_id ?? null,
+        estoqueMin: num(i.stock?.min),
+        estoqueMax: num(i.stock?.max),
+        subTipo: i.sub_type ?? null,
       });
     }
     const proximo = r.paging?.searchAfter ?? r.paging?.search_after;

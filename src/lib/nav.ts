@@ -127,6 +127,10 @@ export const NAV: NavGroup[] = [
          qualquer análise. */
       { label: "Termômetro", href: "/mercado-livre" },
       area(3),
+      /* Automações é a leitura AO VIVO do canal: o que está aberto agora
+         e até quando dá para aceitar. Vem antes de Campanhas, que é o
+         registro do que já foi processado de planilha. */
+      { label: "Automações", href: "/automacoes" },
       { label: "Campanhas", href: "/promocoes/campanhas" },
       { label: "Processar planilha", href: "/promocoes/processar" },
       area(4),
