@@ -42,8 +42,23 @@ export type PromocaoAberta = {
   sellerPct: number | null;
   contaId: string;
   contaNome: string;
-  /** Quantos itens o canal listou. Null quando a contagem falhou. */
-  itens: number | null;
+  /**
+   * A contagem por status, direto do canal.
+   *
+   * O endpoint de itens aceita `status` e devolve o total no `paging`, o
+   * que custa uma chamada de uma linha por status. É assim que o cartão
+   * mostra os números sem varrer 748 itens.
+   *
+   *   participando ...... o item já está na promoção (started)
+   *   agendados ......... aceito, começa depois (pending)
+   *   pendentes ......... convidado, esperando a nossa resposta (candidate)
+   *
+   * "Cabem" e "não cabem" NÃO vêm daqui: são um recorte dos pendentes
+   * contra o nosso piso, e o piso só existe depois de carregar os itens.
+   */
+  participando: number | null;
+  agendados: number | null;
+  pendentes: number | null;
 };
 
 export type DadosAutomacoes = {
@@ -84,9 +99,9 @@ export async function carregarAutomacoes(): Promise<DadosAutomacoes> {
     porConta.flatMap(({ conta, lista }) =>
       lista.map(async (p) => {
         const extra = p.bruto as PromoBrutaExtra;
-        let itens: number | null = null;
+        let contagem = { participando: null as number | null, agendados: null as number | null, pendentes: null as number | null };
         try {
-          itens = await contarItens(conta.id, p.codigo, p.tipo);
+          contagem = await contarPorStatus(conta.id, p.codigo, p.tipo);
         } catch {
           /* Contagem é enfeite: a promoção entra na tela mesmo sem ela. */
         }
@@ -103,7 +118,7 @@ export async function carregarAutomacoes(): Promise<DadosAutomacoes> {
           sellerPct: extra?.benefits?.seller_percent ?? null,
           contaId: conta.id,
           contaNome: conta.nome,
-          itens,
+          ...contagem,
         });
       })
     )
@@ -125,15 +140,30 @@ export async function carregarAutomacoes(): Promise<DadosAutomacoes> {
   };
 }
 
-/** Só o total, que vem no `paging` sem precisar varrer o resto. */
-async function contarItens(conta: string, codigo: string, tipo: string): Promise<number | null> {
+/**
+ * Quantos itens em cada status, sem varrer a promoção.
+ *
+ * `limit=1` basta: o número vem no `paging.total`, e o item que volta é
+ * descartado. Três chamadas de uma linha custam menos que uma varredura
+ * de 748 — e o `meliGet` já passa pela fila de cota.
+ *
+ * Os três não somam o total: item `finished` fica fora de propósito, que
+ * é o que saiu da campanha e não é decisão de ninguém.
+ */
+async function contarPorStatus(conta: string, codigo: string, tipo: string) {
   const { meliGet } = await import("@/lib/meli/cliente");
-  const q = new URLSearchParams({ promotion_type: tipo, app_version: "v2", limit: "1" });
-  const r = await meliGet<{ paging?: { total?: number } }>(
-    `/seller-promotions/promotions/${codigo}/items?${q}`,
-    conta
-  );
-  return r.paging?.total ?? null;
+  const um = async (status: string) => {
+    const q = new URLSearchParams({ promotion_type: tipo, app_version: "v2", limit: "1", status });
+    const r = await meliGet<{ paging?: { total?: number } }>(
+      `/seller-promotions/promotions/${codigo}/items?${q}`,
+      conta
+    );
+    return r.paging?.total ?? null;
+  };
+  const [participando, agendados, pendentes] = await Promise.all([
+    um("started"), um("pending"), um("candidate"),
+  ]);
+  return { participando, agendados, pendentes };
 }
 
 /* ══════════════════════════════════════════════════════════════

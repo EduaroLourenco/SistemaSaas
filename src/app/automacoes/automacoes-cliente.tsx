@@ -8,6 +8,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { money, count, pct } from "@/lib/format";
+import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
 import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
@@ -55,12 +56,20 @@ const diasAte = (iso: string | null) =>
 const dia = (iso: string | null) =>
   iso == null ? "—" : new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 
-export default function Automacoes({ dados }: { dados: DadosAutomacoes }) {
+export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads: DadosTrafegoPago }) {
+  const [tema, setTema] = React.useState<"promocoes" | "ads">("promocoes");
   const [conta, setConta] = React.useState("");
   const [tipo, setTipo] = React.useState("");
   const [prazo, setPrazo] = React.useState("");
   const [folga, setFolga] = React.useState(5);
   const [aberta, setAberta] = React.useState<PromocaoAberta | null>(null);
+  /* O que cabe no piso só se sabe depois de carregar os itens, então o
+     cartão fica sem esses dois números até alguém abrir a promoção. O
+     resultado sobe para cá para o cartão não perder a conta ao fechar. */
+  const [cabem, setCabem] = React.useState<Map<string, Cabem>>(new Map());
+  const anotarCabem = React.useCallback((chave: string, c: Cabem) => {
+    setCabem((antes) => new Map(antes).set(chave, c));
+  }, []);
 
   const promocoes = React.useMemo(
     () =>
@@ -80,7 +89,8 @@ export default function Automacoes({ dados }: { dados: DadosAutomacoes }) {
   );
 
   const tipos = React.useMemo(() => [...new Set(dados.promocoes.map((p) => p.tipo))], [dados.promocoes]);
-  const itensTotais = promocoes.reduce((s, p) => s + (p.itens ?? 0), 0);
+  const participando = promocoes.reduce((s, p) => s + (p.participando ?? 0), 0);
+  const pendentes = promocoes.reduce((s, p) => s + (p.pendentes ?? 0), 0);
   const vencendo = promocoes.filter((p) => {
     const n = diasAte(p.prazo ?? p.fim);
     return n != null && n >= 0 && n <= 14;
@@ -95,7 +105,7 @@ export default function Automacoes({ dados }: { dados: DadosAutomacoes }) {
             title="Nenhuma conta do Mercado Livre conectada"
             description="Conecte uma conta em Canais e contas para ver as promoções abertas."
           />
-        </PageBody>
+      </PageBody>
       </>
     );
   }
@@ -106,7 +116,23 @@ export default function Automacoes({ dados }: { dados: DadosAutomacoes }) {
         title="Automações"
         badge={<Badge tone="warn">somente leitura</Badge>}
         inlineFilters
+        actions={
+          <div className="flex gap-1 rounded-r1 bg-panel-3 p-[3px]">
+            {([["promocoes", "Promoções"], ["ads", "Tráfego pago"]] as const).map(([k, r]) => (
+              <button
+                key={k} onClick={() => setTema(k)} aria-selected={tema === k}
+                className={[
+                  "rounded-[7px] px-3.5 py-[7px] text-[13px] font-semibold transition",
+                  tema === k ? "bg-panel text-ink shadow-1" : "text-ink-2 hover:text-ink",
+                ].join(" ")}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        }
         filters={
+          tema === "ads" ? undefined : (
           <BarraFiltros>
             <Filtro rotulo="Conta">
               <select value={conta} onChange={(e) => setConta(e.target.value)} className="gerizo-select">
@@ -140,14 +166,17 @@ export default function Automacoes({ dados }: { dados: DadosAutomacoes }) {
               />
             </Filtro>
           </BarraFiltros>
+          )
         }
       />
       <PageBody>
+        {tema === "ads" && <Ads dados={ads} />}
+        {tema === "promocoes" && (<>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatTile label="Promoções abertas" value={count(promocoes.length)} />
-          <StatTile label="Itens convidados" value={count(itensTotais)} />
+          <StatTile label="Itens participando" value={count(participando)} />
+          <StatTile label="Pendentes de aceite" value={count(pendentes)} />
           <StatTile label="Vencem em 14 dias" value={count(vencendo)} />
-          <StatTile label="Contas" value={count(dados.contas.length)} />
         </div>
 
         {dados.falhas.length > 0 && (
@@ -166,10 +195,19 @@ export default function Automacoes({ dados }: { dados: DadosAutomacoes }) {
         <Carrossel
           promocoes={promocoes}
           aberta={aberta}
+          cabem={cabem}
           onAbrir={(p) => setAberta(aberta?.codigo === p.codigo && aberta.contaId === p.contaId ? null : p)}
         />
 
-        {aberta && <Detalhe key={aberta.contaId + aberta.codigo} promocao={aberta} folga={folga} />}
+        {aberta && (
+          <Detalhe
+            key={aberta.contaId + aberta.codigo}
+            promocao={aberta}
+            folga={folga}
+            onContar={anotarCabem}
+          />
+        )}
+        </>)}
       </PageBody>
     </>
   );
@@ -177,12 +215,30 @@ export default function Automacoes({ dados }: { dados: DadosAutomacoes }) {
 
 /* ══ O carrossel ══════════════════════════════════════════════ */
 
+/** Uma linha do placar do cartão. Vazio diz o motivo, não fica em branco. */
+function Conta({ rotulo, valor, cor, aguardando }: {
+  rotulo: string; valor: number | null; cor: string; aguardando?: string;
+}) {
+  if (valor == null && aguardando === undefined) return null;
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="text-ink-2">{rotulo}</dt>
+      <dd className={valor == null ? "text-[11px] text-ink-3" : `font-mono font-bold ${cor}`}>
+        {valor == null ? aguardando : count(valor)}
+      </dd>
+    </div>
+  );
+}
+
+type Cabem = { cabem: number; nao: number };
+
 function Carrossel({
-  promocoes, aberta, onAbrir,
+  promocoes, aberta, onAbrir, cabem,
 }: {
   promocoes: PromocaoAberta[];
   aberta: PromocaoAberta | null;
   onAbrir: (p: PromocaoAberta) => void;
+  cabem: Map<string, Cabem>;
 }) {
   if (!promocoes.length) {
     return <div className="mt-4"><EmptyState title="Nenhuma promoção com esses filtros" /></div>;
@@ -191,10 +247,12 @@ function Carrossel({
     <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 md:mx-0 md:px-0">
       {promocoes.map((p) => {
         const n = diasAte(p.prazo ?? p.fim);
+        const chave = p.contaId + p.codigo;
         const estaAberta = aberta?.codigo === p.codigo && aberta.contaId === p.contaId;
+        const cabe = cabem.get(chave) ?? null;
         return (
           <button
-            key={p.contaId + p.codigo}
+            key={chave}
             onClick={() => onAbrir(p)}
             aria-expanded={estaAberta}
             className={[
@@ -222,12 +280,26 @@ function Carrossel({
               {p.nome ?? "Sem nome"}
             </p>
             <p className="font-mono text-[11.5px] text-ink-3">{dia(p.inicio)} → {dia(p.fim)}</p>
-            <div className="mt-3 flex items-center justify-between text-[12px] text-ink-2">
-              <span>{p.itens == null ? "itens não lidos" : `${count(p.itens)} ${p.itens === 1 ? "item" : "itens"}`}</span>
-              {p.meliPct != null && (
-                <span className="text-up">Meli {pct(p.meliPct / 100, 0)}</span>
-              )}
-            </div>
+
+            <dl className="mt-3 space-y-1 text-[12px]">
+              <Conta rotulo="Faz parte" valor={p.participando} cor="text-up" />
+              {(p.agendados ?? 0) > 0 && <Conta rotulo="Agendados" valor={p.agendados} cor="text-info" />}
+              <Conta rotulo="Pendentes de aceite" valor={p.pendentes} cor="text-ink" />
+              <Conta
+                rotulo="Cabem no piso" valor={cabe?.cabem ?? null} cor="text-brand-2"
+                aguardando={cabe == null && (p.pendentes ?? 0) > 0 ? "abra para calcular" : undefined}
+              />
+              <Conta
+                rotulo="Não cabem" valor={cabe?.nao ?? null} cor="text-down"
+                aguardando={cabe == null && (p.pendentes ?? 0) > 0 ? "" : undefined}
+              />
+            </dl>
+
+            {p.meliPct != null && (
+              <p className="mt-2 text-[11.5px] text-up">
+                Meli põe {pct(p.meliPct / 100, 1)}{p.sellerPct != null && ` · nós ${pct(p.sellerPct / 100, 1)}`}
+              </p>
+            )}
           </button>
         );
       })}
@@ -239,11 +311,16 @@ function Carrossel({
 
 type Aba = "cabem" | "nao" | "dentro" | "todos";
 
-function Detalhe({ promocao, folga }: { promocao: PromocaoAberta; folga: number }) {
+function Detalhe({ promocao, folga, onContar }: {
+  promocao: PromocaoAberta;
+  folga: number;
+  onContar: (chave: string, c: Cabem) => void;
+}) {
   const [dados, setDados] = React.useState<ItensDaPromocao | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [aba, setAba] = React.useState<Aba>("cabem");
   const [marcados, setMarcados] = React.useState<Set<string>>(new Set());
+  const ultimaContagem = React.useRef<Cabem | null>(null);
 
   React.useEffect(() => {
     let vivo = true;
@@ -354,6 +431,13 @@ function Detalhe({ promocao, folga }: { promocao: PromocaoAberta; folga: number 
     return aba === "todos" || (aba === "cabem" && s === "cabe") || (aba === "nao" && s === "nao")
       || (aba === "dentro" && (s === "dentro" || s === "agendado"));
   });
+
+  /* Sobe a conta para o cartão: ele não tem como saber o que cabe sem os
+     itens, e sem isto perderia o número ao fechar. */
+  if (contagem.cabe !== ultimaContagem.current?.cabem || contagem.nao !== ultimaContagem.current?.nao) {
+    ultimaContagem.current = { cabem: contagem.cabe, nao: contagem.nao };
+    queueMicrotask(() => onContar(promocao.contaId + promocao.codigo, { cabem: contagem.cabe, nao: contagem.nao }));
+  }
 
   const colunas: Column<ItemAutomacao>[] = [
     {
@@ -481,3 +565,60 @@ function Detalhe({ promocao, folga }: { promocao: PromocaoAberta; folga: number 
 }
 
 const vazio = (motivo?: string) => <span className="text-ink-3">{motivo ?? "—"}</span>;
+
+/* ══ Tráfego pago ═════════════════════════════════════════════
+   Por ora só a leitura do que já existe em /anuncios/trafego-pago,
+   recortada no que é DECISÃO: mídia no ar sem retorno. A seleção em
+   massa e o envio entram junto com a escrita de promoção. */
+function Ads({ dados }: { dados: DadosTrafegoPago }) {
+  if (dados.vazio) {
+    return <EmptyState title="Sem relatório de mídia no período" />;
+  }
+  const acao = (l: LinhaAnuncioAds) =>
+    l.midia !== "ativa" ? { r: "Mídia já parada", t: "neutral" as const }
+    : l.situacao === "familia_vende" ? { r: "Manter — quem vende é o irmão", t: "info" as const }
+    : l.situacao === "prejuizo" ? { r: "Desligar — a mídia come a margem", t: "down" as const }
+    : l.situacao === "sem_retorno" ? { r: "Desligar — gasto sem venda", t: "down" as const }
+    : { r: "Manter", t: "up" as const };
+
+  const decidir = dados.linhas.filter((l) => l.midia === "ativa" && (l.situacao === "prejuizo" || l.situacao === "sem_retorno"));
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatTile label="Investimento" value={money(dados.totais.investimento)} />
+        <StatTile label="Receita atribuída" value={money(dados.totais.receitaAtribuida)} />
+        <StatTile label="Anúncios com mídia" value={count(dados.linhas.length)} />
+        <StatTile label="Para desligar" value={count(decidir.length)} />
+      </div>
+      <Panel className="mt-4">
+        <DataTable
+          columns={[
+            { key: "mlb", header: "Anúncio", sticky: true, mobile: "title", width: "280px",
+              sortValue: (l: LinhaAnuncioAds) => l.titulo,
+              cell: (l: LinhaAnuncioAds) => (
+                <div className="min-w-0">
+                  <p className="truncate text-[12.5px] font-medium text-ink">{l.titulo}</p>
+                  <p className="font-mono text-[10.5px] text-ink-3">{l.sku} · {l.mlb} · {l.conta}</p>
+                </div>
+              ) },
+            { key: "inv", header: "Investimento", align: "right", mobile: "metric",
+              sortValue: (l: LinhaAnuncioAds) => l.investimento, cell: (l: LinhaAnuncioAds) => money(l.investimento) },
+            { key: "rec", header: "Receita atribuída", align: "right", mobile: "hidden",
+              sortValue: (l: LinhaAnuncioAds) => l.receitaAtribuida, cell: (l: LinhaAnuncioAds) => money(l.receitaAtribuida) },
+            { key: "acos", header: "ACOS", align: "right", mobile: "hidden",
+              sortValue: (l: LinhaAnuncioAds) => l.acos ?? 0,
+              cell: (l: LinhaAnuncioAds) => (l.acos == null ? vazio() : pct(l.acos / 100, 1)) },
+            { key: "acao", header: "Recomendação", align: "right", mobile: "subtitle",
+              sortValue: (l: LinhaAnuncioAds) => acao(l).r,
+              cell: (l: LinhaAnuncioAds) => <Badge tone={acao(l).t}>{acao(l).r}</Badge> },
+          ]}
+          rows={dados.linhas}
+          rowKey={(l: LinhaAnuncioAds) => l.mlb + l.conta}
+          defaultSort={{ key: "inv", dir: "desc" }}
+          empty="nenhum anúncio com mídia"
+        />
+      </Panel>
+    </>
+  );
+}
