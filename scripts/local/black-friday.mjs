@@ -243,15 +243,17 @@ for (const m of montadas) {
   if (m.unidades) razao.push(`${m.unidades} un em 8 meses`); else razao.push("sem venda em 8 meses");
   if (m.status !== "ativo") razao.push(`ANÚNCIO ${String(m.status).toUpperCase()}`);
   else if (!(Number(m.estoque) > 0)) razao.push("SEM ESTOQUE");
-  m.observacao = `Preço exclusivo ML · ${m.classe} — ${razao.join(" · ")}`;
+  m.motivo = razao.join(" · ");
 }
 
-/* ── A planilha, na paleta da que o canal mandou ──
+/* ── A planilha, na paleta e nas regras da que o canal mandou ──
    Teal na identificação, azul na campanha do mês, roxo no relâmpago,
    preto na Black Week, cinza no Cyber Monday, e a faixa âmbar com
-   PREECHER em vermelho sobre as colunas que a gente preenche. Mesma
-   ordem de linhas também — faixa, cabeçalho, dado — para a aba poder ser
-   colada na dele sem reformatar nada. */
+   PREECHER em vermelho sobre as colunas que a gente preenche.
+
+   OBSERVAÇÃO e Retorno Meli são listas fechadas na planilha dele, com
+   validação na célula. Então vai o valor exato da lista e mais nada —
+   o porquê da classificação foi para uma coluna ao lado, que é nossa. */
 const T_IDENT = "FF134F5C", T_EXTRA = "FF45818E", T_MES = "FF3C78D8", T_REL = "FF674EA7",
       T_WEEK = "FF000000", T_CYBER = "FF666666", T_PREENCHER = "FFF1C232", VERMELHO_TXT = "FFCC0000";
 /* As tintas claras da mesma paleta, para marcar célula no corpo. */
@@ -259,24 +261,38 @@ const L_VERMELHO = "FFF4CCCC", L_AMARELO = "FFFFF2CC", L_VERDE = "FFD9EAD3", L_R
 const brl = '"R$ "#,##0.00';
 const ARIAL = { name: "Arial", size: 10 };
 
+/* As listas, copiadas da validação das células dele. */
+const LISTA_OBS = '"Preço Exclusivo Meli|Super Killer,Preço Exclusivo Meli|Killer,Preço Exclusivo Meli|Aposta"';
+const LISTA_RETORNO = '"Campanha Cadastrada,Crível,Margem Meli"';
+const dv = (lista) => ({ type: "list", allowBlank: true, showErrorMessage: true, formulae: [lista] });
+const OBS = { "SUPER KILLER": "Preço Exclusivo Meli|Super Killer", KILLER: "Preço Exclusivo Meli|Killer", APOSTA: "Preço Exclusivo Meli|Aposta" };
+
 const wb = new ExcelJS.Workbook();
 wb.creator = "gerizo";
 const ws = wb.addWorksheet("BLACK FRIDAY 2026");
 
 /** [rótulo, largura, cor do bloco, leva a faixa PREECHER] */
 const COLS = [
-  ["ORIGEM", 15, T_IDENT], ["MLB", 15, T_IDENT], ["OBSERVAÇÃO", 52, T_IDENT, true],
+  ["ORIGEM", 15, T_IDENT], ["MLB", 15, T_IDENT], ["OBSERVAÇÃO", 28, T_IDENT, true], ["Por que essa classificação", 56, T_EXTRA],
   ["ITEM ID", 13, T_IDENT], ["CONTA", 11, T_IDENT], ["TIPO", 10, T_IDENT],
   ["Título", 46, T_IDENT], ["MODELO", 11, T_IDENT], ["NMV (R$)", 13, T_IDENT],
   ["Melhor preço vendido", 14, T_IDENT], ["Preço De", 12, T_IDENT], ["Preço no ar hoje", 13, T_IDENT],
-  ["Campanha Mês (01/11 a 20/11)", 15, T_MES, true], ["Rebate (R$)", 12, T_MES], ["Rebate (%)", 10, T_MES], ["Retorno Meli", 12, T_MES],
+  ["Campanha Mês (01/11 a 20/11)", 15, T_MES, true], ["Rebate (R$)", 12, T_MES], ["Rebate (%)", 10, T_MES], ["Retorno Meli", 14, T_MES],
   ["Crível relampago", 14, T_REL], ["11/11", 14, T_REL, true], ["Crível × nosso 8%", 17, T_REL],
-  ["Rebate (R$)", 12, T_REL], ["Rebate (%)", 10, T_REL], ["Retorno Meli", 12, T_REL],
-  ["Black Week (21/11 a 29/11)", 15, T_WEEK, true], ["Rebate (R$)", 12, T_WEEK], ["Rebate (%)", 10, T_WEEK], ["Retorno Meli", 12, T_WEEK],
-  ["Cyber Monday (30/11)", 14, T_CYBER, true], ["Rebate (R$)", 12, T_CYBER], ["Rebate (%)", 10, T_CYBER], ["Retorno Meli", 12, T_CYBER],
+  ["Rebate (R$)", 12, T_REL], ["Rebate (%)", 10, T_REL], ["Retorno Meli", 14, T_REL],
+  ["Black Week (21/11 a 29/11)", 15, T_WEEK, true], ["Rebate (R$)", 12, T_WEEK], ["Rebate (%)", 10, T_WEEK], ["Retorno Meli", 14, T_WEEK],
+  ["Cyber Monday (30/11)", 14, T_CYBER, true], ["Rebate (R$)", 12, T_CYBER], ["Rebate (%)", 10, T_CYBER], ["Retorno Meli", 14, T_CYBER],
   ["Unid. 8 meses", 11, T_EXTRA], ["Visitas", 10, T_EXTRA], ["Vendas 8 sem.", 11, T_EXTRA],
   ["Estoque", 9, T_EXTRA], ["Catálogo", 11, T_EXTRA], ["Preço p/ ganhar", 13, T_EXTRA],
 ];
+const C = {
+  obs: 3, porque: 4, nmv: 10, melhor: 11, precoDe: 12, noAr: 13,
+  mes: 14, mesR$: 15, mesPct: 16, mesRet: 17,
+  crivel: 18, rel: 19, versus: 20, relR$: 21, relPct: 22, relRet: 23,
+  week: 24, weekR$: 25, weekPct: 26, weekRet: 27,
+  cyber: 28, cyberR$: 29, cyberPct: 30, cyberRet: 31,
+  estoque: 35, catalogo: 36, paraGanhar: 37,
+};
 ws.columns = COLS.map(([, w]) => ({ width: w }));
 
 /* Linha 1: a faixa PREECHER, só sobre o que a gente preenche. */
@@ -305,7 +321,7 @@ montadas.sort((a, b) => ordem[a.origem] - ordem[b.origem] || (b.nmv ?? 0) - (a.n
 for (const m of montadas) {
   const rebateReais = (p) => (p == null ? null : r2(p * REBATE_MES / 100));
   const r = ws.addRow([
-    m.origem, m.mlb, m.observacao, m.mlb.replace(/^MLB/i, ""), m.conta, m.tipo,
+    m.origem, m.mlb, OBS[m.classe], m.motivo, m.mlb.replace(/^MLB/i, ""), m.conta, m.tipo,
     String(m.titulo).slice(0, 60), m.modelo, m.nmv, m.melhor?.preco ?? null, m.precoDe, m.precoNoAr,
     m.mes?.valor ?? null, rebateReais(m.mes?.valor), REBATE_MES / 100, "",
     m.crivel, m.relFinal, m.faltaPct != null ? m.faltaPct : (m.aceitouCrivel ? "dá para aceitar o crível" : "cabe no nosso preço"),
@@ -315,9 +331,14 @@ for (const m of montadas) {
     m.unidades, m.visitas, m.venRecente, m.estoque >= 40000 ? "sob enc." : m.estoque, m.catalogo || "—", m.paraGanhar,
   ]);
   r.font = ARIAL;
-  for (const c of [9, 10, 11, 12, 13, 14, 17, 18, 20, 23, 24, 27, 28, 36]) r.getCell(c).numFmt = brl;
-  for (const c of [15, 21, 25, 29]) r.getCell(c).numFmt = "0%";
-  if (typeof r.getCell(19).value === "number") r.getCell(19).numFmt = "0.0%";
+  for (const c of [C.nmv, C.melhor, C.precoDe, C.noAr, C.mes, C.mesR$, C.crivel, C.rel, C.relR$, C.week, C.weekR$, C.cyber, C.cyberR$, C.paraGanhar]) r.getCell(c).numFmt = brl;
+  for (const c of [C.mesPct, C.relPct, C.weekPct, C.cyberPct]) r.getCell(c).numFmt = "0%";
+  if (typeof r.getCell(C.versus).value === "number") r.getCell(C.versus).numFmt = "0.0%";
+  r.getCell(C.porque).alignment = { wrapText: true, vertical: "top" };
+
+  /* As listas fechadas, como na planilha dele. */
+  r.getCell(C.obs).dataValidation = dv(LISTA_OBS);
+  for (const c of [C.mesRet, C.relRet, C.weekRet, C.cyberRet]) r.getCell(c).dataValidation = dv(LISTA_RETORNO);
 
   if (m.origem === "Boa Forma") {
     for (let c = 1; c <= COLS.length; c++) r.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_ROXO } };
@@ -325,16 +346,16 @@ for (const m of montadas) {
        ele pediu para saber onde apoiar. */
     if (m.destaqueBoaForma) { r.font = { ...ARIAL, bold: true }; r.getCell(1).value = "Boa Forma ★"; }
   }
-  if (m.aceitouCrivel) for (const c of [17, 19]) r.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERMELHO } };
-  else if (m.faltaPct != null) r.getCell(19).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_AMARELO } };
-  if (m.rel?.extrapolado) r.getCell(18).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_AMARELO } };
-  if (m.classe === "SUPER KILLER") r.getCell(3).font = { ...ARIAL, bold: true, color: { argb: "FF38761D" } };
+  if (m.aceitouCrivel) for (const c of [C.crivel, C.versus]) r.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERMELHO } };
+  else if (m.faltaPct != null) r.getCell(C.versus).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_AMARELO } };
+  if (m.rel?.extrapolado) r.getCell(C.rel).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_AMARELO } };
+  if (m.classe === "SUPER KILLER") r.getCell(C.obs).font = { ...ARIAL, bold: true, color: { argb: "FF38761D" } };
   if (m.status !== "ativo" || !(Number(m.estoque) > 0)) {
-    r.getCell(3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERMELHO } };
-    r.getCell(3).font = { ...ARIAL, bold: true, color: { argb: VERMELHO_TXT } };
-    r.getCell(34).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERMELHO } };
+    r.getCell(C.porque).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERMELHO } };
+    r.getCell(C.porque).font = { ...ARIAL, bold: true, color: { argb: VERMELHO_TXT } };
+    r.getCell(C.estoque).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERMELHO } };
   }
-  if (m.catalogo === "winning") r.getCell(35).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERDE } };
+  if (m.catalogo === "winning") r.getCell(C.catalogo).fill = { type: "pattern", pattern: "solid", fgColor: { argb: L_VERDE } };
 }
 
 ws.views = [{ state: "frozen", xSplit: 2, ySplit: H }];
@@ -350,15 +371,17 @@ tn.fill = { type: "pattern", pattern: "solid", fgColor: { argb: T_IDENT } };
 tn.height = 26;
 notas.mergeCells(1, 1, 1, 2);
 for (const [rotulo, texto] of [
+  ["OBSERVAÇÃO", "É a lista fechada da sua planilha: Preço Exclusivo Meli|Super Killer, |Killer ou |Aposta. A célula mantém a validação, então dá para trocar pelo dropdown."],
+  ["Por que essa classificação", "Coluna nossa, fora da lista do canal: o motivo da classificação em uma linha. Apague antes de mandar, se quiser."],
+  ["Super killer / killer / aposta", "Super killer: ganha o catálogo e está entre os que mais vendem. Killer: uma das duas. Aposta: nenhuma das duas."],
+  ["Retorno Meli", "Também é lista fechada: Campanha Cadastrada, Crível ou Margem Meli. Deixei em branco — é o canal que responde."],
   ["Campanha do mês", "Preço com 6% de rebate, da aba Preços por rebate."],
   ["Black Week", "O preço da campanha do mês menos 5% nossos."],
   ["11/11 relâmpago", "Preço com 8% de rebate. É sempre o nosso preço — o crível não manda nesta coluna."],
   ["Clássico a 8%", "A tabela não tem coluna de 8% no clássico: 11,5% menos 8 pontos daria 3,5%, que não existe na Fórmula base. O passo entre faixas é constante nas 1.256 linhas, então o 8% do clássico é a continuação da mesma reta. Essas células vêm em amarelo."],
   ["Crível × nosso 8%", "Cabe no nosso preço = já estamos abaixo do crível. Dá para aceitar o crível (vermelho) = estamos acima dele, dentro dos 5% de tolerância. Um percentual (amarelo) = passou dos 5%, e é quanto faltaria baixar para alcançá-lo."],
   ["Boa Forma", "Usa a Fórmula base de 10/09, a mais antiga que tem esses SKUs — a de 30/09 é cerca de 10% mais barata. Linhas em roxo; a estrela marca os cinco que mais venderam."],
-  ["Observação", "Preço exclusivo ML, a classificação e o motivo dela: se ganha o catálogo hoje, se o preço da campanha segura a posição, e quanto vendeu em oito meses."],
-  ["Super killer / killer / aposta", "Super killer: ganha o catálogo e está entre os que mais vendem. Killer: uma das duas. Aposta: nenhuma das duas."],
-  ["Vermelho na observação", "Anúncio pausado ou sem estoque. São sugestões do próprio canal, por isso ficaram na lista."],
+  ["Vermelho no porquê", "Anúncio pausado ou sem estoque. São sugestões do próprio canal, por isso ficaram na lista."],
   ["Unidades e receita", "Pedidos não cancelados desde 27/02/2026. As visitas vêm do relatório semanal."],
   ["Preço no ar hoje", "O preço do último dia medido, que não é o de cadastro — o Preço De é o cheio."],
 ]) {
