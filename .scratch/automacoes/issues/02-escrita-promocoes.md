@@ -1,6 +1,6 @@
 # 02 — Entrar e sair de promoção pela API
 
-Status: aberto
+Status: montado, sem ninguém chamando — falta o teste manual
 Blocked by: 01
 
 `src/lib/meli/promocoes-escrita.ts`, único lugar que monta o corpo por tipo

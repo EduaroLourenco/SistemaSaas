@@ -7,6 +7,7 @@ import { Badge, Button, EmptyState, Panel, Skeleton } from "@/components/ui/prim
 import { StatTile } from "@/components/ui/stat-tile";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
+import { Sheet } from "@/components/ui/controls";
 import { money, count, pct } from "@/lib/format";
 import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
 import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
@@ -289,6 +290,19 @@ function Barra({ c, cabe }: { c: Contagem | null; cabe: Cabem | null }) {
 type Cabem = { cabem: number; nao: number };
 type Contagem = { participando: number | null; agendados: number | null; pendentes: number | null };
 
+/** O que a revisão manda para a rota — o mesmo formato do envio. */
+type PedidoRevisao = {
+  mlb: string; promocao: string; tipo: string;
+  preco: number | null; oferta: string | null; estoque: number | null; tetoDoCanal: number | null;
+};
+type LinhaRevisao = {
+  mlb: string; vai: boolean; motivo?: string;
+  metodo?: string; caminho?: string; corpo?: Record<string, unknown>;
+};
+type RespostaRevisao = {
+  conta: string; escritaConectada: boolean; vao: number; ficam: number; linhas: LinhaRevisao[];
+};
+
 function Carrossel({
   promocoes, aberta, onAbrir, cabem, contagens,
 }: {
@@ -387,6 +401,7 @@ function Detalhe({ promocao, folga, onContar }: {
   const [aba, setAba] = React.useState<Aba>("cabem");
   const [marcados, setMarcados] = React.useState<Set<string>>(new Set());
   const ultimaContagem = React.useRef<Cabem | null>(null);
+  const [revisao, setRevisao] = React.useState<PedidoRevisao[] | null>(null);
 
   React.useEffect(() => {
     let vivo = true;
@@ -505,7 +520,22 @@ function Detalhe({ promocao, folga, onContar }: {
     queueMicrotask(() => onContar(promocao.contaId + promocao.codigo, { cabem: contagem.cabe, nao: contagem.nao }));
   }
 
+  const marcar = (mlb: string) =>
+    setMarcados((a) => { const n = new Set(a); n.has(mlb) ? n.delete(mlb) : n.add(mlb); return n; });
+
   const colunas: Column<ItemAutomacao>[] = [
+    {
+      key: "sel", header: "", sticky: true, width: "44px", mobile: "hidden",
+      cell: (i) => (
+        <input
+          type="checkbox" className="h-[17px] w-[17px] accent-brand"
+          checked={marcados.has(i.mlb)}
+          onChange={() => marcar(i.mlb)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Marcar ${i.titulo ?? i.mlb}`}
+        />
+      ),
+    },
     {
       key: "produto", header: "Produto", sticky: true, mobile: "title", width: "300px",
       sortValue: (i) => i.titulo ?? i.mlb,
@@ -620,13 +650,120 @@ function Detalhe({ promocao, folga, onContar }: {
       {marcados.size > 0 && (
         <div className="flex flex-wrap items-center gap-3 border-t border-line bg-panel-2 px-4 py-3">
           <span className="font-mono text-[18px] font-extrabold text-ink">{count(marcados.size)}</span>
-          <span className="text-[12.5px] text-ink-2">
-            marcados — o envio para o Mercado Livre ainda não está ligado
-          </span>
+          <span className="text-[12.5px] text-ink-2">marcados</span>
           <Button className="ml-auto" onClick={() => setMarcados(new Set())}>Limpar</Button>
+          <Button
+            onClick={() =>
+              setRevisao(
+                dados.itens
+                  .filter((i) => marcados.has(i.mlb))
+                  .map((i) => ({
+                    mlb: i.mlb,
+                    promocao: promocao.codigo,
+                    tipo: promocao.tipo,
+                    preco: nossoPreco ? nossaOferta(i)?.valor ?? null : null,
+                    oferta: i.oferta,
+                    estoque: i.estoqueMin ?? null,
+                    tetoDoCanal: i.precoCanal ?? i.maximoCanal ?? null,
+                  }))
+              )
+            }
+          >
+            Revisar envio
+          </Button>
         </div>
       )}
+
+      {revisao && (
+        <Revisao
+          conta={promocao.contaId}
+          itens={revisao}
+          porMlb={new Map(dados.itens.map((i) => [i.mlb, i]))}
+          aoFechar={() => setRevisao(null)}
+        />
+      )}
     </Panel>
+  );
+}
+
+/* ══ A revisão antes de enviar ════════════════════════════════
+   Mostra o corpo exato que iria para o canal, item a item, montado
+   pelas mesmas regras do envio de verdade. Nenhuma chamada sai daqui. */
+function Revisao({ conta, itens, porMlb, aoFechar }: {
+  conta: string;
+  itens: PedidoRevisao[];
+  porMlb: Map<string, ItemAutomacao>;
+  aoFechar: () => void;
+}) {
+  const [r, setR] = React.useState<RespostaRevisao | null>(null);
+  const [erro, setErro] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let vivo = true;
+    fetch("/api/automacoes/revisar", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ conta, itens }),
+    })
+      .then(async (res) => {
+        const j = await res.json();
+        if (!vivo) return;
+        res.ok ? setR(j) : setErro(j.erro ?? "não consegui montar a revisão");
+      })
+      .catch((e) => vivo && setErro(String(e)));
+    return () => { vivo = false; };
+  }, [conta, itens]);
+
+  return (
+    <Sheet onClose={aoFechar} title={`Revisar envio · ${count(itens.length)} itens`} width="640px">
+      {erro && <EmptyState title="Não consegui montar a revisão" description={erro} />}
+      {!erro && !r && <Skeleton className="h-40 w-full" />}
+      {r && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-[13px]">
+            <Badge tone="up">{count(r.vao)} vão</Badge>
+            {r.ficam > 0 && <Badge tone="down">{count(r.ficam)} ficam de fora</Badge>}
+            <span className="text-ink-2">conta {r.conta}</span>
+          </div>
+
+          {!r.escritaConectada && (
+            <Panel className="border-warn/40 bg-warn-wash/40 p-3 text-[12.5px]">
+              Esta conta não autorizou o sistema a alterar promoções. Em Canais e contas,
+              clique em “Permitir alterações” — sem isso o envio nem começa.
+            </Panel>
+          )}
+
+          <div className="max-h-[52vh] space-y-2 overflow-y-auto">
+            {r.linhas.map((l) => {
+              const i = porMlb.get(l.mlb);
+              return (
+                <div key={l.mlb} className="rounded-r1 border border-line p-3">
+                  <div className="flex items-start gap-2">
+                    <Badge tone={l.vai ? "up" : "down"}>{l.vai ? "vai" : "fica"}</Badge>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium text-ink">{i?.titulo ?? l.mlb}</p>
+                      <p className="font-mono text-[11px] text-ink-3">{i?.sku ?? "sem SKU"} · {l.mlb}</p>
+                    </div>
+                  </div>
+                  {l.vai ? (
+                    <pre className="mt-2 overflow-x-auto rounded bg-panel-2 p-2 font-mono text-[11px] text-ink-2">
+{l.metodo} {l.caminho}
+{JSON.stringify(l.corpo, null, 2)}
+                    </pre>
+                  ) : (
+                    <p className="mt-2 text-[12px] text-down">{l.motivo}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-[12px] text-ink-3">
+            Nada foi enviado. O botão de publicar entra depois do teste manual.
+          </p>
+        </div>
+      )}
+    </Sheet>
   );
 }
 
@@ -637,6 +774,8 @@ const vazio = (motivo?: string) => <span className="text-ink-3">{motivo ?? "—"
    recortada no que é DECISÃO: mídia no ar sem retorno. A seleção em
    massa e o envio entram junto com a escrita de promoção. */
 function Ads({ dados }: { dados: DadosTrafegoPago }) {
+  const [marcados, setMarcados] = React.useState<Set<string>>(new Set());
+  const chave = (l: LinhaAnuncioAds) => l.mlb + l.conta;
   if (dados.vazio) {
     return <EmptyState title="Sem relatório de mídia no período" />;
   }
@@ -657,9 +796,35 @@ function Ads({ dados }: { dados: DadosTrafegoPago }) {
         <StatTile label="Anúncios com mídia" value={count(dados.linhas.length)} />
         <StatTile label="Para desligar" value={count(decidir.length)} />
       </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button
+          disabled={!decidir.length}
+          onClick={() => setMarcados(new Set(decidir.map(chave)))}
+        >
+          Marcar os {count(decidir.length)} para desligar
+        </Button>
+        {marcados.size > 0 && (
+          <>
+            <span className="text-[12.5px] text-ink-2">
+              <b className="font-mono text-ink">{count(marcados.size)}</b> marcados
+            </span>
+            <Button onClick={() => setMarcados(new Set())}>Limpar</Button>
+            <Button disabled title="O envio para o Mercado Livre ainda não está ligado">
+              Sincronizar
+            </Button>
+          </>
+        )}
+      </div>
       <Panel className="mt-4">
         <DataTable
           columns={[
+            { key: "sel", header: "", sticky: true, width: "44px", mobile: "hidden",
+              cell: (l: LinhaAnuncioAds) => (
+                <input type="checkbox" className="h-[17px] w-[17px] accent-brand"
+                  checked={marcados.has(chave(l))}
+                  onChange={() => setMarcados((a) => { const n = new Set(a); n.has(chave(l)) ? n.delete(chave(l)) : n.add(chave(l)); return n; })}
+                  aria-label={"Marcar " + l.titulo} />
+              ) },
             { key: "mlb", header: "Anúncio", sticky: true, mobile: "title", width: "280px",
               sortValue: (l: LinhaAnuncioAds) => l.titulo,
               cell: (l: LinhaAnuncioAds) => (

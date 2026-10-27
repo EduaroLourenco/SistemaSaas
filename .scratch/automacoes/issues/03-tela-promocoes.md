@@ -1,6 +1,6 @@
 # 03 — Tela /automacoes, aba Promoções
 
-Status: aberto
+Status: resolvido
 Blocked by: 01
 
 Carrossel de cartões, tabela ao abrir, aba dos não aceitos, tolerância a mais,

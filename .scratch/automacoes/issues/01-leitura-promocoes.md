@@ -1,6 +1,6 @@
 # 01 — Leitura das promoções com os itens
 
-Status: aberto
+Status: resolvido
 
 Estender `src/lib/meli/promocoes-canal.ts` para devolver, além da promoção, os
 itens com todos os campos que a tela precisa: `min/max/suggested_discounted_price`,
