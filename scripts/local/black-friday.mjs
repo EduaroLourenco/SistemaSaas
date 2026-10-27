@@ -57,6 +57,14 @@ for (const i of d.itens) {
   if (Number(i.preco_unitario) > 0) g.precos.push({ p: r2(Number(i.preco_unitario)), q: Number(i.quantidade) || 0, data: i.data });
   venda.set(i.anuncio_id, g);
 }
+/* A mesma janela do NMV do canal: quatro meses. */
+const NMV_DESDE = "2026-06-27";
+const venda4m = new Map();
+for (const i of d.itens) {
+  if (!i.anuncio_id || !i.data || i.data < NMV_DESDE) continue;
+  venda4m.set(i.anuncio_id, (venda4m.get(i.anuncio_id) ?? 0) + (Number(i.total) || 0));
+}
+
 const visita = new Map();
 for (const s of d.semanal) {
   const g = visita.get(s.anuncio_id) ?? { vis: 0, ven: 0 };
@@ -207,7 +215,11 @@ const montadas = linhas.map((l) => {
        até o arredondamento — então nas linhas que não vieram da planilha
        dele o cadastro ocupa o lugar. */
     precoDe: l.precoDe ?? (a ? Number(a.preco_atual) || null : null),
-    nmv: l.nmvCanal ?? r2(g.r),
+    /* O NMV do canal cobre QUATRO meses — conferido contra a nossa receita
+       nos 30 MLBs dele, onde quatro meses erra 13% e as janelas vizinhas
+       erram de 25% a 118%. Nas linhas que somos nós que trazemos, o NMV
+       sai da mesma janela, senão a coluna compara coisas diferentes. */
+    nmv: l.nmvCanal ?? r2(venda4m.get(a?.id) ?? 0),
     unidades: g.q, receita: r2(g.r), visitas: f.vis,
     venRecente: rec.ven, visRecente: rec.vis,
     melhor: a ? melhorPreco(a.id) : null,
@@ -382,7 +394,8 @@ for (const [rotulo, texto] of [
   ["Crível × nosso 8%", "Cabe no nosso preço = já estamos abaixo do crível. Dá para aceitar o crível (vermelho) = estamos acima dele, dentro dos 5% de tolerância. Um percentual (amarelo) = passou dos 5%, e é quanto faltaria baixar para alcançá-lo."],
   ["Boa Forma", "Usa a Fórmula base de 10/09, a mais antiga que tem esses SKUs — a de 30/09 é cerca de 10% mais barata. Linhas em roxo; a estrela marca os cinco que mais venderam."],
   ["Vermelho no porquê", "Anúncio pausado ou sem estoque. São sugestões do próprio canal, por isso ficaram na lista."],
-  ["Unidades e receita", "Pedidos não cancelados desde 27/02/2026. As visitas vêm do relatório semanal."],
+  ["NMV (R$)", "Quatro meses, de 27/06 a 27/10 — a mesma janela do NMV que o canal usa na planilha dele. Confirmado comparando o número dele com a nossa receita nos 30 MLBs: quatro meses erra 13%, e as janelas vizinhas erram de 25% a 118%."],
+  ["Unidades e receita", "As colunas de contexto (Unid. 8 meses, Visitas) são de oito meses, desde 27/02/2026 — janela maior de propósito, para enxergar quem já vendeu bem e esfriou. As visitas vêm do relatório semanal."],
   ["Preço no ar hoje", "O preço do último dia medido, que não é o de cadastro — o Preço De é o cheio."],
 ]) {
   const r = notas.addRow([rotulo, texto]);
