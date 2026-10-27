@@ -71,6 +71,34 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
     setCabem((antes) => new Map(antes).set(chave, c));
   }, []);
 
+  /*
+   * Os contadores do canal, buscados em fila de quatro.
+   *
+   * São três chamadas por promoção. Pedir as 36 de uma vez estoura a
+   * cota e nenhuma volta; pedir uma a uma demora. Quatro por vez enche a
+   * tela em ordem de prazo, que é a que importa.
+   */
+  const [contagens, setContagens] = React.useState<Map<string, Contagem>>(new Map());
+  React.useEffect(() => {
+    let vivo = true;
+    const fila = [...dados.promocoes];
+    const proximo = async (): Promise<void> => {
+      const p = fila.shift();
+      if (!p || !vivo) return;
+      const q = new URLSearchParams({ conta: p.contaId, promocao: p.codigo, tipo: p.tipo });
+      try {
+        const r = await fetch(`/api/automacoes/contagem?${q}`);
+        const j = await r.json();
+        if (vivo && r.ok) setContagens((a) => new Map(a).set(p.contaId + p.codigo, j));
+      } catch {
+        /* Cartão sem contagem continua clicável — abrir carrega tudo. */
+      }
+      return proximo();
+    };
+    void Promise.all(Array.from({ length: 4 }, proximo));
+    return () => { vivo = false; };
+  }, [dados.promocoes]);
+
   const promocoes = React.useMemo(
     () =>
       dados.promocoes.filter((p) => {
@@ -89,8 +117,10 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
   );
 
   const tipos = React.useMemo(() => [...new Set(dados.promocoes.map((p) => p.tipo))], [dados.promocoes]);
-  const participando = promocoes.reduce((s, p) => s + (p.participando ?? 0), 0);
-  const pendentes = promocoes.reduce((s, p) => s + (p.pendentes ?? 0), 0);
+  const soma = (campo: keyof Contagem) =>
+    promocoes.reduce((t, p) => t + (contagens.get(p.contaId + p.codigo)?.[campo] ?? 0), 0);
+  const participando = soma("participando");
+  const pendentes = soma("pendentes");
   const vencendo = promocoes.filter((p) => {
     const n = diasAte(p.prazo ?? p.fim);
     return n != null && n >= 0 && n <= 14;
@@ -196,6 +226,7 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
           promocoes={promocoes}
           aberta={aberta}
           cabem={cabem}
+          contagens={contagens}
           onAbrir={(p) => setAberta(aberta?.codigo === p.codigo && aberta.contaId === p.contaId ? null : p)}
         />
 
@@ -215,30 +246,57 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
 
 /* ══ O carrossel ══════════════════════════════════════════════ */
 
-/** Uma linha do placar do cartão. Vazio diz o motivo, não fica em branco. */
-function Conta({ rotulo, valor, cor, aguardando }: {
-  rotulo: string; valor: number | null; cor: string; aguardando?: string;
+/** Um número do cartão: grande, com o rótulo pequeno embaixo. */
+function Conta({ rotulo, valor, cor, carregando }: {
+  rotulo: string; valor: number | null; cor: string; carregando?: boolean;
 }) {
-  if (valor == null && aguardando === undefined) return null;
   return (
-    <div className="flex items-baseline justify-between gap-2">
-      <dt className="text-ink-2">{rotulo}</dt>
-      <dd className={valor == null ? "text-[11px] text-ink-3" : `font-mono font-bold ${cor}`}>
-        {valor == null ? aguardando : count(valor)}
+    <div>
+      <dd className={`font-mono text-[22px] font-extrabold leading-none tracking-[-0.03em] ${cor}`}>
+        {valor == null
+          ? <span className={`inline-block h-[16px] w-8 rounded bg-panel-3 ${carregando ? "animate-pulse" : ""}`} />
+          : count(valor)}
       </dd>
+      <dt className="mt-1 text-[11px] text-ink-3">{rotulo}</dt>
+    </div>
+  );
+}
+
+/** A proporção da promoção: no ar, esperando resposta, e o que não cabe. */
+function Barra({ c, cabe }: { c: Contagem | null; cabe: Cabem | null }) {
+  const dentro = c?.participando ?? 0;
+  const agendado = c?.agendados ?? 0;
+  const pend = c?.pendentes ?? 0;
+  const total = dentro + agendado + pend;
+  if (!total) return <div className="mt-3 h-[6px] rounded bg-panel-3" />;
+  /* Dentro dos pendentes, separa o que cabe do que não cabe — mas só
+     depois de a promoção ter sido aberta, que é quando isso se sabe. */
+  const cabem = cabe?.cabem ?? 0, nao = cabe?.nao ?? 0;
+  const semConta = cabe ? Math.max(0, pend - cabem - nao) : pend;
+  const faixas: [number, string][] = [
+    [dentro, "bg-up"], [agendado, "bg-info"],
+    [cabem, "bg-brand"], [nao, "bg-down"], [semConta, "bg-line-2"],
+  ];
+  return (
+    <div className="mt-3 flex h-[6px] gap-[2px] overflow-hidden rounded bg-panel-3">
+      {faixas.map(([v, cor], k) =>
+        v > 0 ? <i key={k} className={cor} style={{ width: `${(v / total) * 100}%` }} /> : null
+      )}
     </div>
   );
 }
 
 type Cabem = { cabem: number; nao: number };
+type Contagem = { participando: number | null; agendados: number | null; pendentes: number | null };
 
 function Carrossel({
-  promocoes, aberta, onAbrir, cabem,
+  promocoes, aberta, onAbrir, cabem, contagens,
 }: {
   promocoes: PromocaoAberta[];
   aberta: PromocaoAberta | null;
   onAbrir: (p: PromocaoAberta) => void;
   cabem: Map<string, Cabem>;
+  contagens: Map<string, Contagem>;
 }) {
   if (!promocoes.length) {
     return <div className="mt-4"><EmptyState title="Nenhuma promoção com esses filtros" /></div>;
@@ -250,6 +308,7 @@ function Carrossel({
         const chave = p.contaId + p.codigo;
         const estaAberta = aberta?.codigo === p.codigo && aberta.contaId === p.contaId;
         const cabe = cabem.get(chave) ?? null;
+        const c = contagens.get(chave) ?? null;
         return (
           <button
             key={chave}
@@ -281,25 +340,32 @@ function Carrossel({
             </p>
             <p className="font-mono text-[11.5px] text-ink-3">{dia(p.inicio)} → {dia(p.fim)}</p>
 
-            <dl className="mt-3 space-y-1 text-[12px]">
-              <Conta rotulo="Faz parte" valor={p.participando} cor="text-up" />
-              {(p.agendados ?? 0) > 0 && <Conta rotulo="Agendados" valor={p.agendados} cor="text-info" />}
-              <Conta rotulo="Pendentes de aceite" valor={p.pendentes} cor="text-ink" />
-              <Conta
-                rotulo="Cabem no piso" valor={cabe?.cabem ?? null} cor="text-brand-2"
-                aguardando={cabe == null && (p.pendentes ?? 0) > 0 ? "abra para calcular" : undefined}
-              />
-              <Conta
-                rotulo="Não cabem" valor={cabe?.nao ?? null} cor="text-down"
-                aguardando={cabe == null && (p.pendentes ?? 0) > 0 ? "" : undefined}
-              />
+            {/* A barra conta a história antes dos números: quanto da
+                promoção já está no ar e quanto espera resposta. */}
+            <Barra c={c} cabe={cabe} />
+
+            {/* Dois números, não cinco. Cabem e não cabem só existem
+                depois de abrir, e até lá ocupavam metade do cartão
+                repetindo "ao abrir" com peso de número. */}
+            <dl className="mt-3 grid grid-cols-2 gap-x-3">
+              <Conta rotulo="no ar" valor={c?.participando ?? null} cor="text-up" carregando={!c} />
+              {cabe
+                ? <Conta rotulo="cabem no piso" valor={cabe.cabem} cor="text-brand-2" />
+                : <Conta rotulo="esperando resposta" valor={c?.pendentes ?? null} cor="text-ink" carregando={!c} />}
             </dl>
 
-            {p.meliPct != null && (
-              <p className="mt-2 text-[11.5px] text-up">
-                Meli põe {pct(p.meliPct / 100, 1)}{p.sellerPct != null && ` · nós ${pct(p.sellerPct / 100, 1)}`}
-              </p>
-            )}
+            <p className="mt-2.5 flex items-center gap-2 border-t border-line pt-2 text-[11px] text-ink-3">
+              {cabe
+                ? <>{count(cabe.nao)} não cabem{(c?.agendados ?? 0) > 0 && ` · ${count(c!.agendados!)} agendados`}</>
+                : (c?.agendados ?? 0) > 0
+                  ? <>{count(c!.agendados!)} agendados</>
+                  : <>&nbsp;</>}
+              {p.meliPct != null && (
+                <span className="ml-auto whitespace-nowrap">
+                  Meli <b className="text-up">{pct(p.meliPct, 1)}</b>
+                </span>
+              )}
+            </p>
           </button>
         );
       })}
@@ -467,7 +533,7 @@ function Detalhe({ promocao, folga, onContar }: {
         const f = faixaDe(i, p);
         if (f == null) return <Badge tone="down">fora da tabela</Badge>;
         const perdeu = (i.comissaoCheia ?? 0.115) - f;
-        return <Badge tone={perdeu <= 0.01 ? "up" : perdeu <= 0.04 ? "warn" : "down"}>{pct(f, 1)}</Badge>;
+        return <Badge tone={perdeu <= 0.01 ? "up" : perdeu <= 0.04 ? "warn" : "down"}>{pct(f * 100, 1)}</Badge>;
       } },
     { key: "piso", header: "Nosso piso", align: "right", mobile: "hidden",
       sortValue: (i) => pisoDe(i) ?? 0, cell: (i) => (pisoDe(i) == null ? vazio() : money(pisoDe(i)!)) },
@@ -480,7 +546,7 @@ function Detalhe({ promocao, folga, onContar }: {
         return o?.valor == null ? vazio() : <b className="text-brand-2">{money(o.valor)}</b>;
       } },
     { key: "meli", header: "Meli põe", align: "right", mobile: "hidden",
-      sortValue: (i) => i.meliPct ?? 0, cell: (i) => (i.meliPct == null ? vazio() : pct(i.meliPct / 100, 1)) },
+      sortValue: (i) => i.meliPct ?? 0, cell: (i) => (i.meliPct == null ? vazio() : pct(i.meliPct, 1)) },
     { key: "estoque", header: "Estoque", align: "right", mobile: "hidden",
       sortValue: (i) => i.estoque ?? 0,
       cell: (i) => (i.estoque == null ? vazio() : i.estoque >= 40_000 ? "sob enc." : count(i.estoque)) },
@@ -608,7 +674,7 @@ function Ads({ dados }: { dados: DadosTrafegoPago }) {
               sortValue: (l: LinhaAnuncioAds) => l.receitaAtribuida, cell: (l: LinhaAnuncioAds) => money(l.receitaAtribuida) },
             { key: "acos", header: "ACOS", align: "right", mobile: "hidden",
               sortValue: (l: LinhaAnuncioAds) => l.acos ?? 0,
-              cell: (l: LinhaAnuncioAds) => (l.acos == null ? vazio() : pct(l.acos / 100, 1)) },
+              cell: (l: LinhaAnuncioAds) => (l.acos == null ? vazio() : pct(l.acos, 1)) },
             { key: "acao", header: "Recomendação", align: "right", mobile: "subtitle",
               sortValue: (l: LinhaAnuncioAds) => acao(l).r,
               cell: (l: LinhaAnuncioAds) => <Badge tone={acao(l).t}>{acao(l).r}</Badge> },
