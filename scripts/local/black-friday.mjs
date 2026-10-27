@@ -112,7 +112,9 @@ function precoRebateBoaForma(sku, tipo, pontos) {
   const alvo = Math.round((cheia - pontos / 100) * 1000) / 1000;
   const exata = t[alvo];
   if (exata != null) return { valor: r2(exata), extrapolado: false };
-  /* Abaixo da faixa mais barata: continua a tabela no mesmo passo. */
+  /* Abaixo da faixa mais barata: continua a tabela no mesmo passo. A
+     Fórmula base é uma reta — o passo não varia um centavo em dezesseis
+     intervalos — então 3,5% é a reta dela um ponto adiante. */
   const menor = bandas[0];
   return { valor: r2(t[menor] - passo * 100 * (menor - alvo)), extrapolado: true };
 }
@@ -176,11 +178,19 @@ const montadas = linhas.map((l) => {
   const week = mes ? { valor: r2(mes.valor * (1 - NOSSO_BLACK_WEEK)), extrapolado: mes.extrapolado } : null;
   const crivel = l.crivelCanal ?? tab?.crivelRel ?? null;
 
-  /* O confronto com o crível. */
-  let relFinal = rel?.valor ?? null, aceitouCrivel = false, faltaPct = null;
+  /*
+   * O confronto com o crível — que informa, mas não manda no preço.
+   *
+   * A oferta do relâmpago é sempre o NOSSO preço com 8% de rebate. O
+   * crível entra na coluna ao lado dizendo o que aconteceria: se o nosso
+   * já cabe embaixo dele, se dá para aceitar o dele dentro dos 5% de
+   * tolerância, ou quanto faltaria baixar para alcançá-lo.
+   */
+  const relFinal = rel?.valor ?? null;
+  let aceitouCrivel = false, faltaPct = null;
   if (rel?.valor != null && crivel != null && rel.valor > crivel + 0.01) {
     const gap = (rel.valor - crivel) / rel.valor;
-    if (gap <= TOLERANCIA_CRIVEL) { relFinal = r2(crivel); aceitouCrivel = true; }
+    if (gap <= TOLERANCIA_CRIVEL) aceitouCrivel = true;
     else faltaPct = gap;
   }
 
@@ -286,7 +296,7 @@ for (const m of montadas) {
     m.origem, m.mlb, m.observacao, m.mlb.replace(/^MLB/i, ""), m.conta, m.tipo,
     String(m.titulo).slice(0, 60), m.modelo, m.nmv, m.melhor?.preco ?? null, m.precoDe, m.precoNoAr,
     m.mes?.valor ?? null, rebateReais(m.mes?.valor), REBATE_MES / 100, "",
-    m.crivel, m.relFinal, m.faltaPct != null ? m.faltaPct : (m.aceitouCrivel ? "aceitou o crível" : "cabe no nosso preço"),
+    m.crivel, m.relFinal, m.faltaPct != null ? m.faltaPct : (m.aceitouCrivel ? "dá para aceitar o crível" : "cabe no nosso preço"),
     m.rel?.valor != null ? r2(m.relFinal * REBATE_RELAMPAGO / 100) : null, REBATE_RELAMPAGO / 100, "",
     m.week?.valor ?? null, rebateReais(m.week?.valor), REBATE_MES / 100, "",
     null, null, null, "",
