@@ -66,6 +66,14 @@ export type LeituraPedidos = {
   marketplaces: Record<string, number>;
   /** Colunas do arquivo que este leitor deliberadamente não leu. */
   colunasDescartadas: number;
+  /**
+   * Pedidos cancelados que nunca foram aprovados — e por isso não entraram.
+   *
+   * A listagem do hub traz o carrinho que nunca foi pago com status
+   * "Cancelado". Isso não é cancelamento: é venda que não aconteceu. Ver o
+   * comentário em `lerPedidos`.
+   */
+  nuncaPagos: number;
 };
 
 /** Cabeçalhos aceitos. Nada fora desta lista é lido. */
@@ -204,11 +212,21 @@ export async function lerPedidos(buffer: Buffer): Promise<LeituraPedidos> {
     return c ? ws.getRow(linha).getCell(c).value : null;
   };
 
+  /*
+   * A coluna de aprovação existe neste arquivo?
+   *
+   * A regra abaixo depende dela. Sem a coluna, TODA linha ficaria sem data
+   * de aprovação e o leitor jogaria fora cancelamento de verdade — então a
+   * regra só vale quando o arquivo traz a coluna.
+   */
+  const temAprovacao = cabecalho.has("data_aprovacao");
+
   const pedidos: Pedido[] = [];
   const marketplaces: Record<string, number> = {};
   const datas: string[] = [];
   let linhasLidas = 0;
   let ignoradas = 0;
+  let nuncaPagos = 0;
 
   for (let r = 2; r <= ws.rowCount; r++) {
     const codigo = texto(pega(r, "id_pedido_marketplace")).trim();
@@ -217,12 +235,39 @@ export async function lerPedidos(buffer: Buffer): Promise<LeituraPedidos> {
 
     const criacao = data(pega(r, "data_criacao"));
     if (!criacao) { ignoradas += 1; continue; }
+
+    const status = texto(pega(r, "status")).trim();
+    const fechadoEm = data(pega(r, "data_aprovacao"));
+
+    /*
+     * Cancelado e nunca aprovado não é cancelamento: é carrinho abandonado.
+     *
+     * A listagem do hub marca "Cancelado" o pedido cujo pagamento nunca
+     * passou. Importado como cancelamento, ele virava valor cancelado e
+     * taxa de cancelamento de verdade. O efeito na Loja própria da Probel,
+     * medido em 27/10/2026: 99% de cancelamento em agosto e 49% em
+     * setembro, contra 2% a 5% do que a API do mesmo canal reportava nos
+     * mesmos meses. R$ 1,31 milhão de "cancelado" que nunca foi venda.
+     *
+     * A data de aprovação separa os dois casos sem ambiguidade. Medido nos
+     * 16.069 pedidos de 2026: dos que estão de pé, vindos de planilha,
+     * 0% está sem data de aprovação; dos cancelados da Loja própria, 93%
+     * está. E no Mercado Livre, onde o cancelamento é real, os 309
+     * cancelados TÊM data de aprovação — a regra não toca neles.
+     *
+     * Fica fora da base, não marcado de outro jeito: pedido que nunca foi
+     * pago não é fato de venda nenhum, e guardá-lo só obrigaria toda tela
+     * a lembrar de excluí-lo.
+     */
+    if (temAprovacao && ehCancelado(status) && !fechadoEm) {
+      nuncaPagos += 1;
+      continue;
+    }
+
     datas.push(criacao);
 
     const marketplace = texto(pega(r, "marketplace")).trim() || "Outros";
     marketplaces[marketplace] = (marketplaces[marketplace] ?? 0) + 1;
-
-    const status = texto(pega(r, "status")).trim();
 
     const itens: ItemPedido[] = [];
     for (const [, cols] of [...itemCols.entries()].sort((a, b) => a[0] - b[0])) {
@@ -276,7 +321,7 @@ export async function lerPedidos(buffer: Buffer): Promise<LeituraPedidos> {
       marketplace,
       conta: texto(pega(r, "conta")).trim(),
       data: criacao,
-      fechadoEm: data(pega(r, "data_aprovacao")),
+      fechadoEm,
       status,
       cancelado: ehCancelado(status),
       total: numero(pega(r, "total")),
@@ -298,5 +343,6 @@ export async function lerPedidos(buffer: Buffer): Promise<LeituraPedidos> {
     ignoradas,
     marketplaces,
     colunasDescartadas: descartadas,
+    nuncaPagos,
   };
 }

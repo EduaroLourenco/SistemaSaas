@@ -738,6 +738,12 @@ async function pedidos(
   if (ignoradas) {
     avisos.push(`${ignoradas} pedidos ficaram de fora por canal não resolvido.`);
   }
+  if (r.nuncaPagos) {
+    avisos.push(
+      `${r.nuncaPagos} pedidos com status de cancelado nunca foram aprovados e ficaram de fora: ` +
+        "carrinho que não virou venda não entra como cancelamento."
+    );
+  }
   if (preservadosApi) avisos.push(`${preservadosApi} pedidos e seus itens mantiveram os dados da API.`);
 
   return {

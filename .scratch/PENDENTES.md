@@ -80,13 +80,28 @@ Nada aqui anda sem ele. Não é falta de código.
 
 ## Soltos, menores
 
-- [ ] `/equipe` não aparece na navegação.
-- [ ] VTEX: cancelado inflado em ago/set — conferir. Vem da auditoria
-      de 08/10.
+- [x] `/equipe` na navegação: **já estava lá**, e o item era engano. Está
+      em `NAV_FOOTER` (`src/lib/nav.ts`) desde 01/10, e `NavTree` desenha
+      esse grupo tanto na barra do desktop (`app-shell.tsx:507`) quanto na
+      folha "Mais" do celular (`:526`). Fica abaixo do divisor, com
+      Empresas, Canais, Fontes, Estoques, Glossário e Configurações — é aí
+      que se procura, não entre os grupos de cima.
+- [x] VTEX: cancelado inflado — **era o importador, e continuava
+      entrando**. A listagem do hub marca "Cancelado" o carrinho cujo
+      pagamento nunca passou. Na Loja própria, mesmo mês e duas fontes:
+      API 2% a 5% de cancelamento, planilha 49% a 99%. A data de aprovação
+      separa os dois casos — dos pedidos de planilha que estão de pé,
+      nenhum está sem ela; dos cancelados da Loja própria, 93% está, e os
+      309 cancelados do Meli TÊM a data (cancelamento real).
+      `src/lib/planilhas/pedidos.ts` agora deixa esses de fora e a tela de
+      importação diz quantos. Último lote ruim: 27/10, 85 pedidos, 83
+      "cancelados", R$ 134.645.
+- [ ] **Apagar os 1.199 nunca pagos que já estão na base.** Script pronto
+      e ensaiado: `node scripts/limpar-pedidos-nunca-pagos.mjs
+      00000000-0000-0000-0000-000000000101` (ensaio) e `--aplicar`. São
+      R$ 1.481.734 de "cancelado" que nunca foi venda, em 10 contas, de
+      01/2026 a 22/10. Apaga dado e refaz as diárias: **é do Eduardo**.
 - [ ] Relatório semanal pode estar perdendo venda recente — conferir.
-- [ ] Kit moleskine `MLB6777275760` entrou a 3%.
-- [ ] 6 linhas da Imprimil no 11.11 não pegaram preço.
-- [ ] `LIV_PACK100` saiu R$ 2 abaixo do piso.
 
 ---
 
