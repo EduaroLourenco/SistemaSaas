@@ -14,15 +14,24 @@ sessão nova lê daqui.
 
 ### 1. Tela de anúncios — a visão completa
 Spec: `.scratch/anuncios-raio-x/spec.md` (o diagnóstico de 27/10 está no fim)
+Teste: `node scripts/testar-semana-em-curso.mjs`
 
 - [x] `Metricas.precoVitrine` e `Metricas.precoPraticado` separados em
       `src/lib/analise.ts`. Era um campo só — e era por isso que o preço
       de vitrine nunca aparecia em anúncio que vendeu. Typecheck passou.
-- [ ] Semana em curso fora do recorte por padrão. Hoje a S44 entra com
-      2 dias de 7 (25 vendas contra 264 da S43) e derruba toda métrica e
-      toda comparação "vs. N semanas anteriores".
-- [ ] O rótulo do filtro mostra as datas reais. Hoje diz só "8 semanas",
-      e o usuário não tem como ver qual período está olhando.
+- [x] Semana em curso fora do recorte por padrão. A S44 (2 dias de 7, 25
+      vendas contra 264 da S43) sai da soma e da comparação; a caixa
+      "incluir · 2 de 7 dias" a traz de volta para quem quiser o parcial.
+      `parcial` e `dias` saem do carregador, no fuso de São Paulo.
+- [x] O rótulo do filtro mostra as datas reais: "Semanas · 31/08 – 25/10",
+      no cabeçalho do campo e na folha de filtros do celular.
+- [x] O ano no rótulo da semana. Achado ao conferir o item acima: a chave
+      era `S${semana_iso}` sem o ano, e as quatro semanas de 2025
+      (S41 a S44) tinham o mesmo rótulo das de 2026. A tela listava 52
+      semanas em vez de 56, somava 2025 dentro de 2026 nessas quatro, e a
+      semana em curso herdava as datas da S44 de 2025 — passando por
+      fechada. Agora é `S44/26`, e a ordem é pela data, não pelo número.
+      Conferido no banco: 56 semanas, só a S44/26 parcial, 2 de 7 dias.
 - [ ] A tabela BI densa: uma linha por anúncio, ordenável, primeira
       coluna fixa, com vitrine e praticado em colunas separadas.
 - [ ] O raio-x por SKU: rota própria `/api/anuncios/sku/[sku]`,

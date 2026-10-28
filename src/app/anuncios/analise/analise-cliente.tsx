@@ -39,7 +39,7 @@ import { Elasticidade } from "@/components/analise/elasticidade";
 import { CompararAnuncios } from "@/components/analise/comparar";
 import type { DadosAnalise } from "@/lib/dados/analise";
 import { analisar, LENTES, type AnuncioAnalisado, type Lente } from "@/lib/analise";
-import { money, count, pct, delta as fmtDelta } from "@/lib/format";
+import { money, count, pct, delta as fmtDelta, shortDate } from "@/lib/format";
 import {
   Bar,
   BarChart,
@@ -159,22 +159,49 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
   } = dados;
 
   /*
+   * A semana em curso fica FORA do recorte por padrão.
+   *
+   * Ela tem 2 dias dos 7 e entra duas vezes na conta: na soma do período e
+   * na comparação com as N semanas anteriores. O efeito era toda métrica
+   * da tela aparecer despencando no começo de cada semana — a S44 com 25
+   * vendas contra as 264 da S43 não é queda, é terça-feira.
+   *
+   * Quem quiser ver o parcial marca a caixa; o rótulo diz quantos dias
+   * ele tem, para a leitura não ser confundida com uma semana fechada.
+   */
+  const EM_CURSO = React.useMemo(
+    () => SEMANAS.find((x) => x.parcial) ?? null,
+    [SEMANAS]
+  );
+  const [incluirEmCurso, setIncluirEmCurso] = React.useState(false);
+  const BASE = React.useMemo(
+    () => (incluirEmCurso ? SEMANAS : SEMANAS.filter((x) => !x.parcial)),
+    [SEMANAS, incluirEmCurso]
+  );
+
+  /*
    * Opções de recorte que fazem sentido para este histórico. Sempre termina
    * com o total disponível, para o caso de o Eduardo querer olhar tudo.
    */
   const RECORTES = React.useMemo(() => {
-    const total = SEMANAS.length;
+    const total = BASE.length;
     const valores = RECORTES_POSSIVEIS.filter((n) => n < total);
     if (total > 0) valores.push(total);
     return valores.map((n) => ({
       value: String(n),
       label: n === total ? `${n} semanas (tudo)` : `${n} semanas`,
     }));
-  }, [SEMANAS.length]);
+  }, [BASE.length]);
 
   const [recorte, setRecorte] = React.useState(() =>
     String(Math.min(8, SEMANAS.length || 8))
   );
+  /*
+   * Destravar a semana em curso encurta a lista de opções em 1, e o valor
+   * escolhido pode deixar de existir nela. Clampar aqui evita o <select>
+   * em branco sem precisar de efeito para corrigir o estado.
+   */
+  const nSemanas = Math.min(Number(recorte), BASE.length);
   const [precos, setPrecos] = React.useState<EstadoPrecos>({ fase: "ocioso" });
   const [busca, setBusca] = React.useState("");
   const [conta, setConta] = React.useState("");
@@ -187,10 +214,17 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
   const [lente, setLente] = React.useState<Lente>("todos");
   const [comparando, setComparando] = React.useState(false);
 
+  const selecionadas = React.useMemo(() => BASE.slice(-nSemanas), [BASE, nSemanas]);
   const semanasSelecionadas = React.useMemo(
-    () => SEMANAS.slice(-Number(recorte)).map((s) => s.semana),
-    [recorte]
+    () => selecionadas.map((x) => x.semana),
+    [selecionadas]
   );
+  /* O recorte em datas de verdade. "8 semanas" não diz qual período é. */
+  const rotuloPeriodo = selecionadas.length
+    ? `${shortDate(selecionadas[0].inicio)} – ${shortDate(
+        selecionadas[selecionadas.length - 1].fim
+      )}`
+    : "sem semana fechada";
 
   // O join dos relatórios + as métricas derivadas. Recalcula quando o
   // recorte de semanas muda, porque as curvas A são relativas ao recorte.
@@ -207,13 +241,13 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
    * cartão fica sem variação.
    */
   const resumoAnterior = React.useMemo(() => {
-    const n = Number(recorte);
-    if (SEMANAS.length < 2 * n) return null;
-    return analisar(ANUNCIOS_ANALISE, SEMANAS.slice(-2 * n, -n).map((x) => x.semana)).resumo;
-  }, [recorte, SEMANAS, ANUNCIOS_ANALISE]);
+    if (!nSemanas || BASE.length < 2 * nSemanas) return null;
+    const anteriores = BASE.slice(-2 * nSemanas, -nSemanas).map((x) => x.semana);
+    return analisar(ANUNCIOS_ANALISE, anteriores).resumo;
+  }, [nSemanas, BASE, ANUNCIOS_ANALISE]);
   const variacaoDe = (atual: number, anterior: number | undefined) =>
     anterior ? ((atual - anterior) / anterior) * 100 : undefined;
-  const dicaComparacao = resumoAnterior ? `vs. ${recorte} semanas anteriores` : "sem período anterior para comparar";
+  const dicaComparacao = resumoAnterior ? `vs. ${nSemanas} semanas anteriores` : "sem período anterior para comparar";
 
   // Filtros de atributo (não afetam as médias da carteira, de propósito:
   // "acima da média" tem de significar a média de tudo, não a do filtro).
@@ -357,9 +391,9 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
               />
             </Filtro>
 
-            <Filtro rotulo="Semanas" >
+            <Filtro rotulo={`Semanas · ${rotuloPeriodo}`}>
               <Select
-                value={recorte}
+                value={String(nSemanas)}
                 onChange={(e) => setRecorte(e.target.value)}
                 className="w-[168px]"
               >
@@ -370,6 +404,18 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
                 ))}
               </Select>
             </Filtro>
+
+            {EM_CURSO && (
+              <Filtro composto rotulo="Semana em curso">
+                <div className="h-9 flex items-center">
+                  <Checkbox
+                    checked={incluirEmCurso}
+                    onChange={setIncluirEmCurso}
+                    label={`incluir · ${EM_CURSO.dias} de 7 dias`}
+                  />
+                </div>
+              </Filtro>
+            )}
 
             <Filtro rotulo="Tipo" className="hidden md:flex">
               <Segmented<(typeof TIPOS)[number]>
@@ -477,7 +523,7 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
           itens={itens}
           lente={lente}
           escolher={setLente}
-          periodo={`${recorte} semanas`}
+          periodo={`${nSemanas} semanas (${rotuloPeriodo})`}
         />
 
         <TabelaProdutos
@@ -507,9 +553,9 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
           onClear={limparFiltros}
           applyLabel={`Ver ${filtrados.length} anúncios`}
         >
-          <Field label="Semanas analisadas">
+          <Field label={`Semanas analisadas · ${rotuloPeriodo}`}>
             <Select
-              value={recorte}
+              value={String(nSemanas)}
               onChange={(e) => setRecorte(e.target.value)}
               className="h-11"
             >
@@ -520,6 +566,14 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
               ))}
             </Select>
           </Field>
+
+          {EM_CURSO && (
+            <Checkbox
+              checked={incluirEmCurso}
+              onChange={setIncluirEmCurso}
+              label={`Incluir a semana em curso (${EM_CURSO.semana}, ${EM_CURSO.dias} de 7 dias)`}
+            />
+          )}
 
           <div>
             <p className="label mb-2">Tipo de anúncio</p>

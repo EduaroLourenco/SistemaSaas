@@ -16,7 +16,20 @@ import type { Anuncio, SemanaDesempenho, DiaVenda } from "@/lib/analise";
 
 export type DadosAnalise = {
   anuncios: Anuncio[];
-  semanas: { semana: string; intervalo: string; inicio: string }[];
+  /*
+   * Uma semana do histórico. `parcial` marca a semana em curso — a que
+   * contém hoje —, e `dias` diz quantos dos sete já passaram. A tela usa
+   * os dois para tirar a semana incompleta do recorte por padrão: somada
+   * junto, ela derruba toda métrica e toda comparação.
+   */
+  semanas: {
+    semana: string;
+    intervalo: string;
+    inicio: string;
+    fim: string;
+    dias: number;
+    parcial: boolean;
+  }[];
   categorias: string[];
   importacoes: {
     id: string;
@@ -127,18 +140,31 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
     return { anuncios: [], semanas: [], categorias: [], importacoes: [], vazio: true };
   }
 
-  const semanasVistas = new Map<string, { intervalo: string; inicio: string }>();
+  const semanasVistas = new Map<
+    string,
+    { intervalo: string; inicio: string; fim: string }
+  >();
   const porAnuncio = new Map<string, Anuncio>();
 
   for (const l of dados) {
     const a = l.anuncios;
     if (!a) continue;
 
-    const rotulo = `S${l.semana_iso}`;
+    /*
+     * O ano entra no rótulo porque a semana ISO sozinha repete.
+     *
+     * A base tem 56 semanas, de outubro de 2025 a hoje, e as quatro de
+     * 2025 (S41 a S44) tinham o MESMO rótulo das de 2026. O efeito: a
+     * tela listava 52 semanas em vez de 56, somava 2025 dentro de 2026
+     * nas quatro, e a semana em curso herdava as datas da S44 de 2025 —
+     * o que a fazia passar por semana fechada.
+     */
+    const rotulo = `S${l.semana_iso}/${String(l.ano_iso).slice(2)}`;
     if (!semanasVistas.has(rotulo)) {
       semanasVistas.set(rotulo, {
         intervalo: `${br(l.inicio)} – ${br(l.fim)}`,
         inicio: l.inicio,
+        fim: l.fim,
       });
     }
 
@@ -212,12 +238,29 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
     anuncio.semanas.push(semana);
   }
 
+  /* Ordem cronológica pela data da semana, não pelo número dela: com dois
+     anos na base, S41 de 2025 vem antes de S01 de 2026. */
+  const inicioDe = (rotulo: string) => semanasVistas.get(rotulo)?.inicio ?? "";
   for (const a of porAnuncio.values()) {
-    a.semanas.sort((x, y) => Number(x.semana.slice(1)) - Number(y.semana.slice(1)));
+    a.semanas.sort((x, y) => inicioDe(x.semana).localeCompare(inicioDe(y.semana)));
   }
 
+  /* Hoje no fuso de São Paulo: num servidor em UTC, depois das 21h a data
+     já virou e a semana em curso contaria um dia que ainda não passou. */
+  const hoje = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date());
+
   const semanas = [...semanasVistas.entries()]
-    .map(([semana, v]) => ({ semana, ...v }))
+    .map(([semana, v]) => {
+      const parcial = hoje >= v.inicio && hoje <= v.fim;
+      /* Dias de calendário decorridos, não dias com leitura: o que torna a
+         semana incomparável é ela ainda não ter acabado. */
+      const dias = parcial
+        ? Math.floor((Date.parse(hoje) - Date.parse(v.inicio)) / 86_400_000) + 1
+        : 7;
+      return { semana, ...v, parcial, dias };
+    })
     .sort((x, y) => x.inicio.localeCompare(y.inicio));
 
   const categorias = [...new Set([...porAnuncio.values()].map((a) => a.categoria))].sort();

@@ -163,3 +163,24 @@ Consequência de projeto: qualquer coluna de vitrine na tabela BI tem
 dado para ~5 semanas e nulo no resto. Não é defeito a corrigir, é a
 idade da coleta — e é a diferença entre nulo e zero que as regras de
 `docs/agents/telas.md` mandam respeitar.
+
+### 4. O rótulo da semana ignorava o ano (achado em 27/10, ao corrigir o 2)
+
+A chave da semana era `S${semana_iso}`, sem o ano. A base tem 56 semanas,
+de 06/10/2025 a hoje, e as quatro de 2025 (S41 a S44) caíam no mesmo
+rótulo das de 2026 — 307 das 11.039 linhas.
+
+Três efeitos, todos medidos:
+
+- a tela listava **52** semanas em vez de 56;
+- S41 a S44 somavam os dois anos na mesma coluna;
+- a semana em curso herdava `inicio`/`fim` da S44 de **2025**, e por isso
+  passava por semana fechada. Sem corrigir isto, excluir a semana parcial
+  não funcionaria: não havia semana parcial nenhuma aos olhos do código.
+
+O rótulo agora é `S44/26`, e a ordem das semanas de um anúncio é pela data
+de início, não pelo número da semana (que não ordena entre anos).
+
+Conferido no banco depois da correção: 56 semanas, só a S44/26 parcial,
+com 2 dias de 7. Recorte padrão de 8 semanas: 31/08 – 25/10, terminando na
+S43/26.
