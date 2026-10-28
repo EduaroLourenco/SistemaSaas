@@ -48,15 +48,41 @@ for (const linha of readFileSync(path.join(raiz, ".env.local"), "utf8").split(/\
 
 const APLICAR = process.argv.includes("--aplicar");
 const OPERACAO = "00000000-0000-0000-0000-000000000101";
-const CONTA = "a37f9d9b-5bc7-4a94-a569-578942a93c81"; // Mercado Livre · São Paulo — pronta entrega
 
-/* Do "Resumo de desempenho" do painel do vendedor, lido em 28/10/2026. */
-const VISITAS = [
-  { ano: 2026, mes: 1, visitas: 46211 },
-  { ano: 2026, mes: 2, visitas: 36040 },
-  { ano: 2026, mes: 3, visitas: 38895 },
-  { ano: 2026, mes: 4, visitas: 30796 },
-  { ano: 2026, mes: 5, visitas: 26687 },
+/*
+ * Do "Resumo de desempenho" do painel do vendedor, uma conta por bloco.
+ * Lido em 28/10/2026.
+ *
+ * A contagem de vendas do painel bate com a nossa nos dois casos — São
+ * Paulo com diferença de 0 a 2 pedidos, a 2ª conta exata nos cinco meses
+ * (95, 138, 193, 18, 22). A receita fica acima da do painel porque a
+ * nossa é produto + frete cobrado e a dele é só produto.
+ */
+const CONTAS = [
+  {
+    nome: "São Paulo — pronta entrega",
+    id: "a37f9d9b-5bc7-4a94-a569-578942a93c81",
+    visitas: [
+      { ano: 2026, mes: 1, visitas: 46211 },
+      { ano: 2026, mes: 2, visitas: 36040 },
+      { ano: 2026, mes: 3, visitas: 38895 },
+      { ano: 2026, mes: 4, visitas: 30796 },
+      { ano: 2026, mes: 5, visitas: 26687 },
+    ],
+  },
+  {
+    nome: "2ª conta — venda a prazo",
+    id: "a730ac84-4352-4b10-92f7-14b3ff47f186",
+    /* Abril e maio são pequenos de verdade: a conta caiu 93% em abril,
+       de 28.312 visitas para 1.829, e não recuperou em maio. */
+    visitas: [
+      { ano: 2026, mes: 1, visitas: 12837 },
+      { ano: 2026, mes: 2, visitas: 24703 },
+      { ano: 2026, mes: 3, visitas: 28312 },
+      { ano: 2026, mes: 4, visitas: 1829 },
+      { ano: 2026, mes: 5, visitas: 3642 },
+    ],
+  },
 ];
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -71,37 +97,41 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABA
  * plataforma é calculada. Gravar o mês por cima seria trocar dado fino
  * por dado grosso.
  */
-let diarias = [];
-for (let de = 0; ; de += 1000) {
-  const { data, error } = await sb
-    .from("vendas_diarias")
-    .select("data,visitas")
-    .eq("conta_canal_id", CONTA)
-    .gte("data", "2026-01-01")
-    .lte("data", "2026-12-31")
-    .order("data")
-    .range(de, de + 999);
-  if (error) throw new Error(error.message);
-  diarias = diarias.concat(data);
-  if (data.length < 1000) break;
-}
-const diariasPorMes = new Map();
-for (const d of diarias) {
-  const m = Number(d.data.slice(5, 7));
-  diariasPorMes.set(m, (diariasPorMes.get(m) ?? 0) + (d.visitas ?? 0));
-}
-
 const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const entram = [];
-for (const v of VISITAS) {
-  const jaTem = diariasPorMes.get(v.mes) ?? 0;
-  const linha = `${MES[v.mes - 1]}/${v.ano}: ${v.visitas.toLocaleString("pt-BR")} visitas`;
-  if (jaTem > 0) {
-    console.log(`  ${linha} — IGNORADO, o diário já tem ${jaTem.toLocaleString("pt-BR")}`);
-    continue;
+
+for (const conta of CONTAS) {
+  console.log(`\n${conta.nome}`);
+  let diarias = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await sb
+      .from("vendas_diarias")
+      .select("data,visitas")
+      .eq("conta_canal_id", conta.id)
+      .gte("data", "2026-01-01")
+      .lte("data", "2026-12-31")
+      .order("data")
+      .range(de, de + 999);
+    if (error) throw new Error(error.message);
+    diarias = diarias.concat(data);
+    if (data.length < 1000) break;
   }
-  console.log(`  ${linha}`);
-  entram.push(v);
+  const porMes = new Map();
+  for (const d of diarias) {
+    const m = Number(d.data.slice(5, 7));
+    porMes.set(m, (porMes.get(m) ?? 0) + (d.visitas ?? 0));
+  }
+
+  for (const v of conta.visitas) {
+    const jaTem = porMes.get(v.mes) ?? 0;
+    const linha = `  ${MES[v.mes - 1]}/${v.ano}: ${v.visitas.toLocaleString("pt-BR")} visitas`;
+    if (jaTem > 0) {
+      console.log(`${linha} — IGNORADO, o diário já tem ${jaTem.toLocaleString("pt-BR")}`);
+      continue;
+    }
+    console.log(linha);
+    entram.push({ ...v, conta: conta.id });
+  }
 }
 
 if (!entram.length) {
@@ -116,7 +146,7 @@ if (!APLICAR) {
 const { error } = await sb.from("visitas_mensais").upsert(
   entram.map((v) => ({
     operacao_id: OPERACAO,
-    conta_canal_id: CONTA,
+    conta_canal_id: v.conta,
     ano: v.ano,
     mes: v.mes,
     visitas: v.visitas,

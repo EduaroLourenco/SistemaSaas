@@ -137,6 +137,13 @@ Nada aqui anda sem ele. Não é falta de código.
 
 ## Soltos, menores
 
+- [ ] **Junho da 2ª conta do Meli está sem visita.** As duas contas
+      têm jan a mai do painel e jul em diante da coleta diária; na 2ª
+      conta a coleta só começou em julho, então junho ficou no meio,
+      com 94 pedidos e R$ 191.050 sem visita nenhuma. Falta só o
+      número do painel daquele mês — entra em
+      `scripts/local/visitas-mensais-meli.mjs`.
+
 - [x] **`carregarFormulaBase()` filtrava nada — corrigido em 28/10.**
       Ela pegava o `vigente_de` mais recente de QUALQUER operação e
       carregava itens e preços daquela vigência, também sem filtro. No
