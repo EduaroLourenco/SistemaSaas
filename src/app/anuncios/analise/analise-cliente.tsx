@@ -33,6 +33,7 @@ import { AXIS, GRID, Legend } from "@/components/ui/chart";
 import { TabelaSemanal } from "@/components/analise/tabela-semanal";
 import { TabelaProdutos } from "@/components/analise/tabela-produtos";
 import { TabelaBI } from "@/components/analise/tabela-bi";
+import { BlocosDoSku } from "@/components/analise/blocos-sku";
 import { PainelLentes } from "@/components/analise/painel-lentes";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
 import { LinhaDoTempo } from "@/components/analise/linha-do-tempo";
@@ -822,6 +823,13 @@ function RaioX({
           </div>
         ))}
       </div>
+
+      {/*
+        Recorde, estoque e os anúncios irmãos: buscados sob demanda em
+        /api/anuncios/sku/[sku] quando o drawer abre. Não vêm com a
+        listagem porque são cinco consultas por SKU.
+      */}
+      <BlocosDoSku sku={item.sku} />
 
       {/* preço */}
       <div className="px-4 py-3.5 border-b border-line">

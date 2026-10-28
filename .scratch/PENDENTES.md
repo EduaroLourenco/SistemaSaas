@@ -43,9 +43,21 @@ Teste: `node scripts/testar-semana-em-curso.mjs`
       dizia a spec: é onde moram as outras tabelas desta tela.
       Nulo ordena sempre para o fim, e cada célula vazia diz o motivo —
       "sem leitura", "sem venda" e "sem tabela" são três coisas.
-- [ ] O raio-x por SKU: rota própria `/api/anuncios/sku/[sku]`,
-      `lib/dados/raio-x-sku.ts`, `lib/dados/recorde-sku.ts`, e os cinco
-      blocos do drawer.
+- [x] O raio-x por SKU: rota `/api/anuncios/sku/[sku]`,
+      `lib/dados/raio-x-sku.ts` e `lib/dados/recorde-sku.ts` prontos, e o
+      drawer ganhou três blocos que buscam sob demanda
+      (`components/analise/blocos-sku.tsx`): contra o recorde do próprio
+      SKU, estoque e ruptura pelo giro, e os anúncios irmãos com a
+      situação de catálogo. Conferido contra o banco com
+      `node scripts/conferir-raio-x-sku.mjs` — o giro é recontado por
+      fora e tem de bater. No PA85352: 9 anúncios, recorde de 22 un em
+      S8/26 a R$ 1.976, última semana 1 un (5% do recorde), saldo 360 com
+      giro de 1,64/dia.
+- [ ] **Bloco de promoção ao vivo no drawer.** Ficou de fora: é chamada à
+      API do Meli por MLB (`GET /seller-promotions/items/{MLB}`), com
+      cota, e quem faz essa leitura é o módulo de Automações. Enquanto
+      não estiver ligada, o drawer não mostra bloco nenhum de promoção —
+      melhor ausência do que um "sem promoções" que é "não perguntei".
 
 **O que a coluna de vitrine vai mostrar, e por quê:** dado só das últimas
 ~5 semanas. `anuncio_desempenho_semanal.preco_anunciado` está nulo nas
