@@ -836,9 +836,37 @@ function RaioX({
         <p className="label mb-3">Aderência de preço</p>
         <IndicadorPreco praticado={m.preco} ideal={m.precoIdeal} />
         <div className="mt-4 pt-3 border-t border-line grid grid-cols-2 gap-y-2">
-          <span className="text-[12px] text-ink-3">Comissão do canal</span>
+          <span className="text-[12px] text-ink-3">Comissão de tabela</span>
           <span className="num text-[13px] text-ink text-right">
             {pct(m.comissao)}
+          </span>
+          {/*
+            A paga ao lado da de tabela: é a diferença entre as duas que
+            explica a margem. Campanha com redução de tarifa derruba a
+            cobrada pela metade, e decidir preço pela de tabela é decidir
+            com um custo que não existe.
+          */}
+          <span className="text-[12px] text-ink-3">Comissão paga</span>
+          <span className="text-[13px] text-right">
+            {m.tarifaCobrada == null ? (
+              <span className="text-ink-3" title="nenhuma venda do recorte teve comissão informada pelo canal">
+                —
+              </span>
+            ) : (
+              <span className="inline-flex items-baseline gap-1 justify-end">
+                <span
+                  className={
+                    "num " +
+                    (m.comissao > 0 && m.tarifaCobrada < m.comissao - 0.5 ? "text-up" : "text-ink")
+                  }
+                >
+                  {pct(m.tarifaCobrada)}
+                </span>
+                <span className="num text-[11px] text-ink-3" title="quanto da receita do recorte entrou nesta média">
+                  {Math.round(m.coberturaTarifa * 100)}%
+                </span>
+              </span>
+            )}
           </span>
           <span className="text-[12px] text-ink-3">Subsídio acumulado</span>
           <span

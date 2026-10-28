@@ -51,6 +51,13 @@ const IDENT = [
   { nome: "Receita total", largura: 14, formato: DIN },
   { nome: "Unidades", largura: 10, formato: INT },
   { nome: "Preço médio", largura: 12, formato: DIN },
+  /* Conversão e comissão PAGA entram aqui porque é com elas que se
+     explica o preço: a de tabela é 11,5% e 16,5%, a cobrada fica perto
+     de 7%. A cobertura vai junto — tarifa apurada sobre um quinto da
+     receita não vale o mesmo que sobre a receita toda. */
+  { nome: "Conversão (Meli)", largura: 13, formato: PCT },
+  { nome: "Comissão paga", largura: 13, formato: PCT },
+  { nome: "Cobertura da comissão", largura: 13, formato: PCT },
   { nome: "Participação", largura: 12, formato: PCT },
   { nome: "Acumulado", largura: 11, formato: PCT },
 ];
@@ -109,8 +116,15 @@ function montarAba(
     r.getCell(4).value = l.receita;
     r.getCell(5).value = l.unidades;
     if (l.precoMedio != null) r.getCell(6).value = l.precoMedio;
-    r.getCell(7).value = l.participacao;
-    r.getCell(8).value = l.acumulado;
+    /* Célula vazia onde não há medição: zero diria "converteu zero" e
+       "não pagou comissão", que não é o que aconteceu. */
+    if (l.conversao != null) r.getCell(7).value = l.conversao;
+    if (l.comissaoPraticada != null) {
+      r.getCell(8).value = l.comissaoPraticada;
+      r.getCell(9).value = Math.round(l.coberturaComissao * 10000) / 100;
+    }
+    r.getCell(10).value = l.participacao;
+    r.getCell(11).value = l.acumulado;
     IDENT.forEach((c, i) => {
       if (c.formato) r.getCell(i + 1).numFmt = c.formato;
     });

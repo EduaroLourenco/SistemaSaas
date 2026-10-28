@@ -117,7 +117,28 @@ export type Metricas = {
   precoIdeal: number;
   /** Desvio percentual do praticado sobre o ideal. */
   desvio: number;
+  /** Alíquota NEGOCIADA, de tabela, da última semana. 16.5 = 16,5%. */
   comissao: number;
+  /**
+   * A alíquota que o canal realmente cobrou no recorte, ponderada pela
+   * receita das semanas em que ela é conhecida.
+   *
+   * É diferente da de tabela, e a diferença é o assunto: campanha com
+   * redução de tarifa derruba a cobrada pela metade. Decidir preço pela
+   * de tabela é decidir com um custo que não existe.
+   *
+   * Null quando nenhuma semana do recorte teve venda com comissão
+   * conhecida — e aí é "não sei", nunca zero.
+   */
+  tarifaCobrada: number | null;
+  /**
+   * Quanto da receita do recorte entrou nessa média, de 0 a 1.
+   *
+   * O canal informa a comissão em parte dos pedidos. Uma tarifa apurada
+   * sobre 8% da receita não vale o mesmo que uma sobre 90%, e quem lê
+   * precisa poder ver isso ao lado do número.
+   */
+  coberturaTarifa: number;
   /** Soma de (ideal − praticado) × vendas nas semanas abaixo do ideal. */
   subsidio: number;
   /** Quanto o subsídio representa da receita do item, em %. */
@@ -237,6 +258,21 @@ export function analisar(
         return praticado < w.precoIdeal ? s + (w.precoIdeal - praticado) * w.vendas : s;
       }, 0);
 
+      /*
+       * A tarifa cobrada do recorte: média ponderada pela receita.
+       *
+       * Ponderada, e não simples: uma semana que vendeu R$ 200 a 14% não
+       * pode puxar a média de um recorte que vendeu R$ 40 mil a 7%.
+       */
+      let receitaComTarifa = 0;
+      let tarifaPonderada = 0;
+      for (const w of semanas) {
+        if (w.tarifaCobrada == null || !w.receita) continue;
+        receitaComTarifa += w.receita;
+        tarifaPonderada += w.tarifaCobrada * w.receita;
+      }
+      const tarifaCobrada = receitaComTarifa > 0 ? tarifaPonderada / receitaComTarifa : null;
+
       const comVenda = semanas.filter((w) => w.vendas > 0);
       const ultimaComVenda = comVenda[comVenda.length - 1];
       const ultima = semanas[semanas.length - 1];
@@ -315,6 +351,8 @@ export function analisar(
         precoIdeal,
         desvio,
         comissao: ultima ? ultima.comissao : 0,
+        tarifaCobrada: tarifaCobrada == null ? null : Number(tarifaCobrada.toFixed(2)),
+        coberturaTarifa: receita > 0 ? receitaComTarifa / receita : 0,
         subsidio,
         subsidioPct: receita ? (subsidio / receita) * 100 : 0,
         elasticidadePositiva,

@@ -48,6 +48,7 @@ type Chave =
   | "tabela"
   | "desvio"
   | "subsidio"
+  | "comissao"
   | "estoque";
 
 type Coluna = {
@@ -151,6 +152,25 @@ const COLUNAS: Coluna[] = [
       "A diferença entre a tabela e o preço pago, multiplicada pelas unidades, nas semanas em que vendeu abaixo.",
     valor: (a) => a.metricas.subsidio || null,
     celula: (v) => <span className="font-medium text-down">{money(v)}</span>,
+    fecha: true,
+  },
+  {
+    chave: "comissao",
+    nome: "Comissão paga",
+    ajuda:
+      "A alíquota que o canal realmente cobrou no período, ponderada pela receita. Não é a de tabela: campanha com redução derruba essa pela metade. Em cinza, quanto da receita entrou na conta.",
+    valor: (a) => a.metricas.tarifaCobrada,
+    celula: (v, a) => (
+      <span className="inline-flex items-baseline gap-1">
+        <span className={a.metricas.comissao > 0 && v < a.metricas.comissao - 0.5 ? "text-up" : "text-ink"}>
+          {pct(v)}
+        </span>
+        {/* A cobertura anda junto: tarifa apurada sobre 8% da receita não
+            vale o mesmo que sobre 90%, e o número sozinho esconde isso. */}
+        <span className="text-[11px] text-ink-3">{Math.round(a.metricas.coberturaTarifa * 100)}%</span>
+      </span>
+    ),
+    vazio: "sem comissão",
     fecha: true,
   },
   {

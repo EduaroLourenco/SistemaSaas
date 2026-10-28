@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar } from "./exclusoes";
+import { comissaoUtilizavel } from "./comissao-plausivel";
 import {
   lerRecorte,
   noRecorte,
@@ -53,6 +54,38 @@ export type LinhaSku = {
   pedidos: number;
   /** Preço médio praticado, ponderado pela quantidade. */
   precoMedio: number | null;
+  /**
+   * A alíquota que o canal realmente cobrou nas vendas deste SKU, no
+   * recorte, ponderada pelo valor.
+   *
+   * É a praticada, não a de tabela: a de tabela é 11,5% no clássico e
+   * 16,5% no premium, e a média cobrada na operação é 7,45%. A diferença
+   * é campanha com redução de tarifa, e é ela que explica a margem.
+   *
+   * Soma anúncios clássicos e premium do mesmo produto de propósito —
+   * a pergunta aqui é "quanto este PRODUTO pagou", e o mix entre os dois
+   * faz parte da resposta. Para a alíquota de um anúncio, a tela de
+   * Anúncios é o lugar.
+   *
+   * Null quando nenhuma venda do recorte teve comissão conhecida.
+   */
+  comissaoPraticada: number | null;
+  /** Quanto da receita do SKU entrou nessa média, de 0 a 1. */
+  coberturaComissao: number;
+  /**
+   * Visitas e vendas do relatório semanal do Mercado Livre, somando os
+   * anúncios deste SKU.
+   *
+   * Null quando o SKU não tem anúncio com leitura no recorte — só o Meli
+   * informa visita, então SKU que só vende em outro canal fica sem.
+   *
+   * A semana conta no período em que ela COMEÇA: não dá para partir uma
+   * semana do relatório em dias sem inventar a divisão.
+   */
+  visitas: number | null;
+  vendasCanal: number | null;
+  /** vendas ÷ visitas, as duas da MESMA fonte semanal. Em pontos percentuais. */
+  conversao: number | null;
   /** Chave "aaaa-mm". */
   porMes: Record<string, Celula>;
   /** Chave: id do canal. */
@@ -146,8 +179,10 @@ export async function carregarAnaliseSku(
     await Promise.all([
       paginar(() =>
         sb
+          /* `comissao` e `total` entram para a comissão praticada por SKU:
+             ver `comissaoDoSku`, no fim desta função. */
           .from("pedidos")
-          .select("id,data,cancelado,canal_id,conta_canal_id")
+          .select("id,data,cancelado,canal_id,conta_canal_id,comissao,total")
           .order("data")
       ),
       paginar(() =>
@@ -168,6 +203,8 @@ export async function carregarAnaliseSku(
     cancelado: boolean;
     canal_id: string;
     conta_canal_id: string;
+    comissao: string | number | null;
+    total: string | number;
   };
   type Item = {
     pedido_id: string;
@@ -239,6 +276,50 @@ export async function carregarAnaliseSku(
     if (!idx.length) continue;
     dentro.set(p.id, { ...p, janelas: idx });
   }
+
+  /*
+   * A comissão praticada e as visitas, por SKU.
+   *
+   * Duas leituras que não saem de `pedido_itens` e por isso vêm antes do
+   * laço: a comissão está no PEDIDO (e precisa ser rateada entre os
+   * itens dele), e a visita está no relatório semanal do canal, por
+   * anúncio.
+   */
+  const comissaoPorSku = new Map<string, { comissao: number; valor: number }>();
+  {
+    /* Só pedido com comissão utilizável: zero e ausência não podem virar
+       tarifa, ou a média do SKU desce por falta de dado. A regra é a
+       mesma de `tarifa-cobrada.ts`, importada e não recopiada. */
+    const comComissao = new Map(
+      pedidos
+        .filter((p) => !p.cancelado && comissaoUtilizavel(p.comissao, p.total))
+        .map((p) => [p.id, p])
+    );
+    /* Denominador do rateio: sem ele a comissão de um pedido com vários
+       itens iria inteira para o primeiro. */
+    const totalDoPedido = new Map<string, number>();
+    for (const it of itensRaw as unknown as Item[]) {
+      if (!comComissao.has(it.pedido_id)) continue;
+      totalDoPedido.set(it.pedido_id, (totalDoPedido.get(it.pedido_id) ?? 0) + n(it.total));
+    }
+    for (const it of itensRaw as unknown as Item[]) {
+      const p = comComissao.get(it.pedido_id);
+      const naJanela = dentro.get(it.pedido_id);
+      /* Só a janela principal: é a que define os totais da linha, e a
+         cobertura tem de ser comparável com a receita dela. */
+      if (!p || !naJanela || !naJanela.janelas.includes(0)) continue;
+      const sku = (it.sku ?? "").trim();
+      if (!sku) continue;
+      const tp = totalDoPedido.get(it.pedido_id) ?? 0;
+      const fatia = tp > 0 ? n(it.total) / tp : 1;
+      const at = comissaoPorSku.get(sku) ?? { comissao: 0, valor: 0 };
+      at.comissao += n(p.comissao) * fatia;
+      at.valor += n(it.total);
+      comissaoPorSku.set(sku, at);
+    }
+  }
+
+  const canalPorSku = await visitasPorSku(sb, inicio, fim);
 
   /* ── Agrega ── */
 
@@ -345,6 +426,8 @@ export async function carregarAnaliseSku(
 
   let acumulado = 0;
   const linhas: LinhaSku[] = ordenados.map(([sku, a]) => {
+    const com = comissaoPorSku.get(sku);
+    const canal = canalPorSku.get(sku);
     const participacao = receitaTotal > 0 ? (a.receita * 100) / receitaTotal : 0;
     acumulado += participacao;
     // 80/95 é o corte clássico e o que a operação já usa em `produtos.curva`.
@@ -366,6 +449,11 @@ export async function carregarAnaliseSku(
       receita: r2(a.receita),
       pedidos: a.pedidos.size,
       precoMedio: a.unidades > 0 ? r2(a.receita / a.unidades) : null,
+      comissaoPraticada: com && com.valor > 0 ? r2((com.comissao * 100) / com.valor) : null,
+      coberturaComissao: com && a.receita > 0 ? Math.min(1, com.valor / a.receita) : 0,
+      visitas: canal ? canal.visitas : null,
+      vendasCanal: canal ? canal.vendas : null,
+      conversao: canal && canal.visitas > 0 ? r2((canal.vendas / canal.visitas) * 100) : null,
       porMes: obj(a.porMes),
       porCanal: obj(a.porCanal),
       porPeriodo: obj(a.porPeriodo),
@@ -407,4 +495,67 @@ export async function carregarAnaliseSku(
 /** Nome do canal, para a tela rotular as colunas. */
 export function nomeDosCanais(canais: CanalSku[]): Map<string, string> {
   return new Map(canais.map((c) => [c.id, c.nome]));
+}
+
+/**
+ * Visitas e vendas do relatório semanal do canal, somadas por SKU.
+ *
+ * ── Por que o grão é a semana ──
+ *
+ * É o grão em que o Mercado Livre informa visita por anúncio desde 2025
+ * (o diário só começou em agosto de 2026). Uma semana conta no período
+ * em que ela COMEÇA: partir a semana em dias exigiria inventar a divisão
+ * do tráfego dentro dela.
+ *
+ * ── Por que vendas vêm junto ──
+ *
+ * A conversão precisa de numerador e denominador da MESMA medição. A
+ * venda que esta tela conta vem de `pedido_itens` e cobre todos os
+ * canais; dividir essa por visita que só existe no Meli daria uma taxa
+ * inflada — o mesmo erro que a Visão geral já corrige com `pedComVisita`.
+ */
+async function visitasPorSku(
+  sb: Awaited<ReturnType<typeof clienteServidor>>,
+  inicio: string,
+  fim: string
+): Promise<Map<string, { visitas: number; vendas: number }>> {
+  const saida = new Map<string, { visitas: number; vendas: number }>();
+  try {
+    const [semanas, anunciosRaw] = await Promise.all([
+      paginar(() =>
+        sb
+          .from("anuncio_desempenho_semanal")
+          .select("anuncio_id,inicio,visitas,vendas")
+          .gte("inicio", inicio)
+          .lte("inicio", fim)
+          .order("id")
+      ),
+      paginar(() => sb.from("anuncios").select("id,sku_canal").order("id")),
+    ]);
+
+    const skuDoAnuncio = new Map(
+      (anunciosRaw as unknown as { id: string; sku_canal: string | null }[]).map((a) => [
+        a.id,
+        (a.sku_canal ?? "").trim(),
+      ])
+    );
+
+    for (const s of semanas as unknown as {
+      anuncio_id: string;
+      visitas: number;
+      vendas: number;
+    }[]) {
+      const sku = skuDoAnuncio.get(s.anuncio_id);
+      if (!sku) continue;
+      const at = saida.get(sku) ?? { visitas: 0, vendas: 0 };
+      at.visitas += Number(s.visitas) || 0;
+      at.vendas += Number(s.vendas) || 0;
+      saida.set(sku, at);
+    }
+  } catch (e) {
+    /* Sem o relatório semanal a tela segue sem conversão, que é o estado
+       de antes — melhor que derrubar a página inteira por uma coluna. */
+    console.error("[analise-sku/visitas]", e);
+  }
+  return saida;
 }

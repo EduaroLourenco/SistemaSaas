@@ -533,6 +533,22 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                   {aba !== "curva" && metrica !== "preco" && (
                     <th className={`${th} text-right`}>Preço vendido</th>
                   )}
+                  {aba !== "curva" && (
+                    <>
+                      <th
+                        className={`${th} text-right`}
+                        title="Vendas ÷ visitas do relatório semanal do Mercado Livre, somando os anúncios do SKU. Só o Meli informa visita, então a taxa é dele — a receita e as unidades da linha são de todos os canais."
+                      >
+                        Conversão (Meli)
+                      </th>
+                      <th
+                        className={`${th} text-right`}
+                        title="A alíquota que o canal realmente cobrou nas vendas deste SKU, ponderada pelo valor — não a de tabela. Em cinza, quanto da receita entrou na conta."
+                      >
+                        Comissão paga
+                      </th>
+                    </>
+                  )}
                   {aba !== "curva" &&
                     colunas.map((c) => (
                       <th key={c.chave} className={`${th} text-right`}>
@@ -584,6 +600,31 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                       <td className={`${td} text-right num text-xs text-ink-2`}>
                         {l.precoMedio == null ? "—" : money(l.precoMedio)}
                       </td>
+                    )}
+                    {aba !== "curva" && (
+                      <>
+                        <td className={`${td} text-right num text-xs text-ink-2`}>
+                          {l.conversao == null ? (
+                            <span className="text-ink-3" title="sem visita medida: SKU sem anúncio no Mercado Livre, ou sem leitura no período">—</span>
+                          ) : (
+                            pct(l.conversao, 2)
+                          )}
+                        </td>
+                        <td className={`${td} text-right text-xs`}>
+                          {l.comissaoPraticada == null ? (
+                            <span className="text-ink-3" title="nenhuma venda do período teve comissão informada pelo canal">—</span>
+                          ) : (
+                            <span className="inline-flex items-baseline gap-1">
+                              <span className="num text-ink-2">{pct(l.comissaoPraticada)}</span>
+                              {/* A cobertura anda junto: tarifa apurada sobre
+                                  16% da receita não vale o mesmo que sobre 90%. */}
+                              <span className="num text-[11px] text-ink-3">
+                                {Math.round(l.coberturaComissao * 100)}%
+                              </span>
+                            </span>
+                          )}
+                        </td>
+                      </>
                     )}
 
                     {aba !== "curva" &&
