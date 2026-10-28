@@ -81,7 +81,12 @@ const { processItem, getPrecoTabela, CONFIG_PADRAO } = await jiti.import(
   RAIZ + "/src/lib/planilhas/motor-promocoes.ts"
 );
 
-const base = await carregarFormulaBase();
+/* A operacao vai na mao: fora de uma requisicao nao ha cookie, e
+   carregarFormulaBase() filtra por ela desde 28/10 — sem passar, a
+   funcao devolve null em vez de pegar a base de outra empresa. */
+const OPERACAO = process.env.OPERACAO ?? "00000000-0000-0000-0000-000000000101";
+const base = await carregarFormulaBase(undefined, OPERACAO);
+if (!base) throw new Error("Sem Formula base para a operacao " + OPERACAO);
 console.log(`fórmula ${base.vigenteDe}: ${base.itens} itens, ${base.precos} preços`);
 
 /* ── A decisão, pelo processador da tela ────────────────── */

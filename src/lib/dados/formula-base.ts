@@ -1,6 +1,7 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
+import { operacaoPadrao } from "./operacao";
 import type { FormulaBaseData } from "@/lib/planilhas/motor-promocoes";
 
 /**
@@ -25,15 +26,50 @@ export type BaseDoBanco = {
   precos: number;
 };
 
+/**
+ * A operação da sessão, ou null fora de uma requisição.
+ *
+ * `operacaoPadrao()` lê cookie, e cookie não existe em script. Ali quem
+ * chama passa a operação na mão — o `catch` existe para isso, não para
+ * esconder erro.
+ */
+async function operacaoDaSessao(): Promise<string | null> {
+  try {
+    return (await operacaoPadrao())?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function carregarFormulaBase(
-  emQue?: string
+  emQue?: string,
+  /** A operação dona da base. Obrigatória fora de uma requisição. */
+  operacaoId?: string
 ): Promise<BaseDoBanco | null> {
   const sb = await clienteServidor();
   const corte = emQue ?? new Date().toISOString().slice(0, 10);
 
+  /*
+   * A operação filtra TODAS as consultas daqui.
+   *
+   * Sem isso, `vigente_de` mais recente era o de qualquer empresa: em
+   * 28/10/2026 a Probel (base de 30/09, 1.379 itens) recebia a vigência
+   * de 22/10 de outra empresa, com 82 itens. No app o RLS salvava — a
+   * sessão só enxerga a própria —, mas com a chave de serviço (os
+   * scripts locais) não havia nada segurando.
+   *
+   * O efeito medido era base VAZIA, que o sistema trata como "sem
+   * tabela" e portanto como "não sei" — nenhum preço errado saiu daqui.
+   * Mesmo assim: toda leitura filtra a operação, que é a regra escrita
+   * em `relatorio.ts` e vale para esta também.
+   */
+  const operacao = operacaoId ?? (await operacaoDaSessao());
+  if (!operacao) return null;
+
   const { data: versoes } = await sb
     .from("formula_base_itens")
     .select("vigente_de")
+    .eq("operacao_id", operacao)
     .lte("vigente_de", corte)
     .order("vigente_de", { ascending: false })
     .limit(1);
@@ -46,12 +82,14 @@ export async function carregarFormulaBase(
       sb
         .from("formula_base_itens")
         .select("mlb,tipo_anuncio,comissao_padrao")
+        .eq("operacao_id", operacao)
         .eq("vigente_de", vigenteDe)
     ),
     paginar(() =>
       sb
         .from("formula_base_precos")
         .select("chave_tipo,chave,comissao,preco")
+        .eq("operacao_id", operacao)
         .eq("vigente_de", vigenteDe)
     ),
   ]);
@@ -102,7 +140,11 @@ export async function carregarFormulaBase(
    * percentuais na coluna (16.5 = 16,5%), e o motor compara em fração.
    */
   const faltantes = await paginar(() =>
-    sb.from("anuncios").select("codigo_externo,tipo,comissao_atual").order("id")
+    sb
+      .from("anuncios")
+      .select("codigo_externo,tipo,comissao_atual")
+      .eq("operacao_id", operacao)
+      .order("id")
   );
   let completados = 0;
   for (const a of faltantes) {
