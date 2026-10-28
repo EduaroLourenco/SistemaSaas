@@ -416,8 +416,12 @@ export async function montarRelatorio(
   const [contas, pedidos, itens, visitasItem, anunciosDb, produtos, precosMinimos, metas, anotacoesDb, ads] =
     await Promise.all([
       sb.from("contas_canal").select("id,nome,identificador,operacao_id,canal_id,canais(nome,codigo)").eq("operacao_id", daOperacao).then((r) => r.data ?? []),
-      paginar<{ id: string; conta_canal_id: string; data: string; total: number; cancelado: boolean }>(() =>
-        sb.from("pedidos").select("id,conta_canal_id,data,total,cancelado").eq("operacao_id", daOperacao).gte("data", inicioAno).order("data")
+      /*
+       * `criado_em` entra para medir o que ainda vai chegar: ver a pendência
+       * "A janela desta semana ainda vai subir", no fim desta função.
+       */
+      paginar<{ id: string; conta_canal_id: string; data: string; total: number; cancelado: boolean; criado_em: string }>(() =>
+        sb.from("pedidos").select("id,conta_canal_id,data,total,cancelado,criado_em").eq("operacao_id", daOperacao).gte("data", inicioAno).order("data")
       ),
       paginar<{
         pedido_id: string; codigo_externo: string; sku: string | null; quantidade: number; preco_unitario: number;
@@ -1390,7 +1394,42 @@ export async function montarRelatorio(
   const comGa4 = (ga4 ?? []).some(
     (g) => g.credencial_ref && (g.config as Record<string, unknown> | null)?.propriedade
   );
+  /*
+   * Quanto da venda de um dia só é gravado DEPOIS do dia seguinte.
+   *
+   * A janela fecha ontem, e os números dela conferem com a base até o
+   * centavo (196 pedidos e R$ 355.173,53 em 21–27/10, medido em 28/10).
+   * O que falta não é conta: é dado que ainda não existia na hora da
+   * leitura. Pedido aprovado dias depois da compra e planilha importada
+   * depois fazem o valor de um dia continuar subindo por uma semana.
+   *
+   * A referência são 60 dias já fechados, terminando uma semana ANTES
+   * desta janela — usar a própria janela seria circular, e usar o ano
+   * inteiro misturaria importação de planilha antiga (um pedido de janeiro
+   * gravado em agosto conta como 200 dias de atraso).
+   */
+  const refDe = maisDias(de, -67);
+  const refAte = maisDias(de, -8);
+  const referencia = pedidos.filter((p) => !p.cancelado && p.data >= refDe && p.data <= refAte);
+  const valorRef = soma(referencia.map((p) => Number(p.total) || 0));
+  const tardios = referencia.filter(
+    (p) => diasEntre(p.data, String(p.criado_em).slice(0, 10)) > 1
+  );
+  const fatiaTardia = divide(soma(tardios.map((p) => Number(p.total) || 0)), valorRef);
+  /* Menos de 20 pedidos de referência não sustentam uma porcentagem. */
+  const vaiSubir = referencia.length >= 20 && fatiaTardia >= 0.1;
+
   const pendencias: Pendencia[] = [
+    ...(vaiSubir
+      ? [
+          {
+            titulo: "A janela desta semana ainda vai subir",
+            detalhe: `Nos 60 dias fechados antes desta janela (${refDe.slice(8)}/${refDe.slice(5, 7)} a ${refAte.slice(8)}/${refAte.slice(5, 7)}), ${(fatiaTardia * 100).toFixed(0)}% do valor de um dia só foi gravado mais de um dia depois da data do pedido: aprovação que sai depois da compra, e planilha importada depois.`,
+            impacto: `Os últimos dias de ${de.slice(8)}/${de.slice(5, 7)} a ${ate.slice(8)}/${ate.slice(5, 7)} estão incompletos. A receita e os pedidos desta janela devem subir nos próximos dias, e a comparação com a janela anterior — já fechada — sai desfavorecida.`,
+            quem: "sistema" as const,
+          },
+        ]
+      : []),
     ...(comGa4
       ? []
       : [

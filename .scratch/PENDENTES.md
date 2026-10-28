@@ -101,7 +101,16 @@ Nada aqui anda sem ele. Não é falta de código.
       00000000-0000-0000-0000-000000000101` (ensaio) e `--aplicar`. São
       R$ 1.481.734 de "cancelado" que nunca foi venda, em 10 contas, de
       01/2026 a 22/10. Apaga dado e refaz as diárias: **é do Eduardo**.
-- [ ] Relatório semanal pode estar perdendo venda recente — conferir.
+- [x] Relatório semanal "perdendo venda recente": **a conta está certa, o
+      dado é que ainda não chegou**. Conferido em 28/10 contra a base:
+      21–27/10 dá 196 pedidos e R$ 355.173,53 na tela e na base, ao
+      centavo. O que falta não é soma — nos 60 dias fechados antes da
+      janela, **55% do valor de um dia só foi gravado mais de um dia
+      depois** da data do pedido (aprovação que sai depois, planilha
+      importada depois). A janela fecha ontem, então os últimos dias estão
+      sempre incompletos e a comparação com a janela anterior (fechada)
+      sai desfavorecida. O relatório agora diz isso, medido, em
+      "Pendências" — não é defeito a corrigir, é leitura a declarar.
 
 ---
 
