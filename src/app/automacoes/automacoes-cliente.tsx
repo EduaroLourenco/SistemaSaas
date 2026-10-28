@@ -11,6 +11,8 @@ import { Select, Sheet } from "@/components/ui/controls";
 import { money, count, pct } from "@/lib/format";
 import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
 import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
+import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
+import { paraRegra, type ItemDaTela } from "@/lib/planilhas/item-para-regra";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -58,7 +60,11 @@ const diasAte = (iso: string | null) =>
 const dia = (iso: string | null) =>
   iso == null ? "—" : new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 
-export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads: DadosTrafegoPago }) {
+export default function Automacoes({ dados, ads, regras }: {
+  dados: DadosAutomacoes;
+  ads: DadosTrafegoPago;
+  regras: Regra[];
+}) {
   const [tema, setTema] = React.useState<"promocoes" | "ads">("promocoes");
   const [conta, setConta] = React.useState("");
   const [tipo, setTipo] = React.useState("");
@@ -285,6 +291,7 @@ export default function Automacoes({ dados, ads }: { dados: DadosAutomacoes; ads
             key={aberta.contaId + aberta.codigo}
             promocao={aberta}
             folga={folga}
+            regras={regras}
             onContar={anotarCabem}
           />
         )}
@@ -497,9 +504,10 @@ function Carrossel({
 
 type Aba = "cabem" | "nao" | "dentro" | "todos";
 
-function Detalhe({ promocao, folga, onContar }: {
+function Detalhe({ promocao, folga, regras, onContar }: {
   promocao: PromocaoAberta;
   folga: number;
+  regras: Regra[];
   onContar: (chave: string, c: Cabem) => void;
 }) {
   const [dados, setDados] = React.useState<ItensDaPromocao | null>(null);
@@ -508,6 +516,8 @@ function Detalhe({ promocao, folga, onContar }: {
   const [marcados, setMarcados] = React.useState<Set<string>>(new Set());
   const ultimaContagem = React.useRef<Cabem | null>(null);
   const [revisao, setRevisao] = React.useState<PedidoRevisao[] | null>(null);
+  /* O que as regras decidiram, por MLB. Vazio = ninguém aplicou ainda. */
+  const [porRegra, setPorRegra] = React.useState<Map<string, Resultado>>(new Map());
   /* Preço que a pessoa digitou, por MLB. Vazio = vale o que a folga propôs. */
   const [precos, setPrecos] = React.useState<Map<string, number>>(new Map());
 
@@ -711,6 +721,20 @@ function Detalhe({ promocao, folga, onContar }: {
     { key: "estoque", header: "Estoque", align: "right", mobile: "hidden",
       sortValue: (i) => i.estoque ?? 0,
       cell: (i) => (i.estoque == null ? vazio() : i.estoque >= 40_000 ? "sob enc." : count(i.estoque)) },
+    { key: "regra", header: "Regra", align: "right", mobile: "hidden",
+      sortValue: (i) => porRegra.get(i.mlb)?.regraNome ?? "",
+      cell: (i) => {
+        const d = porRegra.get(i.mlb);
+        if (!d) return vazio();
+        if (d.decisao === "sem_regra") return vazio("nenhuma bateu");
+        const tom = { aceitar: "up", reescrever: "info", nao_entrar: "down", conferir: "warn" } as const;
+        return (
+          <span className="inline-flex flex-col items-end gap-0.5">
+            <Badge tone={tom[d.decisao as keyof typeof tom] ?? "neutral"}>{d.regraNome}</Badge>
+            <span className="text-[10.5px] text-ink-3">{d.motivo}</span>
+          </span>
+        );
+      } },
     { key: "situacao", header: "Situação", align: "right", mobile: "subtitle",
       sortValue: (i) => situacaoDe(i),
       cell: (i) => {
@@ -763,6 +787,33 @@ function Detalhe({ promocao, folga, onContar }: {
         )}
         <Button
           className="ml-auto"
+          disabled={!regras.length}
+          title={regras.length ? undefined : "Crie regras em Automações › Regras de promoção"}
+          onClick={() => {
+            /* A regra decide; quem marca é a decisão dela. O envio
+               continua passando por revisar. */
+            const decidido = new Map<string, Resultado>();
+            const marcar = new Set<string>();
+            for (const i of dados.itens) {
+              if (i.status !== "candidate") continue;
+              const d = avaliarItem(paraRegra(paraItemDaTela(i, promocao)), regras);
+              decidido.set(i.mlb, d);
+              if (d.decisao === "aceitar" || d.decisao === "reescrever") marcar.add(i.mlb);
+              if (d.decisao === "reescrever" && d.acao?.tipo === "reescrever" && d.acao.folgaPct != null) {
+                const ps = pisoDe(i);
+                if (ps != null) {
+                  const v = Math.round(ps * (1 - d.acao.folgaPct / 100) * 100) / 100;
+                  setPrecos((a) => new Map(a).set(i.mlb, v));
+                }
+              }
+            }
+            setPorRegra(decidido);
+            setMarcados(marcar);
+          }}
+        >
+          Aplicar regras
+        </Button>
+        <Button
           disabled={!podeMarcar.length}
           onClick={() => setMarcados(new Set(podeMarcar.map((i) => i.mlb)))}
         >
@@ -1030,4 +1081,36 @@ function Ads({ dados }: { dados: DadosTrafegoPago }) {
       </Panel>
     </>
   );
+}
+
+/**
+ * O item da tela no formato que a regra espera.
+ *
+ * A faixa vai em PONTOS (11,5 e não 0,115): é como a pessoa escreve a
+ * condição, e misturar as duas escalas aqui seria o mesmo erro do pct
+ * que mostrava 0,1% em tudo.
+ */
+function paraItemDaTela(i: ItemAutomacao, p: PromocaoAberta): ItemDaTela {
+  return {
+    mlb: i.mlb,
+    contaCanalId: p.contaId,
+    tipoCampanha: p.tipo,
+    nomeCampanha: p.nome,
+    tipoAnuncio: i.tipoAnuncio,
+    statusAnuncio: i.statusAnuncio,
+    estoque: i.estoque,
+    sku: i.sku,
+    familia: null,
+    catalogo: null,
+    unidades30: null,
+    unidades90: null,
+    visitas30: null,
+    precoCanal: i.precoCanal,
+    precoCheio: i.precoCheio,
+    faixaQueSobra: null,
+    meliPct: i.meliPct,
+    acos: null,
+    investimento30: null,
+    margemPct: null,
+  };
 }
