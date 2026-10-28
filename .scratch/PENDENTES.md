@@ -1,6 +1,6 @@
 # Pendências — a porta de entrada
 
-Atualizado em 27/10/2026.
+Atualizado em 28/10/2026 (noite de 27 para 28).
 
 Este é o único arquivo que precisa ser lido para saber o que falta. Cada
 item aponta para a especificação onde o detalhe está. Quem abrir uma
@@ -102,6 +102,17 @@ publicados, com a **escrita desligada**.
 
 ---
 
+## Para rodar no Supabase — 2 migrações
+
+As duas estão escritas e o código aguenta a falta delas (a tela avisa e
+segue com o comportamento antigo). Enquanto não rodarem, os dois itens
+de Automações que foram entregues nesta noite não guardam nada.
+
+- [ ] `db/45_folga_por_campanha.sql` — a memória da folga.
+- [ ] `db/46_fila_de_aprovacao.sql` — o estado da fila de aprovação.
+
+---
+
 ## Travado no Eduardo
 
 Nada aqui anda sem ele. Não é falta de código.
@@ -119,10 +130,33 @@ Nada aqui anda sem ele. Não é falta de código.
       sistema não guarda esse campo. Precisa de coluna e de importação.
 - [ ] **As quatro operações chamadas "Operação principal".** Precisa
       decidir os nomes.
+- [ ] **Apagar os 1.199 pedidos nunca pagos.** Script pronto e ensaiado
+      (ver em "Soltos"). Apaga dado e refaz as diárias: é decisão dele.
 
 ---
 
 ## Soltos, menores
+
+- [ ] **`carregarFormulaBase()` escolhe a vigência sem filtrar a
+      operação.** Achado em 28/10 ao montar a tabela BI, e NÃO corrigido
+      de propósito: é caminho de preço, e mexer nele sem o Eduardo por
+      perto não vale o risco de madrugada.
+      `src/lib/dados/formula-base.ts` pega o `vigente_de` mais recente de
+      QUALQUER operação e depois carrega itens e preços daquela vigência,
+      também sem filtro. No app o RLS salva — a sessão só enxerga a
+      própria empresa. Fora dele não: com a chave de serviço (os scripts
+      de `scripts/local/`, e qualquer rota que use o cliente
+      privilegiado) a Probel recebe a base de 22/10 de OUTRA empresa, com
+      82 itens em vez dos 1.379 dela.
+      Medido: três operações têm base (Probel 30/09 com 1.379 itens,
+      123c2f3c 22/10 com 82, 01b057f3 10/10 com 72) e **nenhuma chave de
+      SKU/MLB se repete entre elas hoje** — então o efeito atual é base
+      VAZIA, não preço trocado. Por isso não virou incêndio: vazio o
+      sistema trata como "sem tabela", que é "não sei".
+      O conserto é passar a operação e filtrar as duas consultas; o que
+      exige cuidado é que `melhor-preco-reducao.mjs` e
+      `importar-tabela-precos.mjs` chamam a função fora de uma requisição
+      e teriam de receber a operação na mão.
 
 - [x] `/equipe` na navegação: **já estava lá**, e o item era engano. Está
       em `NAV_FOOTER` (`src/lib/nav.ts`) desde 01/10, e `NavTree` desenha
