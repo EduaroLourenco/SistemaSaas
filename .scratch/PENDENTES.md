@@ -72,8 +72,22 @@ Spec: `.scratch/automacoes/spec.md`, `automacao-em-massa.md`,
 A tela, o motor de regras e o diagnóstico de cobertura estão feitos e
 publicados, com a **escrita desligada**.
 
-- [ ] O botão de sincronizar da aba Ads segue desabilitado.
-- [ ] Degrau 2 de `automacao-em-massa.md`: a fila de aprovação.
+- [ ] O botão de sincronizar da aba Ads segue desabilitado — e vai ficar
+      até a primeira escrita de verdade. Ele não tem código por trás:
+      ligá-lo é escrever no Meli Ads, que é a mesma trava do item
+      "Primeira escrita de verdade no Meli", logo abaixo.
+- [x] Degrau 2, a fila de aprovação: `db/46_fila_de_aprovacao.sql`,
+      `lib/dados/fila-aprovacao.ts`, `/api/automacoes/fila` e a aba
+      **Fila** em Automações. Gerar roda as regras em cima do que o canal
+      convidou e grava a decisão com o **piso e a folga do momento** — é
+      o que torna a linha explicável em dezembro. Uma promoção por
+      chamada, quatro ao mesmo tempo, como os contadores: as 36 juntas
+      estouram a cota.
+      Nada é enviado: aprovar só muda o estado. O envio continua em
+      `/api/automacoes/enviar`, com `confirmar: true`.
+      **Falta rodar a migração 46 no Supabase.** Até lá a aba avisa.
+      Falta também o passo 1 do degrau (rodar de madrugada): depende do
+      agendamento, que está parado por `CRON_SECRET` e companhia.
 - [x] Memória de folga — virou `folgas_campanha` (migração
       `db/45_folga_por_campanha.sql`), **por tipo de campanha**, que é
       como a Probel trabalha: 5% nas automáticas e 0% no pré-acordo. O

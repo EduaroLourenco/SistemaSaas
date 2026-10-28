@@ -12,6 +12,8 @@ import { money, count, pct } from "@/lib/format";
 import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
 import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
 import { FOLGA_PADRAO, TIPO_PADRAO, type Folgas } from "@/lib/folga";
+import type { Fila } from "@/lib/dados/fila-aprovacao";
+import { FilaAprovacao } from "@/components/automacoes/fila";
 import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
 import { paraRegra, type ItemDaTela } from "@/lib/planilhas/item-para-regra";
 import { pisoDoItem, faixaDoPreco, precoComFolga } from "@/lib/planilhas/piso-promocao";
@@ -62,13 +64,14 @@ const diasAte = (iso: string | null) =>
 const dia = (iso: string | null) =>
   iso == null ? "—" : new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 
-export default function Automacoes({ dados, ads, regras, folgas }: {
+export default function Automacoes({ dados, ads, regras, folgas, fila }: {
   dados: DadosAutomacoes;
   ads: DadosTrafegoPago;
   regras: Regra[];
   folgas: Folgas;
+  fila: Fila;
 }) {
-  const [tema, setTema] = React.useState<"promocoes" | "ads">("promocoes");
+  const [tema, setTema] = React.useState<"promocoes" | "fila" | "ads">("promocoes");
   const [conta, setConta] = React.useState("");
   const [tipo, setTipo] = React.useState("");
   const [prazo, setPrazo] = React.useState("");
@@ -230,7 +233,7 @@ export default function Automacoes({ dados, ads, regras, folgas }: {
             {atualizando ? "Puxando…" : "Atualizar"}
           </Button>
           <div className="flex gap-1 rounded-r1 bg-panel-3 p-[3px]">
-            {([["promocoes", "Promoções"], ["ads", "Tráfego pago"]] as const).map(([k, r]) => (
+            {([["promocoes", "Promoções"], ["fila", `Fila${fila.linhas.length ? ` (${fila.linhas.length})` : ""}`], ["ads", "Tráfego pago"]] as const).map(([k, r]) => (
               <button
                 key={k} onClick={() => setTema(k)} aria-selected={tema === k}
                 className={[
@@ -245,7 +248,7 @@ export default function Automacoes({ dados, ads, regras, folgas }: {
           </div>
         }
         filters={
-          tema === "ads" ? undefined : (
+          tema !== "promocoes" ? undefined : (
           <BarraFiltros>
             <Filtro rotulo="Conta">
               <Select value={conta} onChange={(e) => setConta(e.target.value)} className="min-w-[180px]">
@@ -293,6 +296,13 @@ export default function Automacoes({ dados, ads, regras, folgas }: {
       />
       <PageBody>
         {tema === "ads" && <Ads dados={ads} />}
+        {tema === "fila" && (
+          <FilaAprovacao
+            fila={fila}
+            promocoes={dados.promocoes}
+            podeEscrever={dados.contas.some((c) => c.escrita)}
+          />
+        )}
         {tema === "promocoes" && (<>
         {/* Um número manda, o resto é contexto. Quatro cartões do mesmo
             tamanho não dizem para onde olhar. */}

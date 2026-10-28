@@ -25,7 +25,7 @@ const jiti = createJiti(import.meta.url, {
   alias: { "@": path.join(raiz, "src"), "server-only": vazio },
   interopDefault: true,
 });
-const { pisoDoItem, faixaDoPreco, precoComFolga } = await jiti.import(
+const { pisoDoItem, faixaDoPreco, precoComFolga, precoProposto } = await jiti.import(
   path.join(raiz, "src/lib/planilhas/piso-promocao.ts")
 );
 
@@ -94,4 +94,22 @@ const item = (extra = {}) => ({
   assert.ok(precoComFolga(1234.56, 7) <= 1234.56 * 0.93 + 0.005);
 }
 
-console.log("OK: piso segue o rebate, falta de dado não vira zero, e a faixa pega o preço igual.");
+
+/* ══ 7. Zero não é piso ══
+   `precoDeTabela` devolve 0 para o anúncio fora da Fórmula base. Esse
+   zero atravessava como piso de verdade e virou, na fila de aprovação,
+   uma linha propondo R$ 0,00 — foi assim que apareceu no print. */
+{
+  assert.equal(pisoDoItem(item({ piso: 0, comissaoCheia: null }), BANDAS), null);
+  assert.equal(pisoDoItem(item({ piso: 0, precos: [] }), BANDAS), null);
+  assert.equal(pisoDoItem(item({ piso: 0, precos: [0, 0, 0] }), BANDAS), null,
+    "linha de preços zerada é ausência, não um piso de graça");
+  assert.equal(precoProposto({ precoCanal: 50, sugerido: null, minimoCanal: null, maximoCanal: null }, 0, 5, false),
+    null, "piso zero não aprova preço nenhum");
+  assert.equal(precoProposto({ precoCanal: null, sugerido: null, minimoCanal: null, maximoCanal: null }, 0, 5, true),
+    null, "e não propõe R$ 0,00");
+}
+
+console.log(
+  "OK: piso segue o rebate, zero é ausência, falta de dado não vira zero, e a faixa pega o preço igual.",
+);
