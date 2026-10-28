@@ -32,8 +32,17 @@ Teste: `node scripts/testar-semana-em-curso.mjs`
       semana em curso herdava as datas da S44 de 2025 — passando por
       fechada. Agora é `S44/26`, e a ordem é pela data, não pelo número.
       Conferido no banco: 56 semanas, só a S44/26 parcial, 2 de 7 dias.
-- [ ] A tabela BI densa: uma linha por anúncio, ordenável, primeira
-      coluna fixa, com vitrine e praticado em colunas separadas.
+- [x] A tabela BI densa: `src/components/analise/tabela-bi.tsx`, uma
+      linha por MLB, toda coluna ordenável, primeira coluna fixa, vitrine
+      e praticado em colunas separadas. Entra por um seletor "uma linha
+      por Produto / Anúncio" — a tabela de produtos continua sendo o
+      padrão, porque ela responde "qual colchão" e esta responde "qual
+      anúncio". Desenhada fora do app com dado real (1.016 anúncios da
+      Probel) e conferida em 1280 e 390; `next build` passa.
+      Fica em `components/analise/` e não em `components/anuncios/` como
+      dizia a spec: é onde moram as outras tabelas desta tela.
+      Nulo ordena sempre para o fim, e cada célula vazia diz o motivo —
+      "sem leitura", "sem venda" e "sem tabela" são três coisas.
 - [ ] O raio-x por SKU: rota própria `/api/anuncios/sku/[sku]`,
       `lib/dados/raio-x-sku.ts`, `lib/dados/recorde-sku.ts`, e os cinco
       blocos do drawer.

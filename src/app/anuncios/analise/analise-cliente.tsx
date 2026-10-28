@@ -32,6 +32,7 @@ import {
 import { AXIS, GRID, Legend } from "@/components/ui/chart";
 import { TabelaSemanal } from "@/components/analise/tabela-semanal";
 import { TabelaProdutos } from "@/components/analise/tabela-produtos";
+import { TabelaBI } from "@/components/analise/tabela-bi";
 import { PainelLentes } from "@/components/analise/painel-lentes";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
 import { LinhaDoTempo } from "@/components/analise/linha-do-tempo";
@@ -212,6 +213,15 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
   const [filtrosAbertos, setFiltrosAbertos] = React.useState(false);
   /* A lente é filtro, não aba: ela recorta a mesma tabela. */
   const [lente, setLente] = React.useState<Lente>("todos");
+  /*
+   * Produto ou anúncio: duas perguntas, não duas telas.
+   *
+   * Por produto (o padrão) soma os 3,9 anúncios do mesmo colchão e
+   * responde "qual produto tem problema". Por anúncio responde "qual
+   * MLB", que é onde se mexe no preço — clássico e premium têm tarifa
+   * diferente, e as duas contas têm preço diferente.
+   */
+  const [grao, setGrao] = React.useState<"produto" | "anuncio">("produto");
   const [comparando, setComparando] = React.useState(false);
 
   const selecionadas = React.useMemo(() => BASE.slice(-nSemanas), [BASE, nSemanas]);
@@ -526,14 +536,34 @@ export default function AnaliseAnuncios({ dados }: { dados: DadosAnalise }) {
           periodo={`${nSemanas} semanas (${rotuloPeriodo})`}
         />
 
-        <TabelaProdutos
-          itens={filtrados}
-          semanas={semanasSelecionadas}
-          abrir={setSelecionado}
-          marcados={marcados}
-          marcar={setMarcados}
-          comparar={() => setComparando(true)}
-        />
+        <div className="flex items-center gap-2">
+          <span className="label">Uma linha por</span>
+          <Segmented<"produto" | "anuncio">
+            options={[
+              { value: "produto", label: "Produto" },
+              { value: "anuncio", label: "Anúncio" },
+            ]}
+            value={grao}
+            onChange={setGrao}
+          />
+        </div>
+
+        {grao === "produto" ? (
+          <TabelaProdutos
+            itens={filtrados}
+            semanas={semanasSelecionadas}
+            abrir={setSelecionado}
+            marcados={marcados}
+            marcar={setMarcados}
+            comparar={() => setComparando(true)}
+          />
+        ) : (
+          <TabelaBI
+            itens={filtrados}
+            semanas={semanasSelecionadas}
+            abrir={setSelecionado}
+          />
+        )}
       </PageBody>
 
       {selecionado && (
