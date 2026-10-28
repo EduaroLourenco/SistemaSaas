@@ -27,12 +27,20 @@ import type { DadosAnaliseSku, LinhaSku } from "@/lib/dados/analise-sku";
  * R$ 11 mil na loja própria: o mesmo item é âncora num lugar e cauda no
  * outro, e nenhum ranking geral mostra isso.
  *
- * ── Unidade ou receita, na mesma tabela ──
+ * ── Unidade, receita ou preço, na mesma tabela ──
  *
- * As duas leituras discordam de propósito, e a discordância é o achado:
- * um SKU pode liderar em unidades e sumir em receita. O botão troca a
+ * As leituras discordam de propósito, e a discordância é o achado: um
+ * SKU pode liderar em unidades e sumir em receita. O botão troca a
  * métrica sem mudar as linhas nem a ordem, para que a comparação seja
- * entre as duas leituras do MESMO recorte.
+ * entre as leituras do MESMO recorte.
+ *
+ * O preço é a terceira, e responde o que as outras duas escondem: a
+ * receita caiu porque vendeu menos, ou porque vendeu mais barato? Ele é
+ * o preço PRATICADO — receita ÷ unidades do mês —, não o de vitrine,
+ * então já vem com desconto de campanha e cupom dentro.
+ *
+ * Mês sem venda não tem preço: a célula diz "—", nunca R$ 0. Zero ali
+ * seria a afirmação de que o produto saiu de graça.
  *
  * ── A curva é do recorte ──
  *
@@ -42,7 +50,7 @@ import type { DadosAnaliseSku, LinhaSku } from "@/lib/dados/analise-sku";
  */
 
 type Aba = "mes" | "canal" | "periodo" | "curva";
-type Metrica = "receita" | "unidades";
+type Metrica = "receita" | "unidades" | "preco";
 
 const MESES = [
   "jan", "fev", "mar", "abr", "mai", "jun",
@@ -236,16 +244,40 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
     });
   }, [linhas, busca, curva]);
 
-  /** O valor de uma célula, na métrica escolhida. */
-  const valor = (c: { receita: number; unidades: number } | undefined) =>
-    c ? (metrica === "receita" ? c.receita : c.unidades) : 0;
+  /**
+   * O valor de uma célula, na métrica escolhida.
+   *
+   * Zero quer dizer "não vendeu" nas três métricas, e é o que faz a
+   * célula virar travessão. No preço isso importa mais: dividir receita
+   * por zero unidade daria infinito, e mostrar R$ 0 diria que saiu de
+   * graça.
+   */
+  const valor = (c: { receita: number; unidades: number } | undefined) => {
+    if (!c) return 0;
+    if (metrica === "receita") return c.receita;
+    if (metrica === "unidades") return c.unidades;
+    return c.unidades > 0 ? c.receita / c.unidades : 0;
+  };
 
   const formatar = (v: number) =>
-    metrica === "receita" ? moneyShort(v) : count(v);
+    metrica === "receita" ? moneyShort(v) : metrica === "preco" ? money(v) : count(v);
 
-  /* O maior valor da tabela dá a escala do sombreado das células. */
+  /*
+   * A escala do sombreado — e por que ela muda com a métrica.
+   *
+   * Receita e unidade se comparam ENTRE produtos: a escala é a tabela
+   * inteira, do zero ao maior valor, e o pico salta.
+   *
+   * Preço não. Comparar o preço de um colchão de R$ 1.800 com o de uma
+   * chopeira de R$ 5.000 não diz nada — e, com uma escala só, as dez
+   * colunas do colchão saem com o mesmo tom, que foi exatamente como
+   * apareceu no primeiro desenho desta tela. O preço se compara com ele
+   * mesmo: a escala é POR LINHA, do mês mais barato ao mais caro daquele
+   * SKU. Aí a pergunta que interessa — "em que mês este produto saiu
+   * mais barato?" — se responde olhando a linha.
+   */
   const maximo = React.useMemo(() => {
-    let m = 0;
+    let max = 0;
     const chaves = aba === "canal" ? canais.map((c) => c.id) : meses;
     for (const l of visiveis.slice(0, 200)) {
       for (const k of chaves) {
@@ -256,11 +288,45 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
               ? l.porPeriodo[k]
               : l.porMes[k]
         );
-        if (v > m) m = v;
+        if (v > max) max = v;
       }
     }
-    return m;
+    return max;
   }, [visiveis, aba, meses, canais, metrica]);
+
+  /** A célula de uma linha numa coluna, qualquer que seja a aba. */
+  const celulaDe = (l: LinhaSku, chave: string) =>
+    aba === "canal" ? l.porCanal[chave] : aba === "periodo" ? l.porPeriodo[chave] : l.porMes[chave];
+
+  /**
+   * A faixa de preço da própria linha, do menor ao maior mês com venda.
+   * Null nas outras métricas, que usam a escala da tabela.
+   */
+  const faixaDaLinha = (l: LinhaSku, chaves: string[]) => {
+    if (metrica !== "preco") return null;
+    let min = Infinity;
+    let max = 0;
+    for (const k of chaves) {
+      const v = valor(celulaDe(l, k));
+      /* Só mês com venda entra: o zero dos outros é ausência, e puxaria
+         a faixa de volta para o zero. */
+      if (v > 0) {
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+    }
+    return Number.isFinite(min) ? { min, max } : null;
+  };
+
+  /** Quão forte a célula pinta, de 0 a 1. */
+  const forcaDe = (v: number, faixa: { min: number; max: number } | null) => {
+    if (v <= 0) return 0;
+    if (!faixa) return maximo > 0 ? v / maximo : 0;
+    const largura = faixa.max - faixa.min;
+    /* Um mês só, ou todos pelo mesmo preço: meio-tom é mais honesto que
+       pintar de claro como se fosse o mais barato de uma série. */
+    return largura > 0 ? (v - faixa.min) / largura : 0.5;
+  };
 
   const th = "px-2.5 py-2 text-[12px] font-semibold text-ink-3 whitespace-nowrap";
   const td = "px-2.5 py-1.5 border-b border-line";
@@ -346,15 +412,16 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
             <FiltroDivisor />
 
             {/*
-              Medir por receita ou por unidade não recarrega nada — é
-              recorte de leitura, não de consulta. Fica depois do divisor
-              para não parecer que precisa de "Aplicar".
+              Trocar a métrica não recarrega nada — é recorte de leitura,
+              não de consulta. Fica depois do divisor para não parecer que
+              precisa de "Aplicar".
             */}
             <Filtro rotulo="Medir por">
               <Segmented
                 options={[
                   { value: "receita" as const, label: "Receita" },
                   { value: "unidades" as const, label: "Unidades" },
+                  { value: "preco" as const, label: "Preço vendido" },
                 ]}
                 value={metrica}
                 onChange={setMetrica}
@@ -460,7 +527,12 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                   </th>
                   <th className={`${th} text-right`}>Total</th>
                   <th className={`${th} text-right`}>Un./dia</th>
-                  {aba !== "curva" && <th className={`${th} text-right`}>Preço vendido</th>}
+                  {/* Com a métrica em preço, a coluna Total já é o preço
+                      médio do recorte: repetir seria a mesma conta duas
+                      vezes, lado a lado. */}
+                  {aba !== "curva" && metrica !== "preco" && (
+                    <th className={`${th} text-right`}>Preço vendido</th>
+                  )}
                   {aba !== "curva" &&
                     colunas.map((c) => (
                       <th key={c.chave} className={`${th} text-right`}>
@@ -501,23 +573,30 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                       </p>
                     </td>
                     <td className={`${td} text-right num text-[12.5px] text-ink font-medium`}>
-                      {formatar(metrica === "receita" ? l.receita : l.unidades)}
+                      {metrica === "preco"
+                        ? l.precoMedio == null
+                          ? "—"
+                          : money(l.precoMedio)
+                        : formatar(metrica === "receita" ? l.receita : l.unidades)}
                     </td>
                     <td className={`${td} text-right num text-xs text-ink-2`}>{(l.unidades / Math.max(1,(Date.parse(periodo.fim)-Date.parse(periodo.inicio))/86400000+1)).toLocaleString("pt-BR",{maximumFractionDigits:2})}</td>
-                    {aba !== "curva" && <td className={`${td} text-right num text-xs text-ink-2`}>{l.precoMedio == null ? "—" : money(l.precoMedio)}</td>}
+                    {aba !== "curva" && metrica !== "preco" && (
+                      <td className={`${td} text-right num text-xs text-ink-2`}>
+                        {l.precoMedio == null ? "—" : money(l.precoMedio)}
+                      </td>
+                    )}
 
                     {aba !== "curva" &&
-                      colunas.map((c) => {
-                        const cel =
-                          aba === "canal"
-                            ? l.porCanal[c.chave]
-                            : aba === "periodo"
-                              ? l.porPeriodo[c.chave]
-                              : l.porMes[c.chave];
+                      (() => {
+                        /* A faixa sai uma vez por linha, não uma por
+                           célula: são dez colunas lendo o mesmo. */
+                        const faixa = faixaDaLinha(l, colunas.map((c) => c.chave));
+                        return colunas.map((c) => {
+                        const cel = celulaDe(l, c.chave);
                         const v = valor(cel);
                         // Sombreado proporcional: com 9 meses e 10 canais,
                         // o olho não acha o pico lendo número por número.
-                        const forca = maximo > 0 ? v / maximo : 0;
+                        const forca = forcaDe(v, faixa);
                         return (
                           <td
                             key={c.chave}
@@ -537,7 +616,8 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                             )}
                           </td>
                         );
-                      })}
+                        });
+                      })()}
 
                     {aba === "periodo" && comparacoes.length > 0 && (
                       <td className={`${td} text-right border-l border-line-2`}>
