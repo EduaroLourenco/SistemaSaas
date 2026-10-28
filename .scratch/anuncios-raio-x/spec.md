@@ -98,3 +98,68 @@ tela diz "não consegui ler as promoções agora", não "sem promoções".
   o motivo na própria célula, não um quadro de aviso.
 - Nada de dois eixos no mesmo gráfico: preço × volume e visitas ×
   conversão são dois gráficos, ou as duas séries indexadas a 100.
+
+---
+
+## Diagnóstico de 27/10/2026 — os dois defeitos que o Eduardo apontou
+
+Medido na base, não suposto. Os números abaixo são de 27/10.
+
+### 1. O preço de vitrine não aparece — é o modelo, não a tela
+
+`Metricas.preco`, em `src/lib/analise.ts`, é **um** campo guardando duas
+coisas diferentes:
+
+```ts
+const preco = ultimaComVenda
+  ? ultimaComVenda.receita / ultimaComVenda.vendas   // praticado
+  : (ultimaComVitrine?.precoAnunciado ?? 0);          // vitrine
+```
+
+Anúncio que vendeu mostra praticado e **nunca** mostra vitrine: não há
+campo onde pôr. A tela não tem defeito; ela exibe fielmente o único
+número que recebe.
+
+Correção: `Metricas` passa a ter `precoVitrine` e `precoPraticado`
+separados. `preco` continua existindo (o desvio contra a tabela usa ele)
+mas deixa de ser o que a tela mostra.
+
+### 2. O filtro de tempo — a semana parcial contamina tudo
+
+`SEMANAS.slice(-Number(recorte))` inclui a semana corrente, que está
+incompleta:
+
+| semana | intervalo | vendas | visitas |
+|---|---|---|---|
+| S43 | 19/10 a 25/10 | 264 | 11.772 |
+| **S44** | **26/10 a 01/11** | **25** | **2.181** |
+
+S44 tem 2 dias dos 7. Entra na soma e também na comparação "vs. N
+semanas anteriores", então toda métrica aparece despencando. E o rótulo
+diz só "8 semanas", nunca as datas — o usuário não tem como ver a causa.
+
+Correções: excluir a semana corrente do recorte por padrão (com opção de
+incluir, rotulada "semana em curso, 2 de 7 dias"), e o rótulo passa a
+mostrar o intervalo real de datas.
+
+### 3. O que a base realmente tem (corrige suposição anterior)
+
+Uma primeira leitura minha disse que o dado semanal parava em julho.
+**Estava errado** — era o limite de 1.000 linhas do PostgREST truncando a
+consulta. Com paginação:
+
+- `anuncio_desempenho_semanal`: **11.039 linhas, 56 semanas, sem buraco
+  nenhum**, da S01/2026 até a S44 (em curso).
+- `preco_anunciado`: **nulo nas 11.039 linhas.** Ninguém nunca gravou.
+  A vitrine só existe via `carregarVitrineSemanal`, que lê
+  `anuncio_estoque_diario`.
+- `anuncio_estoque_diario`: 39.532 leituras, mas só de **30/09 a 27/10**.
+  Logo, vitrine existe para a S40 em diante e **não existe antes** — a
+  tela precisa dizer "não medimos" nas semanas anteriores, não mostrar
+  vazio nem zero.
+- `pedido_itens`: 20.400 linhas, até 28/10. Venda está em dia.
+
+Consequência de projeto: qualquer coluna de vitrine na tabela BI tem
+dado para ~5 semanas e nulo no resto. Não é defeito a corrigir, é a
+idade da coleta — e é a diferença entre nulo e zero que as regras de
+`docs/agents/telas.md` mandam respeitar.

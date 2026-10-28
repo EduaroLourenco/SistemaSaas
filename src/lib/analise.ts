@@ -99,6 +99,21 @@ export type Metricas = {
   conversao: number;
   /** Preço médio da última semana com venda. */
   preco: number;
+  /**
+   * O preço publicado na vitrine do anúncio: o que o comprador vê antes
+   * de comprar. Da última semana do recorte que teve leitura.
+   *
+   * Null quando nenhuma semana do recorte teve leitura. As leituras
+   * começam em 30/09/2026, então recorte anterior a isso vem nulo — e
+   * nulo aqui é "não medimos", nunca "de graça".
+   */
+  precoVitrine: number | null;
+  /**
+   * O preço que o cliente de fato pagou: receita ÷ vendas da última
+   * semana com venda. Difere do de vitrine por campanha, cupom ou frete
+   * embutido. Null quando o recorte não teve venda nenhuma.
+   */
+  precoPraticado: number | null;
   precoIdeal: number;
   /** Desvio percentual do praticado sobre o ideal. */
   desvio: number;
@@ -234,9 +249,19 @@ export function analisar(
       const ultimaComVitrine = [...semanas]
         .reverse()
         .find((w) => w.precoAnunciado != null);
-      const preco = ultimaComVenda
+      /*
+       * Vitrine e praticado são duas perguntas diferentes — "por quanto
+       * está anunciado" e "por quanto saiu" — e cada uma tem a sua
+       * última semana válida. Juntar as duas num campo só fazia o anúncio
+       * que vendeu nunca mostrar a vitrine: não havia onde pôr.
+       */
+      const precoVitrine = ultimaComVitrine?.precoAnunciado ?? null;
+      const precoPraticado = ultimaComVenda
         ? ultimaComVenda.receita / ultimaComVenda.vendas
-        : (ultimaComVitrine?.precoAnunciado ?? 0);
+        : null;
+      /* `preco` segue sendo o que compara com a tabela: o pago, se houve
+         venda; senão o anunciado. Zero = não há preço medido. */
+      const preco = precoPraticado ?? precoVitrine ?? 0;
       const precoIdeal = ultimaComVenda
         ? ultimaComVenda.precoIdeal
         : ultima
@@ -285,6 +310,8 @@ export function analisar(
         receita,
         conversao,
         preco,
+        precoVitrine,
+        precoPraticado,
         precoIdeal,
         desvio,
         comissao: ultima ? ultima.comissao : 0,
