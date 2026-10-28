@@ -42,6 +42,12 @@ import type { DadosAnaliseSku, LinhaSku } from "@/lib/dados/analise-sku";
  * Mês sem venda não tem preço: a célula diz "—", nunca R$ 0. Zero ali
  * seria a afirmação de que o produto saiu de graça.
  *
+ * A quarta é a comissão PAGA, mês a mês. É ela que fecha a história do
+ * preço: campanha com redução de tarifa entra e sai ao longo do ano, e a
+ * média do recorte inteiro esconde quando isso aconteceu. Célula sem
+ * venda com comissão conhecida diz "—" — "não medimos", nunca "não
+ * pagou".
+ *
  * ── A curva é do recorte ──
  *
  * Filtrar por canal recalcula A, B e C dentro dele. É o que permite ver
@@ -50,7 +56,7 @@ import type { DadosAnaliseSku, LinhaSku } from "@/lib/dados/analise-sku";
  */
 
 type Aba = "mes" | "canal" | "periodo" | "curva";
-type Metrica = "receita" | "unidades" | "preco";
+type Metrica = "receita" | "unidades" | "preco" | "comissao";
 
 const MESES = [
   "jan", "fev", "mar", "abr", "mai", "jun",
@@ -252,15 +258,24 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
    * por zero unidade daria infinito, e mostrar R$ 0 diria que saiu de
    * graça.
    */
-  const valor = (c: { receita: number; unidades: number } | undefined) => {
+  const valor = (
+    c: { receita: number; unidades: number; comissao?: number | null } | undefined
+  ) => {
     if (!c) return 0;
     if (metrica === "receita") return c.receita;
     if (metrica === "unidades") return c.unidades;
+    if (metrica === "comissao") return c.comissao ?? 0;
     return c.unidades > 0 ? c.receita / c.unidades : 0;
   };
 
   const formatar = (v: number) =>
-    metrica === "receita" ? moneyShort(v) : metrica === "preco" ? money(v) : count(v);
+    metrica === "receita"
+      ? moneyShort(v)
+      : metrica === "preco"
+        ? money(v)
+        : metrica === "comissao"
+          ? pct(v)
+          : count(v);
 
   /*
    * A escala do sombreado — e por que ela muda com a métrica.
@@ -303,7 +318,10 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
    * Null nas outras métricas, que usam a escala da tabela.
    */
   const faixaDaLinha = (l: LinhaSku, chaves: string[]) => {
-    if (metrica !== "preco") return null;
+    /* Preço e comissão se comparam com eles mesmos, não entre produtos:
+       os dois andam numa faixa estreita e, numa escala comum, a linha
+       inteira sai do mesmo tom. */
+    if (metrica !== "preco" && metrica !== "comissao") return null;
     let min = Infinity;
     let max = 0;
     for (const k of chaves) {
@@ -422,6 +440,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                   { value: "receita" as const, label: "Receita" },
                   { value: "unidades" as const, label: "Unidades" },
                   { value: "preco" as const, label: "Preço vendido" },
+                  { value: "comissao" as const, label: "Comissão paga" },
                 ]}
                 value={metrica}
                 onChange={setMetrica}
@@ -533,6 +552,8 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                   {aba !== "curva" && metrica !== "preco" && (
                     <th className={`${th} text-right`}>Preço vendido</th>
                   )}
+                  {/* Com a métrica em comissão, a coluna Total já é a
+                      alíquota do recorte: a coluna fixa sairia repetida. */}
                   {aba !== "curva" && (
                     <>
                       <th
@@ -541,12 +562,14 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                       >
                         Conversão (Meli)
                       </th>
-                      <th
-                        className={`${th} text-right`}
-                        title="A alíquota que o canal realmente cobrou nas vendas deste SKU, ponderada pelo valor — não a de tabela. Em cinza, quanto da receita entrou na conta."
-                      >
-                        Comissão paga
-                      </th>
+                      {metrica !== "comissao" && (
+                        <th
+                          className={`${th} text-right`}
+                          title="A alíquota que o canal realmente cobrou nas vendas deste SKU, ponderada pelo valor — não a de tabela. Em cinza, quanto da receita entrou na conta."
+                        >
+                          Comissão paga
+                        </th>
+                      )}
                     </>
                   )}
                   {aba !== "curva" &&
@@ -593,7 +616,11 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                         ? l.precoMedio == null
                           ? "—"
                           : money(l.precoMedio)
-                        : formatar(metrica === "receita" ? l.receita : l.unidades)}
+                        : metrica === "comissao"
+                          ? l.comissaoPraticada == null
+                            ? "—"
+                            : pct(l.comissaoPraticada)
+                          : formatar(metrica === "receita" ? l.receita : l.unidades)}
                     </td>
                     <td className={`${td} text-right num text-xs text-ink-2`}>{(l.unidades / Math.max(1,(Date.parse(periodo.fim)-Date.parse(periodo.inicio))/86400000+1)).toLocaleString("pt-BR",{maximumFractionDigits:2})}</td>
                     {aba !== "curva" && metrica !== "preco" && (
@@ -610,6 +637,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                             pct(l.conversao, 2)
                           )}
                         </td>
+                        {metrica !== "comissao" && (
                         <td className={`${td} text-right text-xs`}>
                           {l.comissaoPraticada == null ? (
                             <span className="text-ink-3" title="nenhuma venda do período teve comissão informada pelo canal">—</span>
@@ -624,6 +652,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                             </span>
                           )}
                         </td>
+                        )}
                       </>
                     )}
 
@@ -638,10 +667,27 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                         // Sombreado proporcional: com 9 meses e 10 canais,
                         // o olho não acha o pico lendo número por número.
                         const forca = forcaDe(v, faixa);
+                        /*
+                         * A comissão de uma célula pode sair de uma fatia
+                         * pequena do mês: em outubro de 2026 a cobertura
+                         * do PA85351 é 6%, porque a venda migrou para
+                         * canais que não informam tarifa. O número não é
+                         * falso, mas é fino — e número fino com a mesma
+                         * cara do grosso engana. Abaixo de um quarto do
+                         * valor, ele some de tom e a procedência vai no
+                         * título.
+                         */
+                        const cobertura = metrica === "comissao" ? (cel?.coberturaComissao ?? 0) : 1;
+                        const fina = metrica === "comissao" && v > 0 && cobertura < 0.25;
                         return (
                           <td
                             key={c.chave}
                             className={`${td} text-right`}
+                            title={
+                              metrica === "comissao" && v > 0
+                                ? `apurada sobre ${Math.round(cobertura * 100)}% do valor do período`
+                                : undefined
+                            }
                             style={
                               v > 0
                                 ? { background: `color-mix(in srgb, var(--brand) ${Math.round(forca * 22)}%, transparent)` }
@@ -649,8 +695,9 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
                             }
                           >
                             {v > 0 ? (
-                              <span className="num text-[12px] text-ink-2">
+                              <span className={`num text-[12px] ${fina ? "text-ink-3" : "text-ink-2"}`}>
                                 {formatar(v)}
+                                {fina && <span className="ml-0.5 text-[10px]">·</span>}
                               </span>
                             ) : (
                               <span className="text-[12px] text-ink-3">—</span>

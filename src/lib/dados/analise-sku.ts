@@ -44,7 +44,20 @@ import { carregarContasRecorte } from "./contas-recorte";
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
 const r2 = (v: number) => Number(v.toFixed(2));
 
-export type Celula = { unidades: number; receita: number; pedidos: number };
+export type Celula = {
+  unidades: number;
+  receita: number;
+  pedidos: number;
+  /**
+   * A alíquota que o canal cobrou neste recorte, em pontos percentuais.
+   *
+   * Null quando nenhuma venda da célula teve comissão conhecida — e aí é
+   * "não medimos", que é diferente de "não pagou".
+   */
+  comissao?: number | null;
+  /** Quanto do valor da célula entrou nessa alíquota, de 0 a 1. */
+  coberturaComissao?: number;
+};
 
 export type LinhaSku = {
   sku: string;
@@ -286,6 +299,20 @@ export async function carregarAnaliseSku(
    * anúncio.
    */
   const comissaoPorSku = new Map<string, { comissao: number; valor: number }>();
+  /*
+   * A mesma conta, quebrada por mês, por canal e por período.
+   *
+   * É o que permite ver a tarifa mudando ao longo do ano — campanha com
+   * redução entra e sai, e a média do recorte inteiro esconde isso.
+   * Chave: `sku|escopo|chave`.
+   */
+  const comissaoPorCelula = new Map<string, { comissao: number; valor: number }>();
+  const somarComissao = (chave: string, comissao: number, valor: number) => {
+    const at = comissaoPorCelula.get(chave) ?? { comissao: 0, valor: 0 };
+    at.comissao += comissao;
+    at.valor += valor;
+    comissaoPorCelula.set(chave, at);
+  };
   {
     /* Só pedido com comissão utilizável: zero e ausência não podem virar
        tarifa, ou a média do SKU desce por falta de dado. A regra é a
@@ -305,17 +332,32 @@ export async function carregarAnaliseSku(
     for (const it of itensRaw as unknown as Item[]) {
       const p = comComissao.get(it.pedido_id);
       const naJanela = dentro.get(it.pedido_id);
-      /* Só a janela principal: é a que define os totais da linha, e a
-         cobertura tem de ser comparável com a receita dela. */
-      if (!p || !naJanela || !naJanela.janelas.includes(0)) continue;
+      if (!p || !naJanela) continue;
       const sku = (it.sku ?? "").trim();
       if (!sku) continue;
       const tp = totalDoPedido.get(it.pedido_id) ?? 0;
       const fatia = tp > 0 ? n(it.total) / tp : 1;
+      const parte = n(p.comissao) * fatia;
+      const valor = n(it.total);
+
+      /* Toda janela recebe a sua: a coluna de comparação precisa da
+         tarifa DELA, não da principal. */
+      for (const idx of naJanela.janelas) somarComissao(`${sku}|periodo|${idx}`, parte, valor);
+
+      /*
+       * Mês, canal e o total do SKU são só da janela principal, como o
+       * resto da linha. Somar as extras contaria o mesmo pedido duas
+       * vezes onde elas se sobrepõem.
+       */
+      if (!naJanela.janelas.includes(0)) continue;
       const at = comissaoPorSku.get(sku) ?? { comissao: 0, valor: 0 };
-      at.comissao += n(p.comissao) * fatia;
-      at.valor += n(it.total);
+      at.comissao += parte;
+      at.valor += valor;
       comissaoPorSku.set(sku, at);
+
+      const dia = String(naJanela.data).slice(0, 10);
+      somarComissao(`${sku}|mes|${dia.slice(0, 7)}`, parte, valor);
+      somarComissao(`${sku}|canal|${naJanela.canalId}`, parte, valor);
     }
   }
 
@@ -434,12 +476,20 @@ export async function carregarAnaliseSku(
     const curva: LinhaSku["curva"] =
       acumulado <= 80 ? "A" : acumulado <= 95 ? "B" : "C";
 
-    const obj = (m: Map<string, Celula>) =>
+    const obj = (m: Map<string, Celula>, escopo: string) =>
       Object.fromEntries(
-        [...m.entries()].map(([k, c]) => [
-          k,
-          { ...c, receita: r2(c.receita) },
-        ])
+        [...m.entries()].map(([k, c]) => {
+          const com = comissaoPorCelula.get(`${sku}|${escopo}|${k}`);
+          return [
+            k,
+            {
+              ...c,
+              receita: r2(c.receita),
+              comissao: com && com.valor > 0 ? r2((com.comissao * 100) / com.valor) : null,
+              coberturaComissao: com && c.receita > 0 ? Math.min(1, com.valor / c.receita) : 0,
+            },
+          ];
+        })
       );
 
     return {
@@ -454,9 +504,9 @@ export async function carregarAnaliseSku(
       visitas: canal ? canal.visitas : null,
       vendasCanal: canal ? canal.vendas : null,
       conversao: canal && canal.visitas > 0 ? r2((canal.vendas / canal.visitas) * 100) : null,
-      porMes: obj(a.porMes),
-      porCanal: obj(a.porCanal),
-      porPeriodo: obj(a.porPeriodo),
+      porMes: obj(a.porMes, "mes"),
+      porCanal: obj(a.porCanal, "canal"),
+      porPeriodo: obj(a.porPeriodo, "periodo"),
       canais: a.porCanal.size,
       primeiraVenda: a.primeira,
       ultimaVenda: a.ultima,
