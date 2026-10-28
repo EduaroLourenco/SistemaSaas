@@ -74,7 +74,16 @@ publicados, com a **escrita desligada**.
 
 - [ ] O botão de sincronizar da aba Ads segue desabilitado.
 - [ ] Degrau 2 de `automacao-em-massa.md`: a fila de aprovação.
-- [ ] Memória de folga em `regras_automacao`.
+- [x] Memória de folga — virou `folgas_campanha` (migração
+      `db/45_folga_por_campanha.sql`), **por tipo de campanha**, que é
+      como a Probel trabalha: 5% nas automáticas e 0% no pré-acordo. O
+      campo no topo edita a régua do tipo em foco (a promoção aberta, o
+      filtro, ou o padrão) e grava sozinho. Zero é régua, não ausência —
+      `scripts/testar-folga-por-campanha.mjs` cobre justamente esse caso,
+      que com `||` no lugar de `??` ofertaria 5% abaixo de um preço
+      negociado.
+      **Falta rodar a migração 45 no Supabase.** Até lá a tela avisa e
+      segue com 5% sem memória, como antes.
 - [ ] Aposentar a planilha de promoção — é o objetivo final deste módulo.
 
 ---

@@ -11,6 +11,7 @@ import { Select, Sheet } from "@/components/ui/controls";
 import { money, count, pct } from "@/lib/format";
 import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
 import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
+import { FOLGA_PADRAO, TIPO_PADRAO, type Folgas } from "@/lib/folga";
 import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
 import { paraRegra, type ItemDaTela } from "@/lib/planilhas/item-para-regra";
 import { AlertTriangle, RefreshCw } from "lucide-react";
@@ -60,16 +61,34 @@ const diasAte = (iso: string | null) =>
 const dia = (iso: string | null) =>
   iso == null ? "—" : new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 
-export default function Automacoes({ dados, ads, regras }: {
+export default function Automacoes({ dados, ads, regras, folgas }: {
   dados: DadosAutomacoes;
   ads: DadosTrafegoPago;
   regras: Regra[];
+  folgas: Folgas;
 }) {
   const [tema, setTema] = React.useState<"promocoes" | "ads">("promocoes");
   const [conta, setConta] = React.useState("");
   const [tipo, setTipo] = React.useState("");
   const [prazo, setPrazo] = React.useState("");
-  const [folga, setFolga] = React.useState(5);
+  /*
+   * A folga, lembrada por tipo de campanha.
+   *
+   * Era um `useState(5)` que voltava a 5% a cada visita. A régua não é a
+   * mesma para todo tipo — 5% nas automáticas e 0% no pré-acordo, onde o
+   * preço foi negociado a dedo —, então o que se guarda é uma folga por
+   * tipo, mais um padrão para quem ainda não tem a sua.
+   *
+   * O campo edita a folga do tipo EM FOCO: o da promoção aberta, ou o do
+   * filtro, ou o padrão. Assim quem está mexendo numa promoção mexe na
+   * régua dela, e não numa configuração global que ele não viu.
+   */
+  const [porTipo, setPorTipo] = React.useState<Record<string, number>>(folgas.porTipo);
+  const [erroFolga, setErroFolga] = React.useState<string | null>(null);
+  const folgaDe = React.useCallback(
+    (t: string) => porTipo[t] ?? porTipo[TIPO_PADRAO] ?? FOLGA_PADRAO,
+    [porTipo]
+  );
   const [aberta, setAberta] = React.useState<PromocaoAberta | null>(null);
   /* O que cabe no piso só se sabe depois de carregar os itens, então o
      cartão fica sem esses dois números até alguém abrir a promoção. O
@@ -141,6 +160,38 @@ export default function Automacoes({ dados, ads, regras }: {
   );
 
   const tipos = React.useMemo(() => [...new Set(dados.promocoes.map((p) => p.tipo))], [dados.promocoes]);
+
+  /* O tipo que o campo de folga edita: a promoção aberta manda, depois o
+     filtro, e por último o padrão. */
+  const tipoEmFoco = aberta?.tipo || tipo || TIPO_PADRAO;
+
+  /*
+   * Guardar espera a digitação parar. Sem isso, digitar "12" grava 1 e
+   * depois 12 — duas escritas e uma corrida para ver qual chega por
+   * último.
+   */
+  const timerFolga = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mudarFolga = React.useCallback((t: string, v: number) => {
+    setPorTipo((antes) => ({ ...antes, [t]: v }));
+    setErroFolga(null);
+    if (timerFolga.current) clearTimeout(timerFolga.current);
+    timerFolga.current = setTimeout(async () => {
+      try {
+        const r = await fetch("/api/automacoes/folga", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ tipo: t, folga: v }),
+        });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          setErroFolga(j.erro ?? "Não consegui guardar a folga.");
+        }
+      } catch {
+        setErroFolga("Não consegui guardar a folga.");
+      }
+    }, 700);
+  }, []);
+  React.useEffect(() => () => { if (timerFolga.current) clearTimeout(timerFolga.current); }, []);
   const soma = (campo: keyof Contagem) =>
     promocoes.reduce((t, p) => t + (contagens.get(p.contaId + p.codigo)?.[campo] ?? 0), 0);
   const participando = soma("participando");
@@ -219,10 +270,19 @@ export default function Automacoes({ dados, ads, regras }: {
                 <option value="venceu">Já venceu</option>
               </Select>
             </Filtro>
-            <Filtro rotulo="Folga abaixo do piso">
+            <Filtro
+              rotulo={`Folga abaixo do piso · ${tipoEmFoco === TIPO_PADRAO ? "padrão" : ROTULO[tipoEmFoco] ?? tipoEmFoco}`}
+            >
               <input
-                type="number" min={0} max={30} step={0.5} value={folga}
-                onChange={(e) => setFolga(Number(e.target.value) || 0)}
+                type="number" min={0} max={30} step={0.5} value={folgaDe(tipoEmFoco)}
+                onChange={(e) => {
+                  const bruto = e.target.value;
+                  /* Campo vazio é meio da digitação, não 0%: salvar aqui
+                     gravaria zero toda vez que alguém apaga para trocar o
+                     número — e 0% é uma régua de verdade, a do pré-acordo. */
+                  if (bruto === "") return;
+                  mudarFolga(tipoEmFoco, Math.min(30, Math.max(0, Number(bruto) || 0)));
+                }}
                 className="h-10 w-[86px] rounded-r1 border border-line bg-panel px-2 text-right font-mono text-[13px] text-ink focus:border-brand"
               />
             </Filtro>
@@ -278,6 +338,15 @@ export default function Automacoes({ dados, ads, regras }: {
           </Panel>
         )}
 
+        {(folgas.faltaMigracao || erroFolga) && (
+          <Panel className="mt-4 border-warn/40 bg-warn-wash/40">
+            <div className="flex items-start gap-2 p-4 text-[13px]">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warn" />
+              <p>{erroFolga ?? folgas.faltaMigracao}</p>
+            </div>
+          </Panel>
+        )}
+
         <Carrossel
           promocoes={promocoes}
           aberta={aberta}
@@ -290,7 +359,7 @@ export default function Automacoes({ dados, ads, regras }: {
           <Detalhe
             key={aberta.contaId + aberta.codigo}
             promocao={aberta}
-            folga={folga}
+            folga={folgaDe(aberta.tipo)}
             regras={regras}
             onContar={anotarCabem}
           />
