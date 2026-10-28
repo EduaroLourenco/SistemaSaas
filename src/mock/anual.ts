@@ -38,6 +38,13 @@ export type MesAnual = {
   receita: number;
   pedidos: number;
   visitas: number;
+  /**
+   * A visita deste mês veio do painel do canal, no grão do MÊS, e não da
+   * coleta diária por anúncio — que só existe de junho de 2026 em
+   * diante. A tela marca o número para quem lê saber que ele serve para
+   * a taxa do mês inteiro, e não para olhar dia nem semana dentro dele.
+   */
+  visitaDoMes?: boolean;
   ads: number;
   pedidosCancelados: number;
   valorCancelado: number;

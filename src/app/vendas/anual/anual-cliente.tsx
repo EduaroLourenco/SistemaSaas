@@ -9,6 +9,42 @@ import { AXIS, GRID, ChartTooltip, Legend } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 import { money, moneyShort, count, pct } from "@/lib/format";
 import { derivar, somar, type MesAnual } from "@/mock/anual";
+
+/*
+ * Visita e conversão de um mês sem medição.
+ *
+ * A coleta diária de visita por anúncio começou em junho de 2026. Antes
+ * disso, mês sem visita mostrava "0" e conversão "0,00%" — que se lê
+ * como "ninguém entrou" e "não converteu nada", quando o que houve foi
+ * não termos medido. Zero e ausência são coisas diferentes.
+ *
+ * Onde a visita veio do painel do canal (grão do mês), o número aparece
+ * com o traço pontilhado: ele serve para a taxa do mês inteiro e não
+ * para olhar dia nem semana dentro dele.
+ */
+function Visitas({ m }: { m: MesAnual }) {
+  if (!m.visitas) return <span className="text-ink-3" title="sem visita medida neste mês">—</span>;
+  return (
+    <span
+      className={m.visitaDoMes ? "num underline decoration-dotted underline-offset-2" : "num"}
+      title={m.visitaDoMes ? "visita do painel do canal, no total do mês" : undefined}
+    >
+      {count(m.visitas)}
+    </span>
+  );
+}
+
+function Conversao({ m }: { m: MesAnual }) {
+  if (!m.visitas) return <span className="text-ink-3" title="sem visita medida neste mês">—</span>;
+  return (
+    <span
+      className={m.visitaDoMes ? "num underline decoration-dotted underline-offset-2" : "num"}
+      title={m.visitaDoMes ? "sobre a visita do painel do canal, no total do mês" : undefined}
+    >
+      {pct(derivar(m).conversao, 2)}
+    </span>
+  );
+}
 import type { DadosAnual } from "@/lib/dados/vendas";
 
 /** O escopo é o id de um canal, ou "todos". Sai do banco, não de um union fixo. */
@@ -158,15 +194,15 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
       key: "visitas",
       header: "Visitas",
       width: 104,
-      cell: (m) => <span className="num">{count(m.visitas)}</span>,
-      total: (t) => <span className="num">{count(t.visitas)}</span>,
+      cell: (m) => <Visitas m={m} />,
+      total: (t) => <Visitas m={t} />,
     },
     {
       key: "conversao",
       header: "Conversão",
       width: 100,
-      cell: (m) => <span className="num">{pct(derivar(m).conversao, 2)}</span>,
-      total: (t) => <span className="num">{pct(derivar(t).conversao, 2)}</span>,
+      cell: (m) => <Conversao m={m} />,
+      total: (t) => <Conversao m={t} />,
     },
     {
       key: "ads",

@@ -488,6 +488,14 @@ export type MesAnual = {
   receita: number;
   pedidos: number;
   visitas: number;
+  /**
+   * A visita deste mês veio do painel do canal, no grão do MÊS, e não da
+   * coleta diária por anúncio.
+   *
+   * A tela precisa saber para dizer: o número é bom para a taxa do mês
+   * inteiro e não serve para olhar dia nem semana dentro dele.
+   */
+  visitaDoMes?: boolean;
   ads: number;
   pedidosCancelados: number;
   valorCancelado: number;
@@ -525,6 +533,33 @@ function mesVazio(m: number): MesAnual {
     // desconfia de uma linha de alvo.
     meta: 0,
   };
+}
+
+/**
+ * Visitas que só existem no grão do mês, por conta de canal.
+ *
+ * A coleta diária por anúncio do Mercado Livre começou em junho de 2026.
+ * Antes disso o que existe é o total do mês, lido do painel do vendedor
+ * e gravado em `visitas_mensais`. Espalhar esse total pelos dias
+ * inventaria um pico que ninguém mediu, então ele fica no grão em que
+ * foi medido e só é usado onde o grão bate: no mês.
+ */
+async function visitasDoMes(ano: number): Promise<Map<string, number>> {
+  const sb = await clienteServidor();
+  const { data, error } = await sb
+    .from("visitas_mensais")
+    .select("conta_canal_id,mes,visitas")
+    .eq("ano", ano);
+  const mapa = new Map<string, number>();
+  if (error) {
+    console.error("[visitas-mensais]", error);
+    return mapa;
+  }
+  for (const l of data ?? []) {
+    const v = Number(l.visitas) || 0;
+    if (v > 0) mapa.set(`${l.conta_canal_id}|${l.mes}`, v);
+  }
+  return mapa;
 }
 
 export async function carregarAnual(): Promise<DadosAnual> {
@@ -578,6 +613,35 @@ export async function carregarAnual(): Promise<DadosAnual> {
       for (const id of [l.canalId, ...(gruposAnual.get(l.canalId) ?? [])]) {
         const a = anterior[id];
         if (a) { a.receita += l.receita; a.pedidos += l.pedidos; }
+      }
+    }
+  }
+
+  /*
+   * O mês sem visita diária completa com a visita do painel.
+   *
+   * Só onde o diário não tem NADA naquele mês: onde ele tem, ele manda,
+   * porque atribui pedido a dia com visita medida — que é como a
+   * conversão da plataforma é calculada. Somar os dois contaria a mesma
+   * visita duas vezes.
+   */
+  const mensais = await visitasDoMes(base.ano);
+  if (mensais.size) {
+    for (const c of base.canais) {
+      const serie = series[c.id];
+      if (!c.contaCanalId || !serie) continue;
+      const grupos = (gruposAnual.get(c.id) ?? []).map((g) => series[g]);
+      for (let m = 0; m < 12; m++) {
+        if (serie[m].visitas > 0) continue;
+        const v = mensais.get(`${c.contaCanalId}|${m + 1}`) ?? 0;
+        if (!v) continue;
+        serie[m].visitas = v;
+        serie[m].visitaDoMes = true;
+        for (const alvo of [series.todos, ...grupos]) {
+          if (!alvo) continue;
+          alvo[m].visitas += v;
+          alvo[m].visitaDoMes = true;
+        }
       }
     }
   }
