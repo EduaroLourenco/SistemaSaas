@@ -28,9 +28,10 @@
  * Não toca em quem já tem `comissao_origem = 'canal'`: esse já veio do
  * extrato, pela API ou pelo relatório de tarifas.
  *
- * Não renova token. Os dois CLIs do Eduardo são donos do refresh; renovar
- * daqui rotacionaria o dele e quebraria as automações. Token vencido para
- * a execução com a data de validade na tela.
+ * O token vem do cofre do sistema — a integração do app que o Eduardo
+ * criou no Meli —, e o cliente renova sozinho se precisar. Os token.json
+ * dos CLIs antigos não entram aqui: são outra credencial, vencem em 6
+ * horas e só o CLI dono renova.
  *
  * ── Alternativa sem API ──
  *
@@ -69,46 +70,30 @@ const rest = (caminho) => process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/" + c
 const contasCanal = await (await fetch(rest("contas_canal?select=id,nome,canal_id"), { headers: SB })).json();
 const achar = (parte) => contasCanal.find((c) => c.nome.toLowerCase().includes(parte));
 
-/* Os mesmos arquivos de token que `sincronizar-meli.mjs` usa. */
-const APELIDOS = {
-  principal: { conta: achar("são paulo"), arquivo: "C:/Users/dudu4/OneDrive/Desktop/Meli+/.meli/token.json" },
-  segunda: { conta: achar("prazo"), arquivo: "C:/Users/dudu4/OneDrive/Desktop/apis/Mercado Livre Principal/.meli/token.json" },
-};
+/*
+ * O token sai do COFRE do sistema, não de arquivo.
+ *
+ * Esta era a parte errada da primeira versão: ela lia os token.json dos
+ * dois CLIs antigos do Eduardo, que vencem em 6 horas e só o CLI dono
+ * renova. Só que o sistema tem integração própria — o app que ele criou
+ * no Meli —, com refresh no cofre, e o cliente (`accessToken` em
+ * cliente.ts) renova sozinho quando precisa. É o mesmo caminho que a
+ * sincronização usa, e por isso funciona fora de uma requisição.
+ */
+const integracoes = await (
+  await fetch(rest("integracoes?select=conta_canal_id,status&provedor=eq.mercado_livre"), { headers: SB })
+).json();
+const conectadas = new Set(
+  (Array.isArray(integracoes) ? integracoes : [])
+    .filter((i) => i.status === "conectada")
+    .map((i) => i.conta_canal_id)
+);
 
-const lerToken = (p) => {
-  const t = JSON.parse(fs.readFileSync(p, "utf8").replace(/^\uFEFF/, ""));
-  const criado = Date.parse(t.createdAt ?? t.created_at ?? 0);
-  return { valor: t.access_token, expiraEm: criado + (t.expires_in ?? 21600) * 1000 };
-};
-
-globalThis.__meliToken = {};
-const prontas = [];
-for (const [apelido, { conta, arquivo }] of Object.entries(APELIDOS)) {
-  if (!conta) {
-    console.log(`✗ ${apelido}: conta de canal não encontrada no banco`);
-    continue;
-  }
-  let t;
-  try {
-    t = lerToken(arquivo);
-  } catch (e) {
-    console.log(`✗ ${apelido}: não li o token (${e.code ?? e.message})`);
-    continue;
-  }
-  if (t.expiraEm <= Date.now()) {
-    console.log(
-      `✗ ${apelido} (${conta.nome}): token venceu em ${new Date(t.expiraEm).toLocaleString("pt-BR")}. ` +
-        "Rode o CLI dono para renovar — este script não renova de propósito."
-    );
-    continue;
-  }
-  globalThis.__meliToken[conta.id] = t;
-  prontas.push({ apelido, conta });
-  console.log(`✓ ${apelido} (${conta.nome}) token vale até ${new Date(t.expiraEm).toLocaleString("pt-BR")}`);
-}
-
+const contasMeli = contasCanal.filter((c) => conectadas.has(c.id));
+const prontas = contasMeli.map((conta) => ({ apelido: conta.nome, conta }));
+for (const { conta } of prontas) console.log(`• ${conta.nome}`);
 if (!prontas.length) {
-  console.log("\nNenhuma conta com token válido. Nada foi consultado nem gravado.");
+  console.log("Nenhuma conta do Mercado Livre conectada. Nada foi consultado.");
   process.exit(1);
 }
 
@@ -177,11 +162,28 @@ for (const { apelido, conta } of prontas) {
   console.log(`  A PREENCHER: ${atualizar.length}`);
   if (semPedido) console.log(`  ⚠ ${semPedido} pedidos da API sem par aqui — não são criados por este script`);
 
-  const amostra = atualizar.slice(0, 3);
-  for (const a of amostra) {
-    const antes = a.antes == null ? "—" : Number(a.antes).toFixed(2);
-    const taxa = a.total > 0 ? ((a.comissao / a.total) * 100).toFixed(2) + "%" : "—";
-    console.log(`    ex.: comissão ${antes} → ${a.comissao.toFixed(2)} (${taxa} do pedido)`);
+  /*
+   * Quanto disto é número novo e quanto é só a origem subindo de "hub"
+   * para "canal"? A diferença importa: onde o valor bate, a gravação só
+   * carimba a procedência; onde não bate, ela CORRIGE a tarifa, e é bom
+   * ver o tamanho da correção antes de aplicar em dois mil pedidos.
+   */
+  const vazios = atualizar.filter((a) => a.antes == null).length;
+  const iguais = atualizar.filter((a) => a.antes != null && Math.abs(Number(a.antes) - a.comissao) < 0.01).length;
+  const diferentes = atualizar.filter((a) => a.antes != null && Math.abs(Number(a.antes) - a.comissao) >= 0.01);
+  console.log(`    sem comissão antes: ${vazios} · mesmo valor (só a origem muda): ${iguais} · valor diferente: ${diferentes.length}`);
+
+  if (diferentes.length) {
+    const porTamanho = [...diferentes].sort(
+      (x, y) => Math.abs(y.comissao - Number(y.antes)) - Math.abs(x.comissao - Number(x.antes))
+    );
+    const soma = diferentes.reduce((t, a) => t + (a.comissao - Number(a.antes)), 0);
+    console.log(`    efeito das diferenças: R$ ${soma.toFixed(2)} em comissão`);
+    for (const a of porTamanho.slice(0, 3)) {
+      const taxaAntes = a.total > 0 ? ((Number(a.antes) / a.total) * 100).toFixed(2) : "—";
+      const taxaDepois = a.total > 0 ? ((a.comissao / a.total) * 100).toFixed(2) : "—";
+      console.log(`      maior: ${Number(a.antes).toFixed(2)} (${taxaAntes}%) → ${a.comissao.toFixed(2)} (${taxaDepois}%)`);
+    }
   }
 
   totalCasados += daApi.length - semPedido;
@@ -192,17 +194,36 @@ for (const { apelido, conta } of prontas) {
     for (let i = 0; i < atualizar.length; i += 200) {
       const lote = atualizar.slice(i, i + 200);
       for (const a of lote) {
-        const r = await fetch(rest(`pedidos?id=eq.${a.id}`), {
-          method: "PATCH",
-          headers: { ...SB, Prefer: "return=minimal" },
-          body: JSON.stringify({
-            comissao: a.comissao,
-            comissao_origem: "canal",
-            comissao_derivada: false,
-            atualizado_em: new Date().toISOString(),
-          }),
-        });
-        if (!r.ok) throw new Error(`PATCH ${a.id}: ${r.status} ${(await r.text()).slice(0, 120)}`);
+        /*
+         * Repete a linha que a rede derrubou.
+         *
+         * São milhares de PATCH em sequência, e um ECONNRESET no meio
+         * derrubava a execução inteira — rodar de novo funciona, porque
+         * quem já gravou vira `origem: canal` e é pulado, mas perder
+         * vinte minutos por um soluço de rede não precisa acontecer.
+         */
+        let ultima;
+        let feito = false;
+        for (let tentativa = 1; tentativa <= 3 && !feito; tentativa += 1) {
+          try {
+            const r = await fetch(rest(`pedidos?id=eq.${a.id}`), {
+              method: "PATCH",
+              headers: { ...SB, Prefer: "return=minimal" },
+              body: JSON.stringify({
+                comissao: a.comissao,
+                comissao_origem: "canal",
+                comissao_derivada: false,
+                atualizado_em: new Date().toISOString(),
+              }),
+            });
+            if (r.ok) { feito = true; break; }
+            ultima = `${r.status} ${(await r.text()).slice(0, 120)}`;
+          } catch (e) {
+            ultima = e?.cause?.code ?? e?.message ?? String(e);
+          }
+          await new Promise((ok) => setTimeout(ok, 400 * tentativa));
+        }
+        if (!feito) throw new Error(`PATCH ${a.id}: ${ultima}`);
       }
       console.log(`  gravados ${Math.min(i + 200, atualizar.length)} de ${atualizar.length}`);
     }

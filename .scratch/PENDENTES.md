@@ -150,19 +150,18 @@ Nada aqui anda sem ele. Não é falta de código.
       Nunca saiu preço errado daqui: o efeito era base VAZIA, que o
       sistema já trata como "sem tabela", isto é, "não sei".
 
-- [ ] **Comissão praticada: subir a cobertura.** 45% dos pedidos do Meli
-      vindos de planilha têm comissão informada, contra **100% dos que
-      vieram pela API** — `order_items[].sale_fee` é o extrato de quem
-      cobrou, e a sincronização já grava com origem `canal`. Dois
-      caminhos, os dois prontos:
-      1. `node scripts/local/comissao-por-api.mjs 2026-01-01 2026-06-30`
-         (ensaio; `--aplicar` grava). **Precisa de token válido** — os
-         dois venceram, e o script não renova de propósito: renovar daqui
-         rotacionaria o refresh dos CLIs.
-      2. Importar em /importar o relatório de vendas do Meli (tipo
-         `vendas_ml`), que grava com origem `canal` e sobrescreve o
-         derivado. **Nunca foi usado nesta base** — nenhuma importação
-         desse tipo nas últimas 40, e é por isso que a cobertura é baixa.
+- [x] **Comissão praticada pela API — feito em 28/10.** A cobertura por
+      SKU subiu de 16–32% para **55%**, e os 45% que faltam são receita
+      de OUTROS canais, onde a API do Meli não tem o que dizer: a
+      cobertura de cada SKU agora acompanha a fatia do Meli nele (47% de
+      Meli → 45% de cobertura; 66% → 65%). O lado Meli está fechado.
+      3.082 pedidos preenchidos com `order_items[].sale_fee`, o extrato
+      de quem cobrou, por `scripts/local/comissao-por-api.mjs`.
+      Não foi só carimbo: **293 pedidos tinham comissão errada**, com
+      valores impossíveis como 28%, 22% e 42% do pedido — frete
+      capturado pela reconstrução antiga. A API corrigiu para 3% a 5%.
+      O token sai do cofre do sistema (a integração do app do Meli), que
+      renova sozinha; os `token.json` dos CLIs antigos não entram nisso.
 
 - [ ] **Bloco de promoção ao vivo no raio-x do SKU.** Precisa de
       `GET /seller-promotions/items/{MLB}`, que tem cota e token. Não
