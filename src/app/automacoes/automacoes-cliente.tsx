@@ -14,6 +14,7 @@ import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } 
 import { FOLGA_PADRAO, TIPO_PADRAO, type Folgas } from "@/lib/folga";
 import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
 import { paraRegra, type ItemDaTela } from "@/lib/planilhas/item-para-regra";
+import { pisoDoItem, faixaDoPreco, precoComFolga } from "@/lib/planilhas/piso-promocao";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -607,31 +608,19 @@ function Detalhe({ promocao, folga, regras, onContar }: {
 
   const nossoPreco = NOSSO_PRECO.has(promocao.tipo);
 
-  /** O piso que vale: com rebate do canal a comissão efetiva cai. */
+  /*
+   * Piso e faixa saíram para `lib/planilhas/piso-promocao.ts`: a fila de
+   * aprovação decide no servidor, e a conta do piso tem de ser a MESMA
+   * dos dois lados. Aqui ficam só os embrulhos que carregam as bandas.
+   */
   const pisoDe = React.useCallback(
-    (i: ItemAutomacao) => {
-      if (!dados || i.comissaoCheia == null || !i.precos.length) return i.piso;
-      const alvo = i.comissaoCheia - (i.meliPct ?? 0) / 100;
-      let melhor: number | null = null, dist = Infinity;
-      dados.bandas.forEach((b, k) => {
-        const d = Math.abs(b - alvo);
-        if (i.precos[k] != null && d < dist) { dist = d; melhor = i.precos[k]; }
-      });
-      return melhor ?? i.piso;
-    },
+    (i: ItemAutomacao) => (dados ? pisoDoItem(i, dados.bandas) : i.piso),
     [dados]
   );
 
   const faixaDe = React.useCallback(
-    (i: ItemAutomacao, preco: number | null) => {
-      if (!dados || preco == null || !i.precos.length) return null;
-      let f: number | null = null;
-      dados.bandas.forEach((b, k) => {
-        const v = i.precos[k];
-        if (v != null && preco >= v - 0.01) f = b;
-      });
-      return f;
-    },
+    (i: ItemAutomacao, preco: number | null) =>
+      dados ? faixaDoPreco(i, dados.bandas, preco) : null,
     [dados]
   );
 
@@ -869,10 +858,12 @@ function Detalhe({ promocao, folga, regras, onContar }: {
               decidido.set(i.mlb, d);
               if (d.decisao === "aceitar" || d.decisao === "reescrever") marcar.add(i.mlb);
               if (d.decisao === "reescrever" && d.acao?.tipo === "reescrever" && d.acao.folgaPct != null) {
+                /* Fora da closure: dentro dela o TypeScript perde o
+                   estreitamento e `folgaPct` volta a poder não existir. */
+                const folgaDaRegra = d.acao.folgaPct;
                 const ps = pisoDe(i);
                 if (ps != null) {
-                  const v = Math.round(ps * (1 - d.acao.folgaPct / 100) * 100) / 100;
-                  setPrecos((a) => new Map(a).set(i.mlb, v));
+                  setPrecos((a) => new Map(a).set(i.mlb, precoComFolga(ps, folgaDaRegra)));
                 }
               }
             }

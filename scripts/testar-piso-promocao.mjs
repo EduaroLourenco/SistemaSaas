@@ -1,118 +1,97 @@
 /**
- * O mínimo é piso de ACEITAÇÃO, não preço a propor.
+ * O piso do item, a faixa do preço, e o rebate que muda os dois.
  *
- *   node --experimental-strip-types scripts/testar-piso-promocao.mjs
+ * Estas duas contas saíram de dentro da tela de Automações para
+ * `lib/planilhas/piso-promocao.ts` porque a fila de aprovação decide no
+ * servidor. Mudar de lugar código que define PREÇO MÍNIMO sem deixar
+ * teste atrás é como as duas pontas começam a discordar sobre o mesmo
+ * item — e aí o sistema aceita oferta abaixo do piso sem ninguém ver.
  *
- * O caso real é um skate da Bom de Compras publicado a R$ 399, com o canal
- * propondo R$ 379,05 e mínimo de R$ 251,13. O motor devolvia "participar em
- * R$ 251,13" — R$ 128 de desconto que ninguém pediu, e um preço que o canal
- * recusaria de todo modo se fosse mais alto que o dele.
+ * `.scratch/PENDENTES.md`: "Preço nunca é inventado."
  *
- * Em 21/10/2026 as duas leituras do número convergiram, porque o canal não
- * aceita contraproposta de preço mais alto: o mínimo decide ENTRAR ou não,
- * e quem entra entra no preço do canal. O que `comoUsar` ainda muda é de
- * onde o mínimo sai e quanta folga ele tem por padrão — "alvo" é a Fórmula
- * base com 5% de tolerância, "piso" é o custo com zero.
- *
- * Sem proposta na planilha não há o que comparar, e aí o mínimo ainda é
- * escrito: é o caso 5.
+ * Uso: node scripts/testar-piso-promocao.mjs
  */
-import assert from "node:assert/strict";
-import { processItem } from "../src/lib/planilhas/motor-promocoes.ts";
+import { strict as assert } from "node:assert";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createJiti } from "../node_modules/jiti/lib/jiti.mjs";
 
-const PISO = 251.13;
-const base = (comoUsar) => ({
-  baseMlb: new Map([["MLB1", { tipo: "Clássico", padrao: 0.115 }]]),
-  precosSKU: new Map([["SK1", { 0.115: PISO, 0.165: PISO, 0.105: PISO }]]),
-  precosMLB: new Map(),
-  regra: { modo: "tabela", margemMinima: 0, comoUsar },
+const raiz = fileURLToPath(new URL("../", import.meta.url));
+const vazio = path.join(mkdtempSync(path.join(tmpdir(), "gerizo-")), "vazio.cjs");
+writeFileSync(vazio, "module.exports={}");
+const jiti = createJiti(import.meta.url, {
+  alias: { "@": path.join(raiz, "src"), "server-only": vazio },
+  interopDefault: true,
 });
-/** processItem(mlb, sku, saleFee, finalPrice, originalPrice, data) */
-const rodar = (comoUsar, propostaDoCanal, publicado = 399, saleFee = null) =>
-  processItem("MLB1", "SK1", saleFee, propostaDoCanal, publicado, base(comoUsar));
+const { pisoDoItem, faixaDoPreco, precoComFolga } = await jiti.import(
+  path.join(raiz, "src/lib/planilhas/piso-promocao.ts")
+);
 
-let n = 0;
-const vale = (nome, cond, r) => { n++; assert.ok(cond, `${nome} — veio ${JSON.stringify(r)}`); };
+/* As bandas de comissão da promoção, e a linha da Fórmula base alinhada
+   com elas: quanto maior a comissão, maior o preço que sustenta a margem. */
+const BANDAS = [0.115, 0.145, 0.165];
+const item = (extra = {}) => ({
+  mlb: "MLB1",
+  piso: 1000,
+  precos: [1000, 1100, 1200],
+  comissaoCheia: 0.165,
+  meliPct: null,
+  ...extra,
+});
 
-/* 1. O prejuízo que a regra evita, com os números reais do skate: a
-      proposta do canal está muito acima do mínimo, nas duas leituras. */
-const alvo = rodar("alvo", 379.05);
-vale("como ALVO participa", alvo.action === "Participar", alvo);
-vale("e NÃO contrapropõe o mínimo", alvo.newPrice === null, alvo);
-const piso = rodar("piso", 379.05);
-vale("como PISO participa", piso.action === "Participar", piso);
-vale("e também não contrapropõe", piso.newPrice === null, piso);
+/* ══ 1. Sem rebate, o piso é o da comissão cheia ══ */
+{
+  assert.equal(pisoDoItem(item(), BANDAS), 1200, "comissão 16,5% → o preço da banda 0,165");
+  assert.equal(pisoDoItem(item({ comissaoCheia: 0.115 }), BANDAS), 1000);
+}
 
-/* 2. Proposta ABAIXO do mínimo: fica de fora. Escrever o mínimo por cima
-      seria subir o preço, e nenhuma campanha do canal aceita isso. */
-const abaixo = rodar("piso", 250);
-vale("proposta abaixo do piso recusa", abaixo.action === "Não participar", abaixo);
-vale("e não escreve preço", abaixo.newPrice === null, abaixo);
-vale("dizendo de quanto foi", /abaixo do piso/.test(abaixo.pendencia), abaixo);
+/* ══ 2. Com rebate do canal, a comissão efetiva cai e o piso cai junto ══
+   É o ponto da conta: o Meli bancando 2 pontos faz o vendedor pagar
+   14,5%, e exigir o piso de 16,5% recusaria oferta que cabe. */
+{
+  assert.equal(pisoDoItem(item({ meliPct: 2 }), BANDAS), 1100, "16,5% − 2 p.p. = 14,5%");
+  assert.equal(pisoDoItem(item({ meliPct: 5 }), BANDAS), 1000, "16,5% − 5 p.p. = 11,5%");
+}
 
-/* 3. Piso ACIMA do preço publicado: participar exigiria aumentar o preço,
-      e promoção é desconto. Recusa, e não toca no preço. */
-const caro = rodar("piso", 379.05, 200);
-vale("piso acima do publicado recusa", caro.action === "Não participar", caro);
-vale("e não escreve preço", caro.newPrice === null, caro);
-vale("dizendo o porquê", /acima do preço publicado/.test(caro.pendencia), caro);
+/* ══ 3. Falta de dado devolve o piso do item, não zero ══ */
+{
+  assert.equal(pisoDoItem(item({ comissaoCheia: null }), BANDAS), 1000, "sem comissão, o piso do item");
+  assert.equal(pisoDoItem(item({ precos: [] }), BANDAS), 1000, "sem linha de preços, o piso do item");
+  assert.equal(pisoDoItem(item(), []), 1000, "sem bandas, o piso do item");
+  assert.equal(
+    pisoDoItem(item({ piso: null, comissaoCheia: null }), BANDAS),
+    null,
+    "sem nada, null — que quem recebe trata como 'não sei', nunca como zero",
+  );
+}
 
-/* 4. SKU sem piso: pendência que diz o que falta, não "sem preço de tabela". */
-const semPiso = processItem("MLB1", "OUTRO", null, 300, 399, base("piso"));
-vale("SKU sem piso tem pendência própria", /sem piso cadastrado/.test(semPiso.pendencia), semPiso);
+/* ══ 4. Banda sem preço é pulada, não vale zero ══ */
+{
+  const semMeio = item({ precos: [1000, null, 1200], comissaoCheia: 0.165, meliPct: 2 });
+  assert.equal(pisoDoItem(semMeio, BANDAS), 1200,
+    "a banda 0,145 não tem preço: vale a próxima mais perto, não um furo");
+}
 
-/* 5. Sem proposta do canal não há comparação a fazer, e o mínimo vale do
-      mesmo jeito: a régua é nossa, não dele. */
-const semProposta = rodar("piso", null);
-vale("sem proposta, escreve o mínimo", semProposta.newPrice === PISO, semProposta);
+/* ══ 5. A faixa é a última que o preço alcança ══ */
+{
+  assert.equal(faixaDoPreco(item(), BANDAS, 1250), 0.165);
+  assert.equal(faixaDoPreco(item(), BANDAS, 1150), 0.145);
+  assert.equal(faixaDoPreco(item(), BANDAS, 1000), 0.115, "preço igual ao da faixa conta como dentro");
+  assert.equal(faixaDoPreco(item(), BANDAS, 999.995), 0.115, "o centavo de tolerância pega o arredondamento");
+  assert.equal(faixaDoPreco(item(), BANDAS, 900), null, "abaixo de tudo não tem faixa");
+  assert.equal(faixaDoPreco(item(), BANDAS, null), null, "sem preço não há faixa");
+}
 
-/* 6. Com redução de tarifa (Caso A) o motor já validava a proposta e nunca
-      mexeu no preço — nada disso pode ter mudado isso. */
-const comReducao = rodar("piso", 300, 399, 10);
-vale("Caso A segue sem escrever preço", comReducao.newPrice === null, comReducao);
+/* ══ 6. A folga arredonda para baixo ══
+   Para cima devolveria um preço que o próprio piso recusa no teste
+   seguinte, e a tela mostraria "cabe" num item que o canal vai negar. */
+{
+  assert.equal(precoComFolga(1000, 5), 950);
+  assert.equal(precoComFolga(1000, 0), 1000, "folga zero é o piso cheio");
+  assert.equal(precoComFolga(999.99, 3), 969.99);
+  assert.ok(precoComFolga(1234.56, 7) <= 1234.56 * 0.93 + 0.005);
+}
 
-console.log(`${n} verificações, todas certas.`);
-
-/* ── 7. A tolerância é cadastro da empresa, e move o PISO DE ACEITAÇÃO ──
-   db/36: ela decide até onde a proposta do canal pode furar o mínimo e
-   ainda entrar. Antes de 21/10/2026 decidia qual número ia para a
-   planilha, o que só fazia sentido enquanto o motor contrapropunha. */
-const comFolga = (pct, proposta) =>
-  processItem("MLB1", "SK1", null, proposta, 399, {
-    ...base("piso"),
-    regra: { modo: "tabela", margemMinima: 0, comoUsar: "piso", toleranciaPct: pct },
-  });
-let m = 0;
-const diz = (nome, cond, r) => {
-  m++;
-  assert.ok(cond, `${nome} — veio ${JSON.stringify(r)}`);
-};
-/* 251,13 × 0,95 = 238,57 — uma proposta de 240 fura o piso cheio e cabe
-   nos 5%, então a folga é a única coisa que decide entre os dois casos. */
-diz("sem folga, 240 fica de fora", comFolga(0, 240).action === "Não participar", comFolga(0, 240));
-diz("com 5% de folga, 240 entra", comFolga(5, 240).action === "Participar", comFolga(5, 240));
-diz("e entra no preço do canal", comFolga(5, 240).newPrice === null, comFolga(5, 240));
-/* Abaixo de 238,57 nem a folga salva. */
-diz("238,00 fica de fora mesmo com 5%", comFolga(5, 238).action === "Não participar", comFolga(5, 238));
-console.log(`${m} verificações da tolerância, todas certas.`);
-
-/* ── 8. O desconto extra vale com o interruptor LIGADO ──
-   Era um não-operação silencioso: este ramo devolvia antes de calcular o
-   extra, e quem ligava o interruptor e pedia 10% recebia a planilha sem
-   desconto nenhum e sem aviso. Achado em 21/10/2026, quando o Eduardo
-   perguntou se a tolerância servia para reescrever preço. */
-const comExtra = (extra, tol = 0) =>
-  processItem("MLB1", "SK1", null, 379.05, 399, {
-    ...base("piso"),
-    regra: { modo: "tabela", margemMinima: 0, comoUsar: "piso", toleranciaPct: tol },
-  }, "Participar", "Não participar", extra);
-
-let k = 0;
-const prende = (nome, cond, r) => { k++; assert.ok(cond, `${nome} — veio ${JSON.stringify(r)}`); };
-/* Sem extra, nada é escrito: a proposta de 379,05 cobre o piso de 251,13. */
-prende("sem extra, não escreve", comExtra(0).newPrice === null, comExtra(0));
-/* Com 10% de extra, desce do piso: 251,13 × 0,90 = 226,02. */
-prende("com 10% de extra, escreve 226,02", comExtra(0.1).newPrice === 226.02, comExtra(0.1));
-/* E o extra parte do piso JÁ com a tolerância: 251,13 × 0,95 = 238,57, e 238,57 × 0,90 = 214,71. */
-prende("a tolerância entra antes do extra", comExtra(0.1, 5).newPrice === 214.71, comExtra(0.1, 5));
-console.log(`${k} verificações do desconto extra com o interruptor ligado, todas certas.`);
+console.log("OK: piso segue o rebate, falta de dado não vira zero, e a faixa pega o preço igual.");
