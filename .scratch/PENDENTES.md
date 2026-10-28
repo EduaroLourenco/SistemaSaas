@@ -137,26 +137,38 @@ Nada aqui anda sem ele. Não é falta de código.
 
 ## Soltos, menores
 
-- [ ] **`carregarFormulaBase()` escolhe a vigência sem filtrar a
-      operação.** Achado em 28/10 ao montar a tabela BI, e NÃO corrigido
-      de propósito: é caminho de preço, e mexer nele sem o Eduardo por
-      perto não vale o risco de madrugada.
-      `src/lib/dados/formula-base.ts` pega o `vigente_de` mais recente de
-      QUALQUER operação e depois carrega itens e preços daquela vigência,
-      também sem filtro. No app o RLS salva — a sessão só enxerga a
-      própria empresa. Fora dele não: com a chave de serviço (os scripts
-      de `scripts/local/`, e qualquer rota que use o cliente
-      privilegiado) a Probel recebe a base de 22/10 de OUTRA empresa, com
-      82 itens em vez dos 1.379 dela.
-      Medido: três operações têm base (Probel 30/09 com 1.379 itens,
-      123c2f3c 22/10 com 82, 01b057f3 10/10 com 72) e **nenhuma chave de
-      SKU/MLB se repete entre elas hoje** — então o efeito atual é base
-      VAZIA, não preço trocado. Por isso não virou incêndio: vazio o
-      sistema trata como "sem tabela", que é "não sei".
-      O conserto é passar a operação e filtrar as duas consultas; o que
-      exige cuidado é que `melhor-preco-reducao.mjs` e
-      `importar-tabela-precos.mjs` chamam a função fora de uma requisição
-      e teriam de receber a operação na mão.
+- [x] **`carregarFormulaBase()` filtrava nada — corrigido em 28/10.**
+      Ela pegava o `vigente_de` mais recente de QUALQUER operação e
+      carregava itens e preços daquela vigência, também sem filtro. No
+      app o RLS salvava; com a chave de serviço, não: a Probel recebia a
+      base de 22/10 de outra empresa, com 82 itens em vez dos 1.379 dela.
+      Agora as três consultas e a de `anuncios` filtram a operação — do
+      cookie na tela, na mão no script —, e sem operação devolve null em
+      vez de pegar a base alheia. Conferido: Probel 1.379 itens da
+      vigência de 30/09, outra empresa 82 da de 22/10, nenhuma chave de
+      preço vazando entre as duas.
+      Nunca saiu preço errado daqui: o efeito era base VAZIA, que o
+      sistema já trata como "sem tabela", isto é, "não sei".
+
+- [ ] **Comissão praticada: subir a cobertura.** 45% dos pedidos do Meli
+      vindos de planilha têm comissão informada, contra **100% dos que
+      vieram pela API** — `order_items[].sale_fee` é o extrato de quem
+      cobrou, e a sincronização já grava com origem `canal`. Dois
+      caminhos, os dois prontos:
+      1. `node scripts/local/comissao-por-api.mjs 2026-01-01 2026-06-30`
+         (ensaio; `--aplicar` grava). **Precisa de token válido** — os
+         dois venceram, e o script não renova de propósito: renovar daqui
+         rotacionaria o refresh dos CLIs.
+      2. Importar em /importar o relatório de vendas do Meli (tipo
+         `vendas_ml`), que grava com origem `canal` e sobrescreve o
+         derivado. **Nunca foi usado nesta base** — nenhuma importação
+         desse tipo nas últimas 40, e é por isso que a cobertura é baixa.
+
+- [ ] **Bloco de promoção ao vivo no raio-x do SKU.** Precisa de
+      `GET /seller-promotions/items/{MLB}`, que tem cota e token. Não
+      escrevi: sem token válido eu não teria como conferir o formato da
+      resposta, e parser de API escrito no escuro é chute com aparência
+      de conta.
 
 - [x] `/equipe` na navegação: **já estava lá**, e o item era engano. Está
       em `NAV_FOOTER` (`src/lib/nav.ts`) desde 01/10, e `NavTree` desenha
