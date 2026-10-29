@@ -18,10 +18,10 @@ import { carregarRecordeSku, type RecordeSku } from "./recorde-sku";
  *
  * ── O que ele NÃO busca ──
  *
- * A promoção ao vivo do canal. Ela é uma chamada à API do Mercado Livre
- * por MLB, com cota, e quem a faz é o módulo de Automações. Enquanto não
- * estiver ligada aqui, o bloco de promoção não é mostrado — melhor
- * ausência do que um "sem promoções" que na verdade é "não perguntei".
+ * A promoção ao vivo do canal. Ela é por MLB, não por SKU — dois irmãos
+ * do mesmo produto recebem convites e pisos diferentes, e somar os dois
+ * daria um número que não existe em lugar nenhum. Fica em
+ * `/api/anuncios/promocoes/[mlb]`, numa chamada própria ao canal.
  */
 
 export type AnuncioDoSku = {

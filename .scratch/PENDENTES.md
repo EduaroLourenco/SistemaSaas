@@ -1,6 +1,6 @@
 # Pendências — a porta de entrada
 
-Atualizado em 28/10/2026 (noite de 27 para 28).
+Atualizado em 29/10/2026.
 
 Este é o único arquivo que precisa ser lido para saber o que falta. Cada
 item aponta para a especificação onde o detalhe está. Quem abrir uma
@@ -53,11 +53,34 @@ Teste: `node scripts/testar-semana-em-curso.mjs`
       fora e tem de bater. No PA85352: 9 anúncios, recorde de 22 un em
       S8/26 a R$ 1.976, última semana 1 un (5% do recorde), saldo 360 com
       giro de 1,64/dia.
-- [ ] **Bloco de promoção ao vivo no drawer.** Ficou de fora: é chamada à
-      API do Meli por MLB (`GET /seller-promotions/items/{MLB}`), com
-      cota, e quem faz essa leitura é o módulo de Automações. Enquanto
-      não estiver ligada, o drawer não mostra bloco nenhum de promoção —
-      melhor ausência do que um "sem promoções" que é "não perguntei".
+- [x] **Bloco de promoção ao vivo no drawer — feito em 29/10.** O que
+      destravou foi o token: ele sai do cofre do sistema, o mesmo que a
+      comissão por API usa, e com ele deu para SONDAR o endpoint antes de
+      escrever o parser, em vez de chutar o formato.
+      `promocoesDoAnuncio()` em `lib/meli/promocoes-canal.ts`, rota
+      `/api/anuncios/promocoes/[mlb]`, bloco em
+      `components/analise/promocao-ao-vivo.tsx`. O caminho entrou na
+      lista de leitura permitida (`lib/meli/limite.ts`).
+      Confere com `node scripts/conferir-promocao-ao-vivo.mjs`, que fala
+      com o canal de verdade — 4 anúncios lidos, 1 recusado.
+
+      **As quatro coisas que só a resposta real mostrou:**
+      · devolve um ARRAY puro, não `{results}` como os outros dois
+        endpoints de `seller-promotions`;
+      · `app_version=v2` é obrigatório — sem ele, 400 "Invalid
+        app_version", e não um formato antigo;
+      · `price: 0` no convite é "ainda não tem preço", não promoção de
+        graça. Vira nulo, senão a tela oferta R$ 0,00;
+      · no CONVITE o `price` não é proposta: o relâmpago do MLB5792078252
+        veio com 29,09 contra teto de 27,00 do próprio canal. A proposta
+        é `suggested_discounted_price`, dentro de piso e teto. A tela só
+        mostra `price` no que já está no ar.
+
+      Anúncio em revisão responde 400 — que é "não dá para perguntar", e
+      não "nenhuma promoção". Por isso a leitura volta como
+      `{ lido: false, motivo }` e o bloco mostra travessão com o motivo,
+      nunca lista vazia. Três estados separados na tela: no ar, agendada
+      e convite.
 
 **O que a coluna de vitrine vai mostrar, e por quê:** dado só das últimas
 ~5 semanas. `anuncio_desempenho_semanal.preco_anunciado` está nulo nas
@@ -85,8 +108,8 @@ publicados, com a **escrita desligada**.
       estouram a cota.
       Nada é enviado: aprovar só muda o estado. O envio continua em
       `/api/automacoes/enviar`, com `confirmar: true`.
-      **Falta rodar a migração 46 no Supabase.** Até lá a aba avisa.
-      Falta também o passo 1 do degrau (rodar de madrugada): depende do
+      A migração 46 **já rodou** (conferida em 29/10), então a fila
+      guarda. Falta o passo 1 do degrau (rodar de madrugada): depende do
       agendamento, que está parado por `CRON_SECRET` e companhia.
 - [x] Memória de folga — virou `folgas_campanha` (migração
       `db/45_folga_por_campanha.sql`), **por tipo de campanha**, que é
@@ -96,20 +119,26 @@ publicados, com a **escrita desligada**.
       `scripts/testar-folga-por-campanha.mjs` cobre justamente esse caso,
       que com `||` no lugar de `??` ofertaria 5% abaixo de um preço
       negociado.
-      **Falta rodar a migração 45 no Supabase.** Até lá a tela avisa e
-      segue com 5% sem memória, como antes.
+      A migração 45 **já rodou** (conferida em 29/10): a folga editada na
+      tela agora persiste, em vez de voltar a 5% a cada recarga.
 - [ ] Aposentar a planilha de promoção — é o objetivo final deste módulo.
 
 ---
 
-## Para rodar no Supabase — 2 migrações
+## Para rodar no Supabase — nenhuma
 
-As duas estão escritas e o código aguenta a falta delas (a tela avisa e
-segue com o comportamento antigo). Enquanto não rodarem, os dois itens
-de Automações que foram entregues nesta noite não guardam nada.
+As duas que faltavam já rodaram. Conferido em 29/10 contra o banco:
 
-- [ ] `db/45_folga_por_campanha.sql` — a memória da folga.
-- [ ] `db/46_fila_de_aprovacao.sql` — o estado da fila de aprovação.
+- [x] `db/45_folga_por_campanha.sql` — `folgas_campanha` responde
+      (`node scripts/conferir-migracoes.mjs`).
+- [x] `db/46_fila_de_aprovacao.sql` — as sete colunas novas de
+      `decisoes_promocao` respondem (`estado`, `aprovada_por`,
+      `aprovada_em`, `titulo`, `sku`, `preco_canal`, `prazo`).
+      O índice parcial e o check de `estado` não dão para sondar de
+      fora: só se vê tentando gravar, e isso é escrita.
+
+Com isso, a folga por campanha e a fila de aprovação passam a guardar o
+que decidem — era o que faltava para os dois itens acima valerem.
 
 ---
 
@@ -177,11 +206,12 @@ Nada aqui anda sem ele. Não é falta de código.
       O token sai do cofre do sistema (a integração do app do Meli), que
       renova sozinha; os `token.json` dos CLIs antigos não entram nisso.
 
-- [ ] **Bloco de promoção ao vivo no raio-x do SKU.** Precisa de
-      `GET /seller-promotions/items/{MLB}`, que tem cota e token. Não
-      escrevi: sem token válido eu não teria como conferir o formato da
-      resposta, e parser de API escrito no escuro é chute com aparência
-      de conta.
+- [x] **Bloco de promoção ao vivo — feito em 29/10, e por MLB, não por
+      SKU.** O raio-x do SKU junta os irmãos; a promoção não se junta:
+      cada MLB tem convite, piso e teto próprios, e a média de dois
+      pisos não é um número que exista em lugar nenhum. Por isso o bloco
+      ficou ao lado dos do SKU, mas com chamada própria por anúncio. Ver
+      o item 1, em "Em andamento".
 
 - [x] `/equipe` na navegação: **já estava lá**, e o item era engano. Está
       em `NAV_FOOTER` (`src/lib/nav.ts`) desde 01/10, e `NavTree` desenha

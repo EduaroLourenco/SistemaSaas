@@ -140,6 +140,15 @@ const PERMITIDOS = [
    */
   /^\/seller-promotions\/users\/\d+$/,
   /^\/seller-promotions\/promotions\/[A-Z]+-[A-Z]{3}\d+\/items$/i,
+  /*
+   * As promoções de UM anúncio: o que ele tem no ar e para o que o canal
+   * convidou. É o mesmo caminho que a escrita usa para entrar e sair de
+   * promoção — aqui é o GET, que só lê.
+   *
+   * Exige `app_version=v2`. Sem ele a resposta é 400 "Invalid
+   * app_version", não um formato antigo.
+   */
+  /^\/seller-promotions\/items\/[A-Z]{3}\d+$/i,
   /^\/advertising\/advertisers$/,
   /^\/marketplace\/advertising\/[A-Z]{3}\/advertisers\/\d+\/product_ads\/(campaigns|ads)\/search$/,
 ];

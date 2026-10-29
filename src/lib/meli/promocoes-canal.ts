@@ -119,6 +119,163 @@ const data = (v: unknown) => {
   return /(Z|[+-]\d{2}:?\d{2})$/.test(s) ? s : s + "Z";
 };
 
+/* ══════════════════════════════════════════════════════════════
+   As promoções de UM anúncio
+   ══════════════════════════════════════════════════════════════ */
+
+/**
+ * O que este MLB tem no ar, e para o que o canal o convidou.
+ *
+ * ── Por que não dá para montar isto do que já temos ──
+ *
+ * `lerItensDaPromocao` vai da promoção para os itens: para saber as oito
+ * promoções de um anúncio, seriam oito chamadas paginadas, uma por
+ * campanha viva da conta. Esta é uma chamada só, e devolve inclusive o
+ * que não passa por campanha da conta — PRICE_DISCOUNT, LIGHTNING e o
+ * desconto no Pix do próprio canal.
+ *
+ * ── O formato, conferido em 29/10/2026 nas quatro contas ──
+ *
+ * `GET /seller-promotions/items/{MLB}?app_version=v2` devolve um ARRAY
+ * puro, não `{results}` como os outros dois endpoints deste módulo. Dez
+ * tipos apareceram: SMART, SMART_LIGHTNING, LIGHTNING, DEAL,
+ * SELLER_CAMPAIGN, SELLER_COUPON_CAMPAIGN, PRE_NEGOTIATED, BANK,
+ * PRICE_DISCOUNT e UNHEALTHY_STOCK.
+ *
+ * Aqui `id` é o código da PROMOÇÃO — ao contrário de
+ * `promotions/{id}/items`, onde `id` é o do anúncio. PRICE_DISCOUNT vem
+ * sem `id` e com `name` vazio: é o desconto solto, que não tem campanha.
+ *
+ * ── As três armadilhas ──
+ *
+ * `price: 0` no convite é "ainda não tem preço", não promoção de graça.
+ * Vira null, senão a tela mostra R$ 0,00 como oferta.
+ *
+ * `status` separa o que ESTÁ no ar (`started`) do que é só convite
+ * (`candidate`). A tela que juntar os dois mente duas vezes.
+ *
+ * Anúncio em revisão responde HTTP 400 ("Item status is not allowed").
+ * Isso é "não dá para perguntar", e não "nenhuma promoção" — daí o
+ * resultado vir com `lido`, e não como lista vazia.
+ */
+export type PromocaoDoAnuncio = {
+  /** Código da promoção. Null em PRICE_DISCOUNT, que não tem campanha. */
+  codigo: string | null;
+  tipo: string;
+  subTipo: string | null;
+  nome: string | null;
+  /** `started` está no ar agora; `candidate` é convite ainda não aceito. */
+  status: string | null;
+  precoOriginal: number | null;
+  /** O preço da promoção. Null no convite que ainda não tem preço. */
+  preco: number | null;
+  precoMinimo: number | null;
+  precoMaximo: number | null;
+  sugerido: number | null;
+  percentual: number | null;
+  /** Quanto o canal põe e quanto nós pomos, em pontos. */
+  meliPct: number | null;
+  sellerPct: number | null;
+  inicio: string | null;
+  fim: string | null;
+  /** `offer_id` ou `ref_id` — identifica o candidato no aceite. */
+  oferta: string | null;
+  /** Só em relâmpago e oferta do dia: a faixa de unidades. */
+  estoqueMin: number | null;
+  estoqueMax: number | null;
+  /** Só em promoção de meio de pagamento (BANK/COFINANCED): "PIX". */
+  meioPagamento: string | null;
+};
+
+/** Lista, ou o motivo de não ter perguntado. Nunca lista vazia por falha. */
+export type PromocoesDoAnuncio =
+  | { lido: true; promocoes: PromocaoDoAnuncio[] }
+  | { lido: false; motivo: string };
+
+type PromoDoItemBruta = {
+  id?: string;
+  type?: string;
+  sub_type?: string;
+  name?: string;
+  status?: string;
+  price?: number;
+  original_price?: number;
+  min_discounted_price?: number;
+  max_discounted_price?: number;
+  suggested_discounted_price?: number;
+  fixed_percentage?: number;
+  meli_percentage?: number;
+  seller_percentage?: number;
+  start_date?: string;
+  finish_date?: string;
+  offer_id?: string;
+  ref_id?: string;
+  stock?: { min?: number; max?: number };
+  payment_method?: string;
+};
+
+/**
+ * O motivo, em poucas palavras, para caber na própria linha da tela.
+ *
+ * `meliGet` já traduz 429 e conta não conectada; o que chega aqui como
+ * HTTP 400 é o anúncio que o canal não aceita avaliar.
+ */
+function motivoDaRecusa(e: unknown): string {
+  const m = e instanceof Error ? e.message : String(e);
+  if (/HTTP 400/.test(m)) return "o canal não avalia este anúncio";
+  if (/429|limite de chamadas/.test(m)) return "cota do canal estourada";
+  if (/não conectada|não configurada/i.test(m)) return "conta não conectada";
+  return "o canal não respondeu";
+}
+
+export async function promocoesDoAnuncio(
+  conta: Conta,
+  mlb: string
+): Promise<PromocoesDoAnuncio> {
+  let bruto: PromoDoItemBruta[];
+  try {
+    bruto = await meliGet<PromoDoItemBruta[]>(
+      `/seller-promotions/items/${mlb}?app_version=v2`,
+      conta
+    );
+  } catch (e) {
+    return { lido: false, motivo: motivoDaRecusa(e) };
+  }
+  if (!Array.isArray(bruto)) return { lido: false, motivo: "o canal não respondeu" };
+
+  return {
+    lido: true,
+    promocoes: bruto
+      .filter((p) => p.type)
+      .map((p) => {
+        /* Zero é ausência de preço aqui, não preço zero: o convite que
+           ainda não tem valor definido vem com `price: 0`. */
+        const preco = num(p.price);
+        return {
+          codigo: p.id ?? null,
+          tipo: String(p.type),
+          subTipo: p.sub_type ?? null,
+          nome: p.name?.trim() ? p.name : null,
+          status: p.status ?? null,
+          precoOriginal: num(p.original_price),
+          preco: preco === 0 ? null : preco,
+          precoMinimo: num(p.min_discounted_price),
+          precoMaximo: num(p.max_discounted_price),
+          sugerido: num(p.suggested_discounted_price),
+          percentual: num(p.fixed_percentage),
+          meliPct: num(p.meli_percentage),
+          sellerPct: num(p.seller_percentage),
+          inicio: data(p.start_date),
+          fim: data(p.finish_date),
+          oferta: p.offer_id ?? p.ref_id ?? null,
+          estoqueMin: num(p.stock?.min),
+          estoqueMax: num(p.stock?.max),
+          meioPagamento: p.payment_method ?? null,
+        };
+      }),
+  };
+}
+
 export async function lerPromocoesDoCanal(conta: Conta): Promise<PromocaoCanal[]> {
   const v = await vendedor(conta);
   const r = await meliGet<{ results?: PromoBruta[] }>(`/seller-promotions/users/${v.id}?app_version=v2`, conta);

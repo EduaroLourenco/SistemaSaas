@@ -34,6 +34,7 @@ import { TabelaSemanal } from "@/components/analise/tabela-semanal";
 import { TabelaProdutos } from "@/components/analise/tabela-produtos";
 import { TabelaBI } from "@/components/analise/tabela-bi";
 import { BlocosDoSku } from "@/components/analise/blocos-sku";
+import { PromocaoAoVivo } from "@/components/analise/promocao-ao-vivo";
 import { PainelLentes } from "@/components/analise/painel-lentes";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
 import { LinhaDoTempo } from "@/components/analise/linha-do-tempo";
@@ -830,6 +831,14 @@ function RaioX({
         listagem porque são cinco consultas por SKU.
       */}
       <BlocosDoSku sku={item.sku} />
+
+      {/*
+        O preço que o canal está praticando AGORA, por MLB. É uma chamada
+        à API do Mercado Livre por abertura de drawer — por isso fica aqui
+        e não na listagem, e por isso responde "não perguntei" quando o
+        canal recusa, em vez de "sem promoções".
+      */}
+      <PromocaoAoVivo mlb={item.mlb} />
 
       {/* preço */}
       <div className="px-4 py-3.5 border-b border-line">

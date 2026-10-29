@@ -12,6 +12,7 @@ import { money, count, pct } from "@/lib/format";
 import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
 import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
 import { FOLGA_PADRAO, TIPO_PADRAO, type Folgas } from "@/lib/folga";
+import { ROTULO_PROMOCAO, TOM_PROMOCAO } from "@/lib/promocao-rotulos";
 import type { Fila } from "@/lib/dados/fila-aprovacao";
 import { FilaAprovacao } from "@/components/automacoes/fila";
 import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
@@ -39,19 +40,9 @@ import { useRouter } from "next/navigation";
  * pintava o pré-acordo inteiro de vermelho, 96 linhas, todas erradas.
  */
 
-const ROTULO: Record<string, string> = {
-  DEAL: "Tradicional", SMART: "Automática", SMART_LIGHTNING: "Relâmpago auto",
-  LIGHTNING: "Relâmpago", DOD: "Oferta do dia", PRE_NEGOTIATED: "Pré-acordo",
-  UNHEALTHY_STOCK: "Liquidar Full", SELLER_CAMPAIGN: "Nossa campanha",
-  SELLER_COUPON_CAMPAIGN: "Cupom", MARKETPLACE_CAMPAIGN: "Cofinanciada",
-  PRICE_MATCHING: "Preço competitivo", PRICE_MATCHING_MELI_ALL: "100% Meli",
-  PRICE_DISCOUNT: "Desconto avulso", VOLUME: "Leve mais",
-};
-const TOM: Record<string, "neutral" | "info" | "up" | "down" | "warn"> = {
-  DEAL: "info", SELLER_CAMPAIGN: "info", SMART: "neutral", MARKETPLACE_CAMPAIGN: "neutral",
-  LIGHTNING: "down", SMART_LIGHTNING: "down", DOD: "down",
-  PRE_NEGOTIATED: "up", UNHEALTHY_STOCK: "up", SELLER_COUPON_CAMPAIGN: "warn",
-};
+/* Os rótulos moraram aqui até o raio-x do anúncio precisar dos mesmos. */
+const ROTULO = ROTULO_PROMOCAO;
+const TOM = TOM_PROMOCAO;
 
 /* Onde NÓS definimos o preço, a folga reescreve. Onde o canal define, ela
    só decide se aceita a proposta dele. */
