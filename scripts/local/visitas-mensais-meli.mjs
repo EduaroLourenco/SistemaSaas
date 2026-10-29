@@ -81,6 +81,10 @@ const CONTAS = [
       { ano: 2026, mes: 3, visitas: 28312 },
       { ano: 2026, mes: 4, visitas: 1829 },
       { ano: 2026, mes: 5, visitas: 3642 },
+      /* Junho repicou: 94 pedidos e 9.600 visitas, contra 22 e 3.642 em
+         maio. A coleta diaria desta conta so comecou em julho, entao
+         este mes tambem vem do painel. */
+      { ano: 2026, mes: 6, visitas: 9600 },
     ],
   },
 ];

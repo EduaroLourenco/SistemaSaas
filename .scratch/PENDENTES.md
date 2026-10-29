@@ -137,12 +137,19 @@ Nada aqui anda sem ele. Não é falta de código.
 
 ## Soltos, menores
 
-- [ ] **Junho da 2ª conta do Meli está sem visita.** As duas contas
-      têm jan a mai do painel e jul em diante da coleta diária; na 2ª
-      conta a coleta só começou em julho, então junho ficou no meio,
-      com 94 pedidos e R$ 191.050 sem visita nenhuma. Falta só o
-      número do painel daquele mês — entra em
-      `scripts/local/visitas-mensais-meli.mjs`.
+- [x] **Junho da 2ª conta do Meli — fechado em 29/10.** 9.600 visitas,
+      do painel. As duas contas do Meli agora têm o ano inteiro: jan a
+      jun do painel e jul em diante da coleta diária.
+      Conferido antes de gravar: 94 vendas no painel e 94 pedidos na
+      base, e a conversão calculada (0,98%) bate com a do painel
+      (1,0%). A receita fica 15,7% acima porque a nossa inclui frete.
+
+      **O que o ano dessa conta mostra:** março foi o pico (R$ 442.950,
+      28.312 visitas), abril caiu 93% de uma vez, junho repicou sozinho
+      (R$ 191.050 com 9.600 visitas) e de julho em diante ela ficou
+      entre 2.650 e 10.418 visitas, com a conversão caindo de 0,98%
+      para 0,15–0,29%. A queda é de tráfego, e o repique de junho não
+      se sustentou.
 
 - [x] **`carregarFormulaBase()` filtrava nada — corrigido em 28/10.**
       Ela pegava o `vigente_de` mais recente de QUALQUER operação e
