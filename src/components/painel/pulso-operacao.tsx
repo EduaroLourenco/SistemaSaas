@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ChartNoAxesCombined, ShoppingBag, Wallet } from "lucide-react";
+import { ArrowUpRight, ShoppingBag, Wallet } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import type { Recorte } from "@/lib/periodo";
 import { money, count, shortDate } from "@/lib/format";
@@ -21,18 +21,18 @@ export function PulsoOperacao({ recorte }: { recorte: Recorte }) {
   if (!indicador) return null;
   return <section className="gerizo-pulse" aria-label="Pulso da operação">
     <div className="gerizo-pulse-reading">
-      <span className="gerizo-section-index"><ChartNoAxesCombined size={16} /> 01 / O resultado</span>
-      <h2>Como foi o período?</h2>
+
+      <h2>Vendas no período</h2>
       <div className="gerizo-pulse-tabs" role="group" aria-label="Indicador em destaque">
         {MODOS.map(({ id, label, icon: Icon }) => <button key={id} type="button" aria-pressed={modo === id} onClick={() => setModo(id)}><Icon size={15} />{label}</button>)}
       </div>
       <strong className="gerizo-pulse-number" key={`${modo}-${indicador.value}`}>{formatar(indicador.value)}</strong>
       <div className="gerizo-pulse-comparison"><Delta value={indicador.delta} /><span>{indicador.hint}</span></div>
       <p>{recorte.dias ? `${recorte.dias} dias com movimento · ${recorte.intervalo}` : "Ainda não há movimento neste recorte."}</p>
-      <details className="gerizo-pulse-definition"><summary>O que entra neste número?</summary><p>{indicador.ajuda}</p></details>
+      <details className="gerizo-pulse-definition"><summary>Como é calculado</summary><p>{indicador.ajuda}</p></details>
     </div>
     <div className="gerizo-pulse-chart">
-      <span className="gerizo-section-index">Ritmo diário</span>
+      <span className="gerizo-section-index">Por dia</span>
       <div className="gerizo-pulse-chart-canvas">
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <AreaChart data={recorte.faturamento} margin={{ top: 20, right: 12, bottom: 0, left: 12 }}>
@@ -42,7 +42,7 @@ export function PulsoOperacao({ recorte }: { recorte: Recorte }) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <Link href="/vendas/diario">Explorar dia a dia <ArrowUpRight size={16} /></Link>
+      <Link href="/vendas/diario">Vendas por dia <ArrowUpRight size={16} /></Link>
     </div>
   </section>;
 }

@@ -394,7 +394,7 @@ export function ResumoDre({ r }: { r: Resultado }) {
   return (
     <section className="gerizo-finance-story">
       <div className="gerizo-finance-intro">
-        <div><span className="gerizo-section-index">Do faturamento ao resultado</span><h2>O que a operação deixa.</h2><p>{parcial ? "A leitura ainda é parcial. Complete os custos antes de concluir sobre a margem." : "Receita, contribuição e resultado: três etapas da mesma operação."}</p></div>
+        <div><h2>Resultado financeiro</h2><p>{parcial ? "A leitura ainda é parcial. Complete os custos antes de concluir sobre a margem." : "Custos incluídos no resultado."}</p></div>
         <div className="gerizo-coverage"><span>Cobertura dos custos <strong>{pct(r.cobertura, 1)}</strong></span><div role="progressbar" aria-label="Cobertura dos custos" aria-valuenow={Math.max(0, Math.min(100, r.cobertura))} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(0, Math.min(100, r.cobertura))}%` }} /></div><small>{moneyShort(r.receitaSemCusto)} de receita sem custo cadastrado</small></div>
       </div>
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">

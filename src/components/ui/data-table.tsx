@@ -32,6 +32,14 @@ type Props<T> = {
   className?: string;
 };
 
+function subscribeMobile(callback: () => void) {
+  const query = window.matchMedia("(max-width: 767px)");
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+}
+const mobileSnapshot = () => window.matchMedia("(max-width: 767px)").matches;
+const serverSnapshot = () => false;
+
 export function DataTable<T>({
   columns,
   rows,
@@ -43,7 +51,14 @@ export function DataTable<T>({
 }: Props<T>) {
   const [sort, setSort] = React.useState(defaultSort ?? null);
   const [hidden, setHidden] = React.useState<string[]>([]);
+  const mobile = React.useSyncExternalStore(subscribeMobile, mobileSnapshot, serverSnapshot);
+  const [view, setView] = React.useState<"list" | "table">("list");
   const shown = columns.filter((c, index) => index === 0 || !hidden.includes(c.key));
+  const title = shown.find((c) => c.mobile === "title") ?? shown[0];
+  const primary = shown.filter((c) => c !== title && (c.mobile === "metric" || c.mobile === "subtitle")).slice(0, 3);
+  const summary = primary.length ? primary : shown.filter((c) => c !== title && c.mobile !== "hidden").slice(0, 2);
+  const secondary = shown.filter((c) => c !== title && !summary.includes(c));
+  const cards = mobile && view === "list";
 
   const sorted = React.useMemo(() => {
     if (!sort) return rows;
@@ -73,12 +88,32 @@ export function DataTable<T>({
 
   return (
     <>
+      {mobile && <div className="gerizo-mobile-table-tools">
+        <div role="group" aria-label="Visualização dos resultados">
+          <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>Resumo</button>
+          <button type="button" aria-pressed={view === "table"} onClick={() => setView("table")}>Tabela</button>
+        </div>
+        {columns.some((c) => c.sortValue) && <label>Ordenar por
+          <select aria-label="Ordenar resultados por" value={sort?.key ?? ""} onChange={(event) => setSort(event.target.value ? { key: event.target.value, dir: "desc" } : null)}>
+            <option value="">Ordem original</option>
+            {columns.filter((c) => c.sortValue).map((c) => <option key={c.key} value={c.key}>{c.header}</option>)}
+          </select>
+        </label>}
+        {sort && <button type="button" onClick={() => toggleSort(sort.key)} aria-label="Inverter ordenação">{sort.dir === "desc" ? "Decrescente ↓" : "Crescente ↑"}</button>}
+      </div>}
       {columns.length > 4 && <details className="gerizo-table-options">
         <summary>Personalizar leitura <span>{shown.length} de {columns.length} colunas</span></summary>
         <div>{columns.map((c, index) => <label key={c.key}><input type="checkbox" checked={!hidden.includes(c.key) || index === 0} disabled={index === 0} onChange={(event) => setHidden((old) => event.target.checked ? old.filter((key) => key !== c.key) : [...old, c.key])} />{c.header}</label>)}</div>
       </details>}
       {/* ── Desktop: tabela densa ─────────────────────────────── */}
-      <div className={cn("gerizo-table-scroll gerizo-data-table", className)} tabIndex={0} role="region" aria-label="Tabela de resultados. Deslize para ver todas as colunas.">
+      {cards ? <div className="gerizo-mobile-records">
+        {visible.map((row) => <article key={rowKey(row)} className="gerizo-mobile-record">
+          <div className="gerizo-record-title">{title?.cell(row)}</div>
+          <dl>{summary.map((c) => <div key={c.key}><dt>{c.header}</dt><dd>{c.cell(row)}</dd></div>)}</dl>
+          {secondary.length > 0 && <details><summary>Mais dados <span>{secondary.length}</span></summary><dl>{secondary.map((c) => <div key={c.key}><dt>{c.header}</dt><dd>{c.cell(row)}</dd></div>)}</dl></details>}
+          {onRowClick && <button className="gerizo-record-open" type="button" onClick={() => onRowClick(row)}>Abrir detalhes →</button>}
+        </article>)}
+      </div> : <div className={cn("gerizo-table-scroll gerizo-data-table", className)} tabIndex={0} role="region" aria-label="Tabela de resultados. Deslize para ver todas as colunas.">
         <table className="w-full border-collapse text-[13px]" style={{ minWidth: shown.length > 6 ? 920 : shown.length > 3 ? 620 : undefined }}>
           <thead>
             <tr className="bg-panel-2">
@@ -159,9 +194,9 @@ export function DataTable<T>({
             ))}
           </tbody>
         </table>
-      </div>
+      </div>}
 
-      {columns.length > 3 && <p className="px-4 py-2 text-[12px] text-ink-3 md:hidden">Deslize a tabela para ver mais colunas.</p>}
+      {!cards && columns.length > 3 && <p className="px-4 py-2 text-[12px] text-ink-3 md:hidden">Deslize a tabela para comparar mais colunas.</p>}
 
       <Pagination {...pagination} />
     </>

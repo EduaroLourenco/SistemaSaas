@@ -220,127 +220,19 @@ function NavTree({
 
 /* ══ Barra inferior do mobile ════════════════════════════════ */
 
-/**
- * A barra do telefone: uma pílula que flutua, não um rodapé colado.
- *
- * ── Por que mudou ──
- *
- * Era uma faixa branca grudada na borda, com cinco colunas iguais e
- * rótulo embaixo de cada ícone. Funciona e é esquecível — a mesma barra
- * de qualquer painel administrativo. O dono trabalha no telefone andando,
- * e pediu a estética dos aplicativos que ele usa todo dia: Instagram,
- * iFood. Lá a barra é uma peça escura que flutua sobre o conteúdo, e só o
- * item ativo ganha fundo e nome.
- *
- * ── As decisões ──
- *
- * Escura sobre uma interface clara, porque ela precisa se destacar do
- * conteúdo sem roubar a atenção com cor de marca — o roxo fica reservado
- * para o que é dado.
- *
- * Só o ativo mostra o rótulo. Cinco rótulos permanentes é o que faz a
- * barra parecer formulário; um só diz onde você está sem poluir.
- *
- * Alvo de toque de 44px mesmo no ícone sozinho, que é o mínimo para
- * acertar andando.
- */
-function MobileTabBar({
-  pathname,
-  onMore,
-}: {
-  pathname: string;
-  onMore: () => void;
-}) {
-  /*
-   * Encolhe quando se desce, volta quando se sobe ou se chega ao topo.
-   *
-   * A barra flutua sobre o conteúdo, então ela tapa linha de tabela
-   * enquanto se lê. Encolhida ela some do caminho sem sumir de vez — o
-   * dedo ainda acha, e o gesto de voltar é subir, que é o mesmo gesto de
-   * reler. A faixa morta de 6px evita o tremor em rolagem de precisão.
-   */
-  const [encolhida, setEncolhida] = React.useState(false);
-  React.useEffect(() => {
-    let anterior = window.scrollY;
-    let pendente = false;
-    const aoRolar = () => {
-      if (pendente) return;
-      pendente = true;
-      requestAnimationFrame(() => {
-        pendente = false;
-        const y = window.scrollY;
-        const d = y - anterior;
-        if (Math.abs(d) < 6) return;
-        anterior = y;
-        setEncolhida(y > 120 && d > 0);
-      });
-    };
-    window.addEventListener("scroll", aoRolar, { passive: true });
-    return () => window.removeEventListener("scroll", aoRolar);
-  }, []);
-
-  const itemBase =
-    "relative flex items-center justify-center gap-2 rounded-full transition-all duration-300 select-none";
-  return (
-    <nav
-      aria-label="Navegação"
-      className="md:hidden fixed inset-x-0 bottom-0 z-40 flex justify-center pointer-events-none px-3"
-      style={{ paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}
-    >
-      <div
-        className={cn(
-          "pointer-events-auto flex items-center gap-1 rounded-full max-w-full transition-all duration-300",
-          encolhida ? "p-1 scale-[.88] opacity-80" : "p-1.5 scale-100 opacity-100"
-        )}
-        style={{
-          /* Translúcida: o conteúdo atravessa, e o desfoque mantém o
-             contraste do ícone. Opaca demais vira um bloco no meio da
-             leitura; transparente demais perde o ícone no fundo claro. */
-          background: "color-mix(in srgb, var(--ink) 82%, transparent)",
-          backdropFilter: "saturate(160%) blur(18px)",
-          WebkitBackdropFilter: "saturate(160%) blur(18px)",
-          boxShadow: encolhida
-            ? "0 6px 18px -8px rgba(10,22,56,.35)"
-            : "0 12px 34px -10px rgba(10,22,56,.5), 0 2px 8px -2px rgba(10,22,56,.3)",
-          transformOrigin: "bottom center",
-        }}
-      >
-        {MOBILE_TABS.map((t) => {
-          const Icon = t.icon;
-          const active = pathname === t.href;
-          return (
-            <Link
-              key={t.href}
-              href={t.href}
-              aria-current={active ? "page" : undefined}
-              aria-label={t.label}
-              className={cn(
-                itemBase,
-                encolhida ? "h-10" : "h-11",
-                active
-                  ? cn("bg-white/[.18] text-white", encolhida ? "w-10" : "px-4")
-                  : cn("text-white/65 active:text-white", encolhida ? "w-10" : "w-11")
-              )}
-            >
-              <Icon className="h-[21px] w-[21px] shrink-0" strokeWidth={active ? 2.3 : 1.9} />
-              {active && !encolhida && (
-                <span className="text-[13px] font-semibold whitespace-nowrap">{t.label}</span>
-              )}
-            </Link>
-          );
-        })}
-        <button
-          onClick={onMore}
-          aria-label="Mais telas"
-          className={cn(itemBase, encolhida ? "h-10 w-10" : "h-11 w-11", "text-white/65 active:text-white")}
-        >
-          <Menu className="h-[21px] w-[21px]" strokeWidth={1.9} />
-        </button>
-      </div>
-    </nav>
-  );
+/** Navegação estável, com rótulos e áreas de toque fixas. */
+function MobileTabBar({ pathname, onMore }: { pathname: string; onMore: () => void }) {
+  return <nav aria-label="Navegação" className="gerizo-mobile-nav md:hidden">
+    {MOBILE_TABS.map((t) => {
+      const Icon = t.icon;
+      const active = pathname === t.href || (t.href.startsWith("/vendas") && pathname.startsWith("/vendas/")) || (t.href.startsWith("/anuncios") && ["/anuncios/", "/promocoes/", "/mercado-livre"].some((p) => pathname.startsWith(p)));
+      return <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined}>
+        <Icon size={21} aria-hidden="true" /><span>{t.label}</span>
+      </Link>;
+    })}
+    <button type="button" onClick={onMore} aria-label="Mais telas"><Menu size={21} aria-hidden="true" /><span>Mais</span></button>
+  </nav>;
 }
-
 /* ══ Casca ═══════════════════════════════════════════════════ */
 
 /**
@@ -476,7 +368,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <BuscaGlobal />
 
-          <BotaoAtualizar compacto />
+          <div className="hidden md:block"><BotaoAtualizar compacto /></div>
 
           <Link
             href="/alertas"
@@ -524,6 +416,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {moreOpen && <Sheet title="Menu" onClose={() => setMoreOpen(false)}>
         <RodapeEmpresa />
+        <div className="px-4 py-3"><BotaoAtualizar compacto /></div>
         <NavTree pathname={pathname} onNavigate={() => setMoreOpen(false)} />
         <div className="mx-4 mb-5 flex items-center justify-between border-t border-line pt-3"><span className="text-ink-2">Aparência</span><ThemeToggle /></div>
       </Sheet>}

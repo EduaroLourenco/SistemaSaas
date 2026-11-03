@@ -272,10 +272,10 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
 
       <PageBody className="gerizo-overview">
         <nav className="gerizo-workbench" aria-label="Atalhos da operação">
-          <span>Por onde vamos?</span>
+          <span>Atalhos</span>
           <Link href="/vendas/queda">Investigar uma queda <ArrowUpRight size={14} /></Link>
           <Link href="/produtos">Comparar produtos <ArrowUpRight size={14} /></Link>
-          <Link href="/planejamento">Planejar o próximo passo <ArrowUpRight size={14} /></Link>
+          <Link href="/planejamento">Planejamento <ArrowUpRight size={14} /></Link>
         </nav>
         {/* Fontes ficam em Integrações por decisão do usuário. Aqui, só o aviso de atraso. */}
         {dados.fontes.piorAtraso !== null && dados.fontes.piorAtraso >= 2 && (
@@ -297,7 +297,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         />
 
         <PulsoOperacao recorte={recorte} />
-        <div className="gerizo-section-heading"><span>02 / Os sinais</span><h2>O que acompanha o resultado</h2><p>Ticket, conversão e custos ajudam a explicar o período.</p></div>
+        <div className="gerizo-section-heading"><h2>Indicadores</h2></div>
         <div className="gerizo-overview-signals grid grid-cols-2 xl:grid-cols-4 gap-3">
           {KPIS.filter((k) => k.id !== "faturamento" && k.id !== "pedidos").map((k) => {
             /*
@@ -322,9 +322,9 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           })}
         </div>
 
-        <div className="gerizo-section-heading"><span>03 / Próximos movimentos</span><h2>Onde vale olhar agora</h2></div>
+
         <FilaRecomendacoes itens={dados.recomendacoes} />
-        <details className="gerizo-deep-dive"><summary>Explorar gráficos e histórico de canais <span>12 semanas + faturamento diário</span></summary>
+        <details className="gerizo-deep-dive"><summary>Histórico de vendas</summary>
         <div className="gerizo-overview-charts grid grid-cols-1 xl:grid-cols-3 gap-3">
           <Panel className="xl:col-span-2 overflow-hidden">
             <PanelHeader
@@ -426,7 +426,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         </div>
 
         </details>
-        <div className="gerizo-section-heading"><span>04 / De perto</span><h2>Produtos e canais que fazem o resultado</h2></div>
+
 
         {/* Top SKUs e canais lado a lado, como na referência aprovada. */}
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-start">

@@ -113,7 +113,7 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
     <Panel className="gerizo-recommendations overflow-hidden h-full flex flex-col">
       <PanelHeader
         title="Recomendações do dia"
-        hint="O que mudou e onde agir"
+
         action={
           resolvidasHoje > 0 ? (
             <Button size="sm" variant="ghost" onClick={desfazer}>
