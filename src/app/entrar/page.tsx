@@ -5,7 +5,7 @@ import { Brand } from "@/components/ui/brand";
 import { useRouter } from "next/navigation";
 import { clienteNavegador } from "@/lib/supabase/navegador";
 import { Button } from "@/components/ui/primitives";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowUpRight } from "lucide-react";
 import { iniciarCarregando } from "@/components/layout/carregando-gerizo";
 
 /**
@@ -22,6 +22,7 @@ export default function Entrar() {
   const [senha, setSenha] = React.useState("");
   const [erro, setErro] = React.useState<string | null>(null);
   const [enviando, setEnviando] = React.useState(false);
+  const [mostrarSenha, setMostrarSenha] = React.useState(false);
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault();
@@ -58,18 +59,34 @@ export default function Entrar() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-10 bg-ground">
-      <div className="w-full max-w-[340px]">
+    <main className="gerizo-entry">
+      <section className="gerizo-entry-story" aria-labelledby="entry-story-title">
+        <Brand descriptor />
+        <div>
+          <p className="gerizo-eyebrow">Seu próximo movimento</p>
+          <h2 id="entry-story-title">Menos ruído.<br />Mais direção<span>.</span></h2>
+          <p>Vendas, produtos e decisões. Encontre o que importa e faça a operação andar.</p>
+        </div>
+        <div className="gerizo-operation-art" aria-hidden="true">
+          <div><span>01 / ENTENDER</span><strong>O cenário</strong><i /><i /><i /></div>
+          <ArrowUpRight size={32} />
+          <div><span>02 / DECIDIR</span><strong>O próximo passo</strong><b>Olhar. Comparar. Agir.</b></div>
+        </div>
+        <p className="gerizo-entry-signature">GERIZO / INTELIGÊNCIA DE MERCADO</p>
+      </section>
+      <section className="gerizo-entry-access">
+      <div className="w-full max-w-[380px]">
         {/* Marca oficial: estas telas são as primeiras que o cliente vê. */}
-        <div className="mb-7">
+        <div className="mb-7 gerizo-entry-mobile-brand">
           <Brand descriptor />
         </div>
 
-        <h1 className="text-[19px] font-semibold text-ink tracking-tight">
-          Entrar
+        <p className="gerizo-eyebrow">Sua mesa de operação</p>
+        <h1 className="text-[32px] font-semibold text-ink tracking-tight">
+          Bom ter você aqui.
         </h1>
         <p className="text-[13px] text-ink-2 mt-1 mb-6">
-          Acesso à operação de e-commerce.
+          Entre para acompanhar o negócio e cuidar do próximo passo.
         </p>
 
         <form onSubmit={entrar} className="flex flex-col gap-3.5">
@@ -87,18 +104,24 @@ export default function Entrar() {
             />
           </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="label">Senha</span>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="senha" className="label">Senha</label>
+            <span className="relative flex">
             <input
-              type="password"
+              id="senha"
+              type={mostrarSenha ? "text" : "password"}
               required
               autoComplete="current-password"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="h-10 px-3 rounded-r1 bg-panel border border-line text-[14px] text-ink
+              className="h-10 w-full pl-3 pr-12 rounded-r1 bg-panel border border-line text-[14px] text-ink
                          outline-none focus:border-brand focus:ring-2 focus:ring-brand-wash"
             />
-          </label>
+            <button type="button" aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"} aria-pressed={mostrarSenha} onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-0 top-0 h-10 w-11 grid place-items-center text-ink-2">
+              {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+            </span>
+          </div>
 
           {erro && (
             <p
@@ -121,7 +144,7 @@ export default function Entrar() {
                 Entrando
               </>
             ) : (
-              "Entrar"
+              <>Entrar na operação <ArrowUpRight size={17} /></>
             )}
           </Button>
         </form>
@@ -131,6 +154,7 @@ export default function Entrar() {
           por dentro do sistema.
         </p>
       </div>
+      </section>
     </main>
   );
 }

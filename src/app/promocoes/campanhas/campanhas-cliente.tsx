@@ -138,6 +138,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
             <span className="flex items-center gap-1.5 shrink-0">
               <input
                 type="date"
+                aria-label="Data inicial das campanhas"
                 value={de}
                 onChange={(e) => setDe(e.target.value)}
                 className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline-none focus:border-brand"
@@ -145,6 +146,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
               <span className="text-[12px] text-ink-3">até</span>
               <input
                 type="date"
+                aria-label="Data final das campanhas"
                 value={ate}
                 onChange={(e) => setAte(e.target.value)}
                 className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline-none focus:border-brand"
@@ -154,6 +156,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3" />
               <input
                 value={busca}
+                aria-label="Buscar campanha"
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Nome da campanha"
                 className="w-full h-7 pl-8 pr-3 rounded-r1 bg-panel border border-line

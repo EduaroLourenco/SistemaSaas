@@ -354,6 +354,7 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
       />
 
       <PageBody>
+        <ol className="gerizo-process-track" aria-label="Etapas da importação"><li><span>01</span><strong>Escolha a fonte</strong><small>Conexão ou planilha original</small></li><li><span>02</span><strong>Confira a prévia</strong><small>Veja o que será importado</small></li><li><span>03</span><strong>Confirme o envio</strong><small>Grave depois de revisar</small></li></ol>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           {cartoes.map((c) => (
             <Panel key={c.titulo} className="flex flex-col gap-3 p-4">

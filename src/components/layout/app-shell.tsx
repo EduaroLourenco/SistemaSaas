@@ -28,6 +28,7 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { TelaGerizo } from "./carregando-gerizo";
 import { BotaoAtualizar } from "@/components/painel/botao-atualizar";
 import { NavegacaoArea } from "./navegacao-area";
+import { RoteiroArea } from "./roteiro-area";
 
 /* ══ Marca — monograma neutro, sem nome definido ══════════════ */
 
@@ -496,7 +497,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* rail lateral */}
       <aside
         className={cn(
-          "hidden md:flex flex-col fixed left-0 bottom-0 z-30 bg-panel border-r border-line transition-transform duration-200",
+          "gerizo-sidebar hidden md:flex flex-col fixed left-0 bottom-0 z-30 bg-panel border-r border-line transition-transform duration-200",
           !menu.aberto && "-translate-x-full"
         )}
         style={{ top: "var(--topbar)", width: "var(--rail)" }}
@@ -687,10 +688,11 @@ export function PageHeader({ title, breadcrumb, description, badge, actions, fil
           {filters && mobileFilters && mobile && <Button onClick={() => setOpenFilters(true)}><SlidersHorizontal size={16} />Filtros</Button>}
         </div>}
       </div>
-      {!inlineFilters && filters && (!mobile || !mobileFilters) && <div className="mt-4 min-w-0">{filters}</div>}
+      {!inlineFilters && filters && (!mobile || !mobileFilters) && <div className="gerizo-filters-zone mt-4 min-w-0">{filters}</div>}
       {inlineFilters && filters && mobile && !mobileFilters && <div className="mt-4 min-w-0">{filters}</div>}
       {filters && mobile && mobileFilters && openFilters && <FilterSheet onClose={() => setOpenFilters(false)} applyLabel="Ver resultados">{filters}</FilterSheet>}
       <React.Suspense fallback={null}><NavegacaoArea /></React.Suspense>
+      <RoteiroArea />
     </header>
   );
 }

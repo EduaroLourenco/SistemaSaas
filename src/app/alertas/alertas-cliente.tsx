@@ -25,7 +25,7 @@ export default function Alertas({ dados }: { dados: DadosAlertas }) {
   const [filtro, setFiltro] = React.useState<Filtro>("todos");
 
   const visiveis = React.useMemo(
-    () => (filtro === "todos" ? alertas : alertas.filter((a) => a.severidade === filtro)),
+    () => [...(filtro === "todos" ? alertas : alertas.filter((a) => a.severidade === filtro))].sort((a, b) => ({critico: 0, atencao: 1, info: 2}[a.severidade] - {critico: 0, atencao: 1, info: 2}[b.severidade])),
     [alertas, filtro]
   );
 
@@ -56,6 +56,7 @@ export default function Alertas({ dados }: { dados: DadosAlertas }) {
       />
 
       <PageBody>
+        <section className="gerizo-attention-intro"><span className="gerizo-section-index">Seu radar da operação</span><h2>{criticos ? "Comece pelo que não pode esperar." : atencao ? "Alguns sinais merecem um olhar." : "Espaço para olhar adiante."}</h2><p>Os achados aparecem por prioridade. Abra um alerta para ver a evidência antes de agir.</p></section>
         {alertas.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {resumo.map((r) => (

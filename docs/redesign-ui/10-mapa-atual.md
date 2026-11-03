@@ -1,0 +1,65 @@
+# Mapa atual de rotas — 01/11/2026
+
+Total: 59 páginas. Inventário por código; não representa validação de todos os estados.
+
+| Rota | Arquivo |
+|---|---|
+| /vendas/skus | src/app\vendas\skus\page.tsx |
+| /vendas/semanal | src/app\vendas\semanal\page.tsx |
+| /vendas/queda | src/app\vendas\queda\page.tsx |
+| /alertas | src/app\alertas\page.tsx |
+| /mercado-livre | src/app\mercado-livre\page.tsx |
+| /termos | src/app\termos\page.tsx |
+| /vendas/mtd | src/app\vendas\mtd\page.tsx |
+| /anuncios/trafego-pago | src/app\anuncios\trafego-pago\page.tsx |
+| /manual/bling | src/app\manual\bling\page.tsx |
+| /relatorios/exportacoes | src/app\relatorios\exportacoes\page.tsx |
+| /anuncios/tipo | src/app\anuncios\tipo\page.tsx |
+| /integracoes | src/app\integracoes\page.tsx |
+| /vendas/metas | src/app\vendas\metas\page.tsx |
+| /relatorios/apresentacao | src/app\relatorios\apresentacao\page.tsx |
+| /anuncios/preco-performance | src/app\anuncios\preco-performance\page.tsx |
+| /integracoes/estoques | src/app\integracoes\estoques\page.tsx |
+| /vendas/lancamentos | src/app\vendas\lancamentos\page.tsx |
+| /anuncios/preco-ideal | src/app\anuncios\preco-ideal\page.tsx |
+| /integracoes/canais | src/app\integracoes\canais\page.tsx |
+| /relatorio/[chave] | src/app\relatorio\[chave]\page.tsx |
+| /anuncios/preco-alvo | src/app\anuncios\preco-alvo\page.tsx |
+| /importar | src/app\importar\page.tsx |
+| /anuncios/catalogo | src/app\anuncios\catalogo\page.tsx |
+| /guia | src/app\guia\page.tsx |
+| /glossario | src/app\glossario\page.tsx |
+| /anuncios/analise | src/app\anuncios\analise\page.tsx |
+| /promocoes/processar | src/app\promocoes\processar\page.tsx |
+| /configuracoes | src/app\configuracoes\page.tsx |
+| /promocoes/historico | src/app\promocoes\historico\page.tsx |
+| /vendas/diario | src/app\vendas\diario\page.tsx |
+| /promocoes/comparar | src/app\promocoes\comparar\page.tsx |
+| /vendas/dia | src/app\vendas\dia\page.tsx |
+| /comecar | src/app\comecar\page.tsx |
+| /financeiro | src/app\financeiro\page.tsx |
+| /promocoes/campanhas | src/app\promocoes\campanhas\page.tsx |
+| /cadastro | src/app\cadastro\page.tsx |
+| /vendas/comparativos | src/app\vendas\comparativos\page.tsx |
+| /financeiro/fornecedores | src/app\financeiro\fornecedores\page.tsx |
+| /vendas/cancelamentos | src/app\vendas\cancelamentos\page.tsx |
+| /produtos | src/app\produtos\page.tsx |
+| /financeiro/folha | src/app\financeiro\folha\page.tsx |
+| /privacidade | src/app\privacidade\page.tsx |
+| /vendas/canais | src/app\vendas\canais\page.tsx |
+| /financeiro/custos | src/app\financeiro\custos\page.tsx |
+| /automacoes/regras | src/app\automacoes\regras\page.tsx |
+| /automacoes | src/app\automacoes\page.tsx |
+| /vendas/anual | src/app\vendas\anual\page.tsx |
+| /financeiro/contas | src/app\financeiro\contas\page.tsx |
+| /empresas | src/app\empresas\page.tsx |
+| /financeiro/categorias | src/app\financeiro\categorias\page.tsx |
+| /planejamento/resultados | src/app\planejamento\resultados\page.tsx |
+| /planejamento | src/app\planejamento\page.tsx |
+| / | src/app\page.tsx |
+| /equipe | src/app\equipe\page.tsx |
+| /convite/[token] | src/app\convite\[token]\page.tsx |
+| /monitoramento/precos | src/app\monitoramento\precos\page.tsx |
+| /conversa | src/app\conversa\page.tsx |
+| /entrar | src/app\entrar\page.tsx |
+| /monitoramento/fretes | src/app\monitoramento\fretes\page.tsx |
