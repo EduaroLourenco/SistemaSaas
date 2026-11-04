@@ -20,18 +20,6 @@ import type { RaioXSku } from "@/lib/dados/raio-x-sku";
  *   · é este anúncio ou o irmão? — os outros MLBs do mesmo produto.
  */
 
-/*
- * As faixas de cobertura.
- *
- * Abaixo de duas semanas, repor é urgente. Acima de quatro meses não é
- * conforto: é capital parado, e pintar de verde diria o contrário. Por
- * isso o verde tem teto — a faixa boa é um intervalo, não "quanto mais,
- * melhor".
- */
-const COBERTURA_CRITICA = 14;
-const COBERTURA_ATENCAO = 30;
-const COBERTURA_DEMAIS = 120;
-
 const SITUACAO: Record<string, { texto: string; tom: "up" | "warn" | "down" | "neutral" }> = {
   ganhando: { texto: "ganhando", tom: "up" },
   dividindo: { texto: "dividindo", tom: "warn" },
@@ -49,7 +37,7 @@ function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode
   );
 }
 
-export function BlocosDoSku({ sku }: { sku: string }) {
+export function BlocosDoSku({ sku, atual, selecionar }: { sku: string; atual?: string; selecionar?: (mlb: string) => void }) {
   const [dados, setDados] = React.useState<RaioXSku | null>(null);
   const [estado, setEstado] = React.useState<"carregando" | "pronto" | "erro" | "sem-sku">(
     sku ? "carregando" : "sem-sku"
@@ -79,7 +67,7 @@ export function BlocosDoSku({ sku }: { sku: string }) {
     return (
       <Bloco titulo="Histórico do produto">
         <p className="text-[12.5px] text-ink-3">
-          Este anúncio não tem SKU no canal, então não dá para juntar os irmãos dele.
+          Cadastre o SKU para reunir os anúncios deste produto.
         </p>
       </Bloco>
     );
@@ -95,7 +83,7 @@ export function BlocosDoSku({ sku }: { sku: string }) {
     return (
       <Bloco titulo="Histórico do produto">
         {/* Estado vazio honesto: não consegui ler, que é diferente de não ter. */}
-        <p className="text-[12.5px] text-ink-3">Não consegui ler o histórico deste SKU agora.</p>
+        <p className="text-[12.5px] text-ink-3">Histórico indisponível. Tente novamente mais tarde.</p>
       </Bloco>
     );
 
@@ -105,20 +93,9 @@ export function BlocosDoSku({ sku }: { sku: string }) {
   /* Onde a última semana está em relação ao melhor que este SKU já fez. */
   const doRecorde = pico && ultima && pico.unidades ? (ultima.unidades / pico.unidades) * 100 : null;
 
-  const tomCobertura =
-    estoque.diasDeCobertura == null
-      ? "neutral"
-      : estoque.diasDeCobertura <= COBERTURA_CRITICA
-        ? "down"
-        : estoque.diasDeCobertura <= COBERTURA_ATENCAO
-          ? "warn"
-          : estoque.diasDeCobertura <= COBERTURA_DEMAIS
-            ? "up"
-            : "neutral";
-
   return (
     <>
-      <Bloco titulo="Contra o recorde do próprio SKU">
+      <Bloco titulo="Vendas do produto">
         {pico ? (
           <>
             <div className="grid grid-cols-3 gap-3">
@@ -157,34 +134,15 @@ export function BlocosDoSku({ sku }: { sku: string }) {
         )}
       </Bloco>
 
-      <Bloco titulo="Estoque e ruptura">
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <p className="text-[12px] text-ink-3">Saldo</p>
-            <p className="num text-[16px] font-semibold text-ink leading-none mt-1">
-              {estoque.saldo == null ? "—" : count(estoque.saldo)}
-            </p>
-          </div>
-          <div>
-            <p className="text-[12px] text-ink-3">Giro</p>
-            <p className="num text-[16px] font-semibold text-ink leading-none mt-1">
-              {estoque.giroDiario == null
-                ? "—"
-                : `${estoque.giroDiario.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}/dia`}
-            </p>
-            <p className="text-[11.5px] text-ink-3 mt-1">4 semanas fechadas</p>
-          </div>
-          <div>
-            <p className="text-[12px] text-ink-3">Cobertura</p>
-            <p className="mt-1">
-              <Badge tone={tomCobertura}>
-                <span className="num">
-                  {estoque.diasDeCobertura == null ? "—" : `${estoque.diasDeCobertura} dias`}
-                </span>
-              </Badge>
-            </p>
-          </div>
-        </div>
+      <Bloco titulo="Estoque por origem">
+        <p className="text-[12px] text-ink-3 mb-3">Giro: {estoque.giroDiario == null ? "sem vendas" : estoque.giroDiario.toLocaleString("pt-BR") + "/dia"} · 4 semanas fechadas</p>
+        {estoque.leituras.length ? <>
+          <div className="grid gap-3">{estoque.leituras.map(l => <div key={l.id} className="flex justify-between gap-3 border-b border-line pb-3">
+            <div className="min-w-0"><p className="text-[13px] text-ink">{l.origem}</p><p className="text-[12px] text-ink-3">{l.local}</p><p className="text-[11px] text-ink-3">{new Date(l.consultadoEm).toLocaleDateString("pt-BR")}</p></div>
+            <strong className="text-[14px] whitespace-nowrap">{l.disponivel == null ? "Sem leitura" : l.disponivel >= 40000 && l.origem !== "Bling · ERP" ? "Sob encomenda" : count(l.disponivel) + " un"}</strong>
+          </div>)}</div>
+          <p className="text-[12px] text-ink-3 mt-3">As origens podem compartilhar o mesmo estoque; os saldos não são somados.</p>
+        </> : <p className="text-[12px] text-ink-3">{estoque.erroLeitura ? "Não foi possível consultar as origens agora." : "Sem leitura por origem. Confira o saldo de cada anúncio abaixo."}</p>}
         {(estoque.sobEncomenda > 0 || estoque.zerados > 0) && (
           <p className="text-[11.5px] text-ink-3 mt-2.5">
             {estoque.zerados > 0 && (
@@ -200,7 +158,7 @@ export function BlocosDoSku({ sku }: { sku: string }) {
         )}
       </Bloco>
 
-      <Bloco titulo={`Os ${anuncios.length} anúncios deste SKU`}>
+      <Bloco titulo={`Anúncios do produto · ${anuncios.length}`}>
         <div className="flex flex-col gap-1.5">
           {anuncios.map((a) => {
             const s = a.catalogo ? SITUACAO[a.catalogo] : null;
@@ -210,7 +168,7 @@ export function BlocosDoSku({ sku }: { sku: string }) {
                 className="flex items-center justify-between gap-3 py-1 border-b border-line/60 last:border-0"
               >
                 <span className="min-w-0">
-                  <span className="num text-[12px] text-ink block">{a.mlb}</span>
+                  {selecionar ? <button type="button" disabled={atual===a.mlb} className="num text-[12px] text-brand text-left min-h-11 disabled:text-ink disabled:cursor-default" onClick={()=>selecionar(a.mlb)}>{a.mlb}{atual===a.mlb?" · atual":" →"}</button> : <span className="num text-[12px] text-ink block">{a.mlb}</span>}
                   <span className="text-[11.5px] text-ink-3 block">
                     {a.tipo} · {a.conta}
                     {a.status !== "ativo" && ` · ${a.status}`}

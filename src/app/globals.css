@@ -4,17 +4,17 @@
 
 :root {
   /* superfícies */
-  --ground: #f7f9fc;
+  --ground: #f4f3ef;
   --panel: #ffffff;
-  --panel-2: #fafbfd;
-  --panel-3: #f0f3f8;
-  --line: #e6eaf1;
-  --line-2: #d7dde8;
+  --panel-2: #faf9f6;
+  --panel-3: #eeede8;
+  --line: #e3e2dc;
+  --line-2: #cccec8;
 
   /* tinta */
-  --ink: #0a1638;
-  --ink-2: #55627c;
-  --ink-3: #63718b;
+  --ink: #202b2a;
+  --ink-2: #53605e;
+  --ink-3: #68716f;
 
   /* identidade */
   --brand: #7a4dd8;
@@ -22,8 +22,8 @@
   --brand-ink: #ffffff;
   --brand-wash: #f1eaff;
   --brand-edge: #dfd2f6;
-  --nav-active: #dff7f8;
-  --nav-ink: #09677a;
+  --nav-active: #e8e3f3;
+  --nav-ink: #58329b;
   --teal: #10bfa0;
 
   /* semântica */
@@ -48,10 +48,10 @@
   --grid: rgba(16, 24, 40, 0.08);
 
   /* métrica */
-  --r1: 9px; --r2: 14px; --r3: 18px;
+  --r1: 7px; --r2: 10px; --r3: 14px;
   --row: 44px;
-  --rail: 204px;
-  --topbar: 54px;
+  --rail: 224px;
+  --topbar: 60px;
 
   --f-ui: var(--font-inter), ui-sans-serif, "Segoe UI Variable Text", "Segoe UI", Roboto,
     -apple-system, BlinkMacSystemFont, sans-serif;
@@ -254,7 +254,7 @@ body {
 }
 
 .gerizo-nav-active { background: var(--nav-active); color: var(--nav-ink); }
-.gerizo-topbar { background: linear-gradient(100deg, var(--panel) 15%, var(--ground)); }
+.gerizo-topbar { background: var(--panel); }
 .gerizo-shell-brand { background: var(--panel); }
 .gerizo-inline-filters .gerizo-filter-bar { gap: 20px; }
 @media (min-width: 768px) {
@@ -430,4 +430,198 @@ button:disabled { cursor: not-allowed; }
 @keyframes desliza {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
+}
+
+/* Mesa de operação: hierarquia compartilhada entre as famílias de telas. */
+.gerizo-sidebar { background: var(--panel-2); }
+.gerizo-nav-active { box-shadow: inset 3px 0 0 var(--brand); }
+.gerizo-page-header { padding-top: 28px; padding-bottom: 12px; }
+.gerizo-page-header > p { letter-spacing: .09em; font-size: 10px; text-transform: uppercase; }
+.gerizo-header-row h1 { letter-spacing: -.045em; font-weight: 650; }
+.gerizo-panel-header { background: var(--panel-2); border-radius: var(--r2) var(--r2) 0 0; }
+.gerizo-panel-header h3 { font-size: 15px; }
+.gerizo-stat-tile { padding-block: 20px; box-shadow: none; }
+.gerizo-stat-tile .label { font-weight: 600; color: var(--ink-2); }
+.gerizo-stat-tile .gerizo-metric-value { font-weight: 600; letter-spacing: -.04em; }
+.gerizo-overview-kpis > :first-child { border-color: var(--brand-edge); background: var(--brand-wash); }
+.gerizo-table-scroll tbody tr { transition: background-color 120ms ease; }
+.gerizo-table-scroll tbody tr:focus-within { background: var(--brand-wash); }
+.gerizo-table-scroll th { padding-block: 13px; }
+.gerizo-workbench { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 22px; padding-block: 4px 16px; border-bottom: 1px solid var(--line); }
+.gerizo-workbench > span { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-right: auto; }
+.gerizo-workbench a { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; font-size: 12px; color: var(--ink-2); }
+.gerizo-workbench a:hover { color: var(--brand); }
+.gerizo-workbench a svg { transition: transform 140ms ease; }
+.gerizo-workbench a:hover svg { transform: translate(2px, -2px); }
+.gerizo-pulse { display: grid; grid-template-columns: minmax(280px, .9fr) minmax(0, 1.4fr); border: 1px solid var(--line); background: var(--panel); border-radius: 22px; overflow: hidden; }
+.gerizo-pulse-reading { padding: clamp(24px, 3vw, 42px); background: var(--panel-2); }
+.gerizo-section-index { display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-3); font-size: 10px; font-weight: 600; }
+.gerizo-pulse h2 { font-size: 24px; line-height: 1.2; letter-spacing: -.035em; margin: 22px 0; font-weight: 600; }
+.gerizo-pulse-tabs { display: flex; gap: 5px; margin-bottom: 22px; }
+.gerizo-pulse-tabs button { display: flex; gap: 7px; align-items: center; padding: 8px 11px; border: 1px solid transparent; border-radius: 8px; font-size: 12px; color: var(--ink-2); }
+.gerizo-pulse-tabs button[aria-pressed="true"] { background: var(--panel); color: var(--ink); border-color: var(--line-2); box-shadow: var(--sh-1); }
+.gerizo-pulse-number { display: block; font-size: clamp(25px, 3vw, 46px); font-weight: 600; line-height: 1.15; letter-spacing: -.055em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; animation: gerizo-number-in 240ms ease both; }
+.gerizo-pulse-comparison { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 15px; font-size: 12px; color: var(--ink-2); }
+.gerizo-pulse-reading > p { margin-top: 20px; font-size: 12px; color: var(--ink-3); }
+.gerizo-pulse-definition { margin-top: 16px; font-size: 12px; color: var(--ink-2); }
+.gerizo-pulse-definition p { margin-top: 10px; line-height: 1.65; }
+.gerizo-pulse-chart { padding: 30px 24px 20px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.gerizo-pulse-chart-canvas { height: 230px; width: 100%; min-width: 0; margin-top: 16px; }
+.gerizo-pulse-chart > a { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 15px; font-size: 12px; color: var(--ink-2); }
+.gerizo-section-heading { padding-top: 16px; }
+.gerizo-section-heading > span { color: var(--ink-3); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
+.gerizo-section-heading h2 { font-size: 22px; font-weight: 600; letter-spacing: -.035em; margin-top: 6px; }
+.gerizo-section-heading p { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.gerizo-deep-dive { border-block: 1px solid var(--line); padding-block: 16px; }
+.gerizo-deep-dive > summary { font-size: 13px; font-weight: 600; }
+.gerizo-deep-dive > summary span { font-weight: 400; color: var(--ink-3); margin-left: 14px; }
+.gerizo-deep-dive[open] > summary { margin-bottom: 20px; }
+.gerizo-route-guide { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+.gerizo-route-guide > summary { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+.gerizo-route-guide small { margin-left: auto; font-size: 11px; color: var(--brand); }
+.gerizo-route-guide nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
+.gerizo-route-guide nav a { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); font-size: 12px; flex: 1 1 180px; }
+.gerizo-route-guide nav a span { color: var(--ink-3); font-family: var(--f-num); }
+.gerizo-route-guide nav a svg { margin-left: auto; }
+.gerizo-route-guide nav a:hover { border-color: var(--brand); }
+.gerizo-table-options { padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--ink-2); }
+.gerizo-table-options summary span { margin-left: 12px; color: var(--ink-3); }
+.gerizo-table-options > div { display: flex; gap: 12px 24px; flex-wrap: wrap; margin-top: 14px; }
+.gerizo-table-options label { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; }
+.gerizo-table-options input { accent-color: var(--brand); }
+.gerizo-filters-zone { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.gerizo-filters-zone > .gerizo-segmented { width: fit-content; }
+.gerizo-filters-zone input { min-height: 38px; }
+.gerizo-finance-intro { display: flex; gap: 32px; justify-content: space-between; align-items: center; padding: 28px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); margin-bottom: 16px; }
+.gerizo-finance-intro h2, .gerizo-attention-intro h2 { font-size: clamp(24px, 3vw, 36px); letter-spacing: -.045em; font-weight: 600; margin-top: 12px; }
+.gerizo-finance-intro p, .gerizo-attention-intro p { font-size: 13px; line-height: 1.65; color: var(--ink-2); max-width: 520px; margin-top: 10px; }
+.gerizo-coverage { flex: 0 1 300px; min-width: 220px; }
+.gerizo-coverage > span { display: flex; justify-content: space-between; gap: 16px; font-size: 12px; color: var(--ink-2); }
+.gerizo-coverage strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.gerizo-coverage [role="progressbar"] { background: var(--panel-3); height: 10px; border-radius: 20px; overflow: hidden; margin-block: 12px; }
+.gerizo-coverage i { display: block; height: 100%; background: var(--up); border-radius: inherit; transition: width 240ms ease; }
+.gerizo-coverage small { font-size: 11px; color: var(--ink-3); }
+.gerizo-attention-intro { padding: 12px 0 24px; border-bottom: 1px solid var(--line); }
+.gerizo-process-track { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.gerizo-process-track li { display: grid; grid-template-columns: 30px 1fr; gap: 4px 12px; padding: 24px; background: var(--panel); }
+.gerizo-process-track li > span { grid-row: span 2; font-family: var(--f-num); font-size: 18px; color: var(--brand); }
+.gerizo-process-track strong { font-size: 13px; font-weight: 600; }
+.gerizo-process-track small { font-size: 12px; color: var(--ink-3); }
+.gerizo-reading { padding: 18px 20px; border-radius: 12px; }
+.gerizo-reading > p { font-size: 14px; line-height: 1.7; }
+.gerizo-channel-ranking { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+.gerizo-channel-row { position: relative; padding: 24px; }
+.gerizo-channel-row > span:not(.gerizo-channel-position) { padding-right: 38px; min-height: 34px; }
+.gerizo-channel-position { position: absolute; right: 20px; top: 20px; font-family: var(--f-num); font-size: 24px; letter-spacing: -.06em; color: var(--ink-3); opacity: .55; }
+.gerizo-channel-row > p { font-size: clamp(20px, 2vw, 28px); letter-spacing: -.04em; }
+.gerizo-channel-bar { margin-top: 18px; height: 7px; border-radius: 6px; background: var(--panel-3); position: relative; margin-bottom: 32px; }
+.gerizo-channel-bar i { display: block; height: 100%; border-radius: inherit; transition: width 300ms ease; }
+.gerizo-channel-bar span { position: absolute; top: 14px; left: 0; font-size: 11px; color: var(--ink-3); }
+@media (max-width: 600px) { .gerizo-channel-ranking { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: no-preference) {
+  .gerizo-page-body { animation: gerizo-workspace-in 220ms ease-out both; }
+  @keyframes gerizo-workspace-in { from { opacity: .5; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+}
+@media (max-width: 767px) {
+  .gerizo-finance-intro { align-items: stretch; flex-direction: column; padding: 22px; gap: 20px; }
+  .gerizo-coverage { flex-basis: auto; min-width: 0; }
+  .gerizo-process-track { grid-template-columns: 1fr; }
+  .gerizo-process-track li { padding: 16px; }
+}
+@keyframes gerizo-number-in { from { opacity: .3; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 767px) {
+  .gerizo-pulse { grid-template-columns: 1fr; border-radius: 16px; }
+  .gerizo-pulse-number { font-size: clamp(28px, 8vw, 42px); }
+  .gerizo-pulse-chart { padding: 20px 12px; }
+  .gerizo-pulse-chart-canvas { height: 170px; }
+  .gerizo-route-guide small { display: none; }
+  .gerizo-deep-dive > summary span { display: block; margin: 6px 0 0; }
+}
+.gerizo-segmented button[aria-pressed="true"] { box-shadow: var(--sh-1); color: var(--brand); }
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--brand); outline-offset: 3px;
+}
+button:active:not(:disabled) { translate: 0 1px; }
+.gerizo-eyebrow { font-size: 10px; font-weight: 650; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 16px; }
+.gerizo-entry { min-height: 100dvh; display: grid; grid-template-columns: 1.05fr 1fr; background: var(--panel); }
+.gerizo-entry-story { background: #e8ece1; color: #253d35; padding: clamp(36px, 5vw, 80px); display: flex; flex-direction: column; justify-content: space-between; gap: 54px; }
+.gerizo-entry-story .gerizo-eyebrow { color: #536558; }
+.gerizo-entry-story h2 { font-size: clamp(42px, 4.8vw, 76px); line-height: 1.04; letter-spacing: -.065em; font-weight: 600; }
+.gerizo-entry-story h2 span { color: #7950bd; }
+.gerizo-entry-story h2 + p { margin-top: 24px; max-width: 360px; font-size: 17px; line-height: 1.7; color: #536558; }
+:root .gerizo-entry-story .gerizo-logo { filter: none; mix-blend-mode: multiply; }
+.gerizo-entry-story .gerizo-logo + span { color: #536558; }
+.gerizo-entry-access { display: grid; place-items: center; padding: 48px 28px; }
+.gerizo-entry-access input { min-height: 48px; }
+.gerizo-entry-access button[type="submit"] { min-height: 48px; justify-content: space-between; padding-inline: 18px; }
+.gerizo-entry-mobile-brand { display: none; }
+.gerizo-entry-signature { font-size: 10px; letter-spacing: .16em; color: #536558; }
+.gerizo-operation-art { display: flex; align-items: center; gap: 18px; }
+.gerizo-operation-art > div { flex: 1; min-width: 0; border-top: 1px solid #8e9e8f; padding-top: 16px; }
+.gerizo-operation-art span { display: block; font-size: 9px; letter-spacing: .1em; }
+.gerizo-operation-art strong { display: block; margin: 12px 0 20px; font-size: 18px; font-weight: 550; }
+.gerizo-operation-art b { font-size: 12px; font-weight: 450; }
+.gerizo-operation-art i { display: inline-block; width: 22%; height: 8px; background: #81947b; margin-right: 4px; }
+.gerizo-operation-art i:nth-of-type(2) { background: #536c52; }
+.gerizo-operation-art i:nth-of-type(3) { background: #2b493a; }
+@media (min-width: 768px) {
+  .gerizo-page-header, .gerizo-page-body { padding-inline: 32px; }
+}
+@media (max-width: 767px) {
+  .gerizo-page-header { padding-top: 22px; }
+  .gerizo-entry { grid-template-columns: 1fr; }
+  .gerizo-entry-story { display: none; }
+  .gerizo-entry-mobile-brand { display: block; margin-bottom: 48px; }
+  .gerizo-entry-access { padding: 36px 24px; }
+  .gerizo-stat-tile { padding-block: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled) { translate: none; }
+}
+
+/* Leitura mobile: resumo primeiro, comparação disponível sob demanda. */
+@media (max-width: 767px) {
+  .gerizo-mobile-nav { position: fixed; inset: auto 0 0; z-index: 40; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -4px 20px #0000000a; }
+  .gerizo-mobile-nav > :is(a,button) { display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center; min-height: 54px; min-width: 0; color: var(--ink-2); font-size: 11px; font-weight: 600; border-radius: 10px; }
+  .gerizo-mobile-nav > [aria-current="page"] { color: var(--brand); background: var(--brand-wash); }
+  button, select, input:not([type="checkbox"]):not([type="radio"]), a[role="button"], .gerizo-sheet nav a { min-height: 44px; }
+  .gerizo-topbar { gap: 0; padding-inline: 8px; }
+  .gerizo-topbar > :is(button,a), .gerizo-topbar > div > button { min-width: 44px; }
+  .gerizo-page-header { padding-top: 16px; }
+  .gerizo-page-header h1 { font-size: 25px; }
+  .gerizo-page-body { padding-top: 16px; }
+  .gerizo-workbench { gap: 8px; padding-block: 10px; }
+  .gerizo-pulse-reading { padding: 20px; }
+  .gerizo-pulse-number { font-size: clamp(28px,8.5vw,38px); overflow-wrap: anywhere; }
+  .gerizo-pulse-chart-canvas { height: 180px; }
+  .gerizo-sheet { height: 100dvh; max-height: 100dvh; }
+  .gerizo-filter-sheet > :is(div,label), .gerizo-filter-sheet .gerizo-segmented { max-width: 100%; flex-wrap: wrap; }
+  .gerizo-filter-sheet input:not([type="checkbox"]):not([type="radio"]), .gerizo-filter-sheet select { width: 100%; min-width: 0; }
+  .gerizo-mobile-table-tools { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px; border-bottom: 1px solid var(--line); }
+  .gerizo-mobile-table-tools > div { display: grid; grid-template-columns: 1fr 1fr; width: 100%; padding: 3px; border-radius: 10px; background: var(--panel-2); }
+  .gerizo-mobile-table-tools button { padding: 8px 12px; font-size: 13px; border-radius: 8px; color: var(--ink-2); }
+  .gerizo-mobile-table-tools button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); font-weight: 600; }
+  .gerizo-mobile-table-tools label { display: flex; flex: 1 1 150px; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-3); }
+  .gerizo-mobile-table-tools select { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+  .gerizo-mobile-record { padding: 16px; border-bottom: 1px solid var(--line); min-width: 0; }
+  .gerizo-mobile-record:nth-child(even) { background: var(--panel-2); }
+  .gerizo-record-title { font-size: 15px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+  .gerizo-record-title .truncate { white-space: normal; overflow: visible; }
+  .gerizo-mobile-record dl { display: grid; gap: 12px; grid-template-columns: repeat(2,minmax(0,1fr)); margin-top: 14px; }
+  .gerizo-mobile-record dl > div { min-width: 0; }
+  .gerizo-mobile-record dt { font-size: 12px; color: var(--ink-3); margin-bottom: 4px; }
+  .gerizo-mobile-record dd { font-size: 14px; color: var(--ink); overflow-wrap: anywhere; }
+  .gerizo-mobile-record dd > * { max-width: 100%; }
+  .gerizo-mobile-record details { margin-top: 10px; }
+  .gerizo-mobile-record summary { min-height: 44px; align-content: center; font-size: 13px; color: var(--ink-2); }
+  .gerizo-mobile-record summary span { color: var(--ink-3); margin-left: 6px; }
+  .gerizo-record-open { width: 100%; margin-top: 12px; text-align: left; color: var(--brand); font-size: 13px; font-weight: 600; }
+  .gerizo-table-options summary { min-height: 44px; }
+}
+.gerizo-product-filters > summary { display: none; }
+@media (max-width: 767px) {
+  .gerizo-product-filters > summary { display: list-item; min-height: 44px; align-content: center; padding: 10px 16px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
+  .gerizo-product-channel { padding: 14px 0; border-top: 1px solid var(--line); }
+  .gerizo-product-channel h3 { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+  .gerizo-product-channel .badge { margin-top: 8px; }
 }

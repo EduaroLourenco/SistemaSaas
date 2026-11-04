@@ -348,15 +348,16 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
 
       <PageBody>
         {/* cartão por canal */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          {visiveis.map((c) => (
-            <div key={c.id} className="panel panel-1 px-4 py-3">
+        <div className="gerizo-channel-ranking">
+          {[...visiveis].sort((a, b) => b.faturamento - a.faturamento).map((c, index) => (
+            <div key={c.id} className="gerizo-channel-row panel panel-1 px-4 py-3">
+              <span className="gerizo-channel-position">{String(index + 1).padStart(2, "0")}</span>
               <span className="flex items-center gap-1.5 mb-2 min-w-0">
                 <span
                   className="w-2 h-2 rounded-[2px] shrink-0"
                   style={{ background: CANAL_CORES[c.id] }}
                 />
-                <span className="text-[12px] font-medium text-ink-2 truncate">
+                <span className="text-[13px] font-medium text-ink-2">
                   {c.nome}
                 </span>
               </span>
@@ -366,6 +367,7 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
               <div className="mt-2">
                 <Delta value={c.delta} />
               </div>
+              <div className="gerizo-channel-bar" aria-label={`${c.nome}: ${pct(c.participacao)} do faturamento total`}><i style={{ width: `${Math.max(0, Math.min(100, c.participacao))}%`, background: CANAL_CORES[c.id] ?? "var(--brand)" }} /><span>{pct(c.participacao)} do total</span></div>
               <div className="mt-3 pt-2.5 border-t border-line grid grid-cols-2 gap-y-1.5">
                 <span className="text-[12px] uppercase tracking-[0.04em] font-semibold text-ink-3">
                   Pedidos

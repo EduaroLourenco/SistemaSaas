@@ -245,6 +245,114 @@ Nada aqui anda sem ele. Não é falta de código.
       sai desfavorecida. O relatório agora diz isso, medido, em
       "Pendências" — não é defeito a corrigir, é leitura a declarar.
 
+- [x] **Planilha de grupos da Black Friday da Probel — entregue em
+      29/10, fora do app.** Pedido do Eduardo: os 109 MLBs da aba
+      `11-BLACK FRIDAY 2026` do `Controle_Probel_2026_10.xlsx`, em grupos
+      de modelo × ticket médio, 4 concorrentes por grupo (preço e link) e
+      colunas por fórmula (desconto extra, preço final, melhor preço de
+      performance menos o final, diferença contra o concorrente em foco).
+      Desde 30/10 são duas abas separadas, **Grupos** e **Produtos**, e os
+      concorrentes são **por marca fixa**, não "concorrente 1 a 4": cada
+      marca (BF Colchões, Ortobom, Castor, Anjos, Herval, Sankonfort,
+      Luckspuma, Paropas, mais "Outra marca") tem a sua coluna e é a mesma
+      em todos os grupos. A marca se troca no menu (A2 de Produtos para
+      todos, menu por grupo e preço manual na aba Grupos) — feito para
+      usar em reunião. BF Colchões cobre 8 dos 15 grupos; a linha "Grupos
+      com produto da marca" na aba Grupos mostra a cobertura de cada uma.
+      Arquivo: `scratchpad/probel/Probel_Black_Friday_grupos.xlsx`. Para
+      refazer: `coletar-marcas.mjs` (busca no catálogo, cache em
+      `cache_pool.json` e `cache_itens.json`, grava `marcas.json`) e
+      depois `montar-xlsx3.mjs`. Os `montar-xlsx.mjs` e `montar-xlsx2.mjs`
+      são versões antigas. **Tudo em `scratchpad/`, sem commit** — nada
+      disso entrou no app.
+      15 grupos, 3.083 fórmulas, zero erro (recalculado no Excel).
+      Os dois preços de base são as colunas M ("Campanha Mês, 01/11 a
+      20/11") e S da aba. O cabeçalho de S era só uma data (11/11); li
+      como o preço do 11.11. Vazio em 18 produtos (17 travesseiros e 1
+      colchão).
+
+      **O que descobri, e vale para a próxima vez:**
+      · `anuncios.preco_atual` é o preço CHEIO. A vitrine real é o
+        `sale_price` diário (`ultimosPrecosDeVenda`). Dos 717 produtos da
+        Probel só 245 têm vitrine nos últimos 7 dias; os outros 472 estão
+        pausados ou sem anúncio (PA65752: 349 un em 4 meses e os 8
+        anúncios pausados). "Sem vitrine" é verdade, não buraco.
+      · Na aba, NMV é de 4 meses e "Unid." é de 8: dividir um pelo outro
+        dá ticket errado. Ticket sai do banco, por MLB
+        (`pedido_itens.codigo_externo` guarda o MLB). Receita do banco ÷
+        NMV da aba: mediana 0,88. Visitas batem (10.630 contra 10.645) e
+        o "Melhor preço vendido" da aba bate com o preço da semana-recorde
+        do sistema (mediana 1,00). 24 dos 109 MLBs não venderam nos 4
+        meses.
+      · Concorrente pela API do Meli: `/sites/MLB/search` segue fechada;
+        o que abre é o CATÁLOGO. `/products/search` dá nome, marca e a
+        ficha (`SPRING_SYSTEM`, `HEIGHT`, `MATTRESS_PILLOW_TYPE`,
+        `MATTRESS_FIRMNESS`, `DENSITY_BRASIL`); `/products/{id}/items` dá
+        as ofertas com preço, vendedor e `official_store_id`.
+        `buy_box_winner` vem `null` nesses produtos — não use. Os
+        produtos da Probel também estão no catálogo.
+      · **A API NÃO entrega venda de concorrente.** A oferta não tem
+        `sold_quantity`; `/items/{MLB}` de outro vendedor e
+        `/visits/items` respondem 403. Comparar preço é possível;
+        saber quem vende mais, não.
+      · `/items/{MLB}` do NOSSO anúncio também deu 403 com o token da
+        primeira integração: o token do cofre é por CONTA, e aquele não
+        era o da conta dona do anúncio.
+      · Selecionar concorrente só por nome e preço próximo enviesa: o
+        primeiro corte deu "−4%" onde, com a mesma ficha (altura, mola
+        ensacada, pillow, firmeza), o Casal A está +35% acima do menor.
+        Em Pet, Beliche, Viúva A e Travesseiro B só há 2 de 4 com a
+        ficha igual; ficou vazio em vez de completar.
+      · Marcas que a Probel vende sob o próprio nome não são concorrente:
+        Prodormir, Boa Forma, Própet, Próintense, Pelmex, Guardian.
+
+- [x] **Negociação da Magalu preenchida — 29/10, fora do app.** As abas
+      `Negociação 11.11` e `Negociação Black` do `probelcolchoes.xlsx`,
+      coluna G (PREÇO SELLER), 41 linhas cada. Arquivo:
+      `scratchpad/probel/probelcolchoes-preenchida.xlsx`; o gerador é
+      `scratchpad/probel/magalu-preencher.mjs`. **Sem commit.**
+
+      **O que vale para a próxima vez:**
+      · **A base do sistema é a tabela ANTECIPADO.** Conferido: nos 776
+        SKUs em comum, `formula_base_precos` bate AO CENTAVO com a aba
+        "Probel (Antecipado)" da `Tabela de preços - marketplaces.xlsx`
+        (Drive) e com NENHUM da aba de fluxo. O fluxo é ~9,9% mais alto
+        (antecipado = MKP×0,91×0,9 na base das faixas; fluxo = MKP×0,9).
+        Quem pedir "preço em fluxo" não pode ser servido pelo banco.
+      · **A faixa de 11% não existe em tabela nenhuma** — as colunas vão
+        de 4,5% a 20,5% de meio em meio ponto. Mas a fórmula da célula diz
+        a lei: `cartão × (0,75 + comissão)`, cartão = MKP Atual × 0,9.
+        Erro ZERO nas 17 faixas. Então 11% em fluxo é `cartão × 0,86`,
+        avaliado na fórmula da planilha — não interpolado.
+      · O PREÇO SELLER que a aba "Negociação Outubro" já tinha é o
+        **antecipado a 11%**: o modelo reproduz 15 dos 22 ao centavo, e os
+        7 restantes terminam em ,99/,88 (preço redondo posto na mão).
+      · O sugerido da Magalu é o preço de outubro −2% (11.11) e −4%
+        (Black), não um número novo dela.
+      · Dois dos 41 SKUs são **Prodormir**, não Probel (PA67504 e
+        PA65751): saem da aba "Prodormir | BF (fluxo)", que tem a mesma
+        lei e só desloca as colunas em um.
+      · A régua aplicada: o preço de tabela é o pretendido e 5% é o quanto
+        se abre dele. Em fluxo o nosso 11% ficou acima do sugerido nas 41
+        linhas, então foi o sugerido onde ele cabia nos 5% (14 no 11.11,
+        12 no Black) e o LIMITE, tabela −5%, no resto — decisão do Eduardo
+        em 29/10 ("pode aceitar −5%"), porque responder a um pedido de
+        −21% com desconto nenhum fecha a porta.
+      · **Consequência de ofertar o limite:** ele depende só da nossa
+        tabela, não da campanha. Nas 27 linhas recusadas nas duas abas o
+        preço do Black ficou IGUAL ao do 11.11; só as 14 que aceitaram o
+        sugerido ficam mais baratas no Black. Se a Magalu exigir Black
+        abaixo do 11.11, essas 27 precisam de decisão nova.
+
+- [ ] **Concorrente por API dentro do app — só se virar tela.** Os
+      scripts de `scratchpad/probel/` leram `/products/search` e
+      `/products/{id}/items` por fora do cliente do sistema, então não
+      passaram pelo portão de `lib/meli/limite.ts`. Se isso entrar no app,
+      os dois caminhos têm de entrar na lista de leitura permitida, e a
+      tela tem de dizer "preço de catálogo, sem venda" — nunca sugerir
+      quem lidera. Não foi pedido; fica anotado para não refazer a
+      sondagem.
+
 ---
 
 ## Regras que valem para qualquer sessão

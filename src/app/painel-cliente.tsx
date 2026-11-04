@@ -18,6 +18,7 @@ import { recortar } from "@/lib/periodo";
 import { FilaRecomendacoes } from "@/components/painel/fila-recomendacoes";
 import { PainelExclusoes } from "@/components/ui/exclusoes";
 import { SkusEmQueda } from "@/components/painel/skus-em-queda";
+import { PulsoOperacao } from "@/components/painel/pulso-operacao";
 import { money, moneyShort, count, pct, shortDate } from "@/lib/format";
 import {
   Area,
@@ -30,7 +31,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Download, CalendarDays } from "lucide-react";
+import { Download, CalendarDays, ArrowUpRight } from "lucide-react";
 
 const PERIODOS = ["7 dias", "30 dias", "90 dias", "Ano"];
 
@@ -213,6 +214,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
     <>
       <PageHeader
         title="Visão geral"
+        breadcrumb="OPERAÇÃO / PANORAMA"
         inlineFilters
         description={
           canalAtual ? canalAtual.nome : "Consolidado de todos os canais"
@@ -269,6 +271,12 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       />
 
       <PageBody className="gerizo-overview">
+        <nav className="gerizo-workbench" aria-label="Atalhos da operação">
+          <span>Atalhos</span>
+          <Link href="/vendas/queda">Investigar uma queda <ArrowUpRight size={14} /></Link>
+          <Link href="/produtos">Comparar produtos <ArrowUpRight size={14} /></Link>
+          <Link href="/planejamento">Planejamento <ArrowUpRight size={14} /></Link>
+        </nav>
         {/* Fontes ficam em Integrações por decisão do usuário. Aqui, só o aviso de atraso. */}
         {dados.fontes.piorAtraso !== null && dados.fontes.piorAtraso >= 2 && (
           <Link
@@ -288,9 +296,10 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           removidas={dados.removidas}
         />
 
-        {/* KPIs */}
-        <div className="gerizo-overview-kpis grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {KPIS.map((k) => {
+        <PulsoOperacao recorte={recorte} />
+        <div className="gerizo-section-heading"><h2>Indicadores</h2></div>
+        <div className="gerizo-overview-signals grid grid-cols-2 xl:grid-cols-4 gap-3">
+          {KPIS.filter((k) => k.id !== "faturamento" && k.id !== "pedidos").map((k) => {
             /*
              * Conversão sem visita não é zero, é desconhecido. Mostrar
              * "0,00%" aqui faz o número ser lido como "ninguém comprou" —
@@ -313,7 +322,9 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           })}
         </div>
 
-        {/* Faturamento diário + participação */}
+
+        <FilaRecomendacoes itens={dados.recomendacoes} />
+        <details className="gerizo-deep-dive"><summary>Histórico de vendas</summary>
         <div className="gerizo-overview-charts grid grid-cols-1 xl:grid-cols-3 gap-3">
           <Panel className="xl:col-span-2 overflow-hidden">
             <PanelHeader
@@ -414,7 +425,8 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           </Panel>
         </div>
 
-        <FilaRecomendacoes itens={dados.recomendacoes} />
+        </details>
+
 
         {/* Top SKUs e canais lado a lado, como na referência aprovada. */}
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-start">

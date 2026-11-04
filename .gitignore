@@ -10,9 +10,15 @@ scripts/lib
 .scratch/**/*.json
 output/
 tmp/
+# Sondagens e planilhas de trabalho: preço, custo e pedido de verdade.
+scratchpad/
 
 .vercel
 .env*
+
+# Briefing com chave dentro: conhecimento do projeto vai para docs/agents/,
+# segredo fica fora do histórico.
+*.local.md
 
 # Stub que os scripts com jiti criam para o alias de `server-only`.
 vazio.cjs

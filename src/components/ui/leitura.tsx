@@ -33,7 +33,7 @@ export function Leitura({
   return (
     <div
       className={cn(
-        "flex items-start gap-2.5 px-3 py-2.5 rounded-r1 border",
+        "gerizo-reading flex items-start gap-2.5 px-3 py-2.5 rounded-r1 border",
         tom === "bom" && "bg-up-wash border-up/20",
         tom === "atencao" && "bg-warn-wash border-warn/25",
         tom === "neutro" && "bg-panel-2 border-line",

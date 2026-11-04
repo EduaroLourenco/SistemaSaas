@@ -18,10 +18,10 @@ import { carregarRecordeSku, type RecordeSku } from "./recorde-sku";
  *
  * ── O que ele NÃO busca ──
  *
- * A promoção ao vivo do canal. Ela é por MLB, não por SKU — dois irmãos
- * do mesmo produto recebem convites e pisos diferentes, e somar os dois
- * daria um número que não existe em lugar nenhum. Fica em
- * `/api/anuncios/promocoes/[mlb]`, numa chamada própria ao canal.
+ * A promoção ao vivo do canal. Ela é uma chamada à API do Mercado Livre
+ * por MLB, com cota, e quem a faz é o módulo de Automações. Enquanto não
+ * estiver ligada aqui, o bloco de promoção não é mostrado — melhor
+ * ausência do que um "sem promoções" que na verdade é "não perguntei".
  */
 
 export type AnuncioDoSku = {
@@ -46,8 +46,10 @@ export type RaioXSku = {
   anuncios: AnuncioDoSku[];
   recorde: RecordeSku;
   estoque: {
-    /** Soma do saldo dos anúncios que o canal controla. */
+    /** Não consolidado: anúncios e origens podem espelhar o mesmo estoque. */
     saldo: number | null;
+    leituras: { id: string; origem: string; local: string; disponivel: number | null; consultadoEm: string }[];
+    erroLeitura: boolean;
     /** Anúncios sob encomenda ficam fora do saldo e são contados aqui. */
     sobEncomenda: number;
     /** Unidades por dia nas últimas 4 semanas fechadas. */
@@ -100,11 +102,15 @@ export async function carregarRaioXSku(sku: string): Promise<RaioXSku | null> {
   const anunciosDb = (anunciosRaw ?? []) as unknown as LinhaAnuncio[];
   if (!anunciosDb.length) return null;
 
-  const [precosDeVenda, catalogo, recorde, giro] = await Promise.all([
+  const [precosDeVenda, catalogo, recorde, giro, saldos] = await Promise.all([
     ultimosPrecosDeVenda(sb, op.id),
     situacaoDeCatalogo(sb),
     carregarRecordeSku(limpo),
     giroDiario(sb, op.id, limpo),
+    paginar(() => sb.from("estoque_saldos")
+      .select("id,origem,provedor,local_nome,disponivel,consultado_em,contas_canal(nome)")
+      .eq("operacao_id", op.id).eq("sku", limpo).order("local_nome"))
+      .then(linhas => ({ linhas, erro: false })).catch(() => ({ linhas: [], erro: true })),
   ]);
 
   const anuncios: AnuncioDoSku[] = anunciosDb.map((a) => ({
@@ -122,15 +128,12 @@ export async function carregarRaioXSku(sku: string): Promise<RaioXSku | null> {
     catalogo: catalogo.get(a.id) ?? null,
   }));
 
-  /*
-   * O saldo soma só o que o canal controla. Anúncio sob encomenda declara
-   * um número alto para não ficar sem anúncio: somar afogava o estoque
-   * real dos irmãos — um produto com quatro desses aparecia com 160.004.
-   */
-  const controlados = anuncios.filter((a) => a.estoque != null && a.estoque < SOB_ENCOMENDA);
-  const saldo = controlados.length
-    ? controlados.reduce((s, a) => s + (a.estoque ?? 0), 0)
-    : null;
+  // O mesmo saldo pode aparecer em vários anúncios, contas e integrações.
+  // Exibir as leituras por origem; somá-las fabricaria estoque e cobertura.
+  const leituras = (saldos.linhas as unknown as { id: string; origem: string; provedor: string; local_nome: string; disponivel: number | null; consultado_em: string; contas_canal: { nome: string } | null }[]).map(l => ({
+    id: l.id, origem: l.origem === "erp" ? "Bling · ERP" : l.contas_canal?.nome ?? "Mercado Livre",
+    local: l.local_nome, disponivel: l.disponivel == null ? null : Number(l.disponivel), consultadoEm: l.consultado_em,
+  }));
 
   return {
     sku: limpo,
@@ -138,12 +141,12 @@ export async function carregarRaioXSku(sku: string): Promise<RaioXSku | null> {
     anuncios,
     recorde,
     estoque: {
-      saldo,
+      saldo: null,
+      leituras,
+      erroLeitura: saldos.erro,
       sobEncomenda: anuncios.filter((a) => (a.estoque ?? 0) >= SOB_ENCOMENDA).length,
       giroDiario: giro,
-      /* Sem giro não há cobertura: dividir por zero daria "infinitos dias
-         de estoque" para o que não vende, que é o oposto da verdade. */
-      diasDeCobertura: saldo != null && giro ? Math.round(saldo / giro) : null,
+      diasDeCobertura: null,
       zerados: anuncios.filter((a) => a.status === "ativo" && a.estoque === 0).length,
     },
     lidoEm: new Date().toISOString(),

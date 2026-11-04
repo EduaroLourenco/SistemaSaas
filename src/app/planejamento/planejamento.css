@@ -2,6 +2,15 @@
   color: var(--ink);
   font-size: 13px;
 }
+
+/* O estúdio conserva seus modos, mas compartilha o acabamento da operação. */
+.pl-root .pl-calendar-panel,
+.pl-root .pl-campaign { border-radius: var(--r2); box-shadow: var(--sh-1); }
+.pl-root .pl-calendar-toolbar { background: var(--panel-2); border-radius: var(--r2) var(--r2) 0 0; }
+.pl-root .pl-campaign { transition: border-color 140ms ease, box-shadow 140ms ease; }
+.pl-root .pl-campaign:hover { border-color: var(--brand-edge); box-shadow: var(--sh-2); }
+.pl-root .pl-stats strong { font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+.pl-root .pl-section-nav nav button.active { color: var(--brand); }
 .pl-strategy-intro {
   display: flex;
   align-items: flex-start;

@@ -19,12 +19,18 @@ export const ROTULO_PROMOCAO: Record<string, string> = {
   SMART_LIGHTNING: "Relâmpago auto",
   LIGHTNING: "Relâmpago",
   DOD: "Oferta do dia",
-  PRE_NEGOTIATED: "Pré-acordo",
+  /* O painel do canal chama esta de "Recomendada pelo seu consultor" — é
+     por ela que passa o rebate negociado, e por isso a folga dela é
+     outra. O nome diz de quem veio, senão ninguém liga uma coisa à
+     outra ao abrir a tela. */
+  PRE_NEGOTIATED: "Pré-acordo do consultor",
   UNHEALTHY_STOCK: "Liquidar Full",
   SELLER_CAMPAIGN: "Nossa campanha",
   SELLER_COUPON_CAMPAIGN: "Cupom",
   MARKETPLACE_CAMPAIGN: "Cofinanciada",
-  PRICE_MATCHING: "Preço competitivo",
+  /* No painel do canal esta aparece como "Com redução de tarifas", que é
+     o benefício; "preço competitivo" era o mecanismo. */
+  PRICE_MATCHING: "Redução de tarifa",
   PRICE_MATCHING_MELI_ALL: "100% Meli",
   PRICE_DISCOUNT: "Desconto avulso",
   VOLUME: "Leve mais",
@@ -49,3 +55,22 @@ export const TOM_PROMOCAO: Record<string, "neutral" | "info" | "up" | "down" | "
 
 export const rotuloPromocao = (tipo: string) => ROTULO_PROMOCAO[tipo] ?? tipo;
 export const tomPromocao = (tipo: string) => TOM_PROMOCAO[tipo] ?? "neutral";
+
+/**
+ * Como a promoção se chama na tela.
+ *
+ * O canal manda `name` na maioria dos tipos — "11.11 da Black", "Black
+ * Friday 2026" —, e é esse nome que o vendedor lê no painel dele. Mas
+ * LIGHTNING e PRICE_DISCOUNT vêm SEM nome: a relâmpago é a fila do
+ * próprio canal, não uma campanha batizada. "Sem nome" não ajuda
+ * ninguém a reconhecer a oferta relâmpago — e repetir o rótulo do tipo
+ * só duplica o selo que já está ao lado. Entra a palavra do painel do
+ * canal, que é onde o vendedor leu a mesma oferta.
+ */
+const SEM_NOME: Record<string, string> = {
+  LIGHTNING: "Oferta relâmpago do canal",
+  PRICE_DISCOUNT: "Desconto avulso neste anúncio",
+};
+
+export const nomePromocao = (tipo: string, nome: string | null | undefined) =>
+  nome?.trim() ? nome : SEM_NOME[tipo] ?? rotuloPromocao(tipo);

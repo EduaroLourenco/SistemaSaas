@@ -12,7 +12,7 @@ import { money, count, pct } from "@/lib/format";
 import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
 import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
 import { FOLGA_PADRAO, TIPO_PADRAO, type Folgas } from "@/lib/folga";
-import { ROTULO_PROMOCAO, TOM_PROMOCAO } from "@/lib/promocao-rotulos";
+import { ROTULO_PROMOCAO, TOM_PROMOCAO, nomePromocao } from "@/lib/promocao-rotulos";
 import type { Fila } from "@/lib/dados/fila-aprovacao";
 import { FilaAprovacao } from "@/components/automacoes/fila";
 import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
@@ -531,7 +531,7 @@ function Carrossel({
               </span>
             </div>
             <p className="mt-2 min-h-[34px] text-[13.5px] font-semibold leading-snug text-ink">
-              {p.nome ?? "Sem nome"}
+              {nomePromocao(p.tipo, p.nome)}
             </p>
             <p className="font-mono text-[11.5px] text-ink-3">{dia(p.inicio)} → {dia(p.fim)}</p>
 
@@ -810,7 +810,7 @@ function Detalhe({ promocao, folga, regras, onContar }: {
       <div className="flex flex-wrap items-center gap-3 border-b border-line p-4">
         <Badge tone={TOM[promocao.tipo] ?? "neutral"}>{ROTULO[promocao.tipo] ?? promocao.tipo}</Badge>
         <div className="min-w-0">
-          <h2 className="truncate text-[17px] font-bold tracking-[-0.015em] text-ink">{promocao.nome ?? "Sem nome"}</h2>
+          <h2 className="truncate text-[17px] font-bold tracking-[-0.015em] text-ink">{nomePromocao(promocao.tipo, promocao.nome)}</h2>
           <p className="font-mono text-[12px] text-ink-3">
             {promocao.contaNome} · {promocao.codigo} · {dia(promocao.inicio)} → {dia(promocao.fim)}
           </p>
