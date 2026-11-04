@@ -306,22 +306,26 @@ export async function lerPromocoesDoCanal(conta: Conta): Promise<PromocaoCanal[]
  * incompleto.
  */
 /**
- * O mesmo anúncio aparece mais de uma vez na mesma promoção.
+ * Uma linha por JANELA, sem repetir a mesma janela.
  *
- * O canal devolve uma linha por OFERTA, não por anúncio: um MLB com
- * variações, ou proposto duas vezes dentro da mesma campanha, volta
- * repetido. O banco grava por (promoção, anúncio), e o Postgres recusa um
- * upsert cujo lote toque a mesma chave duas vezes — "ON CONFLICT DO UPDATE
- * command cannot affect row a second time". O lote inteiro se perde por
- * causa de uma repetição.
+ * O canal devolve uma linha por OFERTA, não por anúncio, e isso não é
+ * sujeira: é a agenda. No pré-acordo da Probel o mesmo anúncio tem o preço
+ * do mês numa janela de 30 dias e o preço do relâmpago em janelas de 12
+ * horas, nas datas combinadas — onze janelas num anúncio só.
  *
- * Fica a ÚLTIMA ocorrência: é a mais recente na ordem do cursor, e é a que
- * o canal usaria se gravasse uma por vez.
+ * Esta função deduplicava por MLB e guardava a última, o que descartava
+ * dez das onze. Agora a chave é (anúncio, oferta), igual à do banco depois
+ * da migração 47: o que ela ainda tira é a MESMA oferta repetida, que é o
+ * que derrubava o lote inteiro com "ON CONFLICT DO UPDATE command cannot
+ * affect row a second time".
+ *
+ * Sem oferta — convite que o canal manda sem id de oferta — cai numa
+ * chave só por anúncio, e aí vale a última, como antes.
  */
 export function semRepetidos(itens: ItemPromocaoCanal[]): ItemPromocaoCanal[] {
-  const porCodigo = new Map<string, ItemPromocaoCanal>();
-  for (const i of itens) porCodigo.set(i.codigoExterno.toUpperCase(), i);
-  return [...porCodigo.values()];
+  const porJanela = new Map<string, ItemPromocaoCanal>();
+  for (const i of itens) porJanela.set(`${i.codigoExterno.toUpperCase()}|${i.oferta ?? ""}`, i);
+  return [...porJanela.values()];
 }
 
 export async function lerItensDaPromocao(

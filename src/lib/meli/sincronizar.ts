@@ -753,8 +753,10 @@ async function gravarPromocoesDoCanal(
       continue;
     }
     if (!itens.length) continue;
-    /* Sem isto, um anúncio repetido na mesma promoção derruba o lote
-       inteiro com "cannot affect row a second time". */
+    /* Sem isto, a MESMA janela repetida na mesma promoção derruba o lote
+       inteiro com "cannot affect row a second time". Janelas diferentes do
+       mesmo anúncio passam: é a agenda do pré-acordo, e descartá-la era o
+       que fazia a tela mostrar um preço onde havia onze. Ver db/47. */
     const unicos = semRepetidos(itens);
     const { error: e2 } = await sb
       .from("promocao_canal_itens")
@@ -764,6 +766,8 @@ async function gravarPromocoesDoCanal(
           promocao_id: p.id as string,
           codigo_externo: i.codigoExterno,
           anuncio_id: idPorMlb.get(i.codigoExterno.toUpperCase()) ?? null,
+          /* Vazio, não nulo: chave única com nulo não deduplica. */
+          oferta: i.oferta ?? "",
           status: i.status,
           preco_original: i.precoOriginal,
           preco_promocional: i.precoPromocional,
@@ -771,7 +775,7 @@ async function gravarPromocoesDoCanal(
           inicio: i.inicio,
           fim: i.fim,
         })),
-        { onConflict: "promocao_id,codigo_externo" }
+        { onConflict: "promocao_id,codigo_externo,oferta" }
       );
     if (e2) {
       resumo.avisos.push(`Itens da promoção ${p.codigo}: ${e2.message}`);

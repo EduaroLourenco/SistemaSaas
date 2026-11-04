@@ -55,6 +55,26 @@ type Situacao = "dentro" | "agendado" | "cabe" | "nao";
 const dia = (iso: string | null) =>
   iso == null ? "—" : new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 
+/**
+ * A janela, com hora quando ela é curta.
+ *
+ * O relâmpago do pré-acordo roda das 15h às 3h do dia seguinte: sem a
+ * hora, "04/11 a 05/11" não diz que o preço cai à tarde e sobe de
+ * madrugada. Acima de 48 horas é o preço do mês, e aí a hora é ruído.
+ */
+const janela = (inicio: string | null, fim: string | null) => {
+  if (inicio == null) return "—";
+  const i = new Date(inicio);
+  const f = fim == null ? null : new Date(fim);
+  const curta = f != null && f.getTime() - i.getTime() <= 48 * 3_600_000;
+  const hora = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  if (!curta) return `${dia(inicio)} a ${dia(fim)}`;
+  return `${dia(inicio)} ${hora(i)}–${hora(f!)}`;
+};
+
+/** A linha é a JANELA, não o anúncio: um MLB tem onze no pré-acordo. */
+const chaveDe = (i: ItemAutomacao) => i.oferta ?? i.mlb;
+
 export default function Automacoes({ dados, ads, regras, folgas, fila }: {
   dados: DadosAutomacoes;
   ads: DadosTrafegoPago;
@@ -610,11 +630,19 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
   /* Sobe a conta para o cartão: ele não tem como saber o que cabe sem os
      itens, e sem isto perderia o número ao fechar. */
 
-  /** O que vai para o canal: o digitado ganha do proposto pela folga. */
-  const precoFinal = (i: ItemAutomacao) => precos.get(i.mlb) ?? nossaOferta(i)?.valor ?? null;
+  /* Quantas janelas cada anúncio tem nesta promoção: é o que avisa que a
+     linha é uma data, e não o anúncio inteiro. */
+  const janelasPorMlb = React.useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of dados.itens) if (i.inicio) m.set(i.mlb, (m.get(i.mlb) ?? 0) + 1);
+    return m;
+  }, [dados.itens]);
 
-  const marcar = (mlb: string) =>
-    setMarcados((a) => { const n = new Set(a); n.has(mlb) ? n.delete(mlb) : n.add(mlb); return n; });
+  /** O que vai para o canal: o digitado ganha do proposto pela folga. */
+  const precoFinal = (i: ItemAutomacao) => precos.get(chaveDe(i)) ?? nossaOferta(i)?.valor ?? null;
+
+  const marcar = (chave: string) =>
+    setMarcados((a) => { const n = new Set(a); n.has(chave) ? n.delete(chave) : n.add(chave); return n; });
 
   const colunas: Column<ItemAutomacao>[] = [
     {
@@ -622,8 +650,8 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
       cell: (i) => (
         <input
           type="checkbox" className="h-[17px] w-[17px] accent-brand"
-          checked={marcados.has(i.mlb)}
-          onChange={() => marcar(i.mlb)}
+          checked={marcados.has(chaveDe(i))}
+          onChange={() => marcar(chaveDe(i))}
           onClick={(e) => e.stopPropagation()}
           aria-label={`Marcar ${i.titulo ?? i.mlb}`}
         />
@@ -642,6 +670,20 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
         </div>
       ),
     },
+    /* A janela vem antes do preço porque é ela que explica por que o
+       mesmo produto aparece onze vezes com preços diferentes. */
+    { key: "janela", header: "Janela", mobile: "hidden", width: "140px",
+      sortValue: (i) => i.inicio ?? "",
+      cell: (i) => {
+        if (i.inicio == null) return vazio("a da campanha");
+        const n = janelasPorMlb.get(i.mlb) ?? 1;
+        return (
+          <div className="min-w-0">
+            <p className="font-mono text-[11.5px] text-ink">{janela(i.inicio, i.fim)}</p>
+            {n > 1 && <p className="text-[10.5px] text-ink-3">{n} janelas neste anúncio</p>}
+          </div>
+        );
+      } },
     { key: "cheio", header: "Preço cheio", align: "right", mobile: "hidden",
       sortValue: (i) => i.precoCheio ?? 0, cell: (i) => (i.precoCheio == null ? vazio() : money(i.precoCheio)) },
     { key: "pede", header: "O Meli pede", align: "right", mobile: "metric",
@@ -677,7 +719,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
             type="number" step="0.01" min={0} value={v}
             onChange={(e) => {
               const n = Number(e.target.value);
-              setPrecos((a) => { const m = new Map(a); Number.isFinite(n) && n > 0 ? m.set(i.mlb, n) : m.delete(i.mlb); return m; });
+              setPrecos((a) => { const m = new Map(a); Number.isFinite(n) && n > 0 ? m.set(chaveDe(i), n) : m.delete(chaveDe(i)); return m; });
             }}
             onClick={(e) => e.stopPropagation()}
             className={[
@@ -797,14 +839,14 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
               if (i.status !== "candidate") continue;
               const d = avaliarItem(paraRegra(paraItemDaTela(i, promocao)), regras);
               decidido.set(i.mlb, d);
-              if (d.decisao === "aceitar" || d.decisao === "reescrever") marcar.add(i.mlb);
+              if (d.decisao === "aceitar" || d.decisao === "reescrever") marcar.add(chaveDe(i));
               if (d.decisao === "reescrever" && d.acao?.tipo === "reescrever" && d.acao.folgaPct != null) {
                 /* Fora da closure: dentro dela o TypeScript perde o
                    estreitamento e `folgaPct` volta a poder não existir. */
                 const folgaDaRegra = d.acao.folgaPct;
                 const ps = pisoDe(i);
                 if (ps != null) {
-                  setPrecos((a) => new Map(a).set(i.mlb, precoComFolga(ps, folgaDaRegra)));
+                  setPrecos((a) => new Map(a).set(chaveDe(i), precoComFolga(ps, folgaDaRegra)));
                 }
               }
             }
@@ -816,7 +858,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
         </Button>
         <Button
           disabled={!podeMarcar.length}
-          onClick={() => setMarcados(new Set(podeMarcar.map((i) => i.mlb)))}
+          onClick={() => setMarcados(new Set(podeMarcar.map(chaveDe)))}
         >
           Marcar os {count(podeMarcar.length)} que cabem
         </Button>
@@ -825,7 +867,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
       <DataTable
         columns={colunas}
         rows={lista}
-        rowKey={(i) => i.mlb}
+        rowKey={chaveDe}
         defaultSort={{ key: "pede", dir: "desc" }}
         empty={aba === "nao" ? "nenhum item fora do piso" : aba === "dentro" ? "nenhum item dentro ainda" : "nenhum item"}
       />
@@ -839,7 +881,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
             onClick={() =>
               setRevisao(
                 dados.itens
-                  .filter((i) => marcados.has(i.mlb))
+                  .filter((i) => marcados.has(chaveDe(i)))
                   .map((i) => ({
                     mlb: i.mlb,
                     promocao: promocao.codigo,

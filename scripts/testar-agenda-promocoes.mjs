@@ -9,12 +9,22 @@
  */
 import assert from "node:assert/strict";
 import path from "node:path";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createJiti } from "../node_modules/jiti/lib/jiti.mjs";
 
 const raiz = fileURLToPath(new URL("../", import.meta.url));
-const jiti = createJiti(import.meta.url, { alias: { "@": path.join(raiz, "src") }, interopDefault: true });
+/* `promocoes-canal.ts` abre com `import "server-only"`, que fora do Next
+   não resolve. O vazio deixa o módulo carregar sem tocar no canal. */
+const vazio = path.join(mkdtempSync(path.join(tmpdir(), "gerizo-teste-")), "vazio.cjs");
+writeFileSync(vazio, "module.exports={}");
+const jiti = createJiti(import.meta.url, {
+  alias: { "@": path.join(raiz, "src"), "server-only": vazio },
+  interopDefault: true,
+});
 const { agruparCampanhas, oQueNaoEspera, GRUPOS } = await jiti.import(path.join(raiz, "src/lib/agenda-promocoes.ts"));
+const { semRepetidos } = await jiti.import(path.join(raiz, "src/lib/meli/promocoes-canal.ts"));
 
 const CAPTURA = {
  "geradoEm": "2026-11-04T03:28:43.452Z",
@@ -388,7 +398,30 @@ assert.ok(meiaResposta.some((c) => c.incerto), "uma conta sem resposta já torna
 const umaConta = campanhas.filter((c) => c.contas.length === 1);
 assert.ok(umaConta.length === 9 && umaConta.every((c) => !c.incerto));
 
+/* ── as janelas do pré-acordo não podem ser confundidas com repetição ──
+
+   O MLB5299288202 tem onze janelas em novembro: o preço do mês numa de 30
+   dias e o relâmpago em dez de 12 horas. `semRepetidos` guardava uma só, e
+   era por isso que a tela mostrava um preço onde havia uma agenda. O que
+   ela ainda tem de tirar é a MESMA oferta repetida. */
+const JANELAS = [
+  { codigoExterno: "MLB5299288202", oferta: "OFFER-mes", preco: 2552.87, inicio: "2026-11-01T03:00:00Z" },
+  { codigoExterno: "MLB5299288202", oferta: "OFFER-04", preco: 2233, inicio: "2026-11-04T18:00:00Z" },
+  { codigoExterno: "MLB5299288202", oferta: "OFFER-11", preco: 2233, inicio: "2026-11-11T18:00:00Z" },
+  /* a mesma oferta duas vezes: é esta que derrubava o lote inteiro */
+  { codigoExterno: "MLB5299288202", oferta: "OFFER-11", preco: 2233, inicio: "2026-11-11T18:00:00Z" },
+  /* convite sem oferta: cai na chave só por anúncio, e vale o último */
+  { codigoExterno: "MLB4731835429", oferta: null, preco: 714.5, inicio: null },
+  { codigoExterno: "MLB4731835429", oferta: null, preco: 700, inicio: null },
+];
+const unicas = semRepetidos(JANELAS);
+assert.equal(unicas.length, 4, "três janelas do primeiro anúncio e uma do segundo");
+assert.equal(unicas.filter((i) => i.codigoExterno === "MLB5299288202").length, 3, "as três janelas sobrevivem");
+assert.equal(unicas.find((i) => i.codigoExterno === "MLB4731835429").preco, 700, "sem oferta, vale a última");
+assert.equal(new Set(unicas.map((i) => `${i.codigoExterno}|${i.oferta ?? ""}`)).size, 4, "nenhuma chave repetida vai para o upsert");
+
 console.log(`${campanhas.length} campanhas de ${CAPTURA.promocoes.length} linhas`);
+console.log(`janelas: ${JANELAS.length} do canal viram ${unicas.length} linhas no banco`);
 for (const g of GRUPOS) {
   const itens = campanhas.filter((c) => g.cabe(c.dias));
   if (itens.length) console.log(`  ${g.titulo}: ${itens.map((c) => `${c.nome} (${c.dias ?? "—"}d, ${c.pendentes})`).join(", ")}`);

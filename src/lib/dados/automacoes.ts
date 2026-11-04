@@ -210,6 +210,20 @@ export type ItemAutomacao = {
   meliPct: number | null;
   sellerPct: number | null;
   oferta: string | null;
+  /**
+   * A JANELA desta linha, que é o que distingue duas linhas do mesmo
+   * anúncio.
+   *
+   * O pré-acordo não é um preço, é uma agenda: o mesmo MLB vem com o
+   * preço do mês numa janela de 30 dias e o do relâmpago em janelas de 12
+   * horas, nas datas combinadas. Sem estas duas datas a tela mostrava
+   * onze linhas iguais e a pessoa não tinha como saber qual era qual.
+   *
+   * Null nas campanhas de data fixa, onde a janela é a da campanha e já
+   * está no cabeçalho.
+   */
+  inicio: string | null;
+  fim: string | null;
   estoqueMin: number | null;
   estoqueMax: number | null;
   /** O nosso piso na comissão cheia do tipo do anúncio. */
@@ -281,6 +295,8 @@ export async function carregarItensDaPromocao(
       meliPct: i.meliPct,
       sellerPct: i.sellerPct,
       oferta: i.oferta,
+      inicio: i.inicio,
+      fim: i.fim,
       estoqueMin: i.estoqueMin,
       estoqueMax: i.estoqueMax,
       piso: linha && cheia != null ? linha[bandas.indexOf(cheia)] ?? null : null,
