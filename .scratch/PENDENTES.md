@@ -1,6 +1,6 @@
 # Pendências — a porta de entrada
 
-Atualizado em 29/10/2026.
+Atualizado em 04/11/2026.
 
 Este é o único arquivo que precisa ser lido para saber o que falta. Cada
 item aponta para a especificação onde o detalhe está. Quem abrir uma
@@ -121,13 +121,39 @@ publicados, com a **escrita desligada**.
       negociado.
       A migração 45 **já rodou** (conferida em 29/10): a folga editada na
       tela agora persiste, em vez de voltar a 5% a cada recarga.
+- [x] **Uma linha por JANELA do pré-acordo — feito em 04/11.** A tabela
+      guardava uma linha por anúncio, então das onze janelas de um MLB
+      sobrava uma. Três mudanças: a oferta entrou na chave
+      (`db/47_janela_da_promocao.sql`), `semRepetidos` em
+      `lib/meli/promocoes-canal.ts` parou de deduplicar por MLB, e a tela
+      ganhou a coluna **Janela** com hora quando a janela é curta
+      ("04/11 15:00–03:00") e "N janelas neste anúncio" quando há mais de
+      uma. Teste: `node scripts/testar-agenda-promocoes.mjs`.
+      De quebra, um bug que vinha com isso: seleção, preço digitado e a
+      key do React usavam o MLB — um clique marcava as onze janelas de
+      uma vez e o React recebia onze linhas com a mesma key. Agora é a
+      oferta (`chaveDe`).
+      **A migração 47 ainda NÃO rodou** — está em "Para rodar no
+      Supabase", abaixo, e até rodar a sincronização de promoção quebra
+      ao gravar.
+      A tela não foi aberta: o `node_modules/next` desta máquina está
+      incompleto e `next dev` não sobe. Validado por tipo e por teste.
 - [ ] Aposentar a planilha de promoção — é o objetivo final deste módulo.
 
 ---
 
-## Para rodar no Supabase — nenhuma
+## Para rodar no Supabase — uma
 
-As duas que faltavam já rodaram. Conferido em 29/10 contra o banco:
+- [ ] **`db/47_janela_da_promocao.sql`** — adiciona `oferta` em
+      `promocao_canal_itens`, troca o `unique (promocao_id,
+      codigo_externo)` por um que inclui a oferta, e cria o índice da
+      agenda por anúncio. **Enquanto não rodar, a sincronização de
+      promoção falha ao gravar**, porque o código já manda a coluna.
+      A coluna é `not null default ''` de propósito: no Postgres, chave
+      única com NULL não deduplica, e o convite sem oferta cairia fora da
+      trava.
+
+As duas anteriores já rodaram. Conferido em 29/10 contra o banco:
 
 - [x] `db/45_folga_por_campanha.sql` — `folgas_campanha` responde
       (`node scripts/conferir-migracoes.mjs`).
@@ -343,6 +369,65 @@ Nada aqui anda sem ele. Não é falta de código.
         preço do Black ficou IGUAL ao do 11.11; só as 14 que aceitaram o
         sugerido ficam mais baratas no Black. Se a Magalu exigir Black
         abaixo do 11.11, essas 27 precisam de decisão nova.
+
+- [x] **Pré-acordo da Probel conferido contra a agenda real — 04/11,
+      fora do app.** O Eduardo queria saber, linha por linha da aba
+      `11-BLACK FRIDAY 2026` do `Controle Probel 2026 (1).xlsx` (109
+      anúncios), o que está no ar, o que está agendado e o que falta
+      aceitar. Resultado do cruzamento: **11/11** — 91 negociados, 76
+      agendados, 5 falta aceitar, 10 sem janela, 6 com preço diferente;
+      **Black Week** — 92 negociados, 77 agendados, 3 falta aceitar, 12
+      sem janela, 0 com preço diferente; **Campanha do mês** — 108
+      negociados, 89 no ar, 1 falta aceitar, 18 sem janela, 8 com preço
+      diferente. 63 linhas para resolver: 40 sem janela (cobrar o
+      consultor), 9 falta aceitar (um clique), 14 com preço diferente.
+      Só 11 dos 109 não têm janela nenhuma.
+      Arquivos em `output/`, scripts em `scratchpad/preacordo/`. **Sem
+      commit.**
+
+      **O que descobri, e é o que mais enganou:**
+      · **O pré-acordo é uma AGENDA, não um preço.** O relâmpago da
+        Probel não é promoção `LIGHTNING`: o consultor **reprecifica a
+        mesma oferta** `PRE_NEGOTIATED` ("Pre Acordo Casa") com o preço
+        do relâmpago do dia. Prova: o MLB5299288202 estava R$ 2.552,87
+        às 11:00 e R$ 2.233,00 às 14:27, na MESMA oferta, enquanto
+        `LIGHTNING` e `SMART_LIGHTNING` seguiam `candidate`. Olhar o
+        status do convite de LIGHTNING para saber se há relâmpago dá
+        resposta errada.
+      · **Duas formas de janela, e a duração é que separa.** 12h
+        (15:00 → 03:00 do dia seguinte) é relâmpago; 720h (01/11 →
+        01/12) é o preço do mês. A longa cobre 11/11 e a Black Week
+        também, então filtrar por data sem olhar a duração joga o
+        relâmpago de hoje na linha do mês. Corte: `fim − início > 48h`.
+      · **A paginação é por cursor.**
+        `/seller-promotions/promotions/{id}/items` pagina por
+        `paging.searchAfter` e **ignora `offset` e `page` em silêncio** —
+        três páginas de offset devolvem os mesmos 50 anúncios, e foi
+        isso que me fez anunciar "52 anúncios sem agenda" que não
+        existiam. Com cursor: 1.539 janelas, 175 anúncios.
+        E `paging.total` conta ANÚNCIOS, não janelas.
+      · `/seller-promotions/items/{mlb}?app_version=v2` devolve só a
+        janela VIGENTE de cada tipo, com `inicio`/`fim` nulos no
+        pré-acordo. A agenda inteira só sai pelo endpoint da promoção,
+        com `promotion_type=PRE_NEGOTIATED`.
+      · **A coluna "11/11" da aba não é a campanha "11.11 da Black".**
+        É uma das datas de relâmpago (Data 1 a 11, colunas 33 a 43),
+        sempre R$ 1,00 abaixo da coluna 18 "Crível relampago". O
+        `DEAL "11.11 da Black"` (19/10 a 12/11) é campanha separada do
+        Meli. Eu casei uma com a outra e invalidei 113 de 191 linhas da
+        primeira entrega.
+      · Um instantâneo de manhã não serve para falar da tarde: o
+        relâmpago entra durante o dia. Reler ao vivo antes de responder.
+
+- [x] **Maior desconto da Black — respondido em 04/11.** O maior
+      aceito é **53,1%** (54,9% na base do próprio convite), 4 itens
+      acima de 50%, mediana 42,3%, nenhum em 60%. Aceitando os 45
+      convites pendentes no preço sugerido o teto vai a 65,9%
+      (MLB5397752736, R$ 5.230 → 1.785,87). O piso do canal
+      (`precoMinimo`) permitiria 80%.
+      **Banner de "até 70%" não tem respaldo hoje**, e se cabe na margem
+      não dá para dizer: nenhum SKU da Probel tem `custo_unitario`. Ver
+      "Custos por SKU", em "Travado no Eduardo".
 
 - [ ] **Concorrente por API dentro do app — só se virar tela.** Os
       scripts de `scratchpad/probel/` leram `/products/search` e
