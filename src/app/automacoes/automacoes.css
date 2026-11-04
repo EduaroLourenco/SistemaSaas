@@ -1,0 +1,115 @@
+/*
+ * A lista de campanhas de Automações.
+ *
+ * A primeira versão desta tela era uma grade de cartões com borda,
+ * sombra, pílula colorida ao lado do título e uma barra de progresso em
+ * cada linha. O Eduardo reprovou: "cara de inteligência artificial". E
+ * era, no sentido literal — é o padrão que os textos sobre "AI slop"
+ * descrevem, o mesmo cartão repetido com a mesma fileira de números
+ * coloridos em cima.
+ *
+ * O que a v2 faz no lugar, e por quê:
+ *
+ *  · hierarquia por TIPOGRAFIA — peso, tamanho, espaço — e não por
+ *    caixa. Onde a borda parecia necessária, o certo era mais espaço;
+ *  · em tela operacional a superfície principal é a TABELA densa, com o
+ *    resumo acima dela, e não uma grade de cartões;
+ *  · cor em todo número é ruído. Aqui a cor só aparece em dois lugares:
+ *    o prazo que aperta e o número que exige ação.
+ *
+ * Mora em arquivo próprio, como `planejamento.css` e
+ * `central-anuncios.css`: é grade e `grid-template-areas`, que em
+ * utilitário vira string ilegível.
+ */
+
+.auto-lista { font-variant-numeric: tabular-nums; }
+
+/* ── o resumo ── */
+.auto-resumo { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.auto-resumo .big {
+  font-family: var(--f-num); font-size: 58px; font-weight: 700;
+  line-height: .86; letter-spacing: -.055em;
+}
+.auto-resumo .leg { font-size: 14.5px; color: var(--ink-2); max-width: 28ch; line-height: 1.35; padding-bottom: 4px; }
+/* O prazo não quebra no meio: "em até 9 / dias" lia como dois números. */
+.auto-resumo .leg b { color: var(--ink); font-weight: 650; white-space: nowrap; }
+.auto-resto { margin: 16px 0 0; font-size: 13px; color: var(--ink-3); line-height: 1.6; }
+.auto-resto b { font-family: var(--f-num); font-weight: 650; color: var(--ink-2); letter-spacing: -.01em; }
+
+/* ── o filtro: texto com sublinhado, não pílula ── */
+.auto-filtros {
+  display: flex; gap: 18px; overflow-x: auto; margin-top: 26px; padding-bottom: 9px;
+  border-bottom: 1px solid var(--line); scrollbar-width: none;
+}
+.auto-filtros::-webkit-scrollbar { display: none; }
+.auto-filtros button {
+  flex: 0 0 auto; min-height: 44px; font-size: 13.5px; font-weight: 550;
+  color: var(--ink-3); position: relative; white-space: nowrap;
+}
+.auto-filtros button[aria-pressed="true"] { color: var(--ink); font-weight: 680; }
+.auto-filtros button[aria-pressed="true"]::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 8px; height: 2px; background: var(--ink);
+}
+
+/* ── a lista: uma superfície só, sem caixa ── */
+.auto-grupo h2 {
+  margin: 0; padding: 18px 2px 7px; font-size: 11px; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+}
+.auto-cab,
+.auto-linha {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 62px 62px 68px 58px;
+  align-items: center;
+}
+.auto-cab {
+  padding: 9px 2px 7px; font-size: 10.5px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--line);
+}
+/* Rótulo longo em coluna estreita encostava no vizinho: "AGEND.ESPERANDO". */
+.auto-cab span:nth-child(n + 3) { text-align: right; padding-left: 8px; }
+
+.auto-linha {
+  width: 100%; min-height: 52px; padding: 7px 2px;
+  border-bottom: 1px solid var(--line); text-align: left;
+}
+.auto-linha:hover { background: var(--panel); }
+.auto-linha .dia {
+  font-family: var(--f-num); font-size: 18px; font-weight: 700;
+  letter-spacing: -.04em; color: var(--ink-3);
+}
+.auto-linha .dia i { font-style: normal; font-size: 11px; font-weight: 600; margin-left: 1px; }
+.auto-linha.urg .dia { color: var(--down); }
+.auto-linha.med .dia { color: var(--warn); }
+.auto-linha .id { min-width: 0; padding-right: 14px; }
+.auto-linha .nm { display: block; font-size: 14.5px; font-weight: 620; letter-spacing: -.008em; overflow-wrap: anywhere; }
+.auto-linha .sub { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-3); overflow-wrap: anywhere; }
+.auto-linha .col { font-family: var(--f-num); font-size: 14px; text-align: right; letter-spacing: -.02em; color: var(--ink-2); }
+.auto-linha .col.pe { font-weight: 700; color: var(--ink); }
+.auto-linha.urg .col.pe { color: var(--down); }
+.auto-linha .ate { font-size: 11.5px; text-align: right; color: var(--ink-3); }
+.auto-linha[aria-expanded="true"] { background: var(--brand-wash); }
+.auto-linha[aria-expanded="true"] .nm { color: var(--brand-2); }
+
+@media (max-width: 720px) {
+  .auto-resumo .big { font-size: 50px; }
+  .auto-cab { display: none; }
+  /* Áreas explícitas: esconder duas colunas num grid de seis faz o resto
+     se reposicionar sozinho, e a linha vira sopa. */
+  .auto-linha {
+    grid-template-columns: 42px minmax(0, 1fr) 66px;
+    grid-template-areas: "dia nome pe" "dia ate pe";
+    align-items: start; min-height: 62px; padding: 11px 2px;
+  }
+  .auto-linha .col.ar,
+  .auto-linha .col.ag { display: none; }
+  .auto-linha .dia { grid-area: dia; align-self: center; }
+  .auto-linha .id { grid-area: nome; padding-right: 10px; }
+  .auto-linha .ate { grid-area: ate; text-align: left; margin-top: 4px; }
+  .auto-linha .col.pe { grid-area: pe; align-self: center; }
+  .auto-linha .col.pe::after {
+    content: "esperando"; display: block; margin-top: 1px;
+    font-family: var(--f-ui); font-size: 10px; font-weight: 600;
+    color: var(--ink-3); letter-spacing: 0;
+  }
+}

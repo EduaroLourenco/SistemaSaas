@@ -120,17 +120,49 @@ export async function carregarAutomacoes(): Promise<DadosAutomacoes> {
   };
 }
 
+export type ContagemPromocao = {
+  participando: number | null;
+  agendados: number | null;
+  pendentes: number | null;
+  /**
+   * Quanto o canal põe do próprio bolso, em pontos de comissão.
+   *
+   * Null é "esta campanha não tem rebate" — o caso normal em DEAL e em
+   * cupom. Também cai aqui a leitura que falhou: o rebate não decide
+   * nada nesta tela (quem decide é o prazo e o que espera resposta), e
+   * um "não li o rebate" por linha seria barulho onde cabia silêncio.
+   */
+  rebate: { de: number; ate: number } | null;
+};
+
 /**
- * Quantos itens em cada status, sem varrer a promoção.
+ * Quantos itens em cada status, sem varrer a promoção — e o rebate.
  *
- * `limit=1` basta: o número vem no `paging.total`, e o item que volta é
- * descartado. Três chamadas de uma linha custam menos que uma varredura
- * de 748 — e o `meliGet` já passa pela fila de cota.
+ * `limit=1` basta para contar: o número vem no `paging.total`, e o item
+ * que volta é descartado. Três chamadas de uma linha custam menos que
+ * uma varredura de 748 — e o `meliGet` já passa pela fila de cota.
  *
  * Os três não somam o total: item `finished` fica fora de propósito, que
  * é o que saiu da campanha e não é decisão de ninguém.
+ *
+ * ── Por que o rebate vem daqui, e não da lista ──
+ *
+ * `benefits` NÃO existe no endpoint de lista de promoções. Conferido no
+ * JSON cru das duas contas: as únicas chaves são deadline_date,
+ * finish_date, fixed_percentage, id, max/min_purchase_amount, name,
+ * start_date, status, sub_type e type. Por isso `meliPct` em
+ * `PromocaoAberta` é sempre nulo.
+ *
+ * O rebate real é POR ITEM, em `meli_percentage`, e varia dentro da
+ * mesma campanha — 2,2% num anúncio e 4,4% em outro. Uma página de 50
+ * itens dá a faixa sem varrer as 748: é uma chamada a mais, e é o número
+ * que o Eduardo pediu para enxergar sem abrir a campanha.
  */
-export async function contarPorStatus(conta: string, codigo: string, tipo: string) {
+export async function contarPorStatus(
+  conta: string,
+  codigo: string,
+  tipo: string
+): Promise<ContagemPromocao> {
   const { meliGet } = await import("@/lib/meli/cliente");
   const um = async (status: string) => {
     const q = new URLSearchParams({ promotion_type: tipo, app_version: "v2", limit: "1", status });
@@ -140,10 +172,20 @@ export async function contarPorStatus(conta: string, codigo: string, tipo: strin
     );
     return r.paging?.total ?? null;
   };
-  const [participando, agendados, pendentes] = await Promise.all([
-    um("started"), um("pending"), um("candidate"),
+  const faixaDeRebate = async () => {
+    try {
+      const amostra = await lerItensDaPromocao(conta, { codigo, tipo }, 50);
+      const pontos = amostra.map((i) => i.meliPct).filter((v): v is number => v != null && v > 0);
+      if (!pontos.length) return null;
+      return { de: Math.min(...pontos), ate: Math.max(...pontos) };
+    } catch {
+      return null;
+    }
+  };
+  const [participando, agendados, pendentes, rebate] = await Promise.all([
+    um("started"), um("pending"), um("candidate"), faixaDeRebate(),
   ]);
-  return { participando, agendados, pendentes };
+  return { participando, agendados, pendentes, rebate };
 }
 
 /* ══════════════════════════════════════════════════════════════

@@ -10,9 +10,10 @@ import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { Select, Sheet } from "@/components/ui/controls";
 import { money, count, pct } from "@/lib/format";
 import type { DadosTrafegoPago, LinhaAnuncioAds } from "@/lib/dados/trafego-pago";
-import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao } from "@/lib/dados/automacoes";
+import type { DadosAutomacoes, PromocaoAberta, ItemAutomacao, ItensDaPromocao, ContagemPromocao } from "@/lib/dados/automacoes";
 import { FOLGA_PADRAO, TIPO_PADRAO, type Folgas } from "@/lib/folga";
 import { ROTULO_PROMOCAO, TOM_PROMOCAO, nomePromocao } from "@/lib/promocao-rotulos";
+import { GRUPOS, agruparCampanhas, oQueNaoEspera, type Campanha } from "@/lib/agenda-promocoes";
 import type { Fila } from "@/lib/dados/fila-aprovacao";
 import { FilaAprovacao } from "@/components/automacoes/fila";
 import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
@@ -20,6 +21,7 @@ import { paraRegra, type ItemDaTela } from "@/lib/planilhas/item-para-regra";
 import { pisoDoItem, faixaDoPreco, precoComFolga } from "@/lib/planilhas/piso-promocao";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import "./automacoes.css";
 
 /**
  * Automações: o que o canal está oferecendo, e o que a gente faz com isso.
@@ -50,8 +52,6 @@ const NOSSO_PRECO = new Set(["DEAL", "SELLER_CAMPAIGN", "PRICE_DISCOUNT"]);
 
 type Situacao = "dentro" | "agendado" | "cabe" | "nao";
 
-const diasAte = (iso: string | null) =>
-  iso == null ? null : Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
 const dia = (iso: string | null) =>
   iso == null ? "—" : new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 
@@ -64,8 +64,10 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
 }) {
   const [tema, setTema] = React.useState<"promocoes" | "fila" | "ads">("promocoes");
   const [conta, setConta] = React.useState("");
+  /* O tipo é a faixa de chips. O prazo saiu de filtro: virou a própria
+     ordem da agenda, e um filtro que repete o agrupamento é só mais um
+     controle para errar. */
   const [tipo, setTipo] = React.useState("");
-  const [prazo, setPrazo] = React.useState("");
   /*
    * A folga, lembrada por tipo de campanha.
    *
@@ -74,9 +76,9 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
    * preço foi negociado a dedo —, então o que se guarda é uma folga por
    * tipo, mais um padrão para quem ainda não tem a sua.
    *
-   * O campo edita a folga do tipo EM FOCO: o da promoção aberta, ou o do
-   * filtro, ou o padrão. Assim quem está mexendo numa promoção mexe na
-   * régua dela, e não numa configuração global que ele não viu.
+   * O campo vive no cabeçalho da campanha ABERTA, e não na barra de
+   * filtros: ela é parâmetro da campanha, não recorte da lista. Quem
+   * está mexendo numa promoção mexe na régua dela.
    */
   const [porTipo, setPorTipo] = React.useState<Record<string, number>>(folgas.porTipo);
   const [erroFolga, setErroFolga] = React.useState<string | null>(null);
@@ -85,13 +87,6 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
     [porTipo]
   );
   const [aberta, setAberta] = React.useState<PromocaoAberta | null>(null);
-  /* O que cabe no piso só se sabe depois de carregar os itens, então o
-     cartão fica sem esses dois números até alguém abrir a promoção. O
-     resultado sobe para cá para o cartão não perder a conta ao fechar. */
-  const [cabem, setCabem] = React.useState<Map<string, Cabem>>(new Map());
-  const anotarCabem = React.useCallback((chave: string, c: Cabem) => {
-    setCabem((antes) => new Map(antes).set(chave, c));
-  }, []);
 
   /*
    * Os contadores do canal, buscados em fila de quatro.
@@ -100,7 +95,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
    * cota e nenhuma volta; pedir uma a uma demora. Quatro por vez enche a
    * tela em ordem de prazo, que é a que importa.
    */
-  const [contagens, setContagens] = React.useState<Map<string, Contagem>>(new Map());
+  const [contagens, setContagens] = React.useState<Map<string, ContagemPromocao>>(new Map());
   const [atualizando, iniciarAtualizacao] = React.useTransition();
   const router = useRouter();
 
@@ -114,7 +109,6 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
    */
   const atualizar = () => {
     setContagens(new Map());
-    setCabem(new Map());
     iniciarAtualizacao(() => router.refresh());
   };
   React.useEffect(() => {
@@ -137,28 +131,26 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
     return () => { vivo = false; };
   }, [dados.promocoes]);
 
-  const promocoes = React.useMemo(
-    () =>
-      dados.promocoes.filter((p) => {
-        if (conta && p.contaId !== conta) return false;
-        if (tipo && p.tipo !== tipo) return false;
-        if (prazo) {
-          const n = diasAte(p.prazo ?? p.fim);
-          if (n == null) return false;
-          if (prazo === "7" && !(n >= 0 && n <= 7)) return false;
-          if (prazo === "30" && !(n >= 0 && n <= 30)) return false;
-          if (prazo === "venceu" && n >= 0) return false;
-        }
-        return true;
-      }),
-    [dados.promocoes, conta, tipo, prazo]
+  /* Uma linha por CAMPANHA, não por conta — ver lib/agenda-promocoes. */
+  const campanhas = React.useMemo(
+    () => agruparCampanhas(
+      conta ? dados.promocoes.filter((p) => p.contaId === conta) : dados.promocoes,
+      contagens
+    ),
+    [dados.promocoes, conta, contagens]
   );
 
-  const tipos = React.useMemo(() => [...new Set(dados.promocoes.map((p) => p.tipo))], [dados.promocoes]);
+  const visiveis = React.useMemo(
+    () => (tipo ? campanhas.filter((c) => c.tipo === tipo) : campanhas),
+    [campanhas, tipo]
+  );
 
-  /* O tipo que o campo de folga edita: a promoção aberta manda, depois o
-     filtro, e por último o padrão. */
-  const tipoEmFoco = aberta?.tipo || tipo || TIPO_PADRAO;
+  /* Os chips saem da lista INTEIRA, não da filtrada: um chip que some ao
+     ser clicado não tem como ser desclicado. */
+  const tipos = React.useMemo(
+    () => [...new Set(dados.promocoes.map((p) => p.tipo))].sort((a, b) => (ROTULO[a] ?? a).localeCompare(ROTULO[b] ?? b)),
+    [dados.promocoes]
+  );
 
   /*
    * Guardar espera a digitação parar. Sem isso, digitar "12" grava 1 e
@@ -187,15 +179,15 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
     }, 700);
   }, []);
   React.useEffect(() => () => { if (timerFolga.current) clearTimeout(timerFolga.current); }, []);
-  const soma = (campo: keyof Contagem) =>
-    promocoes.reduce((t, p) => t + (contagens.get(p.contaId + p.codigo)?.[campo] ?? 0), 0);
-  const participando = soma("participando");
-  const pendentes = soma("pendentes");
-  const urgentes = promocoes.filter((p) => { const n = diasAte(p.prazo ?? p.fim); return n != null && n >= 0 && n <= 7; }).length;
-  const vencendo = promocoes.filter((p) => {
-    const n = diasAte(p.prazo ?? p.fim);
-    return n != null && n >= 0 && n <= 14;
-  }).length;
+
+  /* O herói é o que não dá para adiar, e ele fica ACIMA da faixa de
+     chips de propósito: é o estado da conta, não o da lista filtrada. */
+  const { prazo: prazoUrgente, esperando: esperandoUrgente } = oQueNaoEspera(campanhas);
+  const totalPendentes = campanhas.reduce((s, c) => s + c.pendentes, 0);
+  const totalAgendados = campanhas.reduce((s, c) => s + c.agendados, 0);
+  const totalNoAr = campanhas.reduce((s, c) => s + c.noAr, 0);
+  /* Nenhuma contagem chegou: zero aqui seria mentira, não medida. */
+  const semContagem = contagens.size === 0 && dados.promocoes.length > 0;
 
   if (dados.semConexao) {
     return (
@@ -239,7 +231,9 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
           </div>
         }
         filters={
-          tema !== "promocoes" ? undefined : (
+          /* Uma conta só não tem o que filtrar — e controle morto é pior
+             que controle nenhum. */
+          tema !== "promocoes" || dados.contas.length < 2 ? undefined : (
           <BarraFiltros>
             <Filtro rotulo="Conta">
               <Select value={conta} onChange={(e) => setConta(e.target.value)} className="min-w-[180px]">
@@ -248,38 +242,6 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
               </Select>
-            </Filtro>
-            <Filtro rotulo="Tipo">
-              <Select value={tipo} onChange={(e) => setTipo(e.target.value)} className="min-w-[150px]">
-                <option value="">Todos</option>
-                {tipos.map((t) => (
-                  <option key={t} value={t}>{ROTULO[t] ?? t}</option>
-                ))}
-              </Select>
-            </Filtro>
-            <Filtro rotulo="Prazo">
-              <Select value={prazo} onChange={(e) => setPrazo(e.target.value)} className="min-w-[150px]">
-                <option value="">Qualquer</option>
-                <option value="7">Vence em 7 dias</option>
-                <option value="30">Em 30 dias</option>
-                <option value="venceu">Já venceu</option>
-              </Select>
-            </Filtro>
-            <Filtro
-              rotulo={`Folga abaixo do piso · ${tipoEmFoco === TIPO_PADRAO ? "padrão" : ROTULO[tipoEmFoco] ?? tipoEmFoco}`}
-            >
-              <input
-                type="number" min={0} max={30} step={0.5} value={folgaDe(tipoEmFoco)}
-                onChange={(e) => {
-                  const bruto = e.target.value;
-                  /* Campo vazio é meio da digitação, não 0%: salvar aqui
-                     gravaria zero toda vez que alguém apaga para trocar o
-                     número — e 0% é uma régua de verdade, a do pré-acordo. */
-                  if (bruto === "") return;
-                  mudarFolga(tipoEmFoco, Math.min(30, Math.max(0, Number(bruto) || 0)));
-                }}
-                className="h-10 w-[86px] rounded-r1 border border-line bg-panel px-2 text-right font-mono text-[13px] text-ink focus:border-brand"
-              />
             </Filtro>
           </BarraFiltros>
           )
@@ -295,36 +257,49 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
           />
         )}
         {tema === "promocoes" && (<>
-        {/* Um número manda, o resto é contexto. Quatro cartões do mesmo
-            tamanho não dizem para onde olhar. */}
-        <div className="flex flex-wrap items-end gap-x-8 gap-y-3 border-b border-line pb-4">
-          <div>
-            <p className="font-mono text-[46px] font-extrabold leading-[0.95] tracking-[-0.045em] text-ink">
-              <Sobe valor={pendentes} />
-            </p>
-            <p className="mt-1 text-[13px] text-ink-2">
-              itens esperando a sua resposta
-              {urgentes > 0 && (
-                <span className="ml-2 rounded-r1 bg-down-wash px-2 py-0.5 text-[12px] font-semibold text-down">
-                  {count(urgentes)} vencem em até 7 dias
-                </span>
+        <div className="auto-lista">
+          {/* Um número manda; o resto é uma frase de números, não uma
+              fileira de cartões coloridos. */}
+          <div className="auto-resumo">
+            <span className="big">
+              {semContagem
+                ? <span className="inline-block h-[0.62em] w-[2.4ch] animate-pulse rounded bg-panel-3 align-baseline" />
+                : <Sobe valor={prazoUrgente == null ? totalPendentes : esperandoUrgente} />}
+            </span>
+            <span className="leg">
+              itens esperando resposta
+              {prazoUrgente != null && (
+                <> <b>{prazoUrgente === 0 ? "que vencem hoje" : `em até ${prazoUrgente} ${prazoUrgente === 1 ? "dia" : "dias"}`}</b></>
               )}
-            </p>
+            </span>
           </div>
-          <dl className="flex gap-7 pb-1">
-            <div>
-              <dd className="font-mono text-[19px] font-bold text-up"><Sobe valor={participando} /></dd>
-              <dt className="text-[11.5px] text-ink-3">já no ar</dt>
-            </div>
-            <div>
-              <dd className="font-mono text-[19px] font-bold text-ink"><Sobe valor={promocoes.length} /></dd>
-              <dt className="text-[11.5px] text-ink-3">promoções abertas</dt>
-            </div>
-            <div>
-              <dd className="font-mono text-[19px] font-bold text-ink">{count(dados.contas.length)}</dd>
-              <dt className="text-[11.5px] text-ink-3">contas</dt>
-            </div>
-          </dl>
+          <p className="auto-resto">
+            <b>{count(totalPendentes)}</b> esperando ao todo &nbsp;·&nbsp;{" "}
+            <b>{count(totalAgendados)}</b> agendados &nbsp;·&nbsp;{" "}
+            <b>{count(totalNoAr)}</b> no ar &nbsp;·&nbsp;{" "}
+            <b>{count(campanhas.length)}</b> campanhas em <b>{count(dados.contas.length)}</b>{" "}
+            {dados.contas.length === 1 ? "conta" : "contas"}
+          </p>
+
+          {/* A faixa de filtro fica acima de tudo que ela recorta. É por
+              aqui que se acha o pré-acordo do consultor num toque. */}
+          <div className="auto-filtros">
+            <button type="button" aria-pressed={!tipo} onClick={() => setTipo("")}>Todas</button>
+            {tipos.map((t) => (
+              <button
+                key={t} type="button" aria-pressed={tipo === t}
+                onClick={() => setTipo(tipo === t ? "" : t)}
+              >
+                {ROTULO[t] ?? t}
+              </button>
+            ))}
+          </div>
+
+          <Lista
+            campanhas={visiveis}
+            aberta={aberta}
+            onAbrir={(p) => setAberta(aberta?.codigo === p.codigo && aberta.contaId === p.contaId ? null : p)}
+          />
         </div>
 
         {dados.falhas.length > 0 && (
@@ -349,21 +324,17 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
           </Panel>
         )}
 
-        <Carrossel
-          promocoes={promocoes}
-          aberta={aberta}
-          cabem={cabem}
-          contagens={contagens}
-          onAbrir={(p) => setAberta(aberta?.codigo === p.codigo && aberta.contaId === p.contaId ? null : p)}
-        />
-
         {aberta && (
           <Detalhe
             key={aberta.contaId + aberta.codigo}
             promocao={aberta}
+            /* A linha abre a conta com mais esperando; a outra conta da
+               mesma campanha fica aqui, a um clique. */
+            irmas={dados.promocoes.filter((p) => p.codigo === aberta.codigo && p.contaId !== aberta.contaId)}
+            onTrocarConta={setAberta}
             folga={folgaDe(aberta.tipo)}
+            onMudarFolga={(v) => mudarFolga(aberta.tipo, v)}
             regras={regras}
-            onContar={anotarCabem}
           />
         )}
         </>)}
@@ -372,7 +343,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
   );
 }
 
-/* ══ O carrossel ══════════════════════════════════════════════ */
+/* ══ A agenda ═════════════════════════════════════════════════ */
 
 /**
  * O número subindo até o valor, em vez de pular.
@@ -403,48 +374,6 @@ function Sobe({ valor }: { valor: number }) {
   return <>{count(v)}</>;
 }
 
-/** Um número do cartão: grande, com o rótulo pequeno embaixo. */
-function Conta({ rotulo, valor, cor, carregando }: {
-  rotulo: string; valor: number | null; cor: string; carregando?: boolean;
-}) {
-  return (
-    <div>
-      <dd className={`font-mono text-[22px] font-extrabold leading-none tracking-[-0.03em] ${cor}`}>
-        {valor == null
-          ? <span className={`inline-block h-[16px] w-8 rounded bg-panel-3 ${carregando ? "animate-pulse" : ""}`} />
-          : count(valor)}
-      </dd>
-      <dt className="mt-1 text-[11px] text-ink-3">{rotulo}</dt>
-    </div>
-  );
-}
-
-/** A proporção da promoção: no ar, esperando resposta, e o que não cabe. */
-function Barra({ c, cabe }: { c: Contagem | null; cabe: Cabem | null }) {
-  const dentro = c?.participando ?? 0;
-  const agendado = c?.agendados ?? 0;
-  const pend = c?.pendentes ?? 0;
-  const total = dentro + agendado + pend;
-  if (!total) return <div className="mt-3 h-[6px] rounded bg-panel-3" />;
-  /* Dentro dos pendentes, separa o que cabe do que não cabe — mas só
-     depois de a promoção ter sido aberta, que é quando isso se sabe. */
-  const cabem = cabe?.cabem ?? 0, nao = cabe?.nao ?? 0;
-  const semConta = cabe ? Math.max(0, pend - cabem - nao) : pend;
-  const faixas: [number, string][] = [
-    [dentro, "bg-up"], [agendado, "bg-info"],
-    [cabem, "bg-brand"], [nao, "bg-down"], [semConta, "bg-line-2"],
-  ];
-  return (
-    <div className="mt-3 flex h-[6px] gap-[2px] overflow-hidden rounded bg-panel-3">
-      {faixas.map(([v, cor], k) =>
-        v > 0 ? <i key={k} className={cor} style={{ width: `${(v / total) * 100}%` }} /> : null
-      )}
-    </div>
-  );
-}
-
-type Cabem = { cabem: number; nao: number };
-type Contagem = { participando: number | null; agendados: number | null; pendentes: number | null };
 
 /** O que a revisão manda para a rota — o mesmo formato do envio. */
 type PedidoRevisao = {
@@ -463,111 +392,97 @@ type RespostaRevisao = {
   conta: string; escritaConectada: boolean; vao: number; ficam: number; linhas: LinhaRevisao[];
 };
 
-function Carrossel({
-  promocoes, aberta, onAbrir, cabem, contagens,
-}: {
-  promocoes: PromocaoAberta[];
+/**
+ * A lista de campanhas.
+ *
+ * Uma superfície só, densa: cabeçalho de coluna uma vez no topo, grupos
+ * separados por um rótulo pequeno, linha de 52px. Sem cartão, sem barra
+ * de progresso, sem pílula — ver `automacoes.css` para o porquê.
+ */
+function Lista({ campanhas, aberta, onAbrir }: {
+  campanhas: Campanha[];
   aberta: PromocaoAberta | null;
   onAbrir: (p: PromocaoAberta) => void;
-  cabem: Map<string, Cabem>;
-  contagens: Map<string, Contagem>;
 }) {
-  if (!promocoes.length) {
-    return <div className="mt-4"><EmptyState title="Nenhuma promoção com esses filtros" /></div>;
+  if (!campanhas.length) {
+    return <EmptyState title="Nenhuma campanha com esse filtro" />;
   }
-  /* Em grupos por urgência: uma fila de 27 cartões iguais não diz o
-     que olhar primeiro, e o prazo é justamente o que decide a ordem. */
-  const grupos: { titulo: string; itens: PromocaoAberta[] }[] = [
-    { titulo: "Esta semana", itens: [] },
-    { titulo: "Este mês", itens: [] },
-    { titulo: "Sem pressa", itens: [] },
-  ];
-  for (const p of promocoes) {
-    const n = diasAte(p.prazo ?? p.fim);
-    grupos[n == null ? 2 : n <= 7 ? 0 : n <= 30 ? 1 : 2].itens.push(p);
-  }
-
   return (
-    <div className="mt-4 space-y-5">
-      {grupos.filter((g) => g.itens.length).map((g) => (
-        <section key={g.titulo}>
-          <h2 className="mb-2 flex items-baseline gap-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3">
-            {g.titulo}
-            <span className="font-mono text-[11px] font-normal normal-case tracking-normal">
-              {count(g.itens.length)}
-            </span>
-          </h2>
-          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 md:mx-0 md:px-0">
-          {g.itens.map((p) => {
-        const n = diasAte(p.prazo ?? p.fim);
-        const chave = p.contaId + p.codigo;
-        const estaAberta = aberta?.codigo === p.codigo && aberta.contaId === p.contaId;
-        const cabe = cabem.get(chave) ?? null;
-        const c = contagens.get(chave) ?? null;
+    <>
+      <div className="auto-cab">
+        <span>Prazo</span><span>Campanha</span><span>No ar</span>
+        <span>Agend.</span><span>Esperando</span><span>Aceite</span>
+      </div>
+      {GRUPOS.map((g) => {
+        const itens = campanhas
+          .filter((c) => g.cabe(c.dias))
+          .sort((a, b) => (a.dias ?? 9e9) - (b.dias ?? 9e9) || b.pendentes - a.pendentes);
+        if (!itens.length) return null;
         return (
-          <button
-            key={chave}
-            onClick={() => onAbrir(p)}
-            aria-expanded={estaAberta}
-            className={[
-              "w-[270px] shrink-0 snap-start rounded-r3 border bg-panel p-4 text-left transition",
-              "hover:-translate-y-0.5 hover:shadow-2",
-              estaAberta ? "border-brand shadow-2 ring-2 ring-brand-wash" : "border-line shadow-1",
-            ].join(" ")}
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <Badge tone={TOM[p.tipo] ?? "neutral"}>{ROTULO[p.tipo] ?? p.tipo}</Badge>
-              <span className="ml-auto truncate text-[11px] text-ink-3">{p.contaNome}</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className={[
-                "font-mono text-[32px] font-extrabold leading-none tracking-[-0.04em]",
-                n != null && n <= 7 ? "text-down" : "text-ink",
-              ].join(" ")}>
-                {n == null ? "—" : n < 0 ? "venceu" : n}
-              </span>
-              <span className="text-[12px] font-semibold text-ink-2">
-                {n == null ? "sem prazo de aceite" : n < 0 ? "" : n === 1 ? "dia para aceitar" : "dias para aceitar"}
-              </span>
-            </div>
-            <p className="mt-2 min-h-[34px] text-[13.5px] font-semibold leading-snug text-ink">
-              {nomePromocao(p.tipo, p.nome)}
-            </p>
-            <p className="font-mono text-[11.5px] text-ink-3">{dia(p.inicio)} → {dia(p.fim)}</p>
-
-            {/* A barra conta a história antes dos números: quanto da
-                promoção já está no ar e quanto espera resposta. */}
-            <Barra c={c} cabe={cabe} />
-
-            {/* Dois números, não cinco. Cabem e não cabem só existem
-                depois de abrir, e até lá ocupavam metade do cartão
-                repetindo "ao abrir" com peso de número. */}
-            <dl className="mt-3 grid grid-cols-2 gap-x-3">
-              <Conta rotulo="no ar" valor={c?.participando ?? null} cor="text-up" carregando={!c} />
-              {cabe
-                ? <Conta rotulo="cabem no piso" valor={cabe.cabem} cor="text-brand-2" />
-                : <Conta rotulo="esperando resposta" valor={c?.pendentes ?? null} cor="text-ink" carregando={!c} />}
-            </dl>
-
-            <p className="mt-2.5 flex items-center gap-2 border-t border-line pt-2 text-[11px] text-ink-3">
-              {cabe
-                ? <>{count(cabe.nao)} não cabem{(c?.agendados ?? 0) > 0 && ` · ${count(c!.agendados!)} agendados`}</>
-                : (c?.agendados ?? 0) > 0
-                  ? <>{count(c!.agendados!)} agendados</>
-                  : <>&nbsp;</>}
-              {p.meliPct != null && (
-                <span className="ml-auto whitespace-nowrap">
-                  Meli <b className="text-up">{pct(p.meliPct, 1)}</b>
-                </span>
-              )}
-            </p>
-          </button>
+          <section key={g.titulo} className="auto-grupo">
+            <h2>{g.titulo}</h2>
+            {itens.map((c) => (
+              <LinhaCampanha key={c.codigo} c={c} aberta={aberta} onAbrir={onAbrir} />
+            ))}
+          </section>
         );
       })}
-          </div>
-        </section>
-      ))}
-    </div>
+    </>
+  );
+}
+
+/** Quanto o canal põe, em pontos. Um número quando a campanha é plana. */
+const faixaRebate = (r: { de: number; ate: number }) => {
+  const n = (v: number) => v.toFixed(1).replace(".", ",");
+  return r.de === r.ate ? `${n(r.de)}%` : `${n(r.de)}–${n(r.ate)}%`;
+};
+
+/** O nome da conta sem a explicação: "São Paulo", não "São Paulo — pronta entrega". */
+const contaCurta = (nome: string) => nome.split("—")[0].trim();
+
+function LinhaCampanha({ c, aberta, onAbrir }: {
+  c: Campanha;
+  aberta: PromocaoAberta | null;
+  onAbrir: (p: PromocaoAberta) => void;
+}) {
+  const d = c.dias;
+  const urgencia = d == null ? "" : d <= 9 ? " urg" : d <= 30 ? " med" : "";
+  const estaAberta = c.contas.some(
+    ({ promocao: p }) => aberta?.codigo === p.codigo && aberta.contaId === p.contaId
+  );
+  /* Com duas contas o subtítulo divide os pendentes entre elas; com uma,
+     o número já está na coluna e repetir seria ruído. */
+  const contas = c.contas.length > 1
+    ? c.contas
+        .map(({ promocao, contagem }) =>
+          `${contaCurta(promocao.contaNome)} ${contagem?.pendentes == null ? "?" : count(contagem.pendentes)}`)
+        .join(" · ")
+    : contaCurta(c.contas[0].promocao.contaNome);
+
+  return (
+    <button
+      type="button"
+      className={`auto-linha${urgencia}`}
+      aria-expanded={estaAberta}
+      /* Abre a conta com mais esperando — `agruparCampanhas` já ordena
+         assim. A outra fica a um clique no cabeçalho do detalhe. */
+      onClick={() => onAbrir(c.contas[0].promocao)}
+    >
+      <span className="dia">{d == null ? "—" : <>{d}<i>d</i></>}</span>
+      <span className="id">
+        <span className="nm">{c.nome}</span>
+        <span className="sub">
+          {ROTULO[c.tipo] ?? c.tipo} · {contas}
+          {c.rebate ? ` · Meli ${faixaRebate(c.rebate)}` : ""}
+        </span>
+      </span>
+      <span className="col ar">{count(c.noAr)}</span>
+      {/* Célula sem valor fica vazia: travessão em coluna inteira é a
+          praga que o telas.md proíbe. */}
+      <span className="col ag">{c.agendados ? count(c.agendados) : ""}</span>
+      <span className="col pe">{c.incerto ? "?" : count(c.pendentes)}</span>
+      <span className="ate">{d == null ? "sem prazo" : dia(c.prazo)}</span>
+    </button>
   );
 }
 
@@ -575,17 +490,19 @@ function Carrossel({
 
 type Aba = "cabem" | "nao" | "dentro" | "todos";
 
-function Detalhe({ promocao, folga, regras, onContar }: {
+function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }: {
   promocao: PromocaoAberta;
+  /** As outras contas da MESMA campanha. Vazio quando só há uma. */
+  irmas: PromocaoAberta[];
+  onTrocarConta: (p: PromocaoAberta) => void;
   folga: number;
+  onMudarFolga: (v: number) => void;
   regras: Regra[];
-  onContar: (chave: string, c: Cabem) => void;
 }) {
   const [dados, setDados] = React.useState<ItensDaPromocao | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [aba, setAba] = React.useState<Aba>("cabem");
   const [marcados, setMarcados] = React.useState<Set<string>>(new Set());
-  const ultimaContagem = React.useRef<Cabem | null>(null);
   const [revisao, setRevisao] = React.useState<PedidoRevisao[] | null>(null);
   /* O que as regras decidiram, por MLB. Vazio = ninguém aplicou ainda. */
   const [porRegra, setPorRegra] = React.useState<Map<string, Resultado>>(new Map());
@@ -692,10 +609,6 @@ function Detalhe({ promocao, folga, regras, onContar }: {
 
   /* Sobe a conta para o cartão: ele não tem como saber o que cabe sem os
      itens, e sem isto perderia o número ao fechar. */
-  if (contagem.cabe !== ultimaContagem.current?.cabem || contagem.nao !== ultimaContagem.current?.nao) {
-    ultimaContagem.current = { cabem: contagem.cabe, nao: contagem.nao };
-    queueMicrotask(() => onContar(promocao.contaId + promocao.codigo, { cabem: contagem.cabe, nao: contagem.nao }));
-  }
 
   /** O que vai para o canal: o digitado ganha do proposto pela folga. */
   const precoFinal = (i: ItemAutomacao) => precos.get(i.mlb) ?? nossaOferta(i)?.valor ?? null;
@@ -810,12 +723,39 @@ function Detalhe({ promocao, folga, regras, onContar }: {
       <div className="flex flex-wrap items-center gap-3 border-b border-line p-4">
         <Badge tone={TOM[promocao.tipo] ?? "neutral"}>{ROTULO[promocao.tipo] ?? promocao.tipo}</Badge>
         <div className="min-w-0">
-          <h2 className="truncate text-[17px] font-bold tracking-[-0.015em] text-ink">{nomePromocao(promocao.tipo, promocao.nome)}</h2>
+          <h2 className="text-[17px] font-bold tracking-[-0.015em] text-ink [overflow-wrap:anywhere]">{nomePromocao(promocao.tipo, promocao.nome)}</h2>
           <p className="font-mono text-[12px] text-ink-3">
             {promocao.contaNome} · {promocao.codigo} · {dia(promocao.inicio)} → {dia(promocao.fim)}
           </p>
         </div>
+        {irmas.map((p) => (
+          <button
+            key={p.contaId}
+            type="button"
+            onClick={() => onTrocarConta(p)}
+            className="min-h-11 rounded-r1 border border-line bg-panel-2 px-3 text-[12.5px] font-semibold text-ink-2 hover:border-brand-edge hover:text-ink"
+          >
+            ver {contaCurta(p.contaNome)}
+          </button>
+        ))}
         {dados.truncado && <Badge tone="warn">lista cortada em 2.000 itens</Badge>}
+        {/* A régua é da campanha, não da lista: por isso mora aqui, e
+            não na barra de filtros. */}
+        <label className="ml-auto flex min-h-11 items-center gap-2 text-[12.5px] font-semibold text-ink-2">
+          Folga abaixo do piso
+          <input
+            type="number" min={0} max={30} step={0.5} value={folga}
+            onChange={(e) => {
+              const bruto = e.target.value;
+              /* Campo vazio é meio da digitação, não 0%: salvar aqui
+                 gravaria zero toda vez que alguém apaga para trocar o
+                 número — e 0% é uma régua de verdade, a do pré-acordo. */
+              if (bruto === "") return;
+              onMudarFolga(Math.min(30, Math.max(0, Number(bruto) || 0)));
+            }}
+            className="h-11 w-[84px] rounded-r1 border border-line bg-panel px-2 text-right font-mono text-[13px] text-ink focus:border-brand"
+          />
+        </label>
       </div>
 
       <div className="flex gap-1 overflow-x-auto border-b border-line px-3 pt-2">
