@@ -69,7 +69,7 @@ export type Anuncio = {
   sku: string;
   titulo: string;
   tipo: "Clássico" | "Premium";
-  status: "ativo" | "pausado";
+  status: "ativo" | "pausado" | "finalizado";
   conta: string;
   categoria: string;
   /**
@@ -80,6 +80,8 @@ export type Anuncio = {
   estoque: number | null;
   /** Preço publicado agora, do cadastro do anúncio. */
   precoAtual: number | null;
+  sincronizadoEm?: string | null;
+  precoReferencia?: number | null;
   semanas: SemanaDesempenho[];
 };
 

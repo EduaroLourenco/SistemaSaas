@@ -553,9 +553,9 @@ function subscribeMobile(callback: () => void) {
 const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
 const serverMobile = () => false;
 
-export function PageHeader({ title, breadcrumb, description, badge, actions, filters, mobileFilters = true, inlineFilters = false, compact = false }: {
+export function PageHeader({ title, breadcrumb, description, badge, actions, filters, mobileFilters = true, inlineFilters = false, compact = false, areaNavigation = true }: {
   title: string; breadcrumb?: string; description?: string; badge?: React.ReactNode;
-  actions?: React.ReactNode; filters?: React.ReactNode; mobileFilters?: boolean; inlineFilters?: boolean; compact?: boolean;
+  actions?: React.ReactNode; filters?: React.ReactNode; mobileFilters?: boolean; inlineFilters?: boolean; compact?: boolean; areaNavigation?: boolean;
 }) {
   const mobile = React.useSyncExternalStore(subscribeMobile, isMobile, serverMobile);
   const [openFilters, setOpenFilters] = React.useState(false);
@@ -584,8 +584,7 @@ export function PageHeader({ title, breadcrumb, description, badge, actions, fil
       {!inlineFilters && filters && (!mobile || !mobileFilters) && <div className="gerizo-filters-zone mt-4 min-w-0">{filters}</div>}
       {inlineFilters && filters && mobile && !mobileFilters && <div className="mt-4 min-w-0">{filters}</div>}
       {filters && mobile && mobileFilters && openFilters && <FilterSheet onClose={() => setOpenFilters(false)} applyLabel="Ver resultados">{filters}</FilterSheet>}
-      <React.Suspense fallback={null}><NavegacaoArea /></React.Suspense>
-      <RoteiroArea />
+      {areaNavigation && <><React.Suspense fallback={null}><NavegacaoArea /></React.Suspense><RoteiroArea /></>}
     </header>
   );
 }

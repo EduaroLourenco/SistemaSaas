@@ -113,7 +113,7 @@ function precoDeTabela(
 export async function carregarAnalise(): Promise<DadosAnalise> {
   const sb = await clienteServidor();
 
-  const [linhas, { data: imports }, tarifas, base, vitrine] = await Promise.all([
+  const [linhas, { data: imports }, tarifas, base, vitrine, cadastro] = await Promise.all([
     paginar(() =>
       sb
         .from("anuncio_desempenho_semanal")
@@ -132,11 +132,12 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
     carregarTarifasCobradas(sb),
     carregarFormulaBase(),
     carregarVitrineSemanal(sb),
+    paginar(() => sb.from("anuncios").select("codigo_externo,titulo,sku_canal,tipo,status,estoque,preco_atual,sincronizado_em,contas_canal(nome)").ilike("codigo_externo", "MLB%").order("codigo_externo")),
   ]);
 
   const dados = linhas as unknown as LinhaSemana[];
 
-  if (!dados.length) {
+  if (!dados.length && !cadastro.length) {
     return { anuncios: [], semanas: [], categorias: [], importacoes: [], vazio: true };
   }
 
@@ -175,7 +176,7 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
         sku: a.sku_canal ?? "",
         titulo: a.titulo,
         tipo: a.tipo === "premium" ? "Premium" : "Clássico",
-        status: a.status === "pausado" ? "pausado" : "ativo",
+        status: a.status === "pausado" ? "pausado" : a.status === "finalizado" ? "finalizado" : "ativo",
         conta: a.contas_canal?.nome ?? "Conta principal",
         categoria: categoriaDe(a.titulo),
         estoque: a.estoque,
@@ -236,6 +237,24 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
     };
 
     anuncio.semanas.push(semana);
+  }
+
+  // O cadastro também entra: falta de histórico não torna um anúncio invisível.
+  for (const a of cadastro as unknown as (NonNullable<LinhaSemana["anuncios"]> & { sincronizado_em: string | null })[]) {
+    const existente = porAnuncio.get(a.codigo_externo);
+    const atributos = {
+      sincronizadoEm: a.sincronizado_em,
+      precoReferencia: precoDeTabela(base, a.codigo_externo, a.sku_canal) || null,
+    };
+    if (existente) Object.assign(existente, atributos);
+    else porAnuncio.set(a.codigo_externo, {
+      mlb: a.codigo_externo, titulo: a.titulo, sku: a.sku_canal ?? "",
+      tipo: a.tipo === "premium" ? "Premium" : "Clássico",
+      status: a.status === "pausado" ? "pausado" : a.status === "finalizado" ? "finalizado" : "ativo",
+      conta: a.contas_canal?.nome ?? "Conta principal", categoria: categoriaDe(a.titulo),
+      estoque: a.estoque, precoAtual: a.preco_atual == null ? null : n(a.preco_atual),
+      semanas: [], ...atributos,
+    });
   }
 
   /* Ordem cronológica pela data da semana, não pelo número dela: com dois

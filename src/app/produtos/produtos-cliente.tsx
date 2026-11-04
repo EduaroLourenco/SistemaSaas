@@ -16,6 +16,14 @@ const controle = "min-h-11 max-w-full rounded-r1 border border-line bg-panel px-
 const dataBr = (v: string) => v.split("-").reverse().join("/");
 const semDado = <span className="whitespace-nowrap text-xs font-normal text-ink-3">Sem dado</span>;
 
+function subscribeMobile(callback: () => void) {
+  const query = window.matchMedia("(max-width: 767px)");
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+}
+const mobileSnapshot = () => window.matchMedia("(max-width: 767px)").matches;
+const serverSnapshot = () => false;
+
 function baixar(blob: Blob, nome: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -56,6 +64,9 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
   const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
   const parametros = useSearchParams();
   const [busca, setBusca] = React.useState("");
+  const mobile = React.useSyncExternalStore(subscribeMobile, mobileSnapshot, serverSnapshot);
+  const [comparar, setComparar] = React.useState(false);
+  const listaMobile = mobile && !comparar;
   const [semVenda, setSemVenda] = React.useState(false);
   const [ordem, setOrdem] = React.useState<Ordenacao>({ coluna: "", metrica: "sku", desc: false });
   /* Mesma coluna alterna o sentido; coluna nova começa decrescente, que é
@@ -152,7 +163,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
   }
 
   return <>
-    <PageHeader title="Produtos e preços" breadcrumb="Catálogo" description="Mesmo SKU, canal a canal"
+    <PageHeader title="Produtos e preços"
       actions={<>
         <Button disabled={pendente || exportando || !linhas.length || !colunas.length} onClick={exportarExcel} aria-busy={exportando}><Download size={15} />{exportando ? "Gerando Excel…" : "Baixar Excel"}</Button>
         <Button disabled={pendente || !linhas.length || !colunas.length} onClick={exportar} title="Baixar os mesmos dados em CSV">CSV</Button>
@@ -173,8 +184,10 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
         <div className="flex flex-wrap items-center gap-3 border-b border-line p-3">
           <input className={`${controle} w-full sm:w-64`} aria-label="Buscar produto" placeholder="Buscar SKU, produto ou anúncio" value={busca} onChange={e => setBusca(e.target.value)} />
           <label className="flex min-h-11 items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={semVenda} onChange={e => setSemVenda(e.target.checked)} />Sem venda no período</label>
-          <span className="text-xs text-ink-3 sm:ml-auto">Clique no título de qualquer coluna para ordenar.</span>
+          {!listaMobile && <span className="text-xs text-ink-3 sm:ml-auto">Toque no título da coluna para ordenar.</span>}
         </div>
+        <details className="gerizo-product-filters" open={!mobile || undefined}>
+        <summary>Curva ABC{curva ? ` · ${curva}` : ""}</summary>
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel-2 px-3 py-2">
           <label className="flex items-center gap-2 text-xs text-ink-2">Curva
             <select aria-label="Filtrar curva ABC" className={controle} value={curva} onChange={e => mudarCurva(e.target.value, canalCurva?.id ?? "")}>
@@ -189,11 +202,32 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
           </label>
           {curva && <button className="order-1 ml-auto min-h-11 px-2 text-xs font-medium text-brand hover:underline sm:order-2 sm:ml-0" onClick={() => mudarCurva("", "")}>Limpar curva</button>}
         </div>
+        </details>
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2 text-xs text-ink-3" aria-live="polite">
           <span>{count(linhas.length)} SKUs · {colunas.length} {colunas.length === 1 ? "canal" : "canais"} · {dataBr(dados.de)} a {dataBr(dados.ate)}{curva ? ` · Curva ${curva} em ${canalCurva?.nome ?? "qualquer canal exibido"}` : ""}</span>
-          <span className="inline-flex items-center gap-1">Deslize para comparar <ArrowRight size={13} /></span>
+          {!listaMobile && <span className="inline-flex items-center gap-1">Deslize para comparar <ArrowRight size={13} /></span>}
         </div>
-        <div className={`max-h-[70vh] overflow-auto ${pendente ? "opacity-60" : ""}`} tabIndex={0} role="region" aria-label="Comparação de preços por SKU e canal">
+        {mobile && <div className="gerizo-mobile-table-tools"><div role="group" aria-label="Visualização dos produtos">
+          <button type="button" aria-pressed={!comparar} onClick={() => setComparar(false)}>Por produto</button>
+          <button type="button" aria-pressed={comparar} onClick={() => setComparar(true)}>Comparar tabela</button>
+        </div></div>}
+        {listaMobile ? <div className="gerizo-mobile-records">
+          {visible.map(l => <article key={l.chave} className="gerizo-mobile-record">
+            <h2 className="gerizo-record-title">{l.titulo || "Produto sem nome"}</h2>
+            {l.sku ? <Link className="gerizo-record-open block py-2" href={historico(l.sku)} prefetch={false}>SKU {l.sku} · Histórico →</Link> : <p>Sem SKU</p>}
+            <details><summary>Preços por canal</summary>
+              {colunas.map(c => { const d = l.canais[c.id]; return <section key={c.id} className="gerizo-product-channel">
+                <h3>{c.nome}</h3>
+                <dl><div><dt>Vendido (médio)</dt><dd>{d?.vendido == null ? semDado : money(d.vendido)}</dd></div>
+                  <div><dt>Vitrine</dt><dd><Vitrine valor={d?.vitrine} catalogo={d?.catalogo} /></dd></div>
+                  <div><dt>Unidades</dt><dd>{d?.unidades == null ? semDado : count(d.unidades)}</dd></div>
+                  <div><dt>Receita</dt><dd>{d?.receita == null ? semDado : money(d.receita)}</dd></div>
+                </dl>{d?.curva && <Badge tone="neutral">Curva {d.curva}</Badge>}
+              </section>; })}
+            </details>
+          </article>)}
+          {(!linhas.length || !colunas.length) && <p className="p-6 text-sm text-ink-3">{!colunas.length ? "Nenhum canal disponível nesta empresa." : "Nenhum produto neste filtro."}</p>}
+        </div> : <div className={`max-h-[70vh] overflow-auto ${pendente ? "opacity-60" : ""}`} tabIndex={0} role="region" aria-label="Comparação de preços por SKU e canal">
           <table className="w-max min-w-full border-separate border-spacing-0 text-[13px]">
             <caption className="sr-only">Preço médio vendido, curva ABC por faturamento e unidades no período; preço de vitrine na última leitura da API. Valores ausentes aparecem como Sem dado.</caption>
             <thead className="sticky top-0 z-20 bg-panel-2">
@@ -233,7 +267,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
             </tr>)}</tbody>
           </table>
           {(!linhas.length || !colunas.length) && <p className="p-6 text-sm text-ink-3">{!colunas.length ? "Nenhum canal disponível nesta empresa." : "Nenhum produto neste filtro."}</p>}
-        </div>
+        </div>}
         <Pagination {...pagination} />
       </Panel>
       <p className="text-xs leading-relaxed text-ink-3">Curva por faturamento do canal: A até 80%, B até 95%, C o resto. Vitrine: última leitura da API.</p>

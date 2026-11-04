@@ -1,5 +1,5 @@
 import { carregarAnalise } from "@/lib/dados/analise";
-import AnaliseAnuncios from "./analise-cliente";
+import AnaliseAnuncios from "@/components/analise/central-anuncios";
 
 export const dynamic = "force-dynamic";
 

@@ -618,3 +618,10 @@ button:active:not(:disabled) { translate: 0 1px; }
   .gerizo-record-open { width: 100%; margin-top: 12px; text-align: left; color: var(--brand); font-size: 13px; font-weight: 600; }
   .gerizo-table-options summary { min-height: 44px; }
 }
+.gerizo-product-filters > summary { display: none; }
+@media (max-width: 767px) {
+  .gerizo-product-filters > summary { display: list-item; min-height: 44px; align-content: center; padding: 10px 16px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
+  .gerizo-product-channel { padding: 14px 0; border-top: 1px solid var(--line); }
+  .gerizo-product-channel h3 { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+  .gerizo-product-channel .badge { margin-top: 8px; }
+}
