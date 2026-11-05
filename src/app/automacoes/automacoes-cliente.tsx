@@ -592,6 +592,16 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
     [nossoPreco, nossaOferta, pisoDe, folga]
   );
 
+  /* Quantas janelas cada anúncio tem nesta promoção: é o que avisa que a
+     linha é uma data, e não o anúncio inteiro. Fica acima dos `return` de
+     erro e de carregamento: hook depois deles derruba a página inteira
+     quando os itens chegam. */
+  const janelasPorMlb = React.useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of dados?.itens ?? []) if (i.inicio) m.set(i.mlb, (m.get(i.mlb) ?? 0) + 1);
+    return m;
+  }, [dados]);
+
   if (erro) {
     return (
       <Panel className="mt-4">
@@ -629,14 +639,6 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
 
   /* Sobe a conta para o cartão: ele não tem como saber o que cabe sem os
      itens, e sem isto perderia o número ao fechar. */
-
-  /* Quantas janelas cada anúncio tem nesta promoção: é o que avisa que a
-     linha é uma data, e não o anúncio inteiro. */
-  const janelasPorMlb = React.useMemo(() => {
-    const m = new Map<string, number>();
-    for (const i of dados.itens) if (i.inicio) m.set(i.mlb, (m.get(i.mlb) ?? 0) + 1);
-    return m;
-  }, [dados.itens]);
 
   /** O que vai para o canal: o digitado ganha do proposto pela folga. */
   const precoFinal = (i: ItemAutomacao) => precos.get(chaveDe(i)) ?? nossaOferta(i)?.valor ?? null;
