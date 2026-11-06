@@ -49,5 +49,6 @@ export function resumoAnuncios(itens: AnuncioAnalisado[]) {
   const receita = medidos.reduce((s,a) => s+a.metricas.receita,0);
   const vendas = medidos.reduce((s,a) => s+a.metricas.vendas,0);
   const visitas = medidos.reduce((s,a) => s+a.metricas.visitas,0);
-  return { receita, vendas, visitas, medidos: medidos.length, conversao: visitas > 0 ? vendas/visitas*100 : null };
+  const comVisita = medidos.reduce((s,a) => s+a.semanas.reduce((t,w) => t+(w.vendasComVisita ?? w.vendas),0),0);
+  return { receita, vendas, visitas, medidos: medidos.length, conversao: visitas > 0 ? comVisita/visitas*100 : null };
 }

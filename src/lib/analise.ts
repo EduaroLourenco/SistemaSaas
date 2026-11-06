@@ -11,6 +11,8 @@
  *  3. cada item carrega o MOTIVO em texto de por que entrou em cada lente.
  */
 
+import type { DiaMovimento } from "./periodo-anuncios";
+
 /** Um dia com venda dentro da semana — é o "quando" e o "a quanto". */
 export type DiaVenda = {
   /** ISO, AAAA-MM-DD. */
@@ -30,6 +32,8 @@ export type SemanaDesempenho = {
   visitas: number;
   vendas: number;
   receita: number;
+  /** Vendas em dias com visita coletada: é o numerador da conversão. Ausente = todas. */
+  vendasComVisita?: number;
 
   /**
    * O preço da vitrine — o que estava publicado no anúncio.
@@ -83,6 +87,11 @@ export type Anuncio = {
   sincronizadoEm?: string | null;
   precoReferencia?: number | null;
   semanas: SemanaDesempenho[];
+  /** Histórico por dia, de onde a tela monta `semanas` para o período escolhido. */
+  movimento?: DiaMovimento[];
+  /** Vitrine e tarifa cobrada por segunda-feira da semana. */
+  vitrine?: Record<string, number>;
+  tarifas?: Record<string, number>;
 };
 
 export type Lente =
@@ -252,7 +261,11 @@ export function analisar(
 
   const itens: AnuncioAnalisado[] = base.map(
     ({ anuncio, semanas, visitas, vendas, receita }) => {
-      const conversao = visitas ? (vendas / visitas) * 100 : 0;
+      /* Venda de dia sem coleta fica fora: com numerador cheio e visitas pela
+         metade, a conversão dobra sem nada ter mudado. */
+      const conversao = visitas
+        ? (semanas.reduce((s, w) => s + (w.vendasComVisita ?? w.vendas), 0) / visitas) * 100
+        : 0;
 
       const subsidio = semanas.reduce((s, w) => {
         if (!w.precoIdeal || !w.vendas) return s;

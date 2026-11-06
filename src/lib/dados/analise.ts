@@ -1,72 +1,40 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
-import { carregarTarifasCobradas, chaveSemana } from "./tarifa-cobrada";
+import { carregarTarifasCobradas } from "./tarifa-cobrada";
 import { carregarFormulaBase } from "./formula-base";
 import { carregarVitrineSemanal } from "./vitrine-semanal";
-import type { Anuncio, SemanaDesempenho, DiaVenda } from "@/lib/analise";
+import type { Anuncio } from "@/lib/analise";
+import type { DiaMovimento } from "@/lib/periodo-anuncios";
 
 /**
- * Análise de anúncios, lida do banco.
+ * Anúncios lidos do banco, com o histórico por dia.
  *
- * Monta a mesma estrutura que `analisar()` já consome — um anúncio com a
- * lista das suas semanas — para que a lógica de lentes, elasticidade e
- * subsídio continue exatamente a mesma. A troca é de fonte, não de regra.
+ * O período é escolhido na tela, que soma estes dias: trocar de período não
+ * volta ao servidor nem perde os filtros.
  */
 
 export type DadosAnalise = {
   anuncios: Anuncio[];
-  /*
-   * Uma semana do histórico. `parcial` marca a semana em curso — a que
-   * contém hoje —, e `dias` diz quantos dos sete já passaram. A tela usa
-   * os dois para tirar a semana incompleta do recorte por padrão: somada
-   * junto, ela derruba toda métrica e toda comparação.
-   */
-  semanas: {
-    semana: string;
-    intervalo: string;
-    inicio: string;
-    fim: string;
-    dias: number;
-    parcial: boolean;
-  }[];
-  categorias: string[];
-  importacoes: {
-    id: string;
-    arquivo: string;
-    periodo: string;
-    linhas: number;
-    quando: string;
-  }[];
-  vazio: boolean;
+  /** Hoje em São Paulo: num servidor em UTC, depois das 21h a data já virou. */
+  hoje: string;
+  /** O dia mais antigo com movimento. Antes dele não há o que comparar. */
+  primeiraData: string | null;
 };
 
-type LinhaSemana = {
-  ano_iso: number;
-  semana_iso: number;
-  inicio: string;
-  fim: string;
-  visitas: number;
-  vendas: number;
-  receita: string;
-  preco_praticado: string | null;
-  preco_anunciado: string | null;
-  preco_ideal: string | null;
-  comissao_negociada: string | null;
-  anuncios: {
-    codigo_externo: string;
-    titulo: string;
-    sku_canal: string | null;
-    tipo: string;
-    status: string;
-    estoque: number | null;
-    preco_atual: string | number | null;
-    contas_canal: { nome: string } | null;
-  } | null;
+type LinhaCadastro = {
+  codigo_externo: string;
+  titulo: string;
+  sku_canal: string | null;
+  tipo: string;
+  status: string;
+  estoque: number | null;
+  preco_atual: string | number | null;
+  sincronizado_em: string | null;
+  contas_canal: { nome: string } | null;
 };
 
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
-const br = (iso: string) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
 
 /**
  * Categoria a partir do título.
@@ -113,193 +81,96 @@ function precoDeTabela(
 export async function carregarAnalise(): Promise<DadosAnalise> {
   const sb = await clienteServidor();
 
-  const [linhas, { data: imports }, tarifas, base, vitrine, cadastro] = await Promise.all([
+  const [visitas, itens, tarifas, base, vitrine, cadastro] = await Promise.all([
     paginar(() =>
       sb
-        .from("anuncio_desempenho_semanal")
-        .select(
-          "ano_iso,semana_iso,inicio,fim,visitas,vendas,receita,preco_praticado,preco_anunciado,preco_ideal,comissao_negociada," +
-            "anuncios(codigo_externo,titulo,sku_canal,tipo,status,estoque,preco_atual,contas_canal(nome))"
-        )
-        .order("semana_iso", { ascending: true })
+        .from("anuncio_desempenho_diario")
+        .select("data,visitas,anuncios!inner(codigo_externo)")
+        .ilike("anuncios.codigo_externo", "MLB%")
     ),
-    sb
-      .from("importacoes")
-      .select("id,nome_arquivo,periodo_inicio,periodo_fim,linhas_validas,criado_em")
-      .eq("tipo", "desempenho_anuncios")
-      .order("criado_em", { ascending: false })
-      .limit(20),
+    /*
+     * Venda vem dos pedidos: a diária só tem visita. E a semanal não serve de
+     * fonte: até junho de 2026 ela ficou sem as contas da Probel, e janeiro
+     * mostrava R$ 37 mil por semana onde os pedidos têm R$ 215 mil.
+     */
+    paginar(() =>
+      sb
+        .from("pedido_itens")
+        .select("codigo_externo,quantidade,preco_unitario,pedidos!inner(data,cancelado)")
+        .eq("pedidos.cancelado", false)
+        .ilike("codigo_externo", "MLB%")
+    ),
     carregarTarifasCobradas(sb),
     carregarFormulaBase(),
     carregarVitrineSemanal(sb),
     paginar(() => sb.from("anuncios").select("codigo_externo,titulo,sku_canal,tipo,status,estoque,preco_atual,sincronizado_em,contas_canal(nome)").ilike("codigo_externo", "MLB%").order("codigo_externo")),
   ]);
 
-  const dados = linhas as unknown as LinhaSemana[];
-
-  if (!dados.length && !cadastro.length) {
-    return { anuncios: [], semanas: [], categorias: [], importacoes: [], vazio: true };
-  }
-
-  const semanasVistas = new Map<
-    string,
-    { intervalo: string; inicio: string; fim: string }
-  >();
-  const porAnuncio = new Map<string, Anuncio>();
-
-  for (const l of dados) {
-    const a = l.anuncios;
-    if (!a) continue;
-
-    /*
-     * O ano entra no rótulo porque a semana ISO sozinha repete.
-     *
-     * A base tem 56 semanas, de outubro de 2025 a hoje, e as quatro de
-     * 2025 (S41 a S44) tinham o MESMO rótulo das de 2026. O efeito: a
-     * tela listava 52 semanas em vez de 56, somava 2025 dentro de 2026
-     * nas quatro, e a semana em curso herdava as datas da S44 de 2025 —
-     * o que a fazia passar por semana fechada.
-     */
-    const rotulo = `S${l.semana_iso}/${String(l.ano_iso).slice(2)}`;
-    if (!semanasVistas.has(rotulo)) {
-      semanasVistas.set(rotulo, {
-        intervalo: `${br(l.inicio)} – ${br(l.fim)}`,
-        inicio: l.inicio,
-        fim: l.fim,
-      });
-    }
-
-    let anuncio = porAnuncio.get(a.codigo_externo);
-    if (!anuncio) {
-      anuncio = {
-        mlb: a.codigo_externo,
-        sku: a.sku_canal ?? "",
-        titulo: a.titulo,
-        tipo: a.tipo === "premium" ? "Premium" : "Clássico",
-        status: a.status === "pausado" ? "pausado" : a.status === "finalizado" ? "finalizado" : "ativo",
-        conta: a.contas_canal?.nome ?? "Conta principal",
-        categoria: categoriaDe(a.titulo),
-        estoque: a.estoque,
-        precoAtual: a.preco_atual == null ? null : n(a.preco_atual),
-        semanas: [],
-      };
-      porAnuncio.set(a.codigo_externo, anuncio);
-    }
-
-    const receita = n(l.receita);
-    const vendas = l.vendas;
-
-    /*
-     * O detalhe por dia só existe quando vem da API de pedidos. A planilha
-     * fecha a semana, então `dias` fica vazio e a tela mostra a semana sem
-     * abrir. Melhor que espalhar a venda pelos sete dias: isso inventaria
-     * um dia de pico que nunca houve.
-     */
-    const dias: DiaVenda[] = [];
-
-    const semana: SemanaDesempenho = {
-      semana: rotulo,
-      intervalo: `${br(l.inicio)} – ${br(l.fim)}`,
-      visitas: l.visitas,
-      vendas,
-      receita,
-      /*
-       * Da leitura diária de vitrine, no último dia medido da semana.
-       * Null quando não houve leitura — cair para o preço pago, como
-       * antes, misturava dois preços diferentes e zerava a semana sem
-       * venda.
-       */
-      precoAnunciado:
-        n(l.preco_anunciado) ||
-        vitrine.get(chaveSemana(a.codigo_externo, l.inicio)) ||
-        null,
-      precoRealizado:
-        l.preco_praticado != null
-          ? n(l.preco_praticado)
-          : vendas
-            ? receita / vendas
-            : null,
-      /*
-       * Da Fórmula base, ao vivo. A coluna `preco_ideal` desta tabela
-       * está nula nas 10.452 linhas do banco — nunca foi gravada — e era
-       * ela que deixava três lentes apagadas e a margem subsidiada em
-       * zero. Fica o `??` porque, no dia em que alguém gravar a coluna,
-       * o valor gravado para aquela semana é mais preciso que a tabela
-       * de hoje.
-       */
-      precoIdeal: n(l.preco_ideal) || precoDeTabela(base, a.codigo_externo, a.sku_canal),
-      comissao: n(l.comissao_negociada),
-      // A de tabela vem do catálogo; esta vem do que foi cobrado de fato.
-      // Null quando não houve venda com comissão conhecida na semana.
-      tarifaCobrada: tarifas.get(chaveSemana(a.codigo_externo, l.inicio)) ?? null,
-      dias,
-      campanhas: [],
-    };
-
-    anuncio.semanas.push(semana);
-  }
-
-  // O cadastro também entra: falta de histórico não torna um anúncio invisível.
-  for (const a of cadastro as unknown as (NonNullable<LinhaSemana["anuncios"]> & { sincronizado_em: string | null })[]) {
-    const existente = porAnuncio.get(a.codigo_externo);
-    const atributos = {
-      sincronizadoEm: a.sincronizado_em,
-      precoReferencia: precoDeTabela(base, a.codigo_externo, a.sku_canal) || null,
-    };
-    if (existente) Object.assign(existente, atributos);
-    else porAnuncio.set(a.codigo_externo, {
-      mlb: a.codigo_externo, titulo: a.titulo, sku: a.sku_canal ?? "",
-      tipo: a.tipo === "premium" ? "Premium" : "Clássico",
-      status: a.status === "pausado" ? "pausado" : a.status === "finalizado" ? "finalizado" : "ativo",
-      conta: a.contas_canal?.nome ?? "Conta principal", categoria: categoriaDe(a.titulo),
-      estoque: a.estoque, precoAtual: a.preco_atual == null ? null : n(a.preco_atual),
-      semanas: [], ...atributos,
-    });
-  }
-
-  /* Ordem cronológica pela data da semana, não pelo número dela: com dois
-     anos na base, S41 de 2025 vem antes de S01 de 2026. */
-  const inicioDe = (rotulo: string) => semanasVistas.get(rotulo)?.inicio ?? "";
-  for (const a of porAnuncio.values()) {
-    a.semanas.sort((x, y) => inicioDe(x.semana).localeCompare(inicioDe(y.semana)));
-  }
-
-  /* Hoje no fuso de São Paulo: num servidor em UTC, depois das 21h a data
-     já virou e a semana em curso contaria um dia que ainda não passou. */
+  /* Hoje no fuso de São Paulo, não no do servidor. */
   const hoje = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
   }).format(new Date());
 
-  const semanas = [...semanasVistas.entries()]
-    .map(([semana, v]) => {
-      const parcial = hoje >= v.inicio && hoje <= v.fim;
-      /* Dias de calendário decorridos, não dias com leitura: o que torna a
-         semana incomparável é ela ainda não ter acabado. */
-      const dias = parcial
-        ? Math.floor((Date.parse(hoje) - Date.parse(v.inicio)) / 86_400_000) + 1
-        : 7;
-      return { semana, ...v, parcial, dias };
-    })
-    .sort((x, y) => x.inicio.localeCompare(y.inicio));
-
-  const categorias = [...new Set([...porAnuncio.values()].map((a) => a.categoria))].sort();
-
-  const importacoes = (imports ?? []).map((i) => ({
-    id: i.id as string,
-    arquivo: i.nome_arquivo as string,
-    periodo:
-      i.periodo_inicio && i.periodo_fim
-        ? `${br(i.periodo_inicio as string)} – ${br(i.periodo_fim as string)}`
-        : "—",
-    linhas: (i.linhas_validas as number) ?? 0,
-    quando: (i.criado_em as string).slice(0, 10),
-  }));
-
-  return {
-    anuncios: [...porAnuncio.values()],
-    semanas,
-    categorias,
-    importacoes,
-    vazio: false,
+  const dias = new Map<string, Map<string, DiaMovimento>>();
+  const diaDe = (mlb: string, data: string) => {
+    const doAnuncio = dias.get(mlb) ?? new Map<string, DiaMovimento>();
+    dias.set(mlb, doAnuncio);
+    const dia = doAnuncio.get(data) ?? ([data, null, 0, 0] as DiaMovimento);
+    doAnuncio.set(data, dia);
+    return dia;
   };
+
+  for (const v of visitas as unknown as { data: string; visitas: number; anuncios: { codigo_externo: string } | null }[]) {
+    if (v.anuncios) diaDe(v.anuncios.codigo_externo.toUpperCase(), v.data.slice(0, 10))[1] = v.visitas;
+  }
+  for (const it of itens as unknown as { codigo_externo: string; quantidade: number; preco_unitario: number; pedidos: { data: string } | null }[]) {
+    if (!it.pedidos?.data) continue;
+    const dia = diaDe(it.codigo_externo.toUpperCase(), it.pedidos.data.slice(0, 10));
+    const unidades = Number(it.quantidade) || 0;
+    dia[2] += unidades;
+    dia[3] = Math.round((dia[3] + unidades * (Number(it.preco_unitario) || 0)) * 100) / 100;
+  }
+
+  /* As duas fontes vêm com chave `MLB|segunda`; na tela elas ficam no anúncio. */
+  const porAnuncio = (mapa: Map<string, number>) => {
+    const saida = new Map<string, Record<string, number>>();
+    for (const [chave, valor] of mapa) {
+      const [mlb, segunda] = chave.split("|");
+      const doAnuncio = saida.get(mlb) ?? {};
+      doAnuncio[segunda] = valor;
+      saida.set(mlb, doAnuncio);
+    }
+    return saida;
+  };
+  const vitrines = porAnuncio(vitrine);
+  const cobradas = porAnuncio(tarifas);
+
+  // Falta de histórico não torna um anúncio invisível: o cadastro manda.
+  const anuncios: Anuncio[] = (cadastro as unknown as LinhaCadastro[]).map((a) => {
+    const mlb = a.codigo_externo;
+    return {
+      mlb,
+      sku: a.sku_canal ?? "",
+      titulo: a.titulo,
+      tipo: a.tipo === "premium" ? "Premium" : "Clássico",
+      status: a.status === "pausado" ? "pausado" : a.status === "finalizado" ? "finalizado" : "ativo",
+      conta: a.contas_canal?.nome ?? "Conta principal",
+      categoria: categoriaDe(a.titulo),
+      estoque: a.estoque,
+      precoAtual: a.preco_atual == null ? null : n(a.preco_atual),
+      sincronizadoEm: a.sincronizado_em,
+      precoReferencia: precoDeTabela(base, mlb, a.sku_canal) || null,
+      semanas: [],
+      movimento: [...(dias.get(mlb.toUpperCase())?.values() ?? [])].sort((x, y) => x[0].localeCompare(y[0])),
+      vitrine: vitrines.get(mlb),
+      tarifas: cobradas.get(mlb),
+    };
+  });
+
+  const primeiraData = anuncios.reduce<string | null>((menor, a) => {
+    const d = a.movimento?.[0]?.[0];
+    return d && (!menor || d < menor) ? d : menor;
+  }, null);
+
+  return { anuncios, hoje, primeiraData };
 }
