@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import { NOME_GDF3, useGdf3 } from "@/lib/marca-gdf3";
 
 /**
  * Tela de carregamento com a marca: fundo branco e as letras de "gerizo."
@@ -163,10 +164,19 @@ export function CarregandoGerizo() {
  * JavaScript da página chegar.
  */
 export function TelaGerizo({ id }: { id?: string }) {
+  const gdf3 = useGdf3();
+  const letras = gdf3
+    ? [...NOME_GDF3.replace(/ /g, " ")].map((c, i) => ({
+        c,
+        dx: ((i * 53) % 400) - 200,
+        dy: ((i * 97) % 300) - 150,
+        rot: ((i * 31) % 70) - 35,
+      }))
+    : LETRAS;
   return (
     <div id={id} className="gerizo-carregando" role="status" aria-live="polite" aria-label="Carregando">
-      <div className="gerizo-carregando-marca" aria-hidden="true">
-        {LETRAS.map((l, i) => (
+      <div className="gerizo-carregando-marca" aria-hidden="true" style={gdf3 ? { fontSize: "clamp(30px, 7vw, 56px)" } : undefined}>
+        {letras.map((l, i) => (
           <span
             key={i}
             className={l.c === "." ? "gerizo-letra gerizo-ponto" : "gerizo-letra"}

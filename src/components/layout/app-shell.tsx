@@ -26,14 +26,42 @@ import { Brand } from "@/components/ui/brand";
 import { Sheet, FilterSheet } from "@/components/ui/controls";
 import { Disclosure } from "@/components/ui/disclosure";
 import { TelaGerizo } from "./carregando-gerizo";
+import { ehGdf3, gravarGdf3, useTituloGdf3 } from "@/lib/marca-gdf3";
 import { BotaoAtualizar } from "@/components/painel/botao-atualizar";
 import { NavegacaoArea } from "./navegacao-area";
 import { RoteiroArea } from "./roteiro-area";
 
 /* ══ Marca — monograma neutro, sem nome definido ══════════════ */
 
+/* Probel e Imprimil usam o nome "GDF3 by Gerizo" no lugar do logo. Lê a
+   empresa ativa da mesma rota do rodapé e relê quando o seletor troca. */
 function Wordmark() {
-  return <Link href="/" aria-label="Gerizo — Visão geral" className="inline-flex items-center py-1"><Brand /></Link>;
+  const [gdf3, setGdf3] = React.useState(false);
+  useTituloGdf3(gdf3);
+  React.useEffect(() => {
+    let vivo = true;
+    const ler = () =>
+      fetch("/api/operacao")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!vivo || !d) return;
+          const v = ehGdf3(`${d.empresa ?? ""} ${d.nome ?? ""}`);
+          setGdf3(v);
+          gravarGdf3(v);
+        })
+        .catch(() => {});
+    ler();
+    window.addEventListener("gerizo:operacao-trocada", ler);
+    return () => {
+      vivo = false;
+      window.removeEventListener("gerizo:operacao-trocada", ler);
+    };
+  }, []);
+  return (
+    <Link href="/" aria-label={gdf3 ? "GDF3 by Gerizo — Visão geral" : "Gerizo — Visão geral"} className="inline-flex items-center py-1">
+      {gdf3 ? <span className="whitespace-nowrap text-[17px] font-bold tracking-tight text-ink">GDF3 <span className="font-medium text-ink-2">by Gerizo</span></span> : <Brand />}
+    </Link>
+  );
 }
 
 /* ══ Seletor de conta / operação — o que faz parecer SaaS ═════ */
