@@ -16,8 +16,12 @@ export async function GET(req: Request) {
   const num = (k: string) => Number(u.searchParams.get(k));
   const [a, l, c, pesoKg, preco] = ["altura", "largura", "comprimento", "peso", "preco"].map(num);
   const tipo = u.searchParams.get("tipo") === "premium" ? "gold_pro" : "gold_special";
+  /* Anúncio que já existe: o Meli conhece medida, preço e tipo dele, e cota
+     mesmo sem nenhuma venda. */
+  const item = (u.searchParams.get("item") ?? "").toUpperCase();
+  const porAnuncio = /^MLB[0-9]+$/.test(item);
 
-  if (![a, l, c, pesoKg, preco].every((v) => Number.isFinite(v) && v > 0)) {
+  if (!porAnuncio && ![a, l, c, pesoKg, preco].every((v) => Number.isFinite(v) && v > 0)) {
     return NextResponse.json({ erro: "Informe altura, largura, comprimento, peso e preço." }, { status: 400 });
   }
   if (!(await contasMeli()).some((x) => x.id === conta && x.conectada)) {
@@ -26,7 +30,7 @@ export async function GET(req: Request) {
 
   try {
     const eu = await vendedor(conta);
-    const q = new URLSearchParams({
+    const q = porAnuncio ? new URLSearchParams({ item_id: item, verbose: "true" }) : new URLSearchParams({
       dimensions: `${Math.ceil(a)}x${Math.ceil(l)}x${Math.ceil(c)},${Math.ceil(pesoKg * 1000)}`,
       item_price: preco.toFixed(2),
       listing_type_id: tipo,

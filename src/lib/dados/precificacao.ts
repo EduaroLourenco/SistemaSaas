@@ -41,6 +41,10 @@ export type ProdutoPreco = {
   impostoPct: number | null;
   margemMinimaPct: number | null;
   pesoKg: number | null;
+  /** Frete por unidade salvo à mão ou cotado (`produtos.frete_unitario`). */
+  freteSalvo: number | null;
+  /** O anúncio clássico mais barato no Meli, para cotar o frete pela API. */
+  mlbMeli: string | null;
   medidas: { altura: number; largura: number; comprimento: number } | null;
   porCanal: Record<string, VendaCanal>;
   /** Gasto de Ads do Meli na janela de `adsJanela`. Nulo sem anúncio patrocinado. */
@@ -80,14 +84,14 @@ export async function carregarPrecificacao(): Promise<DadosPrecificacao | null> 
     paginar(() =>
       sb
         .from("produtos")
-        .select("id,sku,titulo,custo_unitario,embalagem,aliquota_impostos,margem_minima_pct,peso_kg,altura_cm,largura_cm,comprimento_cm")
+        .select("id,sku,titulo,custo_unitario,embalagem,aliquota_impostos,margem_minima_pct,peso_kg,altura_cm,largura_cm,comprimento_cm,frete_unitario")
         .eq("operacao_id", op.id)
         .order("sku")
     ),
     paginar(() =>
       sb
         .from("anuncios")
-        .select("id,produto_id,canal_id,tipo,preco_atual,status")
+        .select("id,produto_id,canal_id,codigo_externo,tipo,preco_atual,status")
         .eq("operacao_id", op.id)
         .eq("status", "ativo")
         .order("id")
@@ -134,7 +138,8 @@ export async function carregarPrecificacao(): Promise<DadosPrecificacao | null> 
   };
 
   /* Vitrine: o menor preço ativo. No Meli, o clássico — o premium é outra régua. */
-  type Anuncio = { id: string; produto_id: string | null; canal_id: string; tipo: string | null; preco_atual: number | null };
+  type Anuncio = { id: string; produto_id: string | null; canal_id: string; codigo_externo: string; tipo: string | null; preco_atual: number | null };
+  const mlbDoProduto = new Map<string, string>();
   const anuncios = anunciosRaw as unknown as Anuncio[];
   const produtoDoAnuncio = new Map(anuncios.map((a) => [a.id, a.produto_id]));
   for (const a of anuncios) {
@@ -143,7 +148,10 @@ export async function carregarPrecificacao(): Promise<DadosPrecificacao | null> 
     if (codigo === "mercado_livre" && a.tipo && a.tipo !== "classico") continue;
     const v = da(a.produto_id, codigo);
     const preco = Number(a.preco_atual);
-    if (v.vitrine == null || preco < v.vitrine) v.vitrine = preco;
+    if (v.vitrine == null || preco < v.vitrine) {
+      v.vitrine = preco;
+      if (codigo === "mercado_livre") mlbDoProduto.set(a.produto_id, a.codigo_externo);
+    }
   }
 
   type Pedido = {
@@ -215,6 +223,8 @@ export async function carregarPrecificacao(): Promise<DadosPrecificacao | null> 
         impostoPct: n(p.aliquota_impostos),
         margemMinimaPct: n(p.margem_minima_pct),
         pesoKg: n(p.peso_kg),
+        freteSalvo: n(p.frete_unitario),
+        mlbMeli: mlbDoProduto.get(p.id) ?? null,
         medidas: a && l && c ? { altura: a, largura: l, comprimento: c } : null,
         porCanal: vendas.get(p.id) ?? {},
         adsMeli: ads?.porProduto.get(p.id)?.investimento ?? null,

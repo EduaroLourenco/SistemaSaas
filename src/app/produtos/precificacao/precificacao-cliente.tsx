@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, EmptyState } from "@/components/ui/primitives";
 import { Tabs, Segmented, Input, Field, Select } from "@/components/ui/controls";
@@ -12,6 +13,7 @@ import {
   regraDoCanal, regraEfetiva, contaNoCanal, precoNoCanal, custoMeliEstimado,
   type CustoProduto, type Logistica, type RegraCanal,
 } from "@/lib/precificacao/regras-canal";
+import type { Decomposicao } from "@/lib/dados/formula-preco";
 import type { DadosPrecificacao, ProdutoPreco } from "@/lib/dados/precificacao";
 
 /**
@@ -119,6 +121,9 @@ export default function PrecificacaoCliente({ dados }: { dados: DadosPrecificaca
   const [imposto, setImposto] = React.useState("");
   const [meta, setMeta] = React.useState("20");
   const [tacos, setTacos] = React.useState(dados?.tacosMeliPct != null ? String(dados.tacosMeliPct) : "0");
+  const [cfg, setCfg] = React.useState<Record<string, { tipo: string; comissao: string }>>({});
+  const [sim, setSim] = React.useState<Simulacao>({});
+  const [produtoCotacao, setProdutoCotacao] = React.useState<string | null>(null);
 
   if (!dados) {
     return (
@@ -129,36 +134,59 @@ export default function PrecificacaoCliente({ dados }: { dados: DadosPrecificaca
     );
   }
 
-  const regra = regraDoCanal(canal)!;
-  const impostoGlobal = ler(imposto);
-  const metaPct = ler(meta) ?? 0;
-  const marketingPct = ler(tacos) ?? 0;
+  const regraBase = regraDoCanal(canal)!;
+  const cfgCanal = cfg[canal] ?? { tipo: regraBase.tipos[0].id, comissao: "" };
+  const regra = regraEfetiva(regraBase, cfgCanal.tipo, ler(cfgCanal.comissao));
+  const faixaCat = regra.tipos[0].faixaCategoria;
+  const ctx: Contexto = {
+    dados, canal, regra,
+    impostoGlobal: ler(imposto),
+    metaPct: ler(meta) ?? 0,
+    adsPct: ler(tacos) ?? 0,
+    sim, setSim,
+  };
 
   const filtros = (
     <div className="flex flex-wrap items-end gap-3">
-      <Field label="Imposto %" className="w-[120px]">
+      <Field label="Imposto %" className="w-[110px]">
         <Input type="number" inputMode="decimal" value={imposto} onChange={(e) => setImposto(e.target.value)} placeholder="do produto" />
       </Field>
       <Field label="Margem desejada %" className="w-[140px]">
         <Input type="number" inputMode="decimal" value={meta} onChange={(e) => setMeta(e.target.value)} />
       </Field>
-      <Field label="Marketing sem Ads medido %" className="w-[190px]">
+      <Field label="Ads (TACoS) %" className="w-[120px]">
         <Input type="number" inputMode="decimal" value={tacos} onChange={(e) => setTacos(e.target.value)} />
       </Field>
       <Field label="Canal" className="min-w-0">
         <Segmented options={dados.canais.map((c) => ({ value: c.codigo, label: c.nome }))} value={canal} onChange={setCanal} />
       </Field>
+      {regraBase.tipos.length > 1 && (
+        <Field label="Tipo" className="w-[170px]">
+          <Select value={cfgCanal.tipo} onChange={(e) => setCfg({ ...cfg, [canal]: { ...cfgCanal, tipo: e.target.value } })}>
+            {regraBase.tipos.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+          </Select>
+        </Field>
+      )}
+      {faixaCat ? (
+        <Field label={`Comissão % (${faixaCat[0]} a ${faixaCat[1]})`} className="w-[150px]">
+          <Input type="number" inputMode="decimal" value={cfgCanal.comissao} placeholder={String(regraBase.tipos.find((t) => t.id === cfgCanal.tipo)?.faixas[0].comissaoPct ?? "")} onChange={(e) => setCfg({ ...cfg, [canal]: { ...cfgCanal, comissao: e.target.value } })} />
+        </Field>
+      ) : (
+        <Field label="Comissão">
+          <span className="num flex h-10 items-center text-[12.5px] text-ink-2">{regra.faixas.map((x) => `${x.comissaoPct}% + ${money(x.taxaFixa)}`).join(" / ")}</span>
+        </Field>
+      )}
     </div>
   );
 
+  const cotar = (produtoId: string) => {
+    setProdutoCotacao(produtoId);
+    setAba("cotacao");
+  };
+
   return (
     <>
-      <PageHeader
-        title="Precificação"
-        badge={<Badge>{dados.empresa}</Badge>}
-        filters={filtros}
-        mobileFilters={false}
-      />
+      <PageHeader title="Precificação" badge={<Badge>{dados.empresa}</Badge>} filters={filtros} mobileFilters={false} />
       <PageBody>
         <Tabs
           className="-mx-4 md:-mx-6"
@@ -171,115 +199,217 @@ export default function PrecificacaoCliente({ dados }: { dados: DadosPrecificaca
           onChange={setAba}
         />
         {regra.conferir && <p className="text-[12.5px] text-warn">{regra.nome}: conferir {regra.conferir}</p>}
-        {aba === "precos" && (
-          <Precos dados={dados} canal={canal} impostoGlobal={impostoGlobal} metaPct={metaPct} marketingPct={marketingPct} />
-        )}
+        {aba === "precos" && <Precos ctx={ctx} onCotar={cotar} />}
         {aba === "cotacao" && (
-          <Cotacao dados={dados} impostoGlobal={impostoGlobal} metaPct={metaPct} marketingPct={marketingPct} />
+          <Cotacao key={produtoCotacao ?? "novo"} dados={dados} produtoId={produtoCotacao} onProduto={setProdutoCotacao} impostoGlobal={ctx.impostoGlobal} metaPct={ctx.metaPct} marketingPct={ctx.adsPct} />
         )}
-        {aba === "contribuicao" && (
-          <Contribuicao dados={dados} canal={canal} impostoGlobal={impostoGlobal} marketingPct={marketingPct} />
-        )}
+        {aba === "contribuicao" && <Contribuicao ctx={ctx} />}
       </PageBody>
     </>
   );
 }
 
-/* ── A conta de um produto num canal ──────────────────────────────────── */
+/* ── O que as abas dividem ────────────────────────────────────────────── */
+
+/** Frete e preço que o usuário digitou para simular, por canal e produto. */
+type Simulacao = Record<string, { frete?: string; preco?: string }>;
+
+type Contexto = {
+  dados: DadosPrecificacao;
+  canal: string;
+  /** Já com o tipo de anúncio e a comissão da categoria escolhidos no topo. */
+  regra: RegraCanal;
+  impostoGlobal: number | null;
+  metaPct: number;
+  /** Ads planejado: entra no preço sugerido e na simulação. O realizado usa o medido. */
+  adsPct: number;
+  sim: Simulacao;
+  setSim: (s: Simulacao) => void;
+};
 
 /**
- * Marketing do produto, em % do preço.
- *
- * No Meli, produto que vendeu tem o Ads MEDIDO: gasto dos anúncios dele ÷
- * vendido (zero se não tem anúncio patrocinado). O campo global de TACoS
- * vale só para o resto: outros canais e produto sem venda, que é estimativa.
+ * Frete por unidade, do mais confiável ao menos: o digitado aqui, o que o
+ * canal cobrou nos pedidos, o salvo no produto, a estimativa do Meli abaixo
+ * de R$ 79. Sem nenhum, a linha pede para cotar.
  */
-function adsDo(p: ProdutoPreco, canal: string, marketingPct: number): { pct: number; medido: boolean } {
-  const v = p.porCanal[canal];
-  if (canal === "mercado_livre" && v?.vendido) return { pct: p.adsMeliPct ?? 0, medido: true };
-  return { pct: marketingPct, medido: false };
+function freteDo(ctx: Contexto, p: ProdutoPreco, precoRef: number | null): { valor: number | null; origem: string } {
+  const digitado = ler(ctx.sim[ctx.canal + p.id]?.frete ?? "");
+  if (digitado != null) return { valor: digitado, origem: "simulado" };
+  if (ctx.regra.frete === "incluso") return { valor: 0, origem: "na tarifa" };
+  const v = p.porCanal[ctx.canal];
+  if (v?.unidadesComRecebido) return { valor: v.freteVendedor / v.unidadesComRecebido, origem: "medido" };
+  if (p.freteSalvo != null) return { valor: p.freteSalvo, origem: "salvo" };
+  const est = precoRef != null ? custoMeliEstimado(precoRef, p.pesoKg, "coleta") : null;
+  if (est) return { valor: est.frete, origem: "estimado" };
+  return { valor: null, origem: "cotar" };
 }
 
+/** Ads medido do produto no Meli (gasto ÷ vendido), para o realizado. */
+const adsMedido = (p: ProdutoPreco, canal: string) =>
+  canal === "mercado_livre" && p.porCanal[canal]?.vendido ? (p.adsMeliPct ?? 0) : null;
 
 type Linha = {
   p: ProdutoPreco;
-  ads: { pct: number; medido: boolean };
-  custo: CustoProduto | null;
-  semImposto: boolean;
+  custoTotal: number | null;
   vitrine: number | null;
   unidades: number;
   vendidoUn: number | null;
   recebeUn: number | null;
   margemReal: number | null;
-  frete: number | null;
+  adsReal: number | null;
+  frete: { valor: number | null; origem: string };
   preco: number | null;
-  lucroUn: number | null;
+  precoSim: number | null;
+  sim: (Decomposicao & { recebe: number }) | null;
 };
 
-function linhaDo(p: ProdutoPreco, canal: string, impostoGlobal: number | null, metaPct: number, marketingPct: number): Linha {
-  const regra = regraDoCanal(canal)!;
-  const v = p.porCanal[canal];
-  const ads = adsDo(p, canal, marketingPct);
-  const impostoPct = p.impostoPct ?? impostoGlobal;
+function linhaDo(ctx: Contexto, p: ProdutoPreco): Linha {
+  const v = p.porCanal[ctx.canal];
+  const impostoPct = ctx.impostoGlobal ?? p.impostoPct ?? 0;
   const un = v?.unidadesComRecebido ?? 0;
   const vendidoUn = un ? v!.vendidoComRecebido / un : null;
   const recebeUn = un ? v!.recebido / un : null;
-  /* Frete do vendedor: o que o canal cobrou nos pedidos. Canal com frete
-     incluso na tarifa não tem esta parcela. Sem venda no Meli, falta medir. */
-  const frete = regra.frete === "incluso" ? 0 : un ? v!.freteVendedor / un : null;
-
-  const base = p.custo == null ? null : p.custo + (p.embalagem ?? 0);
-  const custo: CustoProduto | null =
-    base == null || frete == null
-      ? null
-      : { mercadoria: p.custo!, embalagem: p.embalagem ?? 0, frete, impostoPct: impostoPct ?? 0, marketingPct: ads.pct };
+  const custoTotal = p.custo == null ? null : p.custo + (p.embalagem ?? 0);
+  const adsReal = adsMedido(p, ctx.canal);
 
   const margemReal =
-    base != null && vendidoUn && recebeUn != null
-      ? ((recebeUn - base - vendidoUn * (((impostoPct ?? 0) + ads.pct) / 100)) / vendidoUn) * 100
+    custoTotal != null && vendidoUn && recebeUn != null
+      ? ((recebeUn - custoTotal - vendidoUn * ((impostoPct + (adsReal ?? 0)) / 100)) / vendidoUn) * 100
       : null;
 
-  const r = custo ? precoNoCanal(regra, custo, p.margemMinimaPct ?? metaPct) : null;
+  /* Sem anúncio no canal, a vitrine do Meli é o ponto de partida da simulação. */
+  const vitrine = v?.vitrine ?? null;
+  const referencia = vitrine ?? p.porCanal.mercado_livre?.vitrine ?? null;
+  const frete = freteDo(ctx, p, referencia);
+  const custo: CustoProduto | null =
+    custoTotal == null || frete.valor == null
+      ? null
+      : { mercadoria: p.custo!, embalagem: p.embalagem ?? 0, frete: frete.valor, impostoPct, marketingPct: ctx.adsPct };
+
+  const r = custo ? precoNoCanal(ctx.regra, custo, p.margemMinimaPct ?? ctx.metaPct) : null;
   const preco = r?.ok ? r.preco : null;
+  const precoSim = ler(ctx.sim[ctx.canal + p.id]?.preco ?? "") ?? referencia ?? preco;
   return {
-    p,
-    ads,
-    custo,
-    semImposto: impostoPct == null,
-    vitrine: v?.vitrine ?? null,
-    unidades: v?.unidades ?? 0,
-    vendidoUn,
-    recebeUn,
-    margemReal,
-    frete,
-    preco,
-    lucroUn: preco != null && custo ? contaNoCanal(regra, custo, preco).margem : null,
+    p, custoTotal, vitrine, unidades: v?.unidades ?? 0, vendidoUn, recebeUn, margemReal, adsReal, frete, preco, precoSim,
+    sim: custo && precoSim ? contaNoCanal(ctx.regra, custo, precoSim) : null,
   };
+}
+
+/* ── Frete: campo pequeno que abre na linha ───────────────────────────── */
+
+function CampoFrete({ ctx, linha }: { ctx: Contexto; linha: Linha }) {
+  const router = useRouter();
+  const [aberto, setAberto] = React.useState(false);
+  const [valor, setValor] = React.useState("");
+  const [estado, setEstado] = React.useState<{ carregando?: boolean; erro?: string; salvando?: boolean }>({});
+  const k = ctx.canal + linha.p.id;
+  const meli = ctx.canal === "mercado_livre";
+  const podeBuscar = meli && linha.p.mlbMeli && ctx.dados.contaMeli;
+
+  const buscar = async () => {
+    setEstado({ carregando: true });
+    try {
+      const q = new URLSearchParams({ conta: ctx.dados.contaMeli!, item: linha.p.mlbMeli! });
+      const r = await fetch(`/api/precificacao/frete?${q}`);
+      const j = await r.json();
+      if (r.ok && j.frete != null) { setValor(String(j.frete)); setEstado({}); }
+      else setEstado({ erro: j.erro ?? "o Meli não devolveu custo" });
+    } catch {
+      setEstado({ erro: "sem conexão" });
+    }
+  };
+
+  const abrir = () => {
+    setValor(linha.frete.valor != null ? linha.frete.valor.toFixed(2) : "");
+    setEstado({});
+    setAberto(true);
+    if (podeBuscar && linha.frete.valor == null) void buscar();
+  };
+
+  const usarAqui = () => {
+    ctx.setSim({ ...ctx.sim, [k]: { ...ctx.sim[k], frete: valor } });
+    setAberto(false);
+  };
+
+  /* Salvar grava no produto (`frete_unitario`): vale para as outras telas e
+     para a próxima visita. É o frete do Meli; nos outros canais fica só aqui. */
+  const salvar = async () => {
+    const v = ler(valor);
+    if (v == null) return;
+    setEstado({ salvando: true });
+    const r = await fetch("/api/custos", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ edicoes: [{ produtoId: linha.p.id, freteUnitario: v }] }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      setEstado({ erro: j.erro ?? `não salvou (HTTP ${r.status})` });
+      return;
+    }
+    const { [k]: _, ...resto } = ctx.sim;
+    void _;
+    ctx.setSim(resto);
+    setAberto(false);
+    router.refresh();
+  };
+
+  return (
+    <span className="relative inline-block">
+      <button type="button" onClick={abrir} className="min-h-[40px] text-right leading-tight">
+        {linha.frete.valor != null ? <Moeda v={linha.frete.valor} className="underline decoration-line-2 underline-offset-2" /> : <span className="text-[12.5px] font-medium text-brand">cotar</span>}
+        <span className="block text-[11px] text-ink-3">{linha.frete.origem}</span>
+      </button>
+      {aberto && (
+        <span className="absolute right-0 top-full z-30 mt-1 block w-[230px] rounded-r2 border border-line bg-panel p-3 text-left shadow-[var(--sh-3)]">
+          <span className="mb-1 block text-[12px] text-ink-3">Frete por unidade</span>
+          <Input type="number" inputMode="decimal" autoFocus value={valor} onChange={(e) => setValor(e.target.value)} placeholder={estado.carregando ? "buscando…" : "R$"} />
+          {podeBuscar && (
+            <button type="button" onClick={buscar} disabled={estado.carregando} className="mt-2 text-[12.5px] font-medium text-brand disabled:opacity-50">
+              {estado.carregando ? "Buscando no Meli…" : "Buscar no Meli"}
+            </button>
+          )}
+          {estado.erro && <span className="mt-1 block text-[12px] text-down">{estado.erro}</span>}
+          <span className="mt-3 flex gap-2">
+            {meli && (
+              <button type="button" onClick={salvar} disabled={ler(valor) == null || estado.salvando} className="h-9 flex-1 rounded-r1 bg-brand text-[13px] font-medium text-brand-ink disabled:opacity-50">
+                {estado.salvando ? "Salvando…" : "Salvar"}
+              </button>
+            )}
+            <button type="button" onClick={usarAqui} disabled={ler(valor) == null} className="h-9 flex-1 rounded-r1 border border-line text-[13px] disabled:opacity-50">
+              Só simular
+            </button>
+            <button type="button" onClick={() => setAberto(false)} aria-label="Fechar" className="h-9 w-9 rounded-r1 border border-line text-ink-3">×</button>
+          </span>
+        </span>
+      )}
+    </span>
+  );
 }
 
 /* ── Preços ───────────────────────────────────────────────────────────── */
 
-function Precos({ dados, canal, impostoGlobal, metaPct, marketingPct }: {
-  dados: DadosPrecificacao; canal: string; impostoGlobal: number | null; metaPct: number; marketingPct: number;
-}) {
+function Precos({ ctx, onCotar }: { ctx: Contexto; onCotar: (produtoId: string) => void }) {
+  const { dados, canal } = ctx;
   const linhas = dados.produtos
     .filter((p) => p.custo != null || (p.porCanal[canal]?.unidades ?? 0) > 0)
-    .map((p) => linhaDo(p, canal, impostoGlobal, metaPct, marketingPct));
+    .map((p) => linhaDo(ctx, p));
   const ocultos = dados.produtos.length - linhas.length;
 
-  /* Os números de topo: o realizado do canal na janela. */
+  /* Os números de topo: o realizado do canal na janela, com o Ads medido. */
   let vendido = 0, recebido = 0, custoVendido = 0, semCusto = 0, semImposto = false;
   for (const l of linhas) {
     const v = l.p.porCanal[canal];
     if (!v?.unidadesComRecebido) continue;
     vendido += v.vendidoComRecebido;
     recebido += v.recebido;
-    if (l.p.custo == null) { semCusto += v.unidadesComRecebido; continue; }
-    const imp = l.p.impostoPct ?? impostoGlobal;
+    if (l.custoTotal == null) { semCusto += v.unidadesComRecebido; continue; }
+    const imp = ctx.impostoGlobal ?? l.p.impostoPct;
     if (imp == null) semImposto = true;
-    custoVendido += (l.p.custo + (l.p.embalagem ?? 0)) * v.unidadesComRecebido + v.vendidoComRecebido * (((imp ?? 0) + l.ads.pct) / 100);
+    custoVendido += l.custoTotal * v.unidadesComRecebido + v.vendidoComRecebido * (((imp ?? 0) + (l.adsReal ?? 0)) / 100);
   }
   const contrib = recebido - custoVendido;
+  const k = (l: Linha) => canal + l.p.id;
 
   return (
     <>
@@ -289,15 +419,15 @@ function Precos({ dados, canal, impostoGlobal, metaPct, marketingPct }: {
             className="col-span-2"
             label={`Margem de contribuição${semImposto ? " · sem imposto" : ""}${semCusto ? " · com produto sem custo" : ""}`}
             value={money(contrib)}
-            hint={`${pct((contrib / vendido) * 100)} do vendido`}
+            hint={`${pct((contrib / vendido) * 100)} do vendido · Ads medido`}
           />
           <StatTile label="Vendido" value={money(vendido)} hint={`${dados.de.slice(8)}/${dados.de.slice(5, 7)} a ${dados.ate.slice(8)}/${dados.ate.slice(5, 7)}`} />
           <StatTile label="Recebido" value={money(recebido)} hint={`${pct((recebido / vendido) * 100)} do vendido · do canal`} />
         </div>
       ) : (
-        <Panel className="px-4 py-5">
-          <p className="text-[22px] font-semibold text-ink-3">Sem venda neste canal</p>
-          <p className="text-[12.5px] text-ink-3">preço pela tabela do canal</p>
+        <Panel className="px-4 py-4">
+          <p className="text-[18px] font-semibold text-ink-2">Sem venda neste canal</p>
+          <p className="text-[12.5px] text-ink-3">simulação pela tarifa do canal</p>
         </Panel>
       )}
 
@@ -308,7 +438,7 @@ function Precos({ dados, canal, impostoGlobal, metaPct, marketingPct }: {
           linhas={linhas}
           chave={(l) => l.p.id}
           linhaInteira={(l) =>
-            l.p.custo == null
+            l.custoTotal == null
               ? { aPartirDe: 1, motivo: <Link href="/financeiro/custos" className="underline">sem custo cadastrado</Link> }
               : null
           }
@@ -316,50 +446,67 @@ function Precos({ dados, canal, impostoGlobal, metaPct, marketingPct }: {
             {
               id: "produto", titulo: "Produto", esq: true, valor: (l) => l.unidades,
               celula: (l) => (
-                <span className="block max-w-[260px] whitespace-normal leading-tight">
+                <span className="block max-w-[250px] whitespace-normal leading-tight">
                   <span className="font-medium text-ink">{l.p.titulo}</span>
-                  <span className="block text-[11.5px] text-ink-3">{l.p.sku}</span>
+                  <span className="mt-0.5 flex items-center gap-2 text-[11.5px] text-ink-3">
+                    {l.p.sku}
+                    <button type="button" onClick={() => onCotar(l.p.id)} className="font-medium text-brand">cotar</button>
+                  </span>
                 </span>
               ),
             },
-            { id: "custo", titulo: "Custo", valor: (l) => (l.p.custo == null ? null : l.p.custo + (l.p.embalagem ?? 0)), celula: (l) => <Moeda v={l.p.custo == null ? null : l.p.custo + (l.p.embalagem ?? 0)} /> },
+            { id: "custo", titulo: "Custo", valor: (l) => l.custoTotal, celula: (l) => <Moeda v={l.custoTotal} /> },
             { id: "vitrine", titulo: "Vitrine", valor: (l) => l.vitrine, celula: (l) => (l.vitrine == null ? <span className="text-[12.5px] text-ink-3">sem anúncio</span> : <Moeda v={l.vitrine} />) },
             {
               id: "vendido", titulo: "Vendido a", valor: (l) => l.vendidoUn,
               celula: (l) =>
                 l.vendidoUn == null ? (
-                  <span className="text-[12.5px] text-ink-3">{l.unidades ? "sem recebido do canal" : "sem venda"}</span>
+                  <span className="text-[12.5px] text-ink-3">{l.unidades ? "sem recebido" : "sem venda"}</span>
                 ) : (
                   <span className="leading-tight">
                     <Moeda v={l.vendidoUn} />
-                    <span className="block text-[11.5px] text-ink-3">{l.unidades} un.</span>
+                    <span className="block text-[11.5px] text-ink-3">{l.unidades} un. · recebe {money(l.recebeUn ?? 0)}</span>
                   </span>
                 ),
             },
-            { id: "recebe", titulo: "Recebe", valor: (l) => l.recebeUn, celula: (l) => <Moeda v={l.recebeUn} /> },
             {
-              id: "margem", titulo: "Margem", valor: (l) => l.margemReal,
-              celula: (l) => (l.margemReal == null ? <span className="text-ink-3">—</span> : <span className={cn("num font-semibold", tom(l.margemReal))}>{pct(l.margemReal)}</span>),
-            },
-            {
-              id: "ads", titulo: "Ads", valor: (l) => (l.ads.medido ? l.ads.pct : null),
+              id: "margem", titulo: "Margem real", valor: (l) => l.margemReal,
               celula: (l) =>
-                !l.ads.medido ? <span className="text-[12.5px] text-ink-3">{pct(l.ads.pct)} est.</span>
-                : l.p.adsMeli ? (
+                l.margemReal == null ? <span className="text-ink-3">—</span> : (
                   <span className="leading-tight">
-                    <span className="num">{pct(l.ads.pct)}</span>
-                    <span className="block text-[11.5px] text-ink-3">{money(l.p.adsMeli)}</span>
+                    <span className={cn("num font-semibold", tom(l.margemReal))}>{pct(l.margemReal)}</span>
+                    <span className="block text-[11.5px] text-ink-3">Ads {pct(l.adsReal ?? 0)}</span>
                   </span>
-                ) : <span className="text-[12.5px] text-ink-3">sem Ads</span>,
+                ),
             },
+            { id: "frete", titulo: "Frete", valor: (l) => l.frete.valor, celula: (l) => <CampoFrete ctx={ctx} linha={l} /> },
             {
-              id: "preco", titulo: `Preço p/ ${metaPct}%`, valor: (l) => l.preco,
+              id: "preco", titulo: `Preço p/ ${ctx.metaPct}%`, valor: (l) => l.preco,
               celula: (l) =>
                 l.preco != null ? <Moeda v={l.preco} className="font-semibold text-brand" />
-                : l.frete == null ? <span className="text-[12.5px] text-ink-3">frete: cotar</span>
-                : <span className="text-[12.5px] text-ink-3">não fecha</span>,
+                : <span className="text-[12.5px] text-ink-3">{l.frete.valor == null ? "falta frete" : "não fecha"}</span>,
             },
-            { id: "lucro", titulo: "Lucro/un.", valor: (l) => l.lucroUn, celula: (l) => <Moeda v={l.lucroUn} /> },
+            {
+              id: "simular", titulo: "Simular preço", valor: (l) => l.precoSim,
+              celula: (l) => (
+                <Input
+                  aria-label={`Preço simulado de ${l.p.titulo}`}
+                  type="number" inputMode="decimal" className="w-24"
+                  value={ctx.sim[k(l)]?.preco ?? (l.precoSim != null ? l.precoSim.toFixed(2) : "")}
+                  onChange={(e) => ctx.setSim({ ...ctx.sim, [k(l)]: { ...ctx.sim[k(l)], preco: e.target.value } })}
+                />
+              ),
+            },
+            {
+              id: "resultado", titulo: "Margem simulada", valor: (l) => l.sim?.margemPct ?? null,
+              celula: (l) =>
+                l.sim == null ? <span className="text-ink-3">—</span> : (
+                  <span className="leading-tight">
+                    <span className={cn("num font-semibold", tom(l.sim.margemPct))}>{pct(l.sim.margemPct)}</span>
+                    <span className="block text-[11.5px] text-ink-3">lucro {money(l.sim.margem)} · recebe {money(l.sim.recebe)}</span>
+                  </span>
+                ),
+            },
           ]}
         />
       )}
@@ -372,11 +519,26 @@ function Precos({ dados, canal, impostoGlobal, metaPct, marketingPct }: {
 
 type AjusteCanal = { tipo: string; comissao: string; frete: string; logistica: Logistica; testar: string };
 
-function Cotacao({ dados, impostoGlobal, metaPct, marketingPct }: {
-  dados: DadosPrecificacao; impostoGlobal: number | null; metaPct: number; marketingPct: number;
+function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketingPct }: {
+  dados: DadosPrecificacao; produtoId: string | null; onProduto: (id: string | null) => void;
+  impostoGlobal: number | null; metaPct: number; marketingPct: number;
 }) {
-  const [f, setF] = React.useState({ custo: "", embalagem: "", peso: "", altura: "", largura: "", comprimento: "" });
-  const [ajustes, setAjustes] = React.useState<Record<string, AjusteCanal>>({});
+  /* Escolher um produto preenche custo, peso e medidas, e o frete do Meli que
+     já se conhece dele (medido nas vendas ou salvo). Daí é só variar. */
+  const produto = dados.produtos.find((p) => p.id === produtoId) ?? null;
+  const txt = (x: number | null | undefined) => (x == null ? "" : String(x));
+  const [f, setF] = React.useState({
+    custo: txt(produto?.custo), embalagem: txt(produto?.embalagem), peso: txt(produto?.pesoKg),
+    altura: txt(produto?.medidas?.altura), largura: txt(produto?.medidas?.largura), comprimento: txt(produto?.medidas?.comprimento),
+  });
+  const freteConhecido = (() => {
+    const v = produto?.porCanal.mercado_livre;
+    if (v?.unidadesComRecebido) return v.freteVendedor / v.unidadesComRecebido;
+    return produto?.freteSalvo ?? null;
+  })();
+  const [ajustes, setAjustes] = React.useState<Record<string, AjusteCanal>>((): Record<string, AjusteCanal> =>
+    freteConhecido == null ? {} : { mercado_livre: { tipo: "classico", comissao: "", frete: freteConhecido.toFixed(2), logistica: "coleta", testar: txt(produto?.porCanal.mercado_livre?.vitrine) } }
+  );
   const [api, setApi] = React.useState<{ valor: number | null; erro?: string; carregando?: boolean; chave?: string }>({ valor: null });
   const v = Object.fromEntries(Object.entries(f).map(([k, s]) => [k, ler(s)])) as Record<keyof typeof f, number | null>;
   const cubico = v.altura && v.largura && v.comprimento ? (v.altura * v.largura * v.comprimento) / 6000 : null;
@@ -463,6 +625,14 @@ function Cotacao({ dados, impostoGlobal, metaPct, marketingPct }: {
   return (
     <div className="space-y-4">
       <Panel className="p-4">
+        <Field label="Produto" className="mb-3 max-w-[480px]">
+          <Select value={produtoId ?? ""} onChange={(e) => onProduto(e.target.value || null)}>
+            <option value="">Produto novo</option>
+            {dados.produtos.filter((p) => p.custo != null).map((p) => (
+              <option key={p.id} value={p.id}>{p.titulo} · {p.sku}</option>
+            ))}
+          </Select>
+        </Field>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {campo("custo", "Custo (R$)")}
           {campo("embalagem", "Embalagem (R$)")}
@@ -573,69 +743,63 @@ function Cotacao({ dados, impostoGlobal, metaPct, marketingPct }: {
 
 /* ── Contribuição de um mix ───────────────────────────────────────────── */
 
-function Contribuicao({ dados, canal, impostoGlobal, marketingPct }: {
-  dados: DadosPrecificacao; canal: string; impostoGlobal: number | null; marketingPct: number;
-}) {
-  const regra = regraDoCanal(canal)!;
+function Contribuicao({ ctx }: { ctx: Contexto }) {
+  const { dados, canal } = ctx;
   const produtos = dados.produtos.filter((p) => p.custo != null);
   const [qtd, setQtd] = React.useState<Record<string, number>>({});
-  const [precos, setPrecos] = React.useState<Record<string, string>>({});
 
+  /* Preço e frete vêm da mesma simulação da aba Preços: mudar lá muda aqui. */
   const linhas = produtos.map((p) => {
-    const v = p.porCanal[canal];
+    const l = linhaDo(ctx, p);
     const k = canal + p.id;
-    const un = v?.unidadesComRecebido ?? 0;
-    const frete = regra.frete === "incluso" ? 0 : un ? v!.freteVendedor / un : null;
-    const custo: CustoProduto | null =
-      frete == null ? null : { mercadoria: p.custo!, embalagem: p.embalagem ?? 0, frete, impostoPct: p.impostoPct ?? impostoGlobal ?? 0, marketingPct: adsDo(p, canal, marketingPct).pct };
-    const sugerido = un ? v!.vendidoComRecebido / un : v?.vitrine ?? null;
-    const preco = ler(precos[k] ?? "") ?? sugerido;
+    const v = p.porCanal[canal];
     const q = qtd[k] ?? v?.unidades ?? 0;
-    const conta = custo && preco ? contaNoCanal(regra, custo, preco) : null;
-    return { p, k, q, preco, conta, lucro: conta ? conta.margem * q : null, vendido: preco ? preco * q : 0, frete };
+    return { l, k, q, lucro: l.sim ? l.sim.margem * q : null, vendido: l.sim && l.precoSim ? l.precoSim * q : 0 };
   });
-  const T = linhas.reduce((a, l) => ({ vendido: a.vendido + (l.conta ? l.vendido : 0), lucro: a.lucro + (l.lucro ?? 0), un: a.un + (l.conta ? l.q : 0) }), { vendido: 0, lucro: 0, un: 0 });
+  const T = linhas.reduce((a, x) => ({ vendido: a.vendido + x.vendido, lucro: a.lucro + (x.lucro ?? 0), un: a.un + (x.l.sim ? x.q : 0) }), { vendido: 0, lucro: 0, un: 0 });
 
-  /* Realizado: o mesmo cálculo, com o recebido que o canal informou. */
+  /* Realizado: o recebido que o canal informou, com o Ads medido. */
   let rVend = 0, rLucro = 0;
   for (const p of produtos) {
     const v = p.porCanal[canal];
     if (!v?.unidadesComRecebido) continue;
     rVend += v.vendidoComRecebido;
-    rLucro += v.recebido - (p.custo! + (p.embalagem ?? 0)) * v.unidadesComRecebido - v.vendidoComRecebido * (((p.impostoPct ?? impostoGlobal ?? 0) + adsDo(p, canal, marketingPct).pct) / 100);
+    rLucro += v.recebido - (p.custo! + (p.embalagem ?? 0)) * v.unidadesComRecebido - v.vendidoComRecebido * (((ctx.impostoGlobal ?? p.impostoPct ?? 0) + (adsMedido(p, canal) ?? 0)) / 100);
   }
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile className="col-span-2" label="Contribuição estimada" value={money(T.lucro)} hint={T.vendido ? `${pct((T.lucro / T.vendido) * 100)} de ${money(T.vendido)} · ${T.un} un.` : "escolha as quantidades"} />
-        <StatTile label="Realizado 30 dias" value={rVend ? money(rLucro) : "—"} hint={rVend ? `${pct((rLucro / rVend) * 100)} de ${money(rVend)}` : "sem venda no canal"} />
+        <StatTile className="col-span-2" label={`Contribuição estimada · Ads ${pct(ctx.adsPct)}`} value={money(T.lucro)} hint={T.vendido ? `${pct((T.lucro / T.vendido) * 100)} de ${money(T.vendido)} · ${T.un} un.` : "escolha as quantidades"} />
+        <StatTile label="Realizado 30 dias" value={rVend ? money(rLucro) : "—"} hint={rVend ? `${pct((rLucro / rVend) * 100)} de ${money(rVend)} · Ads medido` : "sem venda no canal"} />
       </div>
       <Grade
         linhas={linhas}
-        chave={(l) => l.k}
-        linhaInteira={(l) => (l.frete == null ? { aPartirDe: 1, motivo: "sem frete medido neste canal — cote na aba Cotação" } : null)}
+        chave={(x) => x.k}
+        linhaInteira={(x) => (x.l.frete.valor == null ? { aPartirDe: 1, motivo: "falta o frete — cote na aba Preços" } : null)}
         colunas={[
-          { id: "produto", titulo: "Produto", esq: true, valor: (l) => l.q, celula: (l) => <span className="block max-w-[240px] whitespace-normal font-medium leading-tight">{l.p.titulo}</span> },
+          { id: "produto", titulo: "Produto", esq: true, valor: (x) => x.q, celula: (x) => <span className="block max-w-[240px] whitespace-normal font-medium leading-tight">{x.l.p.titulo}</span> },
           {
-            id: "qtd", titulo: "Quantidade", valor: (l) => l.q,
-            celula: (l) => (
+            id: "qtd", titulo: "Quantidade", valor: (x) => x.q,
+            celula: (x) => (
               <span className="inline-flex overflow-hidden rounded-r1 border border-line">
-                <button type="button" aria-label="menos" className="h-10 w-10 bg-panel-2 text-ink-2" onClick={() => setQtd({ ...qtd, [l.k]: Math.max(0, l.q - 1) })}>−</button>
-                <input aria-label="quantidade" inputMode="numeric" className="num h-10 w-14 bg-panel text-center" value={l.q} onChange={(e) => setQtd({ ...qtd, [l.k]: Math.max(0, parseInt(e.target.value) || 0) })} />
-                <button type="button" aria-label="mais" className="h-10 w-10 bg-panel-2 text-ink-2" onClick={() => setQtd({ ...qtd, [l.k]: l.q + 1 })}>+</button>
+                <button type="button" aria-label="menos" className="h-10 w-10 bg-panel-2 text-ink-2" onClick={() => setQtd({ ...qtd, [x.k]: Math.max(0, x.q - 1) })}>−</button>
+                <input aria-label="quantidade" inputMode="numeric" className="num h-10 w-14 bg-panel text-center" value={x.q} onChange={(e) => setQtd({ ...qtd, [x.k]: Math.max(0, parseInt(e.target.value) || 0) })} />
+                <button type="button" aria-label="mais" className="h-10 w-10 bg-panel-2 text-ink-2" onClick={() => setQtd({ ...qtd, [x.k]: x.q + 1 })}>+</button>
               </span>
             ),
           },
           {
-            id: "preco", titulo: "Preço", valor: (l) => l.preco,
-            celula: (l) => (
-              <Input aria-label="preço" inputMode="decimal" className="w-24" value={precos[l.k] ?? (l.preco != null ? l.preco.toFixed(2).replace(".", ",") : "")} onChange={(e) => setPrecos({ ...precos, [l.k]: e.target.value })} />
+            id: "preco", titulo: "Preço", valor: (x) => x.l.precoSim,
+            celula: (x) => (
+              <Input aria-label="preço" type="number" inputMode="decimal" className="w-24"
+                value={ctx.sim[x.k]?.preco ?? (x.l.precoSim != null ? x.l.precoSim.toFixed(2) : "")}
+                onChange={(e) => ctx.setSim({ ...ctx.sim, [x.k]: { ...ctx.sim[x.k], preco: e.target.value } })} />
             ),
           },
-          { id: "lucroun", titulo: "Lucro/un.", valor: (l) => l.conta?.margem ?? null, celula: (l) => <Moeda v={l.conta?.margem} className={tom(l.conta?.margemPct ?? null)} /> },
-          { id: "vendido", titulo: "Vendido", valor: (l) => l.vendido, celula: (l) => <Moeda v={l.vendido} /> },
-          { id: "contrib", titulo: "Contribuição", valor: (l) => l.lucro, celula: (l) => <Moeda v={l.lucro} className="font-semibold" /> },
+          { id: "lucroun", titulo: "Lucro/un.", valor: (x) => x.l.sim?.margem ?? null, celula: (x) => <Moeda v={x.l.sim?.margem} className={tom(x.l.sim?.margemPct ?? null)} /> },
+          { id: "vendido", titulo: "Vendido", valor: (x) => x.vendido, celula: (x) => <Moeda v={x.vendido} /> },
+          { id: "contrib", titulo: "Contribuição", valor: (x) => x.lucro, celula: (x) => <Moeda v={x.lucro} className="font-semibold" /> },
         ]}
       />
     </>
