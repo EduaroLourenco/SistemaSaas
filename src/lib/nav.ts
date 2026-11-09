@@ -3,6 +3,7 @@ import {
   CalendarDays,
   TrendingUp,
   Tags,
+  Calculator,
   Percent, // eslint-disable-line @typescript-eslint/no-unused-vars -- volta se Promoções virar grupo próprio
   Radar, // eslint-disable-line @typescript-eslint/no-unused-vars -- volta com Monitoramento
   Wallet,
@@ -90,6 +91,7 @@ export const NAV: NavGroup[] = [
    */
   { label: "Tráfego pago", icon: Megaphone, href: "/anuncios/trafego-pago" },
   { label: "Produtos e preços", icon: Tags, href: "/produtos" },
+  { label: "Precificação", icon: Calculator, href: "/produtos/precificacao" },
   { label: "Conversar", icon: MessagesSquare, href: "/conversa" },
   { label: "Alertas", icon: Bell, href: "/alertas" },
   { label: "Importar", icon: Upload, href: "/importar" },

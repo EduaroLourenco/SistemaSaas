@@ -55,6 +55,10 @@ export type Componentes = {
   /** Alíquota do canal, em pontos percentuais. */
   comissaoPct: number;
   impostoPct: number;
+  /** Tarifa fixa do canal por unidade (Shopee, TikTok, Magalu). */
+  taxaFixa?: number;
+  /** Marketing sobre o preço (TACoS), em pontos percentuais. */
+  marketingPct?: number;
 };
 
 export type ResultadoPreco =
@@ -66,14 +70,16 @@ export function precoParaMargem(
   c: Componentes,
   margemPct: number
 ): ResultadoPreco {
-  const custoFixo = c.mercadoria + c.embalagem + c.frete;
-  const restante = 100 - c.comissaoPct - c.impostoPct - margemPct;
+  const custoFixo = c.mercadoria + c.embalagem + c.frete + (c.taxaFixa ?? 0);
+  const restante = 100 - c.comissaoPct - c.impostoPct - (c.marketingPct ?? 0) - margemPct;
 
   if (restante <= 0) {
     return {
       ok: false,
       motivo:
-        `Comissão (${c.comissaoPct}%) + imposto (${c.impostoPct}%) + margem ` +
+        `Comissão (${c.comissaoPct}%) + imposto (${c.impostoPct}%) + ` +
+        (c.marketingPct ? `marketing (${c.marketingPct}%) + ` : "") +
+        `margem ` +
         `(${margemPct}%) somam ${r2(100 - restante)}%. Não sobra preço para ` +
         `cobrir o custo — reduza a margem pedida.`,
     };
@@ -89,6 +95,8 @@ export type Decomposicao = {
   frete: number;
   embalagem: number;
   mercadoria: number;
+  taxaFixa: number;
+  marketing: number;
   margem: number;
   margemPct: number;
 };
@@ -97,8 +105,10 @@ export type Decomposicao = {
 export function margemDoPreco(c: Componentes, preco: number): Decomposicao {
   const comissao = r2((preco * c.comissaoPct) / 100);
   const imposto = r2((preco * c.impostoPct) / 100);
+  const marketing = r2((preco * (c.marketingPct ?? 0)) / 100);
+  const taxaFixa = r2(c.taxaFixa ?? 0);
   const margem = r2(
-    preco - comissao - imposto - c.frete - c.embalagem - c.mercadoria
+    preco - comissao - imposto - marketing - taxaFixa - c.frete - c.embalagem - c.mercadoria
   );
   return {
     preco: r2(preco),
@@ -107,6 +117,8 @@ export function margemDoPreco(c: Componentes, preco: number): Decomposicao {
     frete: r2(c.frete),
     embalagem: r2(c.embalagem),
     mercadoria: r2(c.mercadoria),
+    taxaFixa,
+    marketing,
     margem,
     margemPct: preco > 0 ? r2((margem * 100) / preco) : 0,
   };

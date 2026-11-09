@@ -79,6 +79,10 @@ const PERMITIDOS = [
   // /users/{id}/items/search e /users/{id}/items_visits
   /^\/users\/\d+\/items(_visits|\/search)$/,
   /^\/users\/\d+\/stores\/search$/,
+  // custo do frete grátis que o vendedor banca, por medidas — cotação de produto novo
+  /^\/users\/\d+\/shipping_options\/free$/,
+  // tarifa de venda (percentual + fixa) para um preço, tipo e categoria
+  /^\/sites\/MLB\/listing_prices$/,
   // multiget de anúncios e detalhe de um anúncio
   /^\/items$/,
   /^\/items\/[A-Z]{3}\d+(\/shipping_options)?$/i,
