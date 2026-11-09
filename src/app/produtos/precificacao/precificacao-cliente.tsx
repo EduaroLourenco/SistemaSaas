@@ -139,7 +139,7 @@ export default function PrecificacaoCliente({ dados }: { dados: DadosPrecificaca
       <Field label="Margem desejada %" className="w-[140px]">
         <Input type="number" inputMode="decimal" value={meta} onChange={(e) => setMeta(e.target.value)} />
       </Field>
-      <Field label="Marketing (TACoS) %" className="w-[150px]">
+      <Field label="Marketing sem Ads medido %" className="w-[190px]">
         <Input type="number" inputMode="decimal" value={tacos} onChange={(e) => setTacos(e.target.value)} />
       </Field>
       <Field label="Canal" className="min-w-0">
@@ -184,8 +184,23 @@ export default function PrecificacaoCliente({ dados }: { dados: DadosPrecificaca
 
 /* ── A conta de um produto num canal ──────────────────────────────────── */
 
+/**
+ * Marketing do produto, em % do preço.
+ *
+ * No Meli, produto que vendeu tem o Ads MEDIDO: gasto dos anúncios dele ÷
+ * vendido (zero se não tem anúncio patrocinado). O campo global de TACoS
+ * vale só para o resto: outros canais e produto sem venda, que é estimativa.
+ */
+function adsDo(p: ProdutoPreco, canal: string, marketingPct: number): { pct: number; medido: boolean } {
+  const v = p.porCanal[canal];
+  if (canal === "mercado_livre" && v?.vendido) return { pct: p.adsMeliPct ?? 0, medido: true };
+  return { pct: marketingPct, medido: false };
+}
+
+
 type Linha = {
   p: ProdutoPreco;
+  ads: { pct: number; medido: boolean };
   custo: CustoProduto | null;
   semImposto: boolean;
   vitrine: number | null;
@@ -201,6 +216,7 @@ type Linha = {
 function linhaDo(p: ProdutoPreco, canal: string, impostoGlobal: number | null, metaPct: number, marketingPct: number): Linha {
   const regra = regraDoCanal(canal)!;
   const v = p.porCanal[canal];
+  const ads = adsDo(p, canal, marketingPct);
   const impostoPct = p.impostoPct ?? impostoGlobal;
   const un = v?.unidadesComRecebido ?? 0;
   const vendidoUn = un ? v!.vendidoComRecebido / un : null;
@@ -213,17 +229,18 @@ function linhaDo(p: ProdutoPreco, canal: string, impostoGlobal: number | null, m
   const custo: CustoProduto | null =
     base == null || frete == null
       ? null
-      : { mercadoria: p.custo!, embalagem: p.embalagem ?? 0, frete, impostoPct: impostoPct ?? 0, marketingPct };
+      : { mercadoria: p.custo!, embalagem: p.embalagem ?? 0, frete, impostoPct: impostoPct ?? 0, marketingPct: ads.pct };
 
   const margemReal =
     base != null && vendidoUn && recebeUn != null
-      ? ((recebeUn - base - vendidoUn * (((impostoPct ?? 0) + marketingPct) / 100)) / vendidoUn) * 100
+      ? ((recebeUn - base - vendidoUn * (((impostoPct ?? 0) + ads.pct) / 100)) / vendidoUn) * 100
       : null;
 
   const r = custo ? precoNoCanal(regra, custo, p.margemMinimaPct ?? metaPct) : null;
   const preco = r?.ok ? r.preco : null;
   return {
     p,
+    ads,
     custo,
     semImposto: impostoPct == null,
     vitrine: v?.vitrine ?? null,
@@ -257,7 +274,7 @@ function Precos({ dados, canal, impostoGlobal, metaPct, marketingPct }: {
     if (l.p.custo == null) { semCusto += v.unidadesComRecebido; continue; }
     const imp = l.p.impostoPct ?? impostoGlobal;
     if (imp == null) semImposto = true;
-    custoVendido += (l.p.custo + (l.p.embalagem ?? 0)) * v.unidadesComRecebido + v.vendidoComRecebido * (((imp ?? 0) + marketingPct) / 100);
+    custoVendido += (l.p.custo + (l.p.embalagem ?? 0)) * v.unidadesComRecebido + v.vendidoComRecebido * (((imp ?? 0) + l.ads.pct) / 100);
   }
   const contrib = recebido - custoVendido;
 
@@ -320,6 +337,17 @@ function Precos({ dados, canal, impostoGlobal, metaPct, marketingPct }: {
             {
               id: "margem", titulo: "Margem", valor: (l) => l.margemReal,
               celula: (l) => (l.margemReal == null ? <span className="text-ink-3">—</span> : <span className={cn("num font-semibold", tom(l.margemReal))}>{pct(l.margemReal)}</span>),
+            },
+            {
+              id: "ads", titulo: "Ads", valor: (l) => (l.ads.medido ? l.ads.pct : null),
+              celula: (l) =>
+                !l.ads.medido ? <span className="text-[12.5px] text-ink-3">{pct(l.ads.pct)} est.</span>
+                : l.p.adsMeli ? (
+                  <span className="leading-tight">
+                    <span className="num">{pct(l.ads.pct)}</span>
+                    <span className="block text-[11.5px] text-ink-3">{money(l.p.adsMeli)}</span>
+                  </span>
+                ) : <span className="text-[12.5px] text-ink-3">sem Ads</span>,
             },
             {
               id: "preco", titulo: `Preço p/ ${metaPct}%`, valor: (l) => l.preco,
@@ -457,7 +485,7 @@ function Contribuicao({ dados, canal, impostoGlobal, marketingPct }: {
     const un = v?.unidadesComRecebido ?? 0;
     const frete = regra.frete === "incluso" ? 0 : un ? v!.freteVendedor / un : null;
     const custo: CustoProduto | null =
-      frete == null ? null : { mercadoria: p.custo!, embalagem: p.embalagem ?? 0, frete, impostoPct: p.impostoPct ?? impostoGlobal ?? 0, marketingPct };
+      frete == null ? null : { mercadoria: p.custo!, embalagem: p.embalagem ?? 0, frete, impostoPct: p.impostoPct ?? impostoGlobal ?? 0, marketingPct: adsDo(p, canal, marketingPct).pct };
     const sugerido = un ? v!.vendidoComRecebido / un : v?.vitrine ?? null;
     const preco = ler(precos[k] ?? "") ?? sugerido;
     const q = qtd[k] ?? v?.unidades ?? 0;
@@ -472,7 +500,7 @@ function Contribuicao({ dados, canal, impostoGlobal, marketingPct }: {
     const v = p.porCanal[canal];
     if (!v?.unidadesComRecebido) continue;
     rVend += v.vendidoComRecebido;
-    rLucro += v.recebido - (p.custo! + (p.embalagem ?? 0)) * v.unidadesComRecebido - v.vendidoComRecebido * (((p.impostoPct ?? impostoGlobal ?? 0) + marketingPct) / 100);
+    rLucro += v.recebido - (p.custo! + (p.embalagem ?? 0)) * v.unidadesComRecebido - v.vendidoComRecebido * (((p.impostoPct ?? impostoGlobal ?? 0) + adsDo(p, canal, marketingPct).pct) / 100);
   }
 
   return (

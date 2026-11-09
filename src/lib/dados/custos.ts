@@ -3,6 +3,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarBaseMargem, agregar } from "./margem";
 import { carregarMargensProduto } from "./margens-produto";
+import { carregarAdsPorProduto, type AdsProduto } from "./ads-produto";
 
 /**
  * O cadastro de custo por SKU: o que preencher, e o que a venda revelou.
@@ -100,6 +101,12 @@ export type CustoSku = {
   pesoKg: number | null;
   margemMinimaPct?: number | null;
 
+  /**
+   * Ads do Meli na janela de 30 dias que o canal entrega (`adsJanela`), não no
+   * recorte da tela. Nulo sem anúncio patrocinado.
+   */
+  ads: AdsProduto | null;
+
   /* Vindos de margem.ts. */
   margemUnidade: number | null;
   margemPct: number | null;
@@ -126,6 +133,7 @@ export type DadosCustos = {
   /** O recorte que produziu estes números. */
   periodo: { inicio: string | null; fim: string | null };
   canais: { id: string; nome: string }[];
+  adsJanela: { inicio: string; fim: string } | null;
 };
 
 export type FiltroCustos = {
@@ -147,7 +155,7 @@ export async function carregarCustos(
 ): Promise<DadosCustos> {
   const sb = await clienteServidor();
 
-  const [produtosRaw, anunciosRaw, faixasRaw, base, comissoesRaw, canaisRaw, margens] =
+  const [produtosRaw, anunciosRaw, faixasRaw, base, comissoesRaw, canaisRaw, margens, ads] =
     await Promise.all([
       paginar(() =>
         sb
@@ -174,6 +182,7 @@ export async function carregarCustos(
         .order("vigencia_inicio", { ascending: false }),
       sb.from("canais").select("id,nome").eq("ativo", true).order("nome"),
       carregarMargensProduto(),
+      carregarAdsPorProduto(sb),
     ]);
 
   /*
@@ -448,6 +457,7 @@ export async function carregarCustos(
       aliquotaImpostos: aliquota,
       pesoKg,
       margemMinimaPct: margens.porProduto.get(prod.id) ?? null,
+      ads: ads?.porProduto.get(prod.id) ?? null,
       margemUnidade,
       margemPct: agregada?.margemPct ?? null,
       faltando,
@@ -464,6 +474,7 @@ export async function carregarCustos(
     completos: linhas.filter((l) => l.margemUnidade != null).length,
     vazio: !linhas.length,
     periodo: { inicio: filtro.inicio ?? null, fim: filtro.fim ?? null },
+    adsJanela: ads ? { inicio: ads.inicio, fim: ads.fim } : null,
     canais: ((canaisRaw.data ?? []) as { id: string; nome: string }[]).map((c) => ({
       id: c.id,
       nome: c.nome,

@@ -681,6 +681,7 @@ type OrdemBruta = {
     installments?: number;
     transaction_amount?: number;
     total_paid_amount?: number;
+    shipping_cost?: number;
     status?: string;
   }[];
   order_items?: {
@@ -752,7 +753,8 @@ export function normalizarPedido(o: OrdemBruta): Pedido {
   );
   const juros = aprovados.reduce((s, p) => {
     const pago = Number(p.total_paid_amount ?? 0);
-    const base = Number(p.transaction_amount ?? 0);
+    // O frete que o COMPRADOR pagou também entra no total pago; não é juro.
+    const base = Number(p.transaction_amount ?? 0) + Number(p.shipping_cost ?? 0);
     return s + Math.max(0, pago - base);
   }, 0);
 

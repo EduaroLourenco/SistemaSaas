@@ -176,7 +176,7 @@ export async function carregarBaseMargem(
         sb
           .from("pedidos")
           .select(
-            "id,data,cancelado,total,comissao,comissao_origem,frete_vendedor,juros,canal_id,conta_canal_id"
+            "id,data,cancelado,total,comissao,comissao_origem,frete_vendedor,juros,origem,canal_id,conta_canal_id"
           )
           .order("data")
       ),
@@ -215,6 +215,7 @@ export async function carregarBaseMargem(
     comissao_origem: string | null;
     frete_vendedor: string | number | null;
     juros: string | number | null;
+    origem: string | null;
     canal_id: string;
     conta_canal_id: string;
   };
@@ -357,7 +358,7 @@ export async function carregarBaseMargem(
       pedidosVistos.add(p.id);
       if (comissaoUtilizavel(p.comissao, p.total, a?.comissao_atual, p.comissao_origem)) comComissaoPraticada += 1;
       if (p.frete_vendedor != null && n(p.frete_vendedor) >= 0) comFretePraticado += 1;
-      if (n(p.juros) > 0) comJuros += 1;
+      if (p.origem !== "api" && n(p.juros) > 0) comJuros += 1;
     }
 
     /* Comissão: praticada quando passa na faixa, senão a alíquota do anúncio. */
@@ -400,7 +401,15 @@ export async function carregarBaseMargem(
      * isso `cobertura.jurosInformado` é devolvido junto: enquanto for
      * baixo, a margem está otimista pelo valor do juro.
      */
-    const juros = r2(n(p.juros) * fatia);
+    /*
+     * Só desconta juro onde ele está DENTRO do total. Na listagem da Vtrina
+     * está (medido: a fórmula da comissão só fecha subtraindo o juro). No
+     * pedido da API do Meli não está — `total_amount` é a soma dos itens, e o
+     * que o comprador pagou a mais (juro do cartão e frete que ele bancou)
+     * vai para o canal, não sai do vendedor. Descontar ali tirava da margem
+     * dinheiro que nunca foi do vendedor: R$ 323 na Imprimil em 3 meses.
+     */
+    const juros = p.origem === "api" ? 0 : r2(n(p.juros) * fatia);
 
     const impostos =
       prod?.aliquota_impostos == null

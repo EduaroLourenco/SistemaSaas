@@ -3,6 +3,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { operacaoPadrao } from "./operacao";
 import { REGRAS } from "@/lib/precificacao/regras-canal";
+import { carregarAdsPorProduto } from "./ads-produto";
 
 /**
  * O que a tela de precificação precisa, por produto e por canal.
@@ -42,6 +43,10 @@ export type ProdutoPreco = {
   pesoKg: number | null;
   medidas: { altura: number; largura: number; comprimento: number } | null;
   porCanal: Record<string, VendaCanal>;
+  /** Gasto de Ads do Meli na janela de `adsJanela`. Nulo sem anúncio patrocinado. */
+  adsMeli: number | null;
+  /** Esse gasto ÷ vendido do produto no Meli na mesma janela. */
+  adsMeliPct: number | null;
 };
 
 export type DadosPrecificacao = {
@@ -53,6 +58,8 @@ export type DadosPrecificacao = {
   produtos: ProdutoPreco[];
   /** Ads ÷ receita do Meli na janela. Nulo sem gasto medido. */
   tacosMeliPct: number | null;
+  /** Janela de 30 dias do Ads por produto, como o Meli entrega. */
+  adsJanela: { inicio: string; fim: string } | null;
   /** A conta do Meli para cotar frete por medidas. */
   contaMeli: string | null;
 };
@@ -68,7 +75,7 @@ export async function carregarPrecificacao(): Promise<DadosPrecificacao | null> 
   const ate = new Date(Date.now() - 86_400_000);
   const de = new Date(ate.getTime() - 29 * 86_400_000);
 
-  const [canaisRaw, produtosRaw, anunciosRaw, pedidosRaw, diariasRaw, contasRaw] = await Promise.all([
+  const [canaisRaw, produtosRaw, anunciosRaw, pedidosRaw, diariasRaw, contasRaw, ads] = await Promise.all([
     sb.from("canais").select("id,codigo,nome").eq("operacao_id", op.id),
     paginar(() =>
       sb
@@ -105,6 +112,7 @@ export async function carregarPrecificacao(): Promise<DadosPrecificacao | null> 
         .order("id")
     ),
     sb.from("contas_canal").select("id,canal_id,padrao").eq("operacao_id", op.id).eq("ativa", true),
+    carregarAdsPorProduto(sb, op.id),
   ]);
 
   const canais = (canaisRaw.data ?? []) as { id: string; codigo: string; nome: string }[];
@@ -209,8 +217,11 @@ export async function carregarPrecificacao(): Promise<DadosPrecificacao | null> 
         pesoKg: n(p.peso_kg),
         medidas: a && l && c ? { altura: a, largura: l, comprimento: c } : null,
         porCanal: vendas.get(p.id) ?? {},
+        adsMeli: ads?.porProduto.get(p.id)?.investimento ?? null,
+        adsMeliPct: ads?.porProduto.get(p.id)?.tacosPct ?? null,
       };
     }),
+    adsJanela: ads ? { inicio: ads.inicio, fim: ads.fim } : null,
     tacosMeliPct: receitaMeli > 0 && adsMeli > 0 ? +((adsMeli / receitaMeli) * 100).toFixed(1) : null,
     contaMeli,
   };

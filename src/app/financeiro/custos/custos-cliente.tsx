@@ -636,6 +636,7 @@ export default function CustosCliente({
                       <th className={`${th} text-right`}>Comissão % (anúncio)</th>
                       <th className={`${th} text-right`}>Frete R$</th>
                       <th className={`${th} text-right`}>Juros R$</th>
+                      <th className={`${th} text-right`} title="Ads do Mercado Livre na janela de 30 dias que o canal entrega">Ads</th>
                       <th className={`${th} text-right w-[92px]`}>Mercadoria</th>
                       <th className={`${th} text-right w-[86px]`}>Embalagem</th>
                       <th className={`${th} text-right w-[80px]`}>Impostos</th>
@@ -713,6 +714,16 @@ export default function CustosCliente({
                             {l.jurosUnidade != null ? money(l.jurosUnidade) : "—"}
                           </span>
                         </td>
+                        <td className={`${td} text-right`}>
+                          {l.ads?.investimento ? (
+                            <div className="flex flex-col items-end leading-tight">
+                              <span className="num text-[12.5px] text-ink-2">{l.ads.tacosPct != null ? pct(l.ads.tacosPct, 1) : "sem venda"}</span>
+                              <span className="num text-[12px] text-ink-3">{money(l.ads.investimento)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[12px] text-ink-3">sem Ads</span>
+                          )}
+                        </td>
                         <td className={td}>
                           <Celula
                             valor={valorDe(l, "custoMercadoria")}
@@ -755,6 +766,12 @@ export default function CustosCliente({
                               <span className="num text-[12px] text-ink-3">
                                 {pct(l.margemPct ?? 0, 1)}
                               </span>
+                              {/* ponytail: margem do recorte menos TACoS da janela do Meli; períodos diferentes, aproximação */}
+                              {l.ads?.tacosPct != null && l.margemPct != null && (
+                                <span className={`num text-[12px] ${l.margemPct - l.ads.tacosPct >= 0 ? "text-ink-2" : "text-down"}`}>
+                                  {pct(l.margemPct - l.ads.tacosPct, 1)} após Ads
+                                </span>
+                              )}
                             </div>
                           ) : (
                             /* O que falta, nomeado. Um "—" aqui faria a
