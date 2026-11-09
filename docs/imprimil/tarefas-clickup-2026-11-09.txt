@@ -1,0 +1,319 @@
+IMPRIMIL — TAREFAS PARA O CLICKUP (Mercado Livre, Shopee, TikTok Shop)
+Feito em 09/11/2026. Dados do sistema, do relatório da Shopee e da planilha de catálogo que você mandou.
+
+COMO USAR
+  Cada tarefa tem: [ETIQUETA] Título — explicação curta.
+  Etiquetas de canal:   MELI · SHOPEE · TIKTOK · ADS · PROMO · PREÇO · ESTRUTURA · CONTEÚDO
+  Status:               FEITO · ANDAMENTO · FAZER · CONTÍNUO
+  Prazo:                11/11 (esta semana) · 30 dias · 60 dias
+  Quando você fizer, me traga e eu atualizo as marcas. Detalho qualquer tarefa quando você pedir.
+
+
+=====================================================================
+0. O QUE EU VI NOS DADOS (resumo de 1 minuto)
+=====================================================================
+
+MERCADO LIVRE
+  - 35 anúncios ativos, 47 pausados.
+  - Desde 28/09, só 9 anúncios venderam. Dois deles (Kit 100 infantil e
+    Kit 30 bíblico) são ~89% da venda. O resto da loja está parado.
+  - Venda de 28/09 a 07/11: R$ 5.412. Semana normal hoje: ~R$ 713.
+  - Ads: gasta R$ 16 por dia dos R$ 60 que pode, porque o ACOS alvo
+    (10%) estrangula a campanha. Plano já escrito em ads-11-11-2026-11-08.txt.
+  - O custo dos produtos NÃO está cadastrado. É a dúvida que trava
+    preço, cupom, Ads e promoção em todos os canais.
+
+SHOPEE (relatório que você mandou)
+  - 8 produtos cadastrados (kits de 10, 15, 30, 50 e 100 infantil; 10, 15 e
+    30 bíblico). Não tem kit 50 e 100 bíblico, que são os formatos fortes.
+  - R$ 0 de venda, 0 pedidos, 0 visitantes hoje.
+  - Em 30 dias: ~181 impressões do card do produto e nenhum pedido.
+    Ou seja: o problema é que quase ninguém vê, antes de ser preço.
+  - Sem Shopee Ads, sem cupom, sem vídeo, sem afiliado, sem live.
+  - Hoje o piso da Shopee usa o preço do clássico do Meli. Isso perde
+    dinheiro (explico no item 3).
+
+TIKTOK SHOP
+  - Zero feito. Nada cadastrado.
+
+---------------------------------------------------------------------
+A conta que decide o preço na Shopee (e que você pediu):
+---------------------------------------------------------------------
+No Meli você paga ~11,5% de comissão. Na Shopee, segundo as fontes que
+achei, paga ~20% + R$ 4,50 por item até R$ 79,99.
+Os blogs divergem em R$ 4 a R$ 7. CONFERIR NA CENTRAL DO VENDEDOR ANTES.
+
+Para ganhar o MESMO dinheiro que no Meli, o preço na Shopee precisa ser MAIOR:
+
+  Kit              preço Meli (clássico)   ganha no Meli   preço Shopee p/ ganhar igual
+  Kit 10           R$ 25,90                R$ 22,92        R$ 34,30
+  Kit 15           R$ 32,90                R$ 29,12        R$ 42,00
+  Kit 30           R$ 42,80                R$ 37,88        R$ 53,00
+  Kit 50           R$ 51,90                R$ 45,93        R$ 63,00
+  Kit 100          R$ 64,90                R$ 57,41        R$ 77,40
+
+Se você usa o preço do Meli na Shopee, ganha uns R$ 7 a R$ 10 A MENOS por
+venda do que ganharia no Meli. Isso AINDA não considera: frete grátis da
+Shopee, cupom, Ads e afiliado. E também não considera o custo do produto.
+(A conta usa a comissão do sistema, 11,5%, sem taxa fixa por unidade. Se o
+Meli cobrar taxa fixa nesses preços, a conta muda. Precisa do custo para
+fechar de vez.)
+
+
+=====================================================================
+1. O QUE JÁ FOI FEITO / ESTÁ EM ANDAMENTO / É CONTÍNUO
+=====================================================================
+(Pelo que está nos arquivos e no que você me disse. Corrija se algo não vale.)
+
+FEITO
+[x] [ESTRUTURA] Plano de escala da Imprimil — documento longo com o porquê (04/11).
+[x] [ESTRUTURA] Plano em linguagem simples — o que fazer, em ordem (04/11).
+[x] [ADS] Plano de Ads — por que o Ads está travado e como destravar (04/11).
+[x] [ADS] Plano de Ads do 11.11 — 2 campanhas, números para o sócio (08/11).
+[x] [MELI] Pesquisa de mercado e planilha de ideias de produto (Excel).
+[x] [PREÇO] Tabela de preço mínimo da Imprimil dentro do sistema.
+[x] [PROMO] Planilha de promoção do 11.11 preenchida (duas réguas).
+[x] [MELI] Catálogo da Imprimil importado para o sistema.
+[x] [SHOPEE] 8 kits cadastrados na Shopee com título e descrição.
+[x] [ESTRUTURA] Planilha de acompanhamento semanal de novos produtos (08/11).
+
+ANDAMENTO
+[~] [SHOPEE][CONTEÚDO] Fotos e vídeos dos anúncios — com a equipe da Imprimil.
+[~] [TIKTOK][CONTEÚDO] Vídeos para o TikTok Shop — com a equipe.
+[~] [ADS] Separar as campanhas (campeões e demais) — mexer no painel do Meli.
+
+CONTÍNUO
+[ ] [ADS] Olhar o Ads uma vez por semana — gasto, venda, ACOS, quem vendeu.
+[ ] [MELI] Conferir se entrou concorrente nas 5 fichas de catálogo — todo mês.
+[ ] [MELI] Pedir avaliação em toda venda entregue — todo pedido.
+[ ] [ESTRUTURA] Preencher a planilha de novos produtos — toda semana.
+
+
+=====================================================================
+2. MERCADO LIVRE — ESCALAR (esta semana e depois)
+=====================================================================
+
+--- Até 11/11 ---
+[MELI][ADS] Montar as 2 campanhas — Campeões (4 anúncios, ACOS 30%, R$ 30/dia)
+    e Demais (R$ 8/dia, ACOS 12%). Listas de MLB no documento de Ads.
+[MELI][ADS] Tirar o MLB5447911965 do Ads e apagar as campanhas 357057878 e 7296756.
+[x] [MELI][PREÇO] Custo dos 10 kits cadastrado (09/11) — falta só a alíquota de imposto.
+[MELI][PROMO] Conferir se os 4 campeões entraram na promoção do 11.11 e têm
+    frete grátis — anúncio com selo de oferta e frete converte mais.
+[MELI][ESTRUTURA] Reativar os 2 anúncios do Kit 100 bíblico — o formato campeão
+    do lado infantil está pausado do lado bíblico.
+[MELI][ESTRUTURA] Abrir chamado no Meli pelos 8 anúncios bloqueados — são os
+    de melhor título e hoje têm zero visita.
+[MELI][ESTRUTURA] Ligar frete grátis nos 10 anúncios que cobram do cliente —
+    antes, conferir no painel quanto sobra para você.
+
+--- Até 30 dias ---
+[MELI][ESTRUTURA] Levar os 6 anúncios bíblicos para catálogo — hoje 0 de 6
+    estão em ficha; o Meli já tem ficha pronta.
+[MELI][PREÇO] Preço de atacado para CNPJ nos 10 que mais vendem — escola,
+    igreja e buffet veem preço de atacado, mãe vê o normal.
+[MELI][ADS] Subir o ACOS alvo dos campeões em degraus (25% → 30%) e olhar o
+    resultado a cada semana. Cortar se o gasto subir e a venda não.
+[MELI][CONTEÚDO] Reescrever títulos com mais de 60 letras — o Meli corta.
+[MELI][CONTEÚDO] Mensagem pedindo avaliação em toda venda — hoje 1 avaliação
+    em ~104 vendas.
+[MELI][PROMO] Usar a folga de preço nas fichas MLB2115626025 (R$ 6,42) e
+    MLB2126334720 (R$ 13,34) — é decisão de promoção, não edição de preço.
+[MELI][ESTRUTURA] Registrar a marca Imprimil e entrar na proteção de marca.
+
+--- Até 60 dias (ideias novas para escalar) ---
+[MELI][ESTRUTURA] Variação de tema nos 4 campeões — 1 anúncio com cardápio de
+    temas em vez de 8 anúncios fracos. Toda a fama vai para a mesma barraca.
+[MELI][ESTRUTURA] Kits maiores e combos — subir a compra média de R$ 55 para
+    R$ 79. Em novembro a compra média caiu para R$ 43.
+[MELI][ESTRUTURA] Agenda personalizada 2027 — é a estação; buscas já pedem
+    "agenda personalizada com logo" e "por atacado". Mesmo processo do caderno.
+[MELI][ESTRUTURA] Lançar Kit 50 e 100 bíblico — o formato campeão do infantil
+    e hoje não tem equivalente bíblico ativo.
+[MELI][ESTRUTURA] Marcador de página bíblico — 25,5% da receita do ano é bíblico.
+[MELI][ESTRUTURA] Giz de cera personalizado + livrinho no mesmo kit.
+[MELI][ESTRUTURA] Decidir as cadernetas pausadas — ou voltam ao ar com frete
+    resolvido, ou o estoque do sistema não vale.
+[MELI][CONTEÚDO] Testar categoria "lembrancinha" nos de festa e medir por 14
+    dias. Hoje 50 estão em "cadernos" e só 2 em "lembrancinha".
+[MELI][PROMO] Calendário de datas para a Imprimil — Dia das Crianças (já
+    vendeu), volta às aulas (jan/fev), Páscoa, EBD/festa junina. Montar o ano.
+
+
+=====================================================================
+3. SHOPEE — ENTENDER POR QUE NÃO VENDE E AGIR
+=====================================================================
+
+DIAGNÓSTICO (da maior para a menor causa provável)
+  1. Quase ninguém vê. 181 impressões em 30 dias. Loja nova, sem venda,
+     sem avaliação: o algoritmo não mostra. Não é preço ainda.
+  2. Nenhum motor de tráfego ligado: sem Ads, sem cupom, sem vídeo, sem
+     afiliado, sem live, sem campanha.
+  3. Catálogo de 8 itens e sem os kits 50 e 100 bíblicos.
+  4. Preço no piso do Meli perde dinheiro (conta no início).
+  5. Foto e vídeo ainda com a equipe.
+
+--- Até 11/11 ---
+[SHOPEE][PREÇO] Montar a tabela de preço da Shopee — conferir a comissão
+    atual na Central do Vendedor e aplicar a conta do início do documento.
+    Piso da Shopee = piso do Meli + comissão a mais.
+[SHOPEE][PROMO] Ver se ainda dá para entrar na campanha 11.11 da Shopee —
+    inscrição tem prazo e a loja precisa estar elegível. Conferir na Central.
+[SHOPEE][PROMO] Criar 1 cupom de loja simples — por exemplo R$ 3 a R$ 5 de
+    desconto em kit acima de R$ 40. Cupom é desconto que SAI DA SUA MARGEM,
+    então só depois de fechar o preço.
+[SHOPEE][ADS] Ligar o Shopee Ads nos 2 kits mais fortes (30 bíblico e 100
+    infantil) com orçamento pequeno (R$ 10 a R$ 15 por dia) — pra gerar as
+    primeiras impressões e vendas. Medir por 7 dias.
+[SHOPEE][ESTRUTURA] Cadastrar o Kit 50 e Kit 100 bíblicos — os formatos que
+    mais vendem no Meli não existem na Shopee.
+[SHOPEE][ESTRUTURA] Confirmar o programa de Frete Grátis da Shopee — as fontes
+    dizem que passou a ser obrigatório em 2026. Ver quanto custa por kit.
+
+--- Até 30 dias ---
+[SHOPEE][CONTEÚDO] Subir as fotos e os vídeos (equipe) — vídeo de 15 a 30s
+    mostrando o kit aberto e as páginas.
+[SHOPEE][CONTEÚDO] Ativar o vídeo do vendedor em todos os 8 produtos — fonte
+    de tráfego separada do relatório.
+[SHOPEE][ESTRUTURA] Programa de afiliados da Shopee — definir comissão (as
+    fontes citam até 14%) só depois do preço fechado.
+[SHOPEE][ESTRUTURA] Validar a marca Imprimil — dá selo e confiança em loja nova.
+[SHOPEE][ESTRUTURA] Montar a loja — banner, categorias, kits por tema, destaque
+    "mais vendido". Hoje a loja não tem nada.
+[SHOPEE][PROMO] Cupom de seguidor e "combo" (compre 2 kits, desconto) — subir a
+    compra média.
+[SHOPEE][ESTRUTURA] Responder chat rápido e manter o prazo de envio — o
+    algoritmo pune loja lenta e atraso pode barrar da campanha.
+
+--- Até 60 dias ---
+[SHOPEE][ADS] Dobrar o Ads só no que venda; cortar o que gastar R$ 15 sem venda.
+[SHOPEE][CONTEÚDO] Live curta mostrando os kits (a equipe).
+[SHOPEE][ESTRUTURA] Levar o resto do catálogo do Meli (cadernos, agenda 2027
+    quando sair).
+[SHOPEE][PREÇO] Revisar o preço com o custo cadastrado.
+
+O QUE EU NÃO SEI DA SHOPEE
+  - Comissão e taxa fixa exatas hoje (blogs divergem).
+  - Prazo de inscrição do 11.11 da Shopee.
+  - Valor mínimo/máximo de cupom que a Shopee aceita.
+  - Quanto custa o frete grátis por kit.
+  Tudo isso está na Central do Vendedor. Se você me mandar um print da
+  tela de taxas, eu fecho a tabela de preço.
+
+
+=====================================================================
+4. TIKTOK SHOP — DO ZERO, ATÉ QUARTA (11/11) SE DER
+=====================================================================
+
+COMO O TIKTOK SHOP FUNCIONA (em uma linha cada)
+  - Venda por 3 portas: vitrine no perfil, vídeo com etiqueta de compra e
+    live.
+  - Cadastro no Seller Center. Pelas fontes, precisa de CNPJ (MEI, EI,
+    LTDA...). Só CPF não basta.
+  - Tráfego pago chama GMV Max: o TikTok usa automaticamente seus vídeos,
+    anúncios e posts de afiliado numa campanha só. Precisa de autorização
+    e de conta de anúncios, loja e TikTok na mesma Central de Negócios.
+  - Afiliados: criadores vendem seu produto e ganham comissão que VOCÊ
+    define (as fontes citam 5% a 30%).
+  - Logística: hoje o lojista embala e envia, ou usa a TikTok Logistics.
+    Termos mudaram em fevereiro de 2026. Conferir no Seller Center.
+
+CUSTOS (fontes divergem — confirmar no Seller Center)
+  - Comissão: uma fonte diz 6% até 14/07/2026 e 10% + R$ 4 depois (itens
+    abaixo de R$ 50). Outras citam 6% com teto de R$ 50 por item.
+  - Programa de frete: ~6% do preço, teto R$ 50.
+  - Afiliado: à parte (5% a 30%, você escolhe).
+  - Cupom e desconto: sai da sua margem.
+
+Se usarmos o cenário mais pesado (10% + 6% de frete + R$ 4 por item, sem
+afiliado), o preço para ganhar o MESMO dinheiro que no Meli seria:
+
+  Kit 10 ≈ R$ 32 · Kit 15 ≈ R$ 39 · Kit 30 ≈ R$ 50 · Kit 50 ≈ R$ 59 · Kit 100 ≈ R$ 73
+
+Com afiliado de 10%, soma uns R$ 3 a R$ 10 por kit. NÃO USE estes preços ainda:
+confirme a comissão e o custo antes.
+
+--- Domingo/segunda (08 e 09/11) ---
+[TIKTOK][ESTRUTURA] Abrir o cadastro de vendedor no Seller Center — CNPJ, dados
+    do responsável e fiscais. A verificação pode demorar; é o que pode
+    atrasar tudo. Começar HOJE.
+[TIKTOK][ESTRUTURA] Reunir os documentos — CNPJ, dados do sócio, comprovante,
+    conta bancária da empresa.
+
+--- Até 11/11 (quarta) ---
+[TIKTOK][ESTRUTURA] Definir a logística — vamos enviar nós mesmos ou usar a
+    TikTok Logistics? Ver prazo e etiqueta no Seller Center.
+[TIKTOK][CONTEÚDO] Cadastrar os kits — reaproveitar os títulos e descrições
+    que já estão na Shopee. Começar com os 4 mais fortes (30 bíblico, 100
+    infantil, 50 infantil, 50 bíblico).
+[TIKTOK][CONTEÚDO] Receber os vídeos da equipe e subir 1 vídeo com a etiqueta
+    de compra em cada produto — no TikTok a venda nasce do vídeo.
+[TIKTOK][PREÇO] Fechar a tabela de preço do TikTok — conferir a comissão e o
+    custo do frete no Seller Center.
+
+--- Até 30 dias ---
+[TIKTOK][PROMO] Ver as campanhas e cupons do TikTok Shop — e entrar só nas que
+    a margem aguentar. As fontes não detalham regras do 11.11 de lá.
+[TIKTOK][ADS] Ligar o GMV Max com orçamento pequeno e só depois de ter
+    vídeo e 1 produto cadastrado. Medir por 7 dias.
+[TIKTOK][ESTRUTURA] Recrutar 5 a 10 criadores afiliados — mandar amostra do kit.
+[TIKTOK][CONTEÚDO] Fazer uma live curta — mostrar o kit e responder.
+[TIKTOK][ESTRUTURA] Medir envio no prazo e atendimento — o TikTok pune quem
+    atrasa.
+
+O QUE EU NÃO SEI DO TIKTOK
+  - Se o cadastro fica pronto até quarta. É verificação deles.
+  - Comissão e frete exatos hoje (as fontes divergem).
+  - Regras do 11.11 no TikTok Shop (não achei informação confiável).
+
+
+=====================================================================
+5. ADS E PROMOÇÕES (resumo — detalhe no documento de Ads)
+=====================================================================
+  - Mercado Livre: Ads 2 campanhas (ver ads-11-11-2026-11-08.txt).
+  - Shopee: Ads só depois do preço fechado.
+  - TikTok: GMV Max só depois de ter vídeo e produto.
+  - Promoções: Meli roda pela Central; Shopee e TikTok só quando
+    houver margem.
+
+
+=====================================================================
+6. A TRAVA QUE ATRAVESSA TUDO
+=====================================================================
+O custo dos produtos não está cadastrado. Sem ele eu não digo:
+  - qual ACOS cabe;
+  - qual cupom cabe;
+  - qual preço fecha em cada canal;
+  - se a Shopee e o TikTok valem a pena para cada kit.
+Cadastrar o custo dos 8 kits (os da Shopee) resolve as quatro coisas.
+É a primeira tarefa da lista de todos os canais.
+
+
+=====================================================================
+7. FONTES
+=====================================================================
+Dados da loja: o próprio sistema (vendas, pedidos, anúncios) e o relatório
+da Shopee que você mandou. As regras abaixo vêm de blogs e guias de
+terceiros; conferir no Seller Center / Central do Vendedor antes de agir.
+  - Shopee 2026 (comissão e taxa): https://ecommercenapratica.com/blog/taxa-shopee/
+  - Shopee 2026 (mudanças): https://actana.com.br/blog/mudancas-na-shopee-em-2026
+  - TikTok Shop (taxas 2026): https://www.viniensina.com.br/taxas-tiktok-shop/
+  - TikTok Shop (GMV Max): https://ads.tiktok.com/business/pt-BR/blog/gmv-max-automate-shop-roi
+  - TikTok Shop (guia): https://www.mlabs.com.br/blog/vendas-pelo-tiktok
+
+
+=====================================================================
+8. ATUALIZAÇÃO 09/11 — CUSTOS E TARIFAS
+=====================================================================
+[x] [PREÇO] Custo dos 10 kits cadastrado (infantil e bíblico) — FEITO 09/11.
+[x] [ESTRUTURA] Comissão de pedido com mais de 1 unidade — corrigida no código.
+[ ] [PREÇO] Informar a alíquota de imposto da Imprimil — sem ela a margem fica
+    incompleta e o ACOS máximo sai otimista.
+[ ] [ESTRUTURA] Corrigir a comissão dos 24 pedidos antigos com mais de 1 unidade
+    (faltam R$ 184,67 de comissão no histórico) — aguarda seu OK.
+[ ] [MELI] Conferir 1 venda no painel do Meli (kit 30 bíblico a R$ 27,99):
+    tarifa de venda + custo de envio — confirma que não há taxa fixa extra.
+[ ] [ADS] Baixar o ACOS alvo dos campeões de 30% para 25% (20% no Kit 100
+    infantil) — o Kit 100 já está no zero com ACOS 33%.
+[ ] [PREÇO] Refazer as tabelas de preço Shopee e TikTok com o custo real,
+    depois de confirmar as comissões.

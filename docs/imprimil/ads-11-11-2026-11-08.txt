@@ -1,0 +1,309 @@
+IMPRIMIL - ADS PARA A SEMANA DO 11.11
+Feito em 08/11/2026, com os dados do sistema (vendas ate 07/11, Ads de 09/10 a 08/11).
+
+
+=====================================================================
+1. A RESPOSTA CURTA
+=====================================================================
+
+Sua ideia faz sentido. Com dois ajustes.
+
+  SIM: separar os campeoes dos demais em duas campanhas.
+  SIM: ser mais agressivo nos campeoes na semana do 11.11.
+  AJUSTE 1: "agressivo" aqui quer dizer ACEITAR PAGAR MAIS POR VENDA
+            (ACOS alvo mais alto). Nao quer dizer so aumentar o dinheiro.
+  AJUSTE 2: a semana de maior venda (05 a 11/10) NAO e boa referencia de
+            "o que o Ads fez". Explico no item 3.
+
+Para uma crianca: Ads e pagar para sua barraca ficar na entrada da feira.
+Hoje voce paga o mesmo "preco de entrada" para o livrinho que vende
+(campeao) e para os 23 que nunca venderam. E ainda disse ao Meli "so pago
+se a venda sair barata" (ACOS 10%), entao ele quase nao te mostra.
+Duas campanhas = um cofre para quem vende, outro cofre pequeno para quem
+ainda esta provando.
+
+
+=====================================================================
+2. ONDE ESTAMOS HOJE (ultimos 30 dias: 09/10 a 08/11)
+=====================================================================
+
+  Vendas da loja toda ................ R$ 3.411
+  Gasto com Ads ...................... R$ 494
+  Vendas que o Meli atribui ao Ads ... R$ 2.077  (61% da loja)
+  ACOS (gasto / venda do Ads) ........ 23,8%
+  TACoS (gasto / venda da loja toda) . 14,5%
+  Quanto o Ads gasta por dia ......... ~R$ 16  (o limite e R$ 60)
+
+ACOS = de cada R$ 100 vendidos PELO anuncio, quanto foi gasto de anuncio.
+TACoS = de cada R$ 100 vendidos NA LOJA TODA, quanto foi gasto de anuncio.
+O TACoS e o numero que seu socio quer ver.
+
+Os 4 anuncios que vendem pelo Ads:
+
+  anuncio         produto             gastou   vendeu    ACOS   conversao
+  MLB7657552828   Kit 100 infantil    R$ 303   R$ 914    33,2%    3,5%
+  MLB5300540513   Kit 30 biblico      R$ 122   R$ 915    13,4%    8,5%
+  MLB5250064627   Kit 50 infantil     R$  23   R$ 148    15,7%    6,7%
+  MLB5447798021   Kit 50 biblico      R$  19   R$  85    22,0%    4,9%
+  os outros 21                        R$  27   R$   0     -        -
+
+  -> Os 2 primeiros sao 89% do gasto e 88% da venda do Ads.
+  -> Os 21 restantes gastaram R$ 27 em 30 dias e nao venderam nada.
+     Isso e R$ 0,90 por dia. NAO e onde o dinheiro esta vazando.
+  -> O Kit 30 biblico e o mais eficiente (ACOS 13%). O Kit 100 infantil
+     vende muito, mas paga caro: ACOS 33% e so 3,5% dos cliques compram.
+
+"Conversao" = de cada 100 pessoas que clicam, quantas compram.
+
+
+=====================================================================
+3. A SEMANA DE MAIOR VENDA (e por que nao copiar)
+=====================================================================
+
+Vendas e Ads por semana (segunda a domingo):
+
+  semana        vendas da loja   gasto Ads   ACOS do Ads
+  05/10             R$ 2.171        R$  50       11,1%   <- recorde
+  12/10             R$   773        R$ 152       35,3%
+  19/10             R$   755        R$  76       15,9%
+  26/10             R$   582        R$ 146       38,3%
+  02/11 (ate hoje)  R$   744        R$  70       20,6%
+
+O que isso mostra:
+
+  1) A semana recorde (05 a 11/10) veio na SEMANA DO DIA DAS CRIANCAS
+     (12/10). Ali o Ads gastou so R$ 50. A venda veio da data, nao do Ads.
+     Alem disso, 1 pedido de 6 kits (R$ 324) pesou 15% da semana.
+     O 11.11 nao e data de livrinho de colorir. Nao espere repetir R$ 2.171
+     so porque o Ads subiu.
+
+  2) Nas semanas em que o gasto subiu (12/10 e 26/10), o ACOS piorou para
+     35% e 38%. Gastar mais fez cada venda ficar mais cara. Isso e normal:
+     o mesmo comprador "barato" acaba, e o Ads comeca a comprar clique
+     mais caro. Por isso o plano tem FREIO (item 6).
+
+  3) O melhor ACOS da loja (11%) foi na semana de gasto baixo. Quando a
+     demanda existe, o Ads fica barato. Quando nao existe, o Ads fica caro.
+
+  Media das ultimas 4 semanas: R$ 713 de venda, R$ 111 de Ads
+  (TACoS 15,6%). E essa a linha de base para comparar.
+
+
+=====================================================================
+4. A ESTRUTURA PROPOSTA: DUAS CAMPANHAS
+=====================================================================
+
+Sobre a sua ideia ("campeoes com ROAS mais baixo, demais com ROAS mais
+alto"): e exatamente isso, mas o Meli pede ACOS, nao ROAS. Sao o mesmo
+numero de cabeca para baixo:
+
+  ROAS 3,3  =  ACOS 30%   (pago ate R$ 30 para vender R$ 100)
+  ROAS 8,3  =  ACOS 12%   (pago ate R$ 12 para vender R$ 100)
+
+CAMPANHA A - "CAMPEOES"  (agressiva)
+  Anuncios: MLB7657552828, MLB5300540513, MLB5250064627, MLB5447798021
+  ACOS alvo: 30%  (ROAS 3,3)
+  Orcamento: R$ 30 por dia
+  Por que: sao os unicos 4 que provaram vender. E aqui que o Meli deve
+  poder te mostrar sem medo.
+
+CAMPANHA B - "DEMAIS"  (cautelosa)
+  Anuncios: os outros ~21 que estao em Ads
+  ACOS alvo: 12%  (ROAS 8,3)
+  Orcamento: R$ 8 por dia
+  Por que: so entra aqui quem vende barato. Se um anuncio mostrar venda,
+  sobe para a campanha A. Se nao vender em 14 dias, sai.
+
+JA DE QUEBRA:
+  - Tirar do Ads o MLB5447911965 (pagou R$ 4,22 por UM clique; o normal
+    da casa e R$ 0,50).
+  - Resolver a campanha pausada 7296756 (alvo 5,58%, nunca vai rodar):
+    apagar, para o painel ficar com so duas campanhas.
+  - NAO ligar Ads em anuncio que cobra frete do cliente. O cliente compara
+    o total e o clique nao converte.
+
+Teto de orcamento da semana (09 a 15/11):
+  Campeoes: 30 x 7 = R$ 210
+  Demais:    8 x 7 = R$ 56
+  Total maximo: R$ 266
+
+O Meli quase nunca gasta o teto inteiro (hoje gasta R$ 16 de R$ 60).
+Por isso abaixo ha 3 cenarios de quanto realmente sai.
+
+
+=====================================================================
+5. OS NUMEROS PARA MANDAR AO SOCIO (semana de 09 a 15/11)
+=====================================================================
+
+Estes numeros sao CENARIOS, nao promessa. Cada um parte de:
+  - quanto vai ser realmente gasto,
+  - ACOS que o Ads vai ter nesse gasto (o ACOS piora quando se gasta mais,
+    como em 12/10 e 26/10),
+  - Ads responder por 60% da venda da loja (e o que mediu nos ultimos 30
+    dias).
+
+                            hoje (media    cenario      cenario     cenario
+                            4 semanas)     CAUTELOSO    BASE        OTIMISTA
+  Investimento em Ads        R$ 111        R$ 150       R$ 220      R$ 266
+  ACOS esperado              ~23%          32%          29%         27%
+  Venda do Ads               R$ 400        R$ 470       R$ 760      R$ 985
+  VENDA DA LOJA              R$ 713        R$ 780       R$ 1.265    R$ 1.640
+  TACoS FINAL                15,6%         19,2%        17,4%       16,2%
+  Sobra antes do custo*      R$ 520        R$ 540       R$ 900      R$ 1.190
+
+  * Sobra antes do custo = venda - comissao do Meli (11,5%) - gasto de Ads.
+    AINDA NAO desconta o papel e a impressao, porque o custo dos produtos
+    nao esta cadastrado. Nao e lucro.
+
+Como ler:
+  - O cenario BASE (R$ 220 de Ads -> ~R$ 1.265 de venda) e o que
+    recomendo falar para o socio: quase o dobro de uma semana normal.
+  - O cenario OTIMISTA e gastar o teto inteiro (R$ 266). Nao prometer.
+  - O cenario CAUTELOSO e o piso: se o 11.11 vier fraco, ainda vende
+    ~R$ 780 gastando R$ 150.
+  - Em todos, o TACoS fica entre 16% e 19%. Isso e normal: durante uma
+    data forte o Ads encarece.
+  - Com orcamento fixo de R$ 30 nos campeoes, o 11.11 nao ganha reforco.
+    O teto da semana e R$ 266; para vender perto do recorde (R$ 2.171)
+    seria preciso subir o orcamento, e a conta mudaria.
+
+Texto pronto para o socio (pode copiar):
+
+  "Para a semana do 11.11 vamos separar o Ads em duas campanhas: uma com
+  os 4 produtos que vendem (ACOS alvo 30%, R$ 30 por dia) e uma
+  pequena para os demais (ACOS alvo 12%, R$ 8 por dia). O teto da semana
+  e R$ 266 e o gasto esperado e de R$ 220 (pode ir de R$ 150 a R$ 266).
+  Esperamos vender cerca de R$ 1.250 na loja (faixa de R$ 780 a R$ 1.640),
+  contra R$ 700 de uma semana normal. O TACoS deve ficar perto de 17%. Ainda nao temos o custo dos
+  produtos cadastrado, entao a margem final eu confirmo depois. Se o
+  anuncio principal passar de ACOS 35% por 3 dias seguidos eu seguro o
+  gasto."
+
+
+=====================================================================
+6. FREIOS (regras para nao queimar dinheiro)
+=====================================================================
+
+  - Kit 100 infantil (MLB7657552828) com ACOS acima de 35% por 3 dias
+    seguidos: tirar R$ 15 por dia do orcamento dele.
+  - Qualquer anuncio com R$ 25 gastos e zero venda: pausar.
+  - Se o gasto dobrar e a venda nao subir junto: voltar o ACOS alvo da
+    campanha A para 25%.
+  - Dia seguinte ao 11.11 (13/11): olhar o resultado e decidir se a
+    campanha A continua em 30% ou desce.
+  - Depois do 11.11: o orcamento da campanha A segue em R$ 30 por dia.
+
+Por que ACOS 30% e nao mais? Regra do proprio Meli: o ACOS alvo deve ficar
+ABAIXO da margem do produto, senao voce paga para vender. Como o custo dos
+produtos nao esta cadastrado, eu NAO sei qual e a margem real. Por isso
+30% e um teto de seguranca, nao um numero provado. Com o custo dos 2 kits
+campeoes eu fecho o numero certo em uma tarde.
+
+
+=====================================================================
+7. O QUE EU NAO SEI (e quem destrava)
+=====================================================================
+
+  - CUSTO dos kits (papel + impressao). Sem isso, nao sei o lucro e nem o
+    ACOS maximo seguro. So voce destrava. E o dado mais importante.
+  - Se o ACOS alvo da campanha atual ainda esta em 10% (era 10% em
+    04/11). Conferir no painel antes de mexer.
+  - Se os 10 anuncios que cobram frete do cliente ja foram virados para
+    frete gratis. Anuncio assim nao deve ir para o Ads.
+  - Quanto o 11.11 vai trazer de gente. A busca publica do Meli nao
+    responde pela API. Os cenarios sao suposicao, ancorada no que a loja
+    ja fez.
+  - Quanto o Ads vai custar de verdade no pico: o clique encarece em data
+    forte (hoje R$ 0,37 a R$ 0,56).
+  - Se a promocao do 11.11 foi aceita nos 4 campeoes (existe a planilha
+    output/11-11-Imprimil-preenchida.xlsx). Anuncio com selo de oferta
+    converte mais; Ads sem oferta paga mais caro pela mesma venda.
+
+
+=====================================================================
+8. TAREFAS PARA O CLICKUP (macro)
+=====================================================================
+
+Legenda: [ ] a fazer   [~] em andamento   [x] feito
+Quando voce me trouxer o que ja fez, eu atualizo as marcas aqui.
+
+--- Antes do 11.11 (hoje, domingo 08/11, ate segunda 09/11 cedo) ---
+[ ] Conferir no painel do Meli Ads: ACOS alvo e orcamento atuais da
+    campanha "{EDU} Kit de Livrinho".
+[ ] Cadastrar o CUSTO dos 2 kits campeoes (Kit 100 infantil e Kit 30
+    biblico) no sistema.            <- destrava o ACOS maximo seguro
+[ ] Conferir se os 4 campeoes tem frete gratis e promocao do 11.11
+    aceita.
+[ ] Ajustar a campanha antiga "CAMPEOES" (4 anuncios, ACOS 30%, R$ 30/dia).
+[ ] Criar a campanha B "DEMAIS" (outros anuncios, ACOS 12%, R$ 8/dia).
+[ ] Tirar o MLB5447911965 do Ads.
+[ ] Apagar a campanha pausada 7296756.
+[ ] Mandar o texto do item 5 para o socio.
+
+--- Durante (10, 11 e 12/11) ---
+[ ] 10/11: olhar gasto e venda do dia. Orcamento segue em R$ 30/dia.
+[ ] 11/11: olhar gasto e venda as 12h e as 18h. ACOS acima de 35%?
+    Aplicar freio do item 6. Se o orcamento acabar cedo com boa venda,
+    avaliar subir.
+[ ] 12/11: olhar quem vendeu.
+[ ] 13/11: fechar o resultado do pico e decidir o proximo passo.
+
+--- Depois (14 a 22/11) ---
+[ ] Fechar o resultado da semana 09 a 15/11 e comparar com o item 5.
+    (eu monto a comparacao se voce me trouxer os numeros do painel)
+[ ] Decidir: campanha A continua em 30%? Fica em 25%? Sobe?
+[ ] Anuncio da campanha B que vendeu: passar para a campanha A.
+[ ] Anuncio da campanha B sem venda em 14 dias: tirar do Ads.
+[ ] Mover o Kit 30 biblico e o Kit 50 biblico: aumentar o orcamento
+    deles primeiro, porque o ACOS e menor (13% e 22%).
+
+--- Estrutura (antes de escalar mais) ---
+[ ] Ligar frete gratis nos 10 anuncios que ainda cobram frete do cliente.
+[ ] Destravar os 8 anuncios bloqueados (chamado no Meli).
+[ ] Reativar o kit 100 biblico (os dois anuncios pausados).
+[ ] Revisar o ACOS alvo contra a margem real quando o custo estiver
+    cadastrado.
+
+Em andamento / feito: (voce me traz e eu preencho aqui)
+  ...
+
+
+=====================================================================
+9. DE ONDE VEM A BASE TECNICA
+=====================================================================
+
+Numeros da loja: o proprio sistema (vendas por dia, pedidos, relatorio de
+Product Ads do Meli). Nada foi estimado onde o dado existia.
+
+Regras de Ads usadas (a de ACOS e da documentacao oficial do Meli; as
+outras sao praticas de blogs de vendedores, e valem como regra de bolso,
+nao como regra oficial):
+  - O vendedor define um ACOS alvo e o Meli calcula o CPC maximo a partir
+    dele: https://sellers.mercadolibre.com/news/how-the-product-ads-bidding-system-works
+  - ACOS deve ficar abaixo da margem bruta; olhar por produto, nao pela
+    media da campanha: https://jaguarsheet.com/pt/blog/acos-roas-product-ads-mercado-livre
+  - Campanha automatica para testar, manual para os que ja vendem:
+    https://gosmarter.com.br/mercado-ads-product-ads-guia-2026/
+
+
+=====================================================================
+10. ATUALIZAÇÃO 09/11 — CUSTO CADASTRADO (muda o ACOS alvo)
+=====================================================================
+
+Custos dos kits entraram no sistema (produto + R$ 0,20 de embalagem).
+Margem dos últimos 30 dias no Meli, ANTES de imposto e ANTES de Ads:
+
+  kit                  preço médio   margem   ACOS que zera a margem
+  Kit 100 infantil       R$ 50,98     32,5%         32,5%
+  Kit 30 bíblico         R$ 27,00     36,8%         36,8%
+  Kit 50 infantil        R$ 35,02     34,1%         34,1%
+  Kit 50 bíblico         R$ 42,31     38,5%         38,5%
+  Loja toda              R$ 3.359     34,2%         34,2%
+
+Leitura:
+  - O ACOS real do Kit 100 infantil (33,2%) está NO ZERO: cada venda dele
+    pelo Ads deixa nada, e ainda tem imposto por cima.
+  - O Kit 30 bíblico (ACOS 13,4%) é o ótimo: sobra ~23% da venda.
+  - Por isso 30% de ACOS alvo nos campeões é alto demais. Recomendo 25%
+    no máximo. E 20% se o imposto passar de 6%.
+  - O imposto ainda não está cadastrado. Preciso da alíquota da Imprimil.
