@@ -692,14 +692,39 @@ type OrdemBruta = {
   }[];
 };
 
-function normalizarPedido(o: OrdemBruta): Pedido {
+/**
+ * O que o vendedor recebe pelo pedido, pela conta do próprio Meli
+ * (página "Provisões"): itens − tarifa de venda − custo de envio do vendedor.
+ *
+ * Em campanha com desconto bancado pelo canal, a tarifa já vem reduzida no
+ * `sale_fee`, então o recebido não cai junto com o preço de vitrine — é por
+ * isso que ele não pode ser derivado de preço × alíquota.
+ *
+ * Nulo quando falta tarifa ou frete: recebido pela metade seria otimista.
+ */
+export function liquidoDoPedido(p: {
+  total: number;
+  comissao: number | null;
+  fretePago: number | null;
+}): number | null {
+  // ponytail: cupom do vendedor fora da conta; entra se aparecer pedido com cupom e extrato que mostre o efeito
+  if (p.comissao == null || p.fretePago == null) return null;
+  return +(p.total - p.comissao - p.fretePago).toFixed(2);
+}
+
+export function normalizarPedido(o: OrdemBruta): Pedido {
   const itens: ItemPedido[] = (o.order_items ?? []).map((i) => ({
     mlb: i.item?.id ?? "",
     titulo: i.item?.title ?? "",
     sku: i.item?.seller_sku ?? null,
     quantidade: Number(i.quantity ?? 0),
     precoUnitario: Number(i.unit_price ?? 0),
-    comissao: i.sale_fee == null ? null : +Number(i.sale_fee).toFixed(2),
+    /* `sale_fee` do Meli é POR UNIDADE. Medido em 09/11/2026 nos pedidos da
+       Imprimil: 2 kits a R$ 53,99 vinham com R$ 6,21 (11,5% de UM kit), 4 kits
+       com R$ 3,22. Sem multiplicar, todo pedido de mais de uma unidade
+       gravava comissão de uma só e a margem saía inflada. */
+    comissao:
+      i.sale_fee == null ? null : +(Number(i.sale_fee) * Number(i.quantity ?? 1)).toFixed(2),
     tipoAnuncio: i.listing_type_id ?? null,
   }));
 
