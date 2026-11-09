@@ -634,7 +634,7 @@ export default function CustosCliente({
                       <th className={`${th} text-right`}>Preço médio</th>
                       <th className={`${th} text-right`}>Comissão do canal</th>
                       <th className={`${th} text-right`}>Comissão % (anúncio)</th>
-                      <th className={`${th} text-right`}>Frete R$</th>
+                      <th className={`${th} text-right`} title="Frete do vendedor como o canal cobrou. No Meli, abaixo de R$ 79 é o custo de envio que substituiu a taxa fixa em 03/2026.">Frete R$</th>
                       <th className={`${th} text-right`}>Juros R$</th>
                       <th className={`${th} text-right`} title="Ads do Mercado Livre na janela de 30 dias que o canal entrega">Ads</th>
                       <th className={`${th} text-right w-[92px]`}>Mercadoria</th>
@@ -708,6 +708,9 @@ export default function CustosCliente({
                             praticado={l.frete.praticado}
                             formato={money}
                           />
+                          {l.frete.praticado != null && l.precoMedio != null && l.precoMedio < 79 && (
+                            <span className="block text-[11px] text-ink-3">custo abaixo de R$ 79</span>
+                          )}
                         </td>
                         <td className={`${td} text-right`}>
                           <span className="num text-[12.5px] text-ink-2">

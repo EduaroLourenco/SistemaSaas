@@ -8,7 +8,7 @@ fs.writeFileSync("vazio.cjs", "");
 const jiti = createJiti(import.meta.url, {
   alias: { "@": path.join(process.cwd(), "src"), "server-only": path.join(process.cwd(), "vazio.cjs") },
 });
-const { regraDoCanal, precoNoCanal, contaNoCanal } = await jiti.import(
+const { regraDoCanal, precoNoCanal, contaNoCanal, regraEfetiva, custoMeliEstimado } = await jiti.import(
   path.join(process.cwd(), "src/lib/precificacao/regras-canal.ts")
 );
 
@@ -35,4 +35,15 @@ assert.ok(Math.abs(contaNoCanal(meli, { ...custo, frete: 6.85, marketingPct: 14.
 
 // Margem impossível devolve motivo, não número
 assert.equal(precoNoCanal(meli, custo, 95).ok, false);
+// Tipo e comissão da categoria
+const premium = regraEfetiva(meli, "premium");
+assert.equal(premium.faixas[0].comissaoPct, 16.5);
+assert.equal(regraEfetiva(meli, "classico", 13).faixas[0].comissaoPct, 13);
+
+// Custo do Meli abaixo de R$ 79: os valores medidos nos pedidos da Imprimil
+assert.deepEqual(custoMeliEstimado(27.99, 0.1, "coleta"), { frete: 6.85, taxaFixa: 0 });
+assert.deepEqual(custoMeliEstimado(53.99, 0.1, "coleta"), { frete: 8.15, taxaFixa: 0 });
+assert.deepEqual(custoMeliEstimado(27.99, 0.1, "flex"), { frete: 0, taxaFixa: 6.65 });
+assert.equal(custoMeliEstimado(27.99, 1.2, "coleta"), null); // mais pesado: só a API sabe
+assert.equal(custoMeliEstimado(89.9, 0.1, "coleta"), null); // acima de R$ 79: frete grátis do vendedor
 console.log("OK: preço por canal fecha a margem em cada faixa de tarifa");

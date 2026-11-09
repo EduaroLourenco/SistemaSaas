@@ -4,11 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, EmptyState } from "@/components/ui/primitives";
-import { Tabs, Segmented, Input, Field } from "@/components/ui/controls";
+import { Tabs, Segmented, Input, Field, Select } from "@/components/ui/controls";
 import { StatTile } from "@/components/ui/stat-tile";
 import { money, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { regraDoCanal, contaNoCanal, precoNoCanal, type CustoProduto } from "@/lib/precificacao/regras-canal";
+import {
+  regraDoCanal, regraEfetiva, contaNoCanal, precoNoCanal, custoMeliEstimado,
+  type CustoProduto, type Logistica, type RegraCanal,
+} from "@/lib/precificacao/regras-canal";
 import type { DadosPrecificacao, ProdutoPreco } from "@/lib/dados/precificacao";
 
 /**
@@ -367,104 +370,203 @@ function Precos({ dados, canal, impostoGlobal, metaPct, marketingPct }: {
 
 /* ── Cotação de produto novo ──────────────────────────────────────────── */
 
+type AjusteCanal = { tipo: string; comissao: string; frete: string; logistica: Logistica; testar: string };
+
 function Cotacao({ dados, impostoGlobal, metaPct, marketingPct }: {
   dados: DadosPrecificacao; impostoGlobal: number | null; metaPct: number; marketingPct: number;
 }) {
   const [f, setF] = React.useState({ custo: "", embalagem: "", peso: "", altura: "", largura: "", comprimento: "" });
-  const [freteMeli, setFreteMeli] = React.useState<{ valor: number | null; erro?: string; carregando?: boolean }>({ valor: null });
+  const [ajustes, setAjustes] = React.useState<Record<string, AjusteCanal>>({});
+  const [api, setApi] = React.useState<{ valor: number | null; erro?: string; carregando?: boolean; chave?: string }>({ valor: null });
   const v = Object.fromEntries(Object.entries(f).map(([k, s]) => [k, ler(s)])) as Record<keyof typeof f, number | null>;
   const cubico = v.altura && v.largura && v.comprimento ? (v.altura * v.largura * v.comprimento) / 6000 : null;
   const cobrado = v.peso != null || cubico != null ? Math.max(v.peso ?? 0, cubico ?? 0) : null;
-  const pronto = v.custo != null && v.peso && v.altura && v.largura && v.comprimento;
+  const medidasProntas = Boolean(v.peso && v.altura && v.largura && v.comprimento);
 
-  const base = (frete: number): CustoProduto => ({
-    mercadoria: v.custo ?? 0, embalagem: v.embalagem ?? 0, frete, impostoPct: impostoGlobal ?? 0, marketingPct,
-  });
+  const ajuste = (codigo: string): AjusteCanal =>
+    ajustes[codigo] ?? { tipo: regraDoCanal(codigo)!.tipos[0].id, comissao: "", frete: "", logistica: "coleta", testar: "" };
+  const mudar = (codigo: string, parte: Partial<AjusteCanal>) => setAjustes({ ...ajustes, [codigo]: { ...ajuste(codigo), ...parte } });
+  const chaveApi = [v.altura, v.largura, v.comprimento, v.peso, ajuste("mercado_livre").tipo].join("|");
+  const custoBase = { mercadoria: v.custo ?? 0, embalagem: v.embalagem ?? 0, impostoPct: impostoGlobal ?? 0, marketingPct };
 
-  /* O frete do Meli depende do preço, e o preço do frete: cota no preço sem
-     frete, recalcula com o frete que voltou. Uma volta basta — a faixa de
-     frete muda devagar com o preço. */
+  /* Uma conta por canal. No Meli o custo de envio depende do preço e o preço
+     do custo: resolve em poucas voltas, até o preço parar de mudar. */
+  const contaDoCanal = (codigo: string) => {
+    const regraBase = regraDoCanal(codigo)!;
+    const a = ajuste(codigo);
+    const efetiva = regraEfetiva(regraBase, a.tipo, ler(a.comissao));
+    const freteManual = ler(a.frete);
+
+    const montar = (preco: number | null): { regra: RegraCanal; frete: number | null; origem: string } => {
+      if (regraBase.frete === "incluso") return { regra: efetiva, frete: freteManual ?? 0, origem: freteManual != null ? "manual" : "na tarifa" };
+      const est = preco != null ? custoMeliEstimado(preco, cobrado, a.logistica) : null;
+      const taxaFixa = est?.taxaFixa ?? 0;
+      const regra = taxaFixa ? { ...efetiva, faixas: efetiva.faixas.map((x) => ({ ...x, taxaFixa: x.taxaFixa + taxaFixa })) } : efetiva;
+      if (freteManual != null) return { regra, frete: freteManual, origem: "manual" };
+      if (a.logistica === "coleta" && api.valor != null && api.chave === chaveApi) return { regra, frete: api.valor, origem: "da API" };
+      if (est) return { regra, frete: est.frete, origem: a.logistica === "flex" ? "seu frete" : "estimado" };
+      return { regra, frete: null, origem: "cotar" };
+    };
+
+    let m = montar(null);
+    let preco: number | null = null;
+    if (v.custo != null) {
+      for (let i = 0; i < 4; i++) {
+        const tentativa = precoNoCanal(m.regra, { ...custoBase, frete: m.frete ?? 0 }, metaPct);
+        if (!tentativa.ok) { preco = null; break; }
+        const proximo = montar(tentativa.preco);
+        const estavel = proximo.frete === m.frete && proximo.regra.faixas[0].taxaFixa === m.regra.faixas[0].taxaFixa;
+        m = proximo;
+        preco = tentativa.preco;
+        if (estavel) break;
+      }
+    }
+    const ok = preco != null && m.frete != null;
+    const conta = ok ? contaNoCanal(m.regra, { ...custoBase, frete: m.frete! }, preco!) : null;
+    const precoTeste = ler(a.testar);
+    let teste: ReturnType<typeof contaNoCanal> | null = null;
+    if (precoTeste && v.custo != null) {
+      const mt = montar(precoTeste);
+      if (mt.frete != null) teste = contaNoCanal(mt.regra, { ...custoBase, frete: mt.frete }, precoTeste);
+    }
+    return { a, regraBase, efetiva, preco: ok ? preco : null, conta, frete: m.frete, origem: m.origem, teste };
+  };
+
+  const meli = contaDoCanal("mercado_livre");
+
+  /* A cotação do Meli pede preço: usa o testado, senão o que a conta achou,
+     senão o preço sem frete. A faixa de frete muda devagar com o preço. */
   const cotar = async () => {
-    if (!pronto || !dados.contaMeli) return;
-    const r0 = precoNoCanal(regraDoCanal("mercado_livre")!, base(0), metaPct);
-    if (!r0.ok) return;
-    setFreteMeli({ valor: null, carregando: true });
+    const semFrete = precoNoCanal(regraEfetiva(regraDoCanal("mercado_livre")!, ajuste("mercado_livre").tipo), { ...custoBase, frete: 0 }, metaPct);
+    const preco = ler(ajuste("mercado_livre").testar) ?? meli.preco ?? (semFrete.ok ? semFrete.preco : null);
+    if (!medidasProntas || !dados.contaMeli || preco == null) return;
+    setApi({ valor: null, carregando: true });
     const q = new URLSearchParams({
       conta: dados.contaMeli, altura: String(v.altura), largura: String(v.largura), comprimento: String(v.comprimento),
-      peso: String(v.peso), preco: String(r0.preco),
+      peso: String(v.peso), preco: String(preco), tipo: ajuste("mercado_livre").tipo,
     });
     try {
       const r = await fetch(`/api/precificacao/frete?${q}`);
       const j = await r.json();
-      setFreteMeli(r.ok ? { valor: j.frete } : { valor: null, erro: j.erro });
+      setApi(r.ok ? { valor: j.frete, chave: chaveApi, erro: j.frete == null ? "o Meli não devolveu custo" : undefined } : { valor: null, erro: j.erro });
     } catch {
-      setFreteMeli({ valor: null, erro: "sem conexão" });
+      setApi({ valor: null, erro: "sem conexão" });
     }
   };
 
   const campo = (k: keyof typeof f, rotulo: string) => (
     <Field label={rotulo}>
-      <Input type="number" inputMode="decimal" value={f[k]} onChange={(e) => { setF({ ...f, [k]: e.target.value }); setFreteMeli({ valor: null }); }} />
+      <Input type="number" inputMode="decimal" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />
     </Field>
   );
 
-  const linhas = dados.canais.map((c) => {
-    const regra = regraDoCanal(c.codigo)!;
-    const frete = regra.frete === "incluso" ? 0 : freteMeli.valor;
-    const custo = v.custo != null && frete != null ? base(frete) : null;
-    const r = custo ? precoNoCanal(regra, custo, metaPct) : null;
-    const conta = r?.ok && custo ? contaNoCanal(regra, custo, r.preco) : null;
-    return { c, regra, frete, preco: r?.ok ? r.preco : null, conta };
-  });
-
   return (
-    <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-      <Panel className="space-y-3 p-4">
-        <div className="grid grid-cols-2 gap-3">
-          {campo("custo", "Custo")}
-          {campo("embalagem", "Embalagem")}
+    <div className="space-y-4">
+      <Panel className="p-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {campo("custo", "Custo (R$)")}
+          {campo("embalagem", "Embalagem (R$)")}
           {campo("peso", "Peso (kg)")}
           {campo("altura", "Altura (cm)")}
           {campo("largura", "Largura (cm)")}
           {campo("comprimento", "Comprimento (cm)")}
         </div>
-        {cobrado != null && (
-          <p className="text-[12.5px] text-ink-3">
-            Peso cobrado <b className="num text-ink">{cobrado.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} kg</b>{" "}
-            {cubico != null && cubico > (v.peso ?? 0) ? "(cúbico)" : "(real)"}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={cotar}
-          disabled={!pronto || !dados.contaMeli || freteMeli.carregando}
-          className="h-11 w-full rounded-r2 bg-brand text-[14px] font-medium text-brand-ink disabled:opacity-50"
-        >
-          {freteMeli.carregando ? "Cotando…" : "Cotar frete no Mercado Livre"}
-        </button>
-        {!dados.contaMeli && <p className="text-[12px] text-ink-3">sem conta do Mercado Livre conectada</p>}
-        {freteMeli.erro && <p className="text-[12px] text-down">{freteMeli.erro}</p>}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          {cobrado != null && (
+            <span className="text-[12.5px] text-ink-3">
+              Peso cobrado <b className="num text-ink">{cobrado.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} kg</b>{" "}
+              {cubico != null && cubico > (v.peso ?? 0) ? "(cúbico)" : "(real)"}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={cotar}
+            disabled={!medidasProntas || !dados.contaMeli || v.custo == null || api.carregando}
+            className="h-10 rounded-r2 bg-brand px-4 text-[13.5px] font-medium text-brand-ink disabled:opacity-50"
+          >
+            {api.carregando ? "Cotando…" : "Cotar frete no Mercado Livre"}
+          </button>
+          {!dados.contaMeli && <span className="text-[12px] text-ink-3">sem conta do Mercado Livre conectada</span>}
+          {api.erro && <span className="text-[12px] text-down">{api.erro}</span>}
+        </div>
       </Panel>
-      <Grade
-        linhas={linhas}
-        chave={(l) => l.c.codigo}
-        colunas={[
-          { id: "canal", titulo: "Canal", esq: true, valor: () => null, celula: (l) => <span className="font-medium">{l.c.nome}</span> },
-          {
-            id: "preco", titulo: `Preço p/ ${metaPct}%`, valor: (l) => l.preco,
-            celula: (l) =>
-              l.preco != null ? <Moeda v={l.preco} className="text-[15px] font-semibold text-brand" />
-              : <span className="text-[12.5px] text-ink-3">{v.custo == null ? "informe o custo" : l.frete == null ? "cotar frete" : "não fecha"}</span>,
-          },
-          { id: "taxas", titulo: "Taxas", valor: (l) => (l.conta ? l.conta.comissao + l.conta.taxaFixa : null), celula: (l) => <Moeda v={l.conta ? l.conta.comissao + l.conta.taxaFixa : null} /> },
-          {
-            id: "frete", titulo: "Frete", valor: (l) => l.frete,
-            celula: (l) => (l.regra.frete === "incluso" ? <span className="text-[12.5px] text-ink-3">na tarifa</span> : <Moeda v={l.frete} />),
-          },
-          { id: "recebe", titulo: "Recebe", valor: (l) => l.conta?.recebe ?? null, celula: (l) => <Moeda v={l.conta?.recebe} /> },
-          { id: "lucro", titulo: "Lucro/un.", valor: (l) => l.conta?.margem ?? null, celula: (l) => <Moeda v={l.conta?.margem} /> },
-        ]}
-      />
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {dados.canais.map((c) => {
+          const r = c.codigo === "mercado_livre" ? meli : contaDoCanal(c.codigo);
+          const faixaCat = r.efetiva.tipos[0].faixaCategoria;
+          const comissaoPadrao = r.efetiva.tipos[0].faixas[0].comissaoPct;
+          const comissaoDigitada = ler(r.a.comissao);
+          const foraDaFaixa = comissaoDigitada != null && faixaCat != null && (comissaoDigitada < faixaCat[0] || comissaoDigitada > faixaCat[1]);
+          return (
+            <Panel key={c.codigo} className="flex flex-col gap-3 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[15px] font-semibold text-ink">{c.nome}</span>
+                {r.regraBase.tipos.length > 1 && (
+                  <Select value={r.a.tipo} onChange={(e) => mudar(c.codigo, { tipo: e.target.value })} className="h-9 w-auto text-[13px]">
+                    {r.regraBase.tipos.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                  </Select>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {faixaCat ? (
+                  <Field label={`Comissão % (${faixaCat[0]} a ${faixaCat[1]})`}>
+                    <Input type="number" inputMode="decimal" value={r.a.comissao} placeholder={String(comissaoPadrao)} invalid={foraDaFaixa} onChange={(e) => mudar(c.codigo, { comissao: e.target.value })} />
+                  </Field>
+                ) : (
+                  <Field label="Comissão">
+                    <span className="num flex h-10 items-center text-[12.5px] text-ink-2">
+                      {r.efetiva.faixas.map((x) => `${x.comissaoPct}% + ${money(x.taxaFixa)}`).join(" / ")}
+                    </span>
+                  </Field>
+                )}
+                <Field label={`Frete R$ · ${r.origem}`}>
+                  <Input type="number" inputMode="decimal" value={r.a.frete} placeholder={r.frete != null ? r.frete.toFixed(2) : "cotar"} onChange={(e) => mudar(c.codigo, { frete: e.target.value })} />
+                </Field>
+                {c.codigo === "mercado_livre" && (
+                  <Field label="Envio" className="col-span-2">
+                    <Segmented
+                      options={[{ value: "coleta", label: "Coleta / Full" }, { value: "flex", label: "Flex / próprio" }]}
+                      value={r.a.logistica}
+                      onChange={(lg) => mudar(c.codigo, { logistica: lg as Logistica })}
+                    />
+                  </Field>
+                )}
+              </div>
+
+              <div className="border-t border-line pt-3">
+                <span className="text-[12px] text-ink-3">Preço para {metaPct}%</span>
+                <div className="num text-[30px] font-semibold leading-tight text-brand">
+                  {r.preco != null ? money(r.preco) : <span className="text-[15px] font-normal text-ink-3">{v.custo == null ? "informe o custo" : r.frete == null ? "cotar o frete" : "não fecha"}</span>}
+                </div>
+                {r.conta && (
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">
+                    <dt className="text-ink-3">Comissão</dt><dd className="num text-right">{money(r.conta.comissao)}</dd>
+                    {r.conta.taxaFixa > 0 && (<><dt className="text-ink-3">Taxa fixa</dt><dd className="num text-right">{money(r.conta.taxaFixa)}</dd></>)}
+                    <dt className="text-ink-3">Frete</dt><dd className="num text-right">{money(r.conta.frete)}</dd>
+                    <dt className="text-ink-3">Recebe</dt><dd className="num text-right font-medium">{money(r.conta.recebe)}</dd>
+                    <dt className="text-ink-3">Lucro/un.</dt><dd className="num text-right font-medium">{money(r.conta.margem)}</dd>
+                  </dl>
+                )}
+              </div>
+
+              <div className="flex items-end gap-2 border-t border-line pt-3">
+                <Field label="Testar preço" className="w-28">
+                  <Input type="number" inputMode="decimal" value={r.a.testar} onChange={(e) => mudar(c.codigo, { testar: e.target.value })} />
+                </Field>
+                {r.teste && (
+                  <span className="pb-2 text-[13px]">
+                    <span className={cn("num font-semibold", tom(r.teste.margemPct))}>{pct(r.teste.margemPct)}</span>
+                    <span className="text-ink-3"> · lucro </span>
+                    <span className="num">{money(r.teste.margem)}</span>
+                  </span>
+                )}
+              </div>
+            </Panel>
+          );
+        })}
+      </div>
     </div>
   );
 }
