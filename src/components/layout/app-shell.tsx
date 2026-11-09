@@ -33,7 +33,7 @@ import { RoteiroArea } from "./roteiro-area";
 
 /* ══ Marca — monograma neutro, sem nome definido ══════════════ */
 
-/* Probel e Imprimil usam o nome "GDF3 by Gerizo" no lugar do logo. Lê a
+/* Imprimil e Bom de Compras usam o nome "GDF3 by Gerizo" no lugar do logo. Lê a
    empresa ativa da mesma rota do rodapé e relê quando o seletor troca. */
 function Wordmark() {
   const [gdf3, setGdf3] = React.useState(false);

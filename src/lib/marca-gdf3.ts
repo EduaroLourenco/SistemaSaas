@@ -2,14 +2,14 @@
 
 import * as React from "react";
 
-/* Probel e Imprimil usam "GDF3 by Gerizo" no lugar da marca. O Wordmark
+/* Imprimil e Bom de Compras usam "GDF3 by Gerizo" no lugar da marca. O Wordmark
    descobre a empresa ativa e grava aqui; a tela de carregamento (que abre
    antes de a empresa ser conhecida) lê o último valor. */
 const CHAVE = "gerizo:gdf3";
 const EVENTO = "gerizo:gdf3-mudou";
 export const NOME_GDF3 = "GDF3 by Gerizo";
 
-export const ehGdf3 = (texto: string) => /probel|imprimil/i.test(texto);
+export const ehGdf3 = (texto: string) => /imprimil|bom de compras/i.test(texto);
 
 export function gravarGdf3(v: boolean) {
   try {
