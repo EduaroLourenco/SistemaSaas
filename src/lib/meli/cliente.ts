@@ -310,7 +310,9 @@ export async function meliGet<T>(
           "A cota é por aplicação e está compartilhada com seus agentes."
       );
     }
-    throw new Error(`Mercado Livre respondeu HTTP ${r.status} em ${caminho}`);
+    // O corpo diz o motivo (ex.: "PolicyAgent" = app bloqueada pela cota/política).
+    const detalhe = (await r.text().catch(() => "")).slice(0, 200);
+    throw new Error(`Mercado Livre respondeu HTTP ${r.status} em ${caminho}${detalhe ? `. ${detalhe}` : ""}`);
   }
   return (await r.json()) as T;
 }
