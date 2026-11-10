@@ -118,8 +118,8 @@ const PERMITIDOS = [
   /^\/inventories\/[A-Z0-9]+\/stock\/fulfillment$/i,
   // perguntas sem resposta — só a contagem interessa
   /^\/questions\/search$/,
-  // custo real do envio: `senders[].cost` é o que o vendedor paga
-  /^\/shipments\/\d+(\/costs)?$/,
+  // custo real do envio: `senders[].cost` é o que o vendedor paga; /sla é o limite de despacho
+  /^\/shipments\/\d+(\/costs|\/sla)?$/,
   // o site é parâmetro: MLB no Brasil, mas não fica preso a ele
   /^\/sites\/[A-Z]{3}\/search$/,
   // /orders/search e /orders/search/recent

@@ -128,6 +128,7 @@ export const NAV: NavGroup[] = [
       /* O termômetro vem primeiro: é a tela que se abre de manhã, antes de
          qualquer análise. */
       { label: "Termômetro", href: "/mercado-livre" },
+      { label: "Envios", href: "/mercado-livre/envios" },
       area(3),
       /* Automações é a leitura AO VIVO do canal: o que está aberto agora
          e até quando dá para aceitar. Vem antes de Campanhas, que é o
