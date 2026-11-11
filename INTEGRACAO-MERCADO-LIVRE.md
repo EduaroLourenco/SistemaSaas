@@ -120,15 +120,24 @@ que prova acesso àquele período.
 
 ---
 
-## Passo 5 — Atualização automática (13h e 01h)
+## Passo 5 — Atualização automática, por bloco
 
-A plataforma sincroniza sozinha duas vezes por dia, no horário de
-Brasília:
+Cada parte tem o seu horário (Brasília). Quem roda é uma fila no servidor
+(`/api/cron/fila`), uma etapa por vez; o `vercel.json` só enfileira.
 
-| Horário | O que traz |
+| Bloco | Quando |
 |---|---|
-| **13h** | A manhã de hoje (parcial) e revisa ontem: estoque, pedidos, visitas |
-| **01h** | Fecha o dia: os três últimos dias inteiros, com os cancelamentos tardios |
+| **Vendas** (com o gasto de publicidade de hoje) | de hora em hora |
+| **Envios** | 03h, 11h, 14h, 15h e 16h |
+| **Financeiro** (revisa os pedidos da semana) | 01h |
+| **Anúncios** (catálogo, disputa e promoções) | 02h |
+| **Estoque** | 04h |
+| **Preços** (o que o comprador paga) | 06h30 |
+| **Publicidade** por anúncio | 11h |
+| **Visitas** | 13h |
+
+O botão **Atualizar** deixa escolher os blocos ou pedir tudo; o pedido
+continua no servidor mesmo com a aba fechada.
 
 A tela **Vendas → Dia** mostra no cabeçalho de quando é o número
 ("atualizado hoje às 13:04 (automático)") e avisa em amarelo se a última
@@ -165,9 +174,10 @@ sozinho. Se um dia a autorização cair (senha do Meli trocada, app
 revogado), a tela avisa; basta gerar um refresh token novo e pôr na
 variável — a plataforma tenta o do ambiente quando o do cofre é recusado.
 
-**Sobre o plano da Vercel:** no Hobby, cada horário dispara uma vez por
-dia, em algum momento dentro da hora marcada (13h00 a 13h59). No Pro,
-dispara no minuto. Cada execução leva cerca de 2 minutos por conta.
+**Sobre o plano da Vercel:** no Hobby, cada rotina dispara uma vez por
+dia, em algum momento dentro da hora marcada. Por isso as vendas de hora
+em hora são 24 rotinas diárias, e não uma de hora em hora — essa barraria
+o deploy no Hobby. No Pro, dispara no minuto.
 
 ---
 

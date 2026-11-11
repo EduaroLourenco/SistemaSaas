@@ -97,13 +97,13 @@ for (let i = 0; i < mlbs.length; i += 20) {
   const lote = mlbs.slice(i, i + 20).map((a) => a.codigo_externo.toUpperCase());
   for (const token of tokens) {
     const r = await fetch(
-      `https://api.mercadolibre.com/items?ids=${lote.join(",")}&attributes=id,secure_thumbnail,thumbnail`,
+      `https://api.mercadolibre.com/items/bulk?ids=${lote.join(",")}&attributes=body.id,body.secure_thumbnail,body.thumbnail`,
       { headers: { Authorization: "Bearer " + token } }
     );
     if (!r.ok) continue;
     const corpo = await r.json();
     for (const item of Array.isArray(corpo) ? corpo : []) {
-      if (item.code !== 200 || !item.body?.id) continue;
+      if (!item.body?.id || item.body.error) continue;
       const foto = https(item.body.secure_thumbnail || item.body.thumbnail);
       if (foto) achadas.set(String(item.body.id).toUpperCase(), foto);
     }

@@ -94,10 +94,10 @@ const catDoMlb = new Map();
 for (let i = 0; i < mlbs.length; i += 20) {
   const lote = mlbs.slice(i, i + 20).map((a) => a.codigo_externo.toUpperCase());
   const j = await pedir(
-    `https://api.mercadolibre.com/items?ids=${lote.join(",")}&attributes=id,catalog_product_id`
+    `https://api.mercadolibre.com/items/bulk?ids=${lote.join(",")}&attributes=body.id,body.catalog_product_id`
   );
   for (const x of Array.isArray(j) ? j : []) {
-    if (x.code !== 200 || !x.body?.id) continue;
+    if (!x.body?.id || x.body.error) continue;
     if (x.body.catalog_product_id)
       catDoMlb.set(String(x.body.id).toUpperCase(), x.body.catalog_product_id);
   }

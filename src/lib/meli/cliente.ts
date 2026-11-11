@@ -462,6 +462,27 @@ type RespostaMulti = {
 };
 
 /**
+ * Até 20 anúncios numa chamada, no formato `{code, body}`.
+ *
+ * O `/items?ids=` foi aposentado pelo Meli: desde 04/11/2026 respondia 403
+ * "ResourceDeprecated" em parte das chamadas, cada dia mais. O substituto é
+ * `/items/bulk?ids=` — mesmo corpo, mesmo limite de 20 (21 dá 400), mas o
+ * status de cada item vem em `status_code`, não em `code`. Conferido na conta
+ * SP em 10/11/2026.
+ */
+export async function itensEmLote<B = RespostaMulti["body"]>(
+  ids: string[],
+  conta: Conta
+): Promise<{ code: number; body: B }[]> {
+  if (!ids.length) return [];
+  const r = await meliGet<{ status_code?: number; code?: number; body: B }[]>(
+    `/items/bulk?ids=${encodeURIComponent(ids.join(","))}`,
+    conta
+  );
+  return r.map((i) => ({ code: i.status_code ?? i.code ?? 0, body: i.body }));
+}
+
+/**
  * Preço atual de vários anúncios. A API aceita no máximo 20 ids por
  * chamada, então os lotes são fatiados aqui.
  */
@@ -474,10 +495,7 @@ export async function precosAtuais(
 
   for (let i = 0; i < unicos.length; i += 20) {
     const lote = unicos.slice(i, i + 20);
-    const resposta = await meliGet<RespostaMulti[]>(
-      `/items?ids=${encodeURIComponent(lote.join(","))}`,
-      conta
-    );
+    const resposta = await itensEmLote(lote, conta);
 
     for (const item of resposta) {
       const b = item.body ?? {};
@@ -1225,10 +1243,7 @@ export async function catalogoCompleto({
 
   for (let i = 0; i < unicos.length; i += 20) {
     const lote = unicos.slice(i, i + 20);
-    const resposta = await meliGet<{ code: number; body: ItemBruto }[]>(
-      `/items?ids=${encodeURIComponent(lote.join(","))}`,
-      conta
-    );
+    const resposta = await itensEmLote<ItemBruto>(lote, conta);
 
     for (const item of resposta) {
       if (item.code !== 200) continue;

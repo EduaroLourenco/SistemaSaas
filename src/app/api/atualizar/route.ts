@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "@/lib/dados/operacao";
-import { planejarAtualizacao } from "@/lib/atualizacao";
+import { acordarFila, estadoDaEmpresa, pedirAtualizacao } from "@/lib/atualizacao-fila";
+import { BLOCOS, ehBloco } from "@/lib/atualizacao-blocos";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 async function autorizar() {
   const sb = await clienteServidor();
@@ -19,44 +20,39 @@ async function autorizar() {
   return { op } as const;
 }
 
-/** GET apenas lista etapas; só o POST lê os canais e grava dados. */
-export async function GET() {
+/** O estado: último pedido manual e quando cada bloco foi atualizado. */
+export async function GET(req: NextRequest) {
   const a = await autorizar();
   if (a.erro) return NextResponse.json({ erro: a.erro }, { status: a.status });
-  try {
-    const plano = await planejarAtualizacao(a.op.id);
-    return NextResponse.json({
-      operacao: { id: a.op.id, nome: a.op.empresa || a.op.nome },
-      periodo: plano.periodo,
-      etapas: plano.etapas.map(({ id, fonte }) => ({ id, fonte })),
-    }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
-    return NextResponse.json({ erro: "Não foi possível consultar as conexões desta empresa." }, { status: 502 });
+  const e = await estadoDaEmpresa(a.op.id);
+  /* Fila parada (a chamada que encadeia caiu): quem está olhando a tela
+     dá o empurrão. Sem isso o pedido esperaria a próxima rotina agendada. */
+  if (e.travado) {
+    const origem = req.nextUrl.origin;
+    after(() => acordarFila(origem));
   }
+  return NextResponse.json({
+    operacao: { id: a.op.id, nome: a.op.empresa || a.op.nome },
+    ultima: e.ultima,
+    pedido: e.pedido,
+  }, { headers: { "Cache-Control": "no-store" } });
 }
 
-/** Cada etapa tem seu próprio limite de tempo e sua autorização conferida de novo. */
-export async function POST(req: Request) {
+/** Enfileira os blocos escolhidos e volta na hora; o servidor segue sozinho. */
+export async function POST(req: NextRequest) {
   const a = await autorizar();
   if (a.erro) return NextResponse.json({ erro: a.erro }, { status: a.status });
   const corpo = await req.json().catch(() => null);
-  if (!corpo || typeof corpo.operacaoId !== "string" || typeof corpo.etapa !== "string") {
-    return NextResponse.json({ erro: "Recarregue a página para atualizar as fontes." }, { status: 400 });
-  }
-  if (corpo.operacaoId !== a.op.id) {
-    return NextResponse.json({ erro: "A empresa selecionada mudou. Inicie uma nova atualização na empresa desejada." }, { status: 409 });
-  }
-  if (corpo.pagina != null && (!Number.isInteger(corpo.pagina) || corpo.pagina < 0 || corpo.pagina > 10000)) {
-    return NextResponse.json({ erro: "Lote de atualização inválido." }, { status: 400 });
-  }
+  const pedidos: unknown[] = Array.isArray(corpo?.blocos) ? corpo.blocos : [];
+  const blocos = BLOCOS.map((b) => b.id).filter((id) => pedidos.includes(id) && ehBloco(id));
+  if (!blocos.length) return NextResponse.json({ erro: "Escolha ao menos um bloco." }, { status: 400 });
   try {
-    const plano = await planejarAtualizacao(a.op.id);
-    const etapa = plano.etapas.find((e) => e.id === corpo.etapa);
-    if (!etapa) return NextResponse.json({ erro: "Esta fonte não está mais conectada à empresa." }, { status: 404 });
-    const comecou = Date.now();
-    const resultado = await etapa.executar(corpo.pagina ?? 0);
-    return NextResponse.json({ ...resultado, segundos: Math.round((Date.now() - comecou) / 1000) });
+    const r = await pedirAtualizacao(a.op.id, blocos, "manual");
+    if ("erro" in r) return NextResponse.json({ erro: r.erro }, { status: 422 });
+    const origem = req.nextUrl.origin;
+    after(() => acordarFila(origem));
+    return NextResponse.json({ pedido: r });
   } catch (e) {
-    return NextResponse.json({ erro: e instanceof Error ? e.message : "Não foi possível atualizar esta fonte." }, { status: 502 });
+    return NextResponse.json({ erro: e instanceof Error ? e.message : "Não foi possível registrar o pedido." }, { status: 502 });
   }
 }

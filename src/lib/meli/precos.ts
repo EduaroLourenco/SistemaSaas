@@ -26,7 +26,9 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 
 export async function capturarPrecosDeVenda(
   contaCanalId: string,
-  prazo: number
+  prazo: number,
+  /** Relê também quem já tem preço de hoje — é o que o pedido manual quer. */
+  refazer = false
 ): Promise<{ ativos: number; gravados: number; falharam: number; semTempo: number }> {
   const sb = clientePrivilegiado();
   const { data, error } = await sb
@@ -44,7 +46,7 @@ export async function capturarPrecosDeVenda(
    */
   const ids = ((data ?? []) as Anuncio[]).map((a) => a.id);
   const feitos = new Set<string>();
-  for (let j = 0; j < ids.length; j += 300) {
+  for (let j = 0; !refazer && j < ids.length; j += 300) {
     const { data: ja } = await sb
       .from("anuncio_estoque_diario")
       .select("anuncio_id")

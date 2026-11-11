@@ -83,8 +83,8 @@ const PERMITIDOS = [
   /^\/users\/\d+\/shipping_options\/free$/,
   // tarifa de venda (percentual + fixa) para um preço, tipo e categoria
   /^\/sites\/MLB\/listing_prices$/,
-  // multiget de anúncios e detalhe de um anúncio
-  /^\/items$/,
+  // multiget de anúncios (`/items/bulk` substituiu `/items?ids=`) e detalhe de um anúncio
+  /^\/items(\/bulk)?$/,
   /^\/items\/[A-Z]{3}\d+(\/shipping_options)?$/i,
   /*
    * Visitas POR ANÚNCIO, dia a dia.

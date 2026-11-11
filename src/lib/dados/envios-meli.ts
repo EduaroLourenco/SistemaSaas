@@ -2,6 +2,7 @@ import "server-only";
 import { operacaoPadrao } from "./operacao";
 import { integracoesDoProvedor } from "@/lib/integracoes/cofre";
 import { meliGet, vendedor } from "@/lib/meli/cliente";
+import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 
 /**
  * Envios do Mercado Livre: o que está pago e ainda não saiu, e até quando.
@@ -65,10 +66,6 @@ const SITUACAO: Record<string, string> = {
 const brt = (ms: number) => new Date(ms - 3 * 3600_000).toISOString();
 const dias = (a: string, b: string) =>
   Math.round((Date.parse(a + "T12:00:00Z") - Date.parse(b + "T12:00:00Z")) / 86_400_000);
-
-/** Três minutos de memória: cada pedido custa até duas chamadas à cota compartilhada. */
-const g = globalThis as unknown as { __enviosMeli?: { op: string; em: number; v: DadosEnvios } };
-const VALE_MS = 180_000;
 
 async function doConta(contaId: string, nome: string, hoje: string): Promise<EnvioMeli[]> {
   const v = await vendedor(contaId);
@@ -136,15 +133,20 @@ async function doConta(contaId: string, nome: string, hoje: string): Promise<Env
   return saida;
 }
 
-export async function carregarEnvios(forcar = false): Promise<DadosEnvios> {
-  const op = await operacaoPadrao();
-  if (!op) return { hoje: brt(Date.now()).slice(0, 10), contas: [], envios: [], falhas: [], geradoEm: new Date().toISOString() };
+/*
+ * Os envios são um RETRATO, não uma consulta ao vivo.
+ *
+ * Cada pedido custa até duas chamadas à cota compartilhada, e abrir a tela
+ * no celular esperava todas elas. Agora o retrato é tirado nos horários do
+ * bloco "Envios" (madrugada, manhã, 14h, 15h e 16h) ou quando alguém pede
+ * pela atualização manual, e a tela só lê. Mora em `agendamentos` com
+ * tipo "envios", uma linha por empresa.
+ */
+const TIPO = "envios";
 
-  const guardado = g.__enviosMeli;
-  if (!forcar && guardado && guardado.op === op.id && Date.now() - guardado.em < VALE_MS) return guardado.v;
-
+export async function atualizarEnvios(operacaoId: string): Promise<DadosEnvios> {
   const hoje = brt(Date.now()).slice(0, 10);
-  const integs = (await integracoesDoProvedor("mercado_livre", op.id)).filter((i) => i.ref);
+  const integs = (await integracoesDoProvedor("mercado_livre", operacaoId)).filter((i) => i.ref);
   const falhas: DadosEnvios["falhas"] = [];
 
   const porConta = await Promise.all(
@@ -163,6 +165,23 @@ export async function carregarEnvios(forcar = false): Promise<DadosEnvios> {
     falhas,
     geradoEm: new Date().toISOString(),
   };
-  g.__enviosMeli = { op: op.id, em: Date.now(), v };
+  const sb = clientePrivilegiado();
+  const { data: atual } = await sb.from("agendamentos").select("id").eq("operacao_id", operacaoId).eq("tipo", TIPO).limit(1).maybeSingle();
+  const linha = { operacao_id: operacaoId, tipo: TIPO, cron: "bloco envios", descricao: "Retrato dos envios do Mercado Livre", config: v, ultimo_disparo: v.geradoEm };
+  const { error } = atual
+    ? await sb.from("agendamentos").update(linha).eq("id", atual.id)
+    : await sb.from("agendamentos").insert(linha);
+  if (error) throw new Error(`Não consegui guardar os envios: ${error.message}`);
   return v;
+}
+
+export async function carregarEnvios(): Promise<DadosEnvios> {
+  const op = await operacaoPadrao();
+  if (!op) return { hoje: brt(Date.now()).slice(0, 10), contas: [], envios: [], falhas: [], geradoEm: new Date().toISOString() };
+  const { data } = await clientePrivilegiado().from("agendamentos").select("config").eq("operacao_id", op.id).eq("tipo", TIPO).limit(1).maybeSingle();
+  const salvo = data?.config as DadosEnvios | undefined;
+  if (!salvo?.geradoEm) return atualizarEnvios(op.id);
+  // O "hoje" e os dias até o limite mudam à meia-noite, mesmo sem retrato novo.
+  const hoje = brt(Date.now()).slice(0, 10);
+  return { ...salvo, hoje, envios: salvo.envios.map((e) => ({ ...e, dias: e.limite ? dias(e.limite.slice(0, 10), hoje) : null })) };
 }

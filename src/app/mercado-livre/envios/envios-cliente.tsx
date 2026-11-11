@@ -73,7 +73,12 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
 
   return (
     <>
-      <PageHeader title="Envios Mercado Livre" />
+      <PageHeader
+        title="Envios Mercado Livre"
+        badge={<span className="num text-[12px] text-ink-3">
+          leitura das {new Date(dados.geradoEm).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })}
+        </span>}
+      />
       <PageBody>
         {/* Uma faixa de filtro acima de tudo que ela recorta */}
         <div className="mb-4 flex flex-wrap gap-2">

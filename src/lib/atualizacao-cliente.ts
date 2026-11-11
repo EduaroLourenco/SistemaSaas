@@ -1,90 +1,93 @@
+import type { Bloco } from "@/lib/atualizacao-blocos";
+
 export type EtapaAtualizacao = {
   id: string;
+  bloco: Bloco;
   fonte: string;
-  estado: "aguardando" | "atualizando" | "concluida" | "falhou" | "interrompida";
+  estado: "aguardando" | "atualizando" | "concluida" | "falhou";
   detalhe?: string;
   avisos?: string[];
+  fim?: string;
+};
+export type PedidoAtualizacao = {
+  id: string;
+  blocos: Bloco[];
+  etapas: EtapaAtualizacao[];
+  criadoEm: string;
+  ativo: boolean;
 };
 export type EstadoAtualizacao = {
-  rodando: boolean;
-  iniciou: boolean;
+  carregado: boolean;
+  enviando: boolean;
   empresa?: string;
-  etapas: EtapaAtualizacao[];
+  ultima: Partial<Record<Bloco, { em: string; falhou: boolean }>>;
+  pedido: PedidoAtualizacao | null;
   erro?: string;
 };
-export const estadoInicial: EstadoAtualizacao = { rodando: false, iniciou: false, etapas: [] };
+export const estadoInicial: EstadoAtualizacao = { carregado: false, enviando: false, ultima: {}, pedido: null };
 
-/** Uma execução por aba, compartilhada pelo cabeçalho e por Fontes de dados. */
+/**
+ * O navegador só PEDE e OLHA. Quem atualiza é o servidor (a fila em
+ * `/api/cron/fila`), então fechar a aba ou bloquear o celular não para
+ * nada: ao voltar, a leitura mostra o que já rodou.
+ */
 export function criarAtualizador(requisitar: typeof fetch = (...args) => fetch(...args)) {
   let estado = estadoInicial;
-  let execucao: Promise<void> | null = null;
+  let relogio: ReturnType<typeof setTimeout> | null = null;
   const ouvintes = new Set<() => void>();
+  const aoTerminar = new Set<() => void>();
   const publicar = (novo: Partial<EstadoAtualizacao>) => {
     estado = { ...estado, ...novo };
     ouvintes.forEach((f) => f());
   };
-  const mudarEtapa = (id: string, mudar: Partial<EtapaAtualizacao>) => {
-    publicar({ etapas: estado.etapas.map((e) => e.id === id ? { ...e, ...mudar } : e) });
-  };
 
-  async function rodar() {
-    publicar({ ...estadoInicial, rodando: true, iniciou: true, empresa: undefined, erro: undefined });
+  async function ler() {
     try {
-      const resp = await requisitar("/api/atualizar", { cache: "no-store" });
-      const plano = await resp.json().catch(() => null);
-      if (!resp.ok || !plano?.operacao?.id || !Array.isArray(plano.etapas)) {
-        throw new Error(plano?.erro ?? "Não foi possível consultar as fontes. Tente novamente.");
-      }
-      publicar({ empresa: plano.operacao.nome, etapas: plano.etapas.map((e: { id: string; fonte: string }) => ({ ...e, estado: "aguardando" })) });
-      let interromper = false;
-      for (const e of estado.etapas) {
-        mudarEtapa(e.id, { estado: "atualizando" });
-        try {
-          let pagina = 0;
-          const avisos = new Set<string>();
-          while (true) {
-          const resposta = await requisitar("/api/atualizar", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ operacaoId: plano.operacao.id, etapa: e.id, pagina }),
-          });
-          const r = await resposta.json().catch(() => null);
-          if (!resposta.ok || !r) {
-            const detalhe = r?.erro ?? "Não foi possível confirmar esta etapa. Tente novamente ao final.";
-            mudarEtapa(e.id, { estado: "falhou", detalhe });
-            // Troca de empresa, sessão expirada ou permissão revogada: não seguir gravando.
-            if ([401, 403, 409].includes(resposta.status)) {
-              publicar({ erro: detalhe, etapas: estado.etapas.map((x) => x.estado === "aguardando" ? { ...x, estado: "interrompida" } : x) });
-              interromper = true;
-            }
-            break;
-          } else {
-            (r.avisos ?? []).forEach((a: string) => avisos.add(a));
-            const continua = Number.isInteger(r.continuacao) && r.continuacao > pagina && r.continuacao <= 10000;
-            mudarEtapa(e.id, { estado: continua ? "atualizando" : "concluida", detalhe: r.detalhe, avisos: [...avisos] });
-            if (!continua) break;
-            pagina = r.continuacao;
-          }
-          }
-        } catch {
-          mudarEtapa(e.id, { estado: "falhou", detalhe: "A conexão caiu. Não foi possível confirmar esta etapa." });
-        }
-        if (interromper) break;
-      }
+      const r = await requisitar("/api/atualizar", { cache: "no-store" });
+      const j = await r.json().catch(() => null);
+      if (!r.ok || !j) throw new Error(j?.erro ?? "Não foi possível ler a atualização.");
+      const antes = estado.pedido?.ativo;
+      publicar({ carregado: true, empresa: j.operacao?.nome, ultima: j.ultima ?? {}, pedido: j.pedido ?? null, erro: undefined });
+      if (antes && !j.pedido?.ativo) aoTerminar.forEach((f) => f());
     } catch (e) {
-      publicar({ erro: e instanceof Error ? e.message : "Não foi possível conectar ao servidor." });
+      publicar({ carregado: true, erro: e instanceof Error ? e.message : "Sem conexão." });
+    }
+    agendar();
+  }
+
+  // Enquanto há pedido andando, relê a cada 4s; parado, não gasta nada.
+  function agendar() {
+    if (relogio) clearTimeout(relogio);
+    relogio = estado.pedido?.ativo ? setTimeout(ler, 4000) : null;
+  }
+
+  async function pedir(blocos: Bloco[]) {
+    publicar({ enviando: true, erro: undefined });
+    try {
+      const r = await requisitar("/api/atualizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocos }),
+      });
+      const j = await r.json().catch(() => null);
+      if (!r.ok || !j?.pedido) throw new Error(j?.erro ?? "Não foi possível pedir a atualização.");
+      publicar({ pedido: j.pedido });
+      agendar();
+    } catch (e) {
+      publicar({ erro: e instanceof Error ? e.message : "Sem conexão." });
     } finally {
-      publicar({ rodando: false });
+      publicar({ enviando: false });
     }
   }
 
   return {
     ler: () => estado,
     assinar: (ouvinte: () => void) => { ouvintes.add(ouvinte); return () => { ouvintes.delete(ouvinte); }; },
-    executar: () => {
-      if (!execucao) execucao = rodar().finally(() => { execucao = null; });
-      return execucao;
-    },
+    /** Primeira leitura de quem monta a tela; as seguintes ficam por conta do relógio. */
+    carregar: () => { if (!estado.carregado) void ler(); },
+    recarregar: () => void ler(),
+    pedir,
+    aoTerminar: (f: () => void) => { aoTerminar.add(f); return () => { aoTerminar.delete(f); }; },
   };
 }
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { meliGet, vendedor } from "./cliente";
+import { itensEmLote, meliGet, vendedor } from "./cliente";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import type { Integracao } from "@/lib/integracoes/cofre";
 import { gravarEstoques, registrarFalhaEstoque } from "@/lib/estoques/gravar";
@@ -69,7 +69,7 @@ export async function estoqueMeli(integ: Integracao, pagina = 0) {
     const grupos = new Map<string, { up?: string; inventario?: string; itens: { mlb: string; sku: string | null; titulo: string }[]; quantidade: number | null }>();
     for (let p = 0; p < catalogo.length; p += 20) {
       const lote = catalogo.slice(p, p + 20);
-      const brutos = await meliGet<{ code: number; body: Item }[]>(`/items?ids=${encodeURIComponent(lote.map((a) => a.codigo).join(","))}`, conta);
+      const brutos = await itensEmLote<Item>(lote.map((a) => a.codigo), conta);
       for (const r of brutos) {
         if (r.code !== 200 || !r.body?.id) { avisos.add("Alguns anúncios não puderam ser consultados; seus saldos anteriores continuam identificados pela data."); continue; }
         const b = r.body;

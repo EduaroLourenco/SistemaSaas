@@ -308,12 +308,12 @@ for (const [dono, lista] of grupos) {
     const lote = ids.slice(i, i + 20);
     for (const h of tentar) {
       const r = await fetch(
-        `https://api.mercadolibre.com/items?ids=${lote.join(",")}&attributes=id,price,original_price,status,available_quantity`,
+        `https://api.mercadolibre.com/items/bulk?ids=${lote.join(",")}&attributes=body.id,body.price,body.original_price,body.status,body.available_quantity`,
         { headers: h }
       );
       if (!r.ok) continue;
       for (const item of await r.json()) {
-        if (item.code === 200 && item.body?.id) vivo.set(String(item.body.id).toUpperCase(), item.body);
+        if (item.body?.id && !item.body.error) vivo.set(String(item.body.id).toUpperCase(), item.body);
       }
       await espera(300);
     }
