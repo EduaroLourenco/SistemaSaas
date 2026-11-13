@@ -19,7 +19,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 const d = JSON.parse(readFileSync("scratchpad/bf/dados.json", "utf8"));
-const SEM_INI = 202627, SEM_FIM = 202643;
+const SEM_INI = 202627, SEM_FIM = 202645;
 const chave = (s) => s.ano_iso * 100 + s.semana_iso;
 const fechada = (s) => chave(s) >= SEM_INI && chave(s) <= SEM_FIM;
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -57,7 +57,7 @@ const A = new Map(d.anuncios.map((a) => [a.id, a]));
 /* A mesma janela das visitas, para os dois números poderem ser divididos
    um pelo outro. Fora dela há 2 unidades: uma da loja própria em 02/06 e
    uma do Meli em 14/06, ambas anteriores à primeira semana medida. */
-const DE = "2026-06-29", ATE = "2026-10-25";
+const DE = "2026-06-29", ATE = "2026-11-08";
 const naJanela = (v) => v.data >= DE && v.data <= ATE;
 const vivas = d.vendas.filter((v) => !v.cancelado && naJanela(v));
 const canceladas = d.vendas.filter((v) => v.cancelado && naJanela(v));
@@ -220,8 +220,8 @@ const pc = (a, b) => b ? (a / b * 100).toFixed(2) + "%" : "—";
 console.log("══ PORTFÓLIO · S27 a S43 · 29/jun a 25/out · 17 semanas fechadas ══");
 console.log(`  anúncios medidos ${total.anuncios} · visitas ${total.vis.toLocaleString("pt-BR")} · vendas ${total.ven} · conversão ${pc(total.ven, total.vis)}`);
 console.log(`  receita (pedidos) ${brl(receitaTotal)} em ${unidadesTotal} unidades · ticket ${brl(ticket)}`);
-const s44 = semanas.get("2026-S44");
-console.log(`  S44 (26/10 a 01/11) ainda correndo: ${s44.vis} visitas, ${s44.ven} vendas — fora dos totais`);
+const s44 = semanas.get("2026-S46");
+console.log(`  S46 (09/11 a 15/11) ainda correndo: ${s44.vis} visitas, ${s44.ven} vendas — fora dos totais`);
 
 console.log("\n══ CLÁSSICO vs PREMIUM ══");
 for (const [n, t] of [["CLÁSSICO", classico], ["PREMIUM", premium]])

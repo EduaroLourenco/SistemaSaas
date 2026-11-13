@@ -91,13 +91,24 @@ async function doConta(contaId: string, nome: string, hoje: string): Promise<Env
         let sub = "";
 
         if (envio) {
-          const sla = await meliGet<{ expected_date?: string }>(`/shipments/${envio}/sla`, contaId).catch(() => null);
+          const sla = await meliGet<{ expected_date?: string; last_updated?: string }>(`/shipments/${envio}/sla`, contaId).catch(() => null);
           const sh = await meliGet<{
             substatus?: string;
             date_created?: string;
             lead_time?: { estimated_delivery_time?: { schedule?: number | null } };
           }>(`/shipments/${envio}`, contaId, { "x-format-new": "true" }).catch(() => null);
           sub = sh?.substatus ?? "";
+          /* Coletado e a API ainda não soube. Na coleta (cross_docking) o
+             envio fica em `ready_to_ship/in_packing_list` por dias, enquanto
+             o painel já mostra "A caminho"; o que muda é o sla, que o Meli
+             fecha logo depois da coleta. Sla mexido depois do limite com o
+             envio na lista de coleta = já saiu. */
+          if (
+            sub === "in_packing_list" &&
+            sla?.expected_date &&
+            sla.last_updated &&
+            Date.parse(sla.last_updated) > Date.parse(sla.expected_date)
+          ) continue;
           if (sla?.expected_date) {
             limite = sla.expected_date;
             origem = "canal";

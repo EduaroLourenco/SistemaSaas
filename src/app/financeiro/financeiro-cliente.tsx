@@ -282,16 +282,6 @@ export default function FinanceiroCliente({
             />
             <Linha rotulo="Comissão do canal" valor={custo("comissao")} nota={coberturaCusto("comissao")} indent />
             <Linha rotulo="Frete" valor={custo("frete")} nota={coberturaCusto("frete")} indent />
-            <Linha
-              rotulo="Juros de parcelamento"
-              valor={custo("juros")}
-              indent
-              nota={
-                r.cadaCoberturaDe.jurosInformado === 0
-                  ? "Sem juros informados nos pedidos; confira a cobertura da fonte."
-                  : undefined
-              }
-            />
             <Linha rotulo="Impostos" valor={custo("impostos")} nota={coberturaCusto("impostos")} indent />
             <Linha rotulo="Embalagem" valor={custo("embalagem")} nota={coberturaCusto("embalagem")} indent />
             <Linha rotulo="Mercadoria" valor={custo("mercadoria")} nota={coberturaCusto("mercadoria")} indent />

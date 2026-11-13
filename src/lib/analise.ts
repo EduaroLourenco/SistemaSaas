@@ -75,6 +75,8 @@ export type Anuncio = {
   tipo: "Clássico" | "Premium";
   status: "ativo" | "pausado" | "finalizado";
   conta: string;
+  /** id em contas_canal: a leitura de preço precisa do token da conta dona do anúncio. */
+  contaId?: string;
   categoria: string;
   /**
    * Saldo da última sincronização do canal. Null = nunca lido, que é

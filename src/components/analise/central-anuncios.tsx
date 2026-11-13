@@ -143,9 +143,16 @@ export default function CentralAnuncios({ dados, inicial }: { dados: DadosAnalis
   async function atualizar() {
     setAtualizando(true);setAviso("");setErro(false);
     try {
-      const r=await fetch("/api/anuncios/precos",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mlbs:selecionado?[selecionado.mlb]:filtrados.map(a=>a.mlb)})});
-      const j=await r.json(); if(!r.ok) throw new Error(j.erro||"Não foi possível atualizar os preços.");
-      setAviso(`${count(j.recebidos-j.comErro)} preços atualizados${j.comErro?` · ${count(j.comErro)} sem resposta`:""}`); router.refresh();
+      // Uma chamada por conta: o token de uma conta dá 403 no anúncio de outra.
+      const porConta=new Map<string,string[]>();
+      for(const a of selecionado?[selecionado]:filtrados){const k=a.contaId??"";porConta.set(k,[...(porConta.get(k)??[]),a.mlb]);}
+      let ok=0,sem=0;
+      for(const [k,mlbs] of porConta){
+        const r=await fetch(`/api/anuncios/precos${k?`?conta=${k}`:""}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mlbs})});
+        const j=await r.json(); if(!r.ok) throw new Error(j.erro||"Não foi possível atualizar os preços.");
+        ok+=j.recebidos-j.comErro; sem+=j.comErro;
+      }
+      setAviso(`${count(ok)} preços atualizados${sem?` · ${count(sem)} sem resposta`:""}`); router.refresh();
     } catch(e) {setErro(true);setAviso(e instanceof Error?e.message:"Falha na atualização. Tente novamente.");}
     finally {setAtualizando(false);}
   }

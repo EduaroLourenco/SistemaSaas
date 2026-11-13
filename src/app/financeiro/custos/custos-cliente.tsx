@@ -447,7 +447,7 @@ export default function CustosCliente({
         {/*
           O recorte vale para o PRATICADO, não para o cadastro.
           Mercadoria, embalagem, alíquota e peso são do produto e não mudam
-          com o período; comissão, frete, juros e preço médio mudam.
+          com o período; comissão, frete e preço médio mudam.
         */}
         <Panel className="px-3 py-2.5 mb-3 flex items-center gap-2 flex-wrap">
           <span className="label shrink-0">Recorte</span>
@@ -635,7 +635,6 @@ export default function CustosCliente({
                       <th className={`${th} text-right`}>Comissão do canal</th>
                       <th className={`${th} text-right`}>Comissão % (anúncio)</th>
                       <th className={`${th} text-right`} title="Frete do vendedor como o canal cobrou. No Meli, abaixo de R$ 79 é o custo de envio que substituiu a taxa fixa em 03/2026.">Frete R$</th>
-                      <th className={`${th} text-right`}>Juros R$</th>
                       <th className={`${th} text-right`} title="Ads do Mercado Livre na janela de 30 dias que o canal entrega">Ads</th>
                       <th className={`${th} text-right w-[92px]`}>Mercadoria</th>
                       <th className={`${th} text-right w-[86px]`}>Embalagem</th>
@@ -711,11 +710,6 @@ export default function CustosCliente({
                           {l.frete.praticado != null && l.precoMedio != null && l.precoMedio < 79 && (
                             <span className="block text-[11px] text-ink-3">custo abaixo de R$ 79</span>
                           )}
-                        </td>
-                        <td className={`${td} text-right`}>
-                          <span className="num text-[12.5px] text-ink-2">
-                            {l.jurosUnidade != null ? money(l.jurosUnidade) : "—"}
-                          </span>
                         </td>
                         <td className={`${td} text-right`}>
                           {l.ads?.investimento ? (

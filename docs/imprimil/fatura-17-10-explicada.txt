@@ -1,0 +1,149 @@
+FATURA DA IMPRIMIL - FECHAMENTO DE 17 DE OUTUBRO DE 2026
+Explicada do jeito mais simples possivel
+
+==================================================================
+A IDEIA GERAL (a analogia que vale para tudo)
+==================================================================
+
+Imagine que o Mercado Livre e um SHOPPING e voce tem uma banquinha la dentro.
+
+Toda vez que voce vende, o shopping nao te entrega o dinheiro inteiro.
+Ele desconta varias coisinhas antes: o aluguel da banca, o moco que
+entrega a mercadoria, o cartaz que voce pediu para pendurar, o deposito
+onde voce deixou caixas.
+
+A FATURA e o extrato desses descontos. Nada mais.
+No total do mes deu R$ 1.516,30.
+
+A forma de cobrar tambem importa:
+- "Cobrado na operacao" = o shopping ja tirou do dinheiro da venda.
+  Voce nem viu passar. (R$ 1.210,78)
+- "Pos-operacao" = o shopping te mandou a conta DEPOIS. Era para voce
+  pagar. Como nao pagou ate o vencimento, ele debitou sozinho em 23/10.
+  (R$ 305,52 = Ads + Full)
+
+==================================================================
+AS 7 LINHAS DA FATURA
+==================================================================
+
+1) TARIFAS DE ENVIOS ............................. R$ 779,87
+   Analogia: o MOTOBOY do shopping.
+   Cada vez que o cliente compra, alguem leva o pacote. Voce paga uma
+   parte da corrida, mesmo quando o cliente ve "frete gratis".
+   Frete gratis para o cliente NAO e gratis para voce: o shopping so
+   esconde o preco da corrida do comprador.
+   Foram 49 corridas. Os valores mais comuns: R$ 6,85 (pedido barato),
+   R$ 8,15 (pedido de ~R$ 54), R$ 16,30 (2 kits).
+
+   Pegadinha: as vezes aparece "por sua conta e por conta do comprador".
+   Exemplo: R$ 16,84 = R$ 6,85 seus + R$ 9,99 que o comprador ja pagou.
+   O shopping te cobra os dois e ja recebeu os R$ 9,99 do cliente. Entao
+   o seu custo de verdade e so os R$ 6,85. O sistema guarda esse valor
+   certo (por isso mostra menos que a fatura: R$ 610,90).
+
+2) TARIFAS DE VENDA .............................. R$ 408,78
+   Analogia: o ALUGUEL da banquinha, pago por cada coisa que vende.
+   E uma porcentagem do preco: 11,5% nos seus livrinhos.
+   Exemplo: kit de R$ 53,99 -> R$ 6,21 de aluguel.
+   Dentro dela vem duas "migalhas": o "custo por cobrar no Mercado Pago"
+   (a maquininha) e a "taxa de recebimento". Tudo faz parte do mesmo
+   aluguel, nao e custo extra.
+   O sistema calcula isso certinho: R$ 374,75 depois dos cancelamentos,
+   igual a fatura, ao centavo.
+
+3) TARIFAS POR CAMPANHA DE PUBLICIDADE ........... R$ 198,85
+   Analogia: o CARTAZ NA ENTRADA do shopping.
+   Voce paga para seu livrinho aparecer na frente. O shopping cobra
+   por clique (cada pessoa que olha o cartaz e clica). O nome tecnico
+   e Product Ads. Cobrado de 07 a 16/10, um pouco por dia.
+   O sistema mostra R$ 197,83: praticamente igual.
+
+4) TARIFAS DE ENVIOS FULL ........................ R$ 106,67
+   Analogia: o DEPOSITO do shopping.
+   Voce deixa caixas la dentro e o shopping cuida de entregar. So que
+   deposito cobra:
+   - aluguel do espaco por dia (centavos, R$ 0,27 a R$ 0,51 por dia)
+   - taxa para tirar caixas de la (centavos)
+   - MULTA DE CAIXA ESQUECIDA ("estoque antigo"): R$ 76,00 de R$ 106,67.
+     Sao os cadernos Moleskine parados la ha muito tempo.
+   Ou seja: quase tudo desse valor e multa por ter deixado mercadoria
+   encalhada. O sistema NAO mostra esse custo hoje.
+
+5) TAXAS DE PARCELAMENTO ......................... R$ 56,16
+   Analogia: o JURO DO CARNE.
+   Quando o cliente parcela no cartao, ele paga um pouquinho a mais.
+   O shopping recebe esse "a mais" do cliente e te cobra o mesmo valor
+   na fatura. Entra de um lado, sai do outro: para voce da ZERO.
+   Por isso o sistema ignora, e esta certo.
+
+6) TARIFAS DA MINHA PAGINA ....................... R$ 51,00
+   Analogia: a TAXA DE MANUTENCAO de um espaco extra (sua pagina
+   propria dentro do Meli). Foi cobrada e CANCELADA na mesma fatura
+   (aparece -R$ 51,00 em "cancelamentos"). Efeito: zero.
+
+7) CANCELAMENTOS ................................. -R$ 85,03
+   Analogia: o SHOPPING DEVOLVENDO TROCO.
+   Quando uma venda e cancelada, o shopping devolve o aluguel cobrado.
+   Sao R$ 34,03 de vendas canceladas + os R$ 51,00 da Minha pagina.
+
+CONTA FINAL:
+   779,87 + 408,78 + 198,85 + 106,67 + 56,16 + 51,00 - 85,03 = 1.516,30
+
+==================================================================
+E AS 5 NOTAS FISCAIS (os PDFs que voce recebeu)? Total R$ 653,30
+==================================================================
+
+Analogia: o RECIBO OFICIAL que o shopping e obrigado a emitir.
+Mas so de SERVICOS dele. Por isso nao tem frete nem juro de parcelamento.
+
+- Mercado Livre Brasil (matriz) ... R$ 335,85  -> o aluguel (tarifa de venda)
+- Ebazar ........................... R$ 198,85  -> o cartaz (Ads). Igual a fatura.
+- Mercado Pago ..................... R$ 37,85   -> a maquininha, que ja esta
+                                                   DENTRO do aluguel
+- Mercado Livre (filial 0122-39) ... R$ 52,58   -> provavelmente o deposito (Full)
+- Mercado Livre (Cajamar) .......... R$ 28,17   -> provavelmente o deposito (Full)
+
+(as duas ultimas eu deduzi pelo emissor; as notas nao trazem itens)
+
+==================================================================
+O QUE O SISTEMA ACERTA E O QUE ELE ESQUECE
+==================================================================
+
+ACERTA (conferido contra a fatura):
+ [ok] Aluguel / comissao ........ bate ao centavo (R$ 374,75)
+ [ok] Cartaz / Ads .............. quase igual (197,83 contra 198,85)
+ [ok] Juro do parcelamento ...... ignora, e e zero mesmo
+ [ok] Motoboy / frete ........... mostra o custo real seu (liquido)
+
+ESQUECE:
+ [!] A CORRIDA PERDIDA DE UM PEDIDO CANCELADO: R$ 39,58
+     Um cliente comprou (28/09), o Meli levou o pacote (R$ 16,30),
+     o cliente devolveu (R$ 23,28) e a venda foi cancelada.
+     O shopping devolveu o aluguel, mas NAO devolveu as corridas.
+     O sistema ignora pedido cancelado, entao esse prejuizo some.
+ [!] O DEPOSITO / FULL: R$ 106,67 (R$ 76,00 so de multa por estoque antigo)
+     Nao existe linha de Full no calculo de margem.
+
+Somando os dois, sao cerca de R$ 146 que a margem mostrada nao desconta.
+
+==================================================================
+COMO FOI PAGO
+==================================================================
+
+ R$ 1.210,78  tirados direto das vendas (aluguel, motoboy, juro, etc.)
+ R$   305,52  debitado em 23/10 como "fatura vencida" (cartaz + deposito)
+
+Dica: cartaz e deposito chegam DEPOIS. Deixe saldo no Mercado Pago ou
+pague antes do vencimento para nao ser debitado de surpresa.
+
+==================================================================
+RESUMO DE UMA FRASE
+==================================================================
+
+Dos R$ 1.516,30, o grosso e motoboy (51%) e aluguel (27%). O que mais
+pesa e o que mais da para controlar: a multa de estoque antigo no Full
+(R$ 76,00) e os pedidos cancelados que ja sairam para entrega.
+
+Observacao: no topo da fatura aparece "R$ 1.014,61" ao lado do valor de
+envios (R$ 779,87). Nao consegui explicar esse numero; as contas fecham
+com R$ 779,87.

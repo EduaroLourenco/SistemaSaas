@@ -516,12 +516,6 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
             <span className="num text-ink-2">3,7%</span> de margem real neste
             exemplo, não 20%.
           </p>
-          <p className="mt-2">
-            O juro de parcelamento fica de fora do alvo: só se sabe depois da
-            venda, quando o comprador escolhe parcelar. Ele entra na margem
-            medida, em Financeiro — e é lá que a diferença entre o alvo e o
-            realizado aparece.
-          </p>
         </Disclosure>
       </PageBody>
     </>

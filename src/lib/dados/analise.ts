@@ -31,7 +31,7 @@ type LinhaCadastro = {
   estoque: number | null;
   preco_atual: string | number | null;
   sincronizado_em: string | null;
-  contas_canal: { nome: string } | null;
+  contas_canal: { id: string; nome: string } | null;
 };
 
 const n = (v: unknown) => (v == null ? 0 : Number(v)) || 0;
@@ -103,7 +103,7 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
     carregarTarifasCobradas(sb),
     carregarFormulaBase(),
     carregarVitrineSemanal(sb),
-    paginar(() => sb.from("anuncios").select("codigo_externo,titulo,sku_canal,tipo,status,estoque,preco_atual,sincronizado_em,contas_canal(nome)").ilike("codigo_externo", "MLB%").order("codigo_externo")),
+    paginar(() => sb.from("anuncios").select("codigo_externo,titulo,sku_canal,tipo,status,estoque,preco_atual,sincronizado_em,contas_canal(id,nome)").ilike("codigo_externo", "MLB%").order("codigo_externo")),
   ]);
 
   /* Hoje no fuso de São Paulo, não no do servidor. */
@@ -155,6 +155,7 @@ export async function carregarAnalise(): Promise<DadosAnalise> {
       tipo: a.tipo === "premium" ? "Premium" : "Clássico",
       status: a.status === "pausado" ? "pausado" : a.status === "finalizado" ? "finalizado" : "ativo",
       conta: a.contas_canal?.nome ?? "Conta principal",
+      contaId: a.contas_canal?.id,
       categoria: categoriaDe(a.titulo),
       estoque: a.estoque,
       precoAtual: a.preco_atual == null ? null : n(a.preco_atual),

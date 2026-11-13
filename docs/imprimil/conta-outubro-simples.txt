@@ -1,0 +1,132 @@
+IMPRIMIL - CONTA DE OUTUBRO NO MERCADO LIVRE (fatura fechada em 17/10/2026)
+Explicacao direta, sem analogias
+
+Periodo das vendas considerado: 18/09 a 17/10/2026 (o mesmo da fatura).
+Quase tudo e de outubro: em setembro houve so 4 pedidos.
+
+==================================================================
+1) O QUE A FATURA COBROU
+==================================================================
+
+Total da fatura: R$ 1.516,30
+
+  Envios (frete) .................. R$ 779,87
+  Tarifas de venda (comissao) ..... R$ 408,78
+  Publicidade (Product Ads) ....... R$ 198,85
+  Envios Full (armazenagem) ....... R$ 106,67
+  Taxas de parcelamento ........... R$  56,16
+  Minha pagina .................... R$  51,00
+  Cancelamentos ................... -R$ 85,03
+  -------------------------------------------
+  Total ........................... R$ 1.516,30
+
+Como foi pago:
+  R$ 1.210,78  descontados das proprias vendas ("cobrado na operacao")
+  R$   305,52  debitados em 23/10 por fatura vencida (Ads + Full, que
+               sao cobrados depois, "pos-operacao")
+
+==================================================================
+2) O QUE NAO E CUSTO SEU (valores que entram e saem)
+==================================================================
+
+A fatura mostra alguns valores brutos. Parte deles voce ja recebeu do
+comprador na mesma venda, entao o efeito liquido e zero.
+
+  Parcelamento: R$ 56,16
+    O comprador paga um acrescimo ao parcelar. A fatura cobra de voce o
+    mesmo valor. Efeito liquido: zero.
+
+  Frete pago pelo comprador: cerca de R$ 129
+    Quando o pedido e abaixo de R$ 79 e nao tem frete gratis, o comprador
+    paga um adicional (geralmente R$ 9,99) no checkout. A fatura cobra
+    esse valor junto com a sua parte do frete. Efeito liquido: zero.
+
+  Minha pagina: R$ 51,00
+    Cobrada e cancelada na mesma fatura. Efeito liquido: zero.
+
+Prova com uma venda real (Kit 30 Biblicos, tela "Detalhe da venda"):
+  Preco do produto ................ R$ 24,91
+  Tarifa de venda 11,5% ........... -R$ 2,86
+  Envio (sua parte) ............... -R$ 6,85
+  Pagamento do comprador (frete) .. +R$ 9,99
+  Fatura cobrou de envio .......... -R$ 16,84
+  Voce recebeu .................... R$ 15,20
+  Conta: 24,91 - 2,86 - 6,85 = 15,20. Os R$ 9,99 entram e saem.
+
+==================================================================
+3) O CUSTO REAL DO MERCADO LIVRE
+==================================================================
+
+  Fatura ........................................ R$ 1.516,30
+  (-) parcelamento (devolvido pelo comprador) ... -R$   56,16
+  (-) frete do comprador (repassado) ............ -R$  129,39
+  ------------------------------------------------------------
+  Custo real do canal ........................... R$ 1.330,75
+
+Composicao do custo real:
+  Comissao (11,5%, ja sem cancelamentos) ........ R$   374,75
+  Frete (sua parte, R$ 5,65 a R$ 8,15 por envio
+         + devolucao de pedido cancelado) ....... R$   650,48
+  Publicidade (Ads) ............................. R$   198,85
+  Full (armazenagem + estoque antigo) ........... R$   106,67
+  ------------------------------------------------------------
+  Total ......................................... R$ 1.330,75
+
+Detalhes importantes:
+  - Dos R$ 650,48 de frete, R$ 39,58 sao de um pedido cancelado
+    (28/09): R$ 16,30 de ida + R$ 23,28 de devolucao. O Meli devolveu a
+    comissao desse pedido, mas nao devolveu o frete.
+  - Dos R$ 106,67 do Full, R$ 76,00 sao multa por estoque antigo
+    (cadernos Moleskine parados). O resto e armazenagem diaria e
+    retirada de estoque.
+
+==================================================================
+4) QUANTO ENTROU E QUANTO SOBROU
+==================================================================
+
+  Vendas (valor dos produtos, 56 pedidos pagos) ... R$ 3.244,39
+
+  (-) Custo real do Mercado Livre (secao 3) ....... R$ 1.330,75
+  (-) Mercadoria (custo dos livrinhos) ............ R$ 1.075,20
+  (-) Impostos (13,3% da venda) ................... R$   427,26
+  (-) Embalagem (R$ 0,20 por unidade) ............. R$    16,40
+  ------------------------------------------------------------
+  Sobra ........................................... R$   394,78
+  Em percentual da venda .......................... 12,2%
+
+Observacao: o caderno vendido por R$ 31,90 esta sem custo de mercadoria
+cadastrado, entao o resultado real e um pouco menor que R$ 394,78.
+
+==================================================================
+5) O QUE O SISTEMA MOSTRA E O QUE ESTA FALTANDO
+==================================================================
+
+Confere com a fatura:
+  - Comissao ........ igual, ao centavo (R$ 374,75)
+  - Ads ............. R$ 197,83 contra R$ 198,85 da fatura
+  - Frete ........... guarda a sua parte (R$ 6,85 / R$ 8,15 etc.), que e
+                      o custo real. Por isso mostra R$ 610,90 e nao os
+                      R$ 779,87 da fatura.
+  - Parcelamento .... ignorado, correto (efeito liquido zero)
+
+Falta no sistema:
+  - Frete e devolucao de pedido cancelado: R$ 39,58
+  - Full: R$ 106,67
+  Somados: cerca de R$ 146. Por isso o sistema mostra margem perto de
+  22% e a conta completa da 12%.
+
+==================================================================
+6) PONTOS DE ATENCAO
+==================================================================
+
+  1. Estoque antigo no Full: R$ 76,00 de multa. Vale decidir se retira
+     ou promove os cadernos parados.
+  2. Ads e Full sao cobrados depois e foram debitados automaticamente em
+     23/10 (R$ 305,52). Deixe saldo no Mercado Pago ou pague antes do
+     vencimento.
+  3. Cancelamento com devolucao custa frete de ida e volta e nao e
+     reembolsado.
+  4. Impostos (13,3%) e embalagem (R$ 0,20) sao valores cadastrados por
+     voce; vale conferir com seu contador.
+  5. No topo da fatura aparece "R$ 1.014,61" ao lado do valor de envios.
+     Nao consegui explicar esse numero; as contas fecham com R$ 779,87.

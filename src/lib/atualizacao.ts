@@ -107,8 +107,12 @@ export async function planejarAtualizacao(operacaoId: string, blocos: readonly B
       return { detalhe: `${r.promocoes.campanhas} promoções, ${r.promocoes.itens} itens`, avisos: r.avisos };
     });
     add("visitas", `meli:${conta}`, `Visitas · ${nome}`, async (_, origem) => {
+      /* 15 dias, não 3: dia lido antes de fechar fica com parte das visitas
+         (30/10 e 11/11 ficaram com ~1/4 na Cotia), e um dia sem rodada
+         deixava o buraco para sempre. A chamada é uma por anúncio qualquer
+         que seja a janela; só cresce o que se grava. */
       const r = await sincronizarMeli({
-        conta, de: diaSP(-1), ate, diasVisitas: 3,
+        conta, de: diaSP(-1), ate, diasVisitas: 15,
         etapas: { catalogo: false, pedidos: false, visitas: true, diarias: true, disputa: false, promocoes: false },
         registro: { origem },
       });

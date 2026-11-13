@@ -57,7 +57,6 @@ const ESTRUTURA: Grupo[] = [
     linhas: [
       { rotulo: "(−) Comissão do canal", campo: "comissao", custo: true },
       { rotulo: "(−) Frete", campo: "frete", custo: true },
-      { rotulo: "(−) Juros de parcelamento", campo: "juros", custo: true },
       { rotulo: "(−) Impostos", campo: "impostos", custo: true },
       { rotulo: "(−) Embalagem", campo: "embalagem", custo: true },
       { rotulo: "(−) Mercadoria", campo: "mercadoria", custo: true },
