@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
-import { acordarFila, pedirAtualizacao } from "@/lib/atualizacao-fila";
+import { acordarFila, pedirAtualizacao, rodarProxima } from "@/lib/atualizacao-fila";
 import { ehBloco } from "@/lib/atualizacao-blocos";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+/** Roda uma etapa da fila aqui mesmo; a mais longa leva ~4 min. */
+export const maxDuration = 300;
 
 function autorizado(req: NextRequest) {
   const segredo = process.env.CRON_SECRET;
@@ -44,6 +45,10 @@ export async function GET(req: NextRequest) {
     }
   }
   const origem = req.nextUrl.origin;
-  after(() => acordarFila(origem));
+  /* Anda uma etapa aqui mesmo, em vez de só chamar a fila: se a chamada
+     falhar, cada rotina agendada ainda empurra a fila (e enterra etapa morta). */
+  after(async () => {
+    if ((await rodarProxima()) === "continuar") await acordarFila(origem);
+  });
   return NextResponse.json({ blocos, empresas });
 }

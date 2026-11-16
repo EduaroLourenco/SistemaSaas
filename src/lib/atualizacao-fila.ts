@@ -198,12 +198,21 @@ export async function rodarProxima(): Promise<"continuar" | "ocupado" | "vazio">
  */
 export async function acordarFila(origem: string) {
   const segredo = process.env.CRON_SECRET;
-  if (!segredo) return;
-  await fetch(`${origem}/api/cron/fila`, {
+  if (!segredo) return console.error("Fila de atualização: CRON_SECRET ausente, a fila não se encadeia.");
+  /* O agendador da Vercel chama pelo endereço da implantação, que fica atrás
+     da proteção de login da Vercel: o POST para lá voltava 401 e a fila
+     morria calada até alguém abrir a tela (11 a 15/11). O domínio de
+     produção é público. */
+  const prod = process.env.VERCEL_ENV === "production" && process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const base = prod ? `https://${prod}` : origem;
+  const r = await fetch(`${base}/api/cron/fila`, {
     method: "POST",
     headers: { authorization: `Bearer ${segredo}` },
     signal: AbortSignal.timeout(15_000),
-  }).catch(() => {});
+  }).catch((e: unknown) => e);
+  if (!(r instanceof Response) || !r.ok) {
+    console.error(`Fila de atualização não acordou em ${base}:`, r instanceof Response ? r.status : r);
+  }
 }
 
 /** O que a tela mostra: último pedido manual e a última vez de cada bloco. */
