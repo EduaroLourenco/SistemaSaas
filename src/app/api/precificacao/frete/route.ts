@@ -15,6 +15,8 @@ export async function GET(req: Request) {
   const conta = u.searchParams.get("conta") ?? "";
   const num = (k: string) => Number(u.searchParams.get(k));
   const [a, l, c, pesoKg, preco] = ["altura", "largura", "comprimento", "peso", "preco"].map(num);
+  /* gratis=0: o comprador paga o frete e o vendedor fica só com o custo de envio do canal. */
+  const gratis = u.searchParams.get("gratis") === "0" ? "false" : "true";
   const tipo = u.searchParams.get("tipo") === "premium" ? "gold_pro" : "gold_special";
   /* Anúncio que já existe: o Meli conhece medida, preço e tipo dele, e cota
      mesmo sem nenhuma venda. */
@@ -36,7 +38,7 @@ export async function GET(req: Request) {
       listing_type_id: tipo,
       mode: "me2",
       condition: "new",
-      free_shipping: "true",
+      free_shipping: gratis,
       verbose: "true",
     });
     const r = await meliGet<{ coverage?: { all_country?: { list_cost?: number } } }>(

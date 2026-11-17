@@ -514,7 +514,7 @@ function Precos({ ctx, onCotar }: { ctx: Contexto; onCotar: (produtoId: string) 
 
 /* ── Cotação de produto novo ──────────────────────────────────────────── */
 
-type AjusteCanal = { tipo: string; comissao: string; frete: string; logistica: Logistica; testar: string };
+type AjusteCanal = { tipo: string; comissao: string; frete: string; logistica: Logistica; testar: string; comprador: boolean };
 
 function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketingPct }: {
   dados: DadosPrecificacao; produtoId: string | null; onProduto: (id: string | null) => void;
@@ -534,7 +534,7 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
     return produto?.freteSalvo ?? null;
   })();
   const [ajustes, setAjustes] = React.useState<Record<string, AjusteCanal>>((): Record<string, AjusteCanal> =>
-    freteConhecido == null ? {} : { mercado_livre: { tipo: "classico", comissao: "", frete: freteConhecido.toFixed(2), logistica: "coleta", testar: txt(produto?.porCanal.mercado_livre?.vitrine) } }
+    freteConhecido == null ? {} : { mercado_livre: { tipo: "classico", comissao: "", frete: freteConhecido.toFixed(2), logistica: "coleta", testar: txt(produto?.porCanal.mercado_livre?.vitrine), comprador: false } }
   );
   const [api, setApi] = React.useState<{ valor: number | null; erro?: string; carregando?: boolean; chave?: string }>({ valor: null });
   const v = Object.fromEntries(Object.entries(f).map(([k, s]) => [k, ler(s)])) as Record<keyof typeof f, number | null>;
@@ -543,9 +543,9 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
   const medidasProntas = Boolean(v.peso && v.altura && v.largura && v.comprimento);
 
   const ajuste = (codigo: string): AjusteCanal =>
-    ajustes[codigo] ?? { tipo: regraDoCanal(codigo)!.tipos[0].id, comissao: "", frete: "", logistica: "coleta", testar: "" };
+    ajustes[codigo] ?? { tipo: regraDoCanal(codigo)!.tipos[0].id, comissao: "", frete: "", logistica: "coleta", testar: "", comprador: false };
   const mudar = (codigo: string, parte: Partial<AjusteCanal>) => setAjustes({ ...ajustes, [codigo]: { ...ajuste(codigo), ...parte } });
-  const chaveApi = [v.altura, v.largura, v.comprimento, v.peso, ajuste("mercado_livre").tipo].join("|");
+  const chaveApi = [v.altura, v.largura, v.comprimento, v.peso, ajuste("mercado_livre").tipo, ajuste("mercado_livre").comprador].join("|");
   const custoBase = { mercadoria: v.custo ?? 0, embalagem: v.embalagem ?? 0, impostoPct: impostoGlobal ?? 0, marketingPct };
 
   /* Uma conta por canal. No Meli o custo de envio depende do preço e o preço
@@ -558,6 +558,15 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
 
     const montar = (preco: number | null): { regra: RegraCanal; frete: number | null; origem: string } => {
       if (regraBase.frete === "incluso") return { regra: efetiva, frete: freteManual ?? 0, origem: freteManual != null ? "manual" : "na tarifa" };
+      /* Comprador paga o frete: só vale abaixo de R$ 79 (acima, o frete grátis é
+         obrigatório) e o custo do vendedor é o que a API cota nesse modo. */
+      if (codigo === "mercado_livre" && a.comprador) {
+        const regra = efetiva;
+        if (freteManual != null) return { regra, frete: freteManual, origem: "manual" };
+        if (preco != null && preco >= 79) return { regra, frete: null, origem: "grátis ≥ R$ 79" };
+        if (api.valor != null && api.chave === chaveApi) return { regra, frete: api.valor, origem: "da API" };
+        return { regra, frete: null, origem: "cotar" };
+      }
       const est = preco != null ? custoMeliEstimado(preco, cobrado, a.logistica) : null;
       const taxaFixa = est?.taxaFixa ?? 0;
       const regra = taxaFixa ? { ...efetiva, faixas: efetiva.faixas.map((x) => ({ ...x, taxaFixa: x.taxaFixa + taxaFixa })) } : efetiva;
@@ -603,6 +612,7 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
     const q = new URLSearchParams({
       conta: dados.contaMeli, altura: String(v.altura), largura: String(v.largura), comprimento: String(v.comprimento),
       peso: String(v.peso), preco: String(preco), tipo: ajuste("mercado_livre").tipo,
+      ...(ajuste("mercado_livre").comprador ? { gratis: "0" } : {}),
     });
     try {
       const r = await fetch(`/api/precificacao/frete?${q}`);
@@ -693,6 +703,15 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
                   <Input type="number" inputMode="decimal" value={r.a.frete} placeholder={r.frete != null ? r.frete.toFixed(2) : "cotar"} onChange={(e) => mudar(c.codigo, { frete: e.target.value })} />
                 </Field>
                 {c.codigo === "mercado_livre" && (
+                  <Field label="Frete ao comprador" className="col-span-2">
+                    <Segmented
+                      options={[{ value: "gratis", label: "Grátis (eu pago)" }, { value: "pago", label: "Comprador paga" }]}
+                      value={r.a.comprador ? "pago" : "gratis"}
+                      onChange={(x) => mudar(c.codigo, { comprador: x === "pago", frete: "" })}
+                    />
+                  </Field>
+                )}
+                {c.codigo === "mercado_livre" && !r.a.comprador && (
                   <Field label="Envio" className="col-span-2">
                     <Segmented
                       options={[{ value: "coleta", label: "Coleta / Full" }, { value: "flex", label: "Flex / próprio" }]}
@@ -706,7 +725,7 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
               <div className="border-t border-line pt-3">
                 <span className="text-[12px] text-ink-3">Preço para {metaPct}%</span>
                 <div className="num text-[30px] font-semibold leading-tight text-brand">
-                  {r.preco != null ? money(r.preco) : <span className="text-[15px] font-normal text-ink-3">{v.custo == null ? "informe o custo" : r.frete == null ? "cotar o frete" : "não fecha"}</span>}
+                  {r.preco != null ? money(r.preco) : <span className="text-[15px] font-normal text-ink-3">{v.custo == null ? "informe o custo" : r.frete == null ? (r.origem.startsWith("grátis") ? "comprador paga só abaixo de R$ 79" : "cotar o frete") : "não fecha"}</span>}
                 </div>
                 {r.conta && (
                   <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">
