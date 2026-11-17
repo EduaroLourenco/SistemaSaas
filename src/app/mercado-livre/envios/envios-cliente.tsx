@@ -4,7 +4,7 @@ import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, AlertCircle, CheckCircle2, List, Table2 } from "lucide-react";
+import { ArrowDown, ArrowUp, AlertCircle, CheckCircle2, List, Printer, Table2 } from "lucide-react";
 import { count } from "@/lib/format";
 import type { DadosEnvios, EnvioMeli } from "@/lib/dados/envios-meli";
 
@@ -33,6 +33,19 @@ function Dias({ dias }: { dias: number | null }) {
       </span>
       <span className={cn("text-[14px] font-medium", tom)}>{rotulo}</span>
     </span>
+  );
+}
+
+/** O Meli só libera etiqueta de envio com nota e ainda não coletado, e só na conta que usa Mercado Envios. */
+const SEM_ETIQUETA = new Set(["", "invoice_pending", "buffered", "shipment_paid"]);
+const temEtiqueta = (e: EnvioMeli) => Boolean(e.envio && e.substatus !== undefined && !SEM_ETIQUETA.has(e.substatus) && e.origem === "canal");
+
+function Marcar({ envio, marcados, alternar }: { envio: EnvioMeli; marcados: Set<number>; alternar: (n: number) => void }) {
+  if (!temEtiqueta(envio)) return null;
+  return (
+    <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center" title="Incluir na impressão de etiquetas">
+      <input type="checkbox" className="h-5 w-5 accent-[var(--brand)]" checked={marcados.has(envio.envio!)} onChange={() => alternar(envio.envio!)} aria-label={`Incluir pedido ${envio.pedido} na impressão de etiquetas`} />
+    </label>
   );
 }
 
@@ -66,6 +79,36 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
   const [conta, setConta] = React.useState("");
   const [ordem, setOrdem] = React.useState<{ chave: Chave; asc: boolean }>({ chave: "dias", asc: true });
   const [tabelaMobile, setTabelaMobile] = React.useState(false);
+  const [marcados, setMarcados] = React.useState<Set<number>>(new Set());
+  const [imprimindo, setImprimindo] = React.useState(false);
+  const [aviso, setAviso] = React.useState<{ tom: "down" | "warn"; texto: string } | null>(null);
+  const alternar = (n: number) => setMarcados((m) => { const x = new Set(m); if (x.has(n)) x.delete(n); else x.add(n); return x; });
+
+  async function imprimir() {
+    setImprimindo(true);
+    setAviso(null);
+    const janela = window.open("", "_blank");
+    try {
+      const r = await fetch("/api/envios/etiquetas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ envios: [...marcados], confirmar: true }) });
+      if (!r.ok) {
+        janela?.close();
+        const j = await r.json().catch(() => ({}));
+        const det = (j.falhas ?? []).map((f: { pedido: number; motivo: string }) => `${f.pedido}: ${f.motivo}`).join(" · ");
+        setAviso({ tom: "down", texto: `${j.erro ?? "Não consegui gerar as etiquetas."}${det ? " " + det : ""}` });
+        return;
+      }
+      const falhas: { pedido: number; motivo: string }[] = JSON.parse(decodeURIComponent(r.headers.get("x-falhas") ?? "%5B%5D"));
+      const url = URL.createObjectURL(await r.blob());
+      if (janela) janela.location.href = url; else window.location.href = url;
+      if (falhas.length) setAviso({ tom: "warn", texto: `${falhas.length} ficaram de fora: ${falhas.map((f) => `${f.pedido} (${f.motivo})`).join(" · ")}` });
+      setMarcados(new Set());
+    } catch {
+      janela?.close();
+      setAviso({ tom: "down", texto: "Falha de conexão ao gerar as etiquetas." });
+    } finally {
+      setImprimindo(false);
+    }
+  }
 
   const lista = React.useMemo(() => {
     const base = dados.envios.filter((e) => !conta || e.conta === conta);
@@ -176,6 +219,17 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
               </div>
             </div>
 
+            {(lista.some(temEtiqueta) || aviso) && (
+              <div className="flex flex-wrap items-center gap-3 border-b border-line bg-panel-2 px-4 py-3 md:px-5">
+                <button type="button" disabled={!marcados.size || imprimindo} onClick={imprimir} className="inline-flex min-h-11 items-center gap-2 rounded-r1 bg-brand px-4 text-[14px] font-semibold text-white disabled:opacity-40">
+                  <Printer aria-hidden="true" size={18} />{imprimindo ? "Gerando…" : `Etiquetas com SKU${marcados.size ? ` (${marcados.size})` : ""}`}
+                </button>
+                <button type="button" onClick={() => setMarcados(new Set(lista.filter(temEtiqueta).map((e) => e.envio!)))} className="min-h-11 rounded-r1 border border-line-2 px-3 text-[14px] font-medium text-ink-2 hover:text-ink">Marcar todos</button>
+                <p className="min-w-0 flex-1 text-[12px] leading-[18px] text-ink-3">Baixar a etiqueta marca o envio como impresso no Mercado Livre. Uma conta por vez.</p>
+                {aviso && <p role="status" className={cn("w-full text-[14px] leading-5 [overflow-wrap:anywhere]", aviso.tom === "down" ? "text-down" : "text-warn")}>{aviso.texto}</p>}
+              </div>
+            )}
+
             <div className={cn("min-w-0 overflow-x-auto", !tabelaMobile && "hidden md:block")} role="region" aria-label="Tabela de envios, com rolagem horizontal" tabIndex={0}>
               <table className="w-full min-w-[1000px] table-fixed text-left text-[14px]">
                 <caption className="sr-only">Envios pendentes no recorte selecionado. Ordenação pelo cabeçalho das colunas.</caption>
@@ -190,7 +244,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
                   ))}</tr>
                 </thead>
                 <tbody>{lista.map((e) => <tr key={`${e.conta}-${e.pedido}`} className="group border-b border-line last:border-0">
-                  <td className="sticky left-0 z-1 bg-panel px-4 py-4 align-top"><Dias dias={e.dias} /></td>
+                  <td className="sticky left-0 z-1 bg-panel px-4 py-4 align-top"><div className="flex items-start gap-1"><Marcar envio={e} marcados={marcados} alternar={alternar} /><Dias dias={e.dias} /></div></td>
                   <td className="px-4 py-4 align-top font-medium text-ink">{limiteBr(e) ?? <span className="font-normal text-ink-3">Sem prazo</span>}</td>
                   <td className="px-4 py-4 align-top"><Produtos envio={e} /></td>
                   <td className="px-4 py-4 align-top"><span className="num text-ink-2 [overflow-wrap:anywhere]">{e.pedido}</span><p className="mt-1 text-[12px] text-ink-3">Compra {compraBr(e.compra)}</p></td>
@@ -203,7 +257,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
             <div className={cn("divide-y divide-line md:hidden", tabelaMobile && "hidden")}>
               {lista.map((e) => <article key={`${e.conta}-${e.pedido}`} aria-label={`Pedido ${e.pedido}`} className="min-w-0 p-4">
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                  <Dias dias={e.dias} />
+                  <div className="flex items-start gap-1"><Marcar envio={e} marcados={marcados} alternar={alternar} /><Dias dias={e.dias} /></div>
                   <div className="text-right"><p className="text-[12px] leading-[18px] text-ink-3">Enviar até</p><p className="text-[14px] font-semibold leading-5 text-ink">{limiteBr(e) ?? "Sem prazo"}</p></div>
                 </div>
                 <Produtos envio={e} />

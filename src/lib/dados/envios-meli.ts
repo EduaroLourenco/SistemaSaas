@@ -20,6 +20,12 @@ import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 
 export type EnvioMeli = {
   conta: string;
+  /** Id da conta de canal, para pedir a etiqueta na conta certa. Ausente em retrato antigo. */
+  contaId?: string;
+  /** Id do envio no Meli (shipping.id). Ausente em retrato antigo. */
+  envio?: number | null;
+  /** Substatus cru do envio: diz se a etiqueta já pode ser baixada. */
+  substatus?: string;
   pedido: number;
   /** Data da compra, ISO com fuso. */
   compra: string;
@@ -123,6 +129,9 @@ async function doConta(contaId: string, nome: string, hoje: string): Promise<Env
 
         saida.push({
           conta: nome,
+          contaId,
+          envio: envio ?? null,
+          substatus: sub,
           pedido: o.id,
           compra: o.date_created,
           limite,

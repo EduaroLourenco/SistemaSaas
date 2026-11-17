@@ -120,6 +120,13 @@ const PERMITIDOS = [
   /^\/questions\/search$/,
   // custo real do envio: `senders[].cost` é o que o vendedor paga; /sla é o limite de despacho
   /^\/shipments\/\d+(\/costs|\/sla)?$/,
+  /*
+   * Etiqueta do envio em PDF (etiqueta + DANFE simplificado + resumo).
+   * É GET, mas tem efeito: envio em `ready_to_print` passa a `printed` no
+   * painel do Meli, como se tivessem clicado em imprimir. Só a tela de
+   * envios chama, e só quando a pessoa pede. Ver lib/meli/etiquetas.ts.
+   */
+  /^\/shipment_labels$/,
   // o site é parâmetro: MLB no Brasil, mas não fica preso a ele
   /^\/sites\/[A-Z]{3}\/search$/,
   // /orders/search e /orders/search/recent

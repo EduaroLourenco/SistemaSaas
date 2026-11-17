@@ -317,6 +317,19 @@ export async function meliGet<T>(
   return (await r.json()) as T;
 }
 
+/** O mesmo GET, para resposta binária (etiqueta em PDF). Erro do Meli vem em JSON e volta no texto. */
+export async function meliArquivo(caminho: string, conta: Conta): Promise<Uint8Array> {
+  autorizarLeitura(caminho);
+  const token = await accessToken(conta);
+  await aguardarVez();
+  const r = await fetch(`${API}${caminho}`, { headers: { authorization: `Bearer ${token}` } });
+  if (!r.ok) {
+    const detalhe = (await r.text().catch(() => "")).slice(0, 300);
+    throw new Error(`Mercado Livre respondeu HTTP ${r.status} em ${caminho.split("?")[0]}${detalhe ? `. ${detalhe}` : ""}`);
+  }
+  return new Uint8Array(await r.arrayBuffer());
+}
+
 /** A conta não conectou a aplicação que pode alterar coisas. */
 export class MeliSemEscrita extends Error {
   constructor(public readonly contaCanalId: string) {
