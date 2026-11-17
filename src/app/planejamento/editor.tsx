@@ -172,7 +172,7 @@ export default function Editor({
                 });
               }}
             >
-              {a}
+              {({ "Essencial": "Dados", "Estratégia": "Metas e estratégia", "Produtos": "Ações e produtos", "Conteúdo e tarefas": "Preparação", "Execução e aprendizado": "Resultados e aprendizados" } as Record<string, string>)[a] ?? a}
             </button>
           ))}
         </nav>

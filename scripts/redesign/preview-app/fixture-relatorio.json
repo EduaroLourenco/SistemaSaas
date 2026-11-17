@@ -1,0 +1,143 @@
+{
+  "geradoEm": "2026-11-16T14:00:00-03:00",
+  "canalAtivo": null,
+  "canaisDisponiveis": [],
+  "instantaneoEm": "2026-11-16T14:00:00-03:00",
+  "periodo": {
+    "de": "2026-11-16",
+    "ate": "2026-11-16",
+    "dias": 7,
+    "hoje": "2026-11-16"
+  },
+  "hojeAteAgora": {
+    "data": "2026-11-16",
+    "receita": 0,
+    "pedidos": 0,
+    "unidades": 0
+  },
+  "janelas": {
+    "anterior": {
+      "de": "2026-11-16",
+      "ate": "2026-11-16"
+    },
+    "media4": "Demonstração",
+    "melhor": "Demonstração"
+  },
+  "estadoDados": [],
+  "operacao": {
+    "receita": {
+      "atual": 0,
+      "anterior": null,
+      "media4": null,
+      "melhor": null,
+      "melhorQuando": null,
+      "contraAnterior": null,
+      "contraMedia4": null,
+      "contraMelhor": null
+    },
+    "pedidos": {
+      "atual": 0,
+      "anterior": null,
+      "media4": null,
+      "melhor": null,
+      "melhorQuando": null,
+      "contraAnterior": null,
+      "contraMedia4": null,
+      "contraMelhor": null
+    },
+    "unidades": {
+      "atual": 0,
+      "anterior": null,
+      "media4": null,
+      "melhor": null,
+      "melhorQuando": null,
+      "contraAnterior": null,
+      "contraMedia4": null,
+      "contraMelhor": null
+    },
+    "ticket": {
+      "atual": 0,
+      "anterior": null,
+      "media4": null,
+      "melhor": null,
+      "melhorQuando": null,
+      "contraAnterior": null,
+      "contraMedia4": null,
+      "contraMelhor": null
+    },
+    "cancelamento": {
+      "atual": 0,
+      "anterior": null,
+      "media4": null,
+      "melhor": null,
+      "melhorQuando": null,
+      "contraAnterior": null,
+      "contraMedia4": null,
+      "contraMelhor": null
+    },
+    "visitas": null,
+    "conversao": null
+  },
+  "canais": [],
+  "produtos": [],
+  "catalogo": {
+    "ganhando": 0,
+    "dividindo": 0,
+    "perdendo": 0,
+    "fora": 0,
+    "elegiveisFora": 0,
+    "consultados": 0,
+    "perdendoLista": [],
+    "alavancas": []
+  },
+  "estoque": {
+    "rupturaCurvaA": [],
+    "encerradosCurvaA": [],
+    "criticos": [],
+    "parados": [],
+    "pausados": []
+  },
+  "multicanal": {
+    "skus": [],
+    "resumo": {
+      "skusEmMaisDeUmCanal": 0,
+      "comPrecoDiferente": 0,
+      "comCanalParado": 0,
+      "receitaEmRisco": 0
+    }
+  },
+  "financeiro": {
+    "coberturaCusto": 0,
+    "receitaComCusto": 0,
+    "receitaTotal": 0,
+    "margemApurada": null,
+    "produtosComCusto": 0,
+    "produtosTotal": 0
+  },
+  "trafegoPago": {
+    "temDado": false,
+    "de": null,
+    "ate": null,
+    "mesmaJanela": false,
+    "investimento": 0,
+    "cliques": 0,
+    "impressoes": 0,
+    "receitaAtribuida": 0,
+    "acos": null,
+    "anunciosNoVermelho": []
+  },
+  "alavancas": [],
+  "metas": null,
+  "prioridades": [],
+  "pendencias": [],
+  "anotacoes": {},
+  "reputacao": [],
+  "promocoes": {
+    "ultimo": null,
+    "historico": [],
+    "porTipo": [],
+    "motivos": [],
+    "semEspaco": [],
+    "cobertura": null
+  }
+}

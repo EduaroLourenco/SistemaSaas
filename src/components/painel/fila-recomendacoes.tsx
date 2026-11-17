@@ -3,12 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { Panel, PanelHeader, Badge, Button } from "@/components/ui/primitives";
-import { cn } from "@/lib/utils";
 import type { Recomendacao } from "@/lib/dados/recomendacoes";
-import { Check, ArrowRight, RotateCcw, TrendingDown, TrendingUp, TriangleAlert, Sparkles } from "lucide-react";
+import { Check, ArrowRight, RotateCcw, CalendarDays } from "lucide-react";
 
 /**
- * Fila de recomendações do dia, em carrossel.
+ * Fila de recomendações do dia, em ordem de prioridade.
  *
  * O que é resolvido some da fila e não volta no mesmo dia. A marca fica no
  * navegador, por dia: amanhã a fila é recalculada e o mesmo problema, se
@@ -49,7 +48,7 @@ function lerResolvidas(): Set<string> {
   }
 }
 
-export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
+export function FilaRecomendacoes({ itens, semDados = false }: { itens: Recomendacao[]; semDados?: boolean }) {
   const [resolvidas, setResolvidas] = React.useState<Set<string>>(new Set());
   const [pronto, setPronto] = React.useState(false);
 
@@ -94,33 +93,36 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
 
   if (!itens.length) {
     return (
-      <Panel className="px-4 py-5 flex items-center gap-3 h-full">
-        <span className="w-8 h-8 rounded-r1 bg-up-wash flex items-center justify-center shrink-0">
-          <Check className="w-4 h-4 text-up" strokeWidth={2.5} />
-        </span>
-        <span>
-          <p className="text-[13px] font-semibold text-ink">Nada mudou o bastante</p>
-          <p className="text-[12.5px] text-ink-2">
-            Nenhum movimento relevante nos últimos 7 dias contra os 7 anteriores.
+      <Panel className="flex flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-5">
+        <div>
+          <p className="text-[14px] font-semibold text-ink">{semDados ? "Sem dados para avaliar prioridades" : "Nenhuma mudança relevante"}</p>
+          <p className="mt-1 text-[14px] text-ink-2">
+            {semDados ? "Confira as fontes de vendas para iniciar a análise." : "Nos últimos 7 dias contra os 7 anteriores."}
           </p>
-        </span>
+        </div>
+        <Link href={semDados ? "/integracoes" : "/planejamento"} className="inline-flex min-h-11 items-center gap-2 text-[14px] font-medium text-brand hover:underline">
+          {semDados ? "Ver fontes" : "Abrir planejamento"}<ArrowRight size={16} aria-hidden="true" />
+        </Link>
       </Panel>
     );
   }
 
   // A fila ocupa a largura do painel; as fontes permanecem em Integrações.
   return (
-    <Panel className="gerizo-recommendations overflow-hidden h-full flex flex-col">
+    <Panel className="home-priorities min-w-0 overflow-hidden">
       <PanelHeader
-        title="Recomendações do dia"
-
+        title="Prioridades"
+        hint="7 dias contra os 7 anteriores · todos os canais"
         action={
-          resolvidasHoje > 0 ? (
+          <div className="flex flex-wrap items-center gap-3">
+          <Link href="/planejamento" className="inline-flex min-h-10 items-center gap-1.5 text-[14px] text-ink-2 hover:text-brand"><CalendarDays size={16} aria-hidden="true" />Planejamento</Link>
+          {resolvidasHoje > 0 ? (
             <Button size="sm" variant="ghost" onClick={desfazer}>
               <RotateCcw className="w-3.5 h-3.5" />
               {resolvidasHoje} resolvida{resolvidasHoje > 1 ? "s" : ""}
             </Button>
-          ) : <Link href="/alertas" className="text-[12px] font-medium text-info whitespace-nowrap">Ver alertas <ArrowRight size={12} className="inline" /></Link>
+          ) : <Link href="/alertas" className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap text-[14px] font-medium text-brand hover:underline">Ver alertas <ArrowRight size={16} aria-hidden="true" /></Link>}
+          </div>
         }
       />
 
@@ -131,57 +133,47 @@ export function FilaRecomendacoes({ itens }: { itens: Recomendacao[] }) {
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-3 overflow-y-auto px-3 py-3 max-h-[480px]">
+        <div className="divide-y divide-line">
           {visiveis.map((r) => (
             <article
               key={r.id}
-              className={cn(
-                "gerizo-recommendation rounded-r2 border border-line p-3",
-                "relative flex flex-col gap-1.5 bg-panel sm:pl-[64px]"
-              )}
+              className="grid min-w-0 gap-3 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_minmax(140px,auto)_auto] lg:items-center lg:gap-5"
             >
-              <span className={cn("hidden sm:grid absolute top-3 left-3 h-10 w-10 rounded-full place-items-center", r.severidade === "critico" ? "bg-down-wash text-down" : r.severidade === "atencao" ? "bg-warn-wash text-warn" : "bg-info-wash text-info")} aria-hidden="true">
-                {r.tipo === "queda_sku" ? <TrendingDown size={20} /> : r.tipo === "conversao" || r.tipo === "alta_sku" ? <TrendingUp size={20} /> : r.severidade === "atencao" ? <TriangleAlert size={20} /> : <Sparkles size={20} />}
-              </span>
-              <span className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Badge tone={TOM[r.severidade]}>{ROTULO[r.severidade]}</Badge>
-                <button
-                  onClick={() => resolver(r.id)}
-                  title="Marcar como resolvida até amanhã"
-                  className="text-[12px] text-ink-3 hover:text-ink flex items-center gap-1"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  resolver
-                </button>
-              </span>
-
-              <span>
-                <p className="text-[13.5px] font-semibold text-ink leading-snug">
+                <h3 className="min-w-0 text-[14px] font-semibold leading-snug text-ink [overflow-wrap:anywhere]">
                   {r.titulo}
-                </p>
-                <p className="text-[12.5px] text-ink-2 leading-relaxed mt-1">
+                </h3>
+              </div>
+                <p className="text-[14px] leading-relaxed text-ink-2">
                   {r.leitura}
                 </p>
-              </span>
+              </div>
 
-              <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mt-auto pt-1">
+              <dl className="flex min-w-0 flex-wrap gap-x-5 gap-y-2">
                 {r.metricas.map((m) => (
-                  <span key={m.rotulo}>
-                    <span className="text-[12px] text-ink-3 mr-1.5">{m.rotulo}</span>
-                    <span className="num text-[13px] font-semibold text-ink">
+                  <div key={m.rotulo}>
+                    <dt className="text-[12px] text-ink-3">{m.rotulo}</dt>
+                    <dd className="text-[16px] font-semibold text-ink tabular-nums">
                       {m.valor}
-                    </span>
-                  </span>
+                    </dd>
+                  </div>
                 ))}
-              </span>
+              </dl>
 
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 lg:flex-col lg:items-end">
               <Link
                 href={r.destino}
-                className="text-[12.5px] text-brand hover:underline flex items-center gap-1"
+                className="inline-flex min-h-11 items-center gap-1 text-[14px] font-medium text-brand hover:underline"
               >
                 Investigar
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
+              <button type="button" onClick={() => resolver(r.id)} title="Marcar como resolvida até amanhã" aria-label={`Marcar como resolvida até amanhã: ${r.titulo}`} className="inline-flex min-h-11 items-center gap-1.5 text-[12px] text-ink-3 hover:text-ink lg:min-h-9">
+                <Check size={14} aria-hidden="true" />Resolver
+              </button>
+              </div>
             </article>
           ))}
         </div>

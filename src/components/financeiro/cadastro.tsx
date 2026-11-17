@@ -6,6 +6,7 @@ import { Panel, Button, Badge, EmptyState } from "@/components/ui/primitives";
 import { Sheet, Input, Select, Field } from "@/components/ui/controls";
 import { Plus, Pencil, Trash2, AlertTriangle, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FinanceNav } from "./nav";
 
 /**
  * Lista + formulário, para os quatro cadastros do financeiro.
@@ -90,7 +91,7 @@ export function Cadastro<T extends { id: string }>({
   vazio,
   faltaMigracao,
   resumo,
-  mobileCards = false,
+  mobileCards = true,
   extraFooter,
   aoGravar,
 }: Props<T>) {
@@ -102,6 +103,19 @@ export function Cadastro<T extends { id: string }>({
   const [aviso, setAviso] = React.useState<string | null>(null);
   const [confirmar, setConfirmar] = React.useState<T | null>(null);
   const [filtro, setFiltro] = React.useState("");
+  const [tabelaMobile, setTabelaMobile] = React.useState(false);
+
+  const secaoDoCampo = (chave: string) => {
+    if (recurso === "fornecedores") return chave.startsWith("contato") || chave === "observacao" ? "Contato e observações" : ["categoriaId", "condicaoPagamento", "diaVencimento"].includes(chave) ? "Condições financeiras" : "Identificação";
+    if (recurso === "funcionarios") return ["salarioBase", "salarioLiquido", "beneficios", "encargos", "diaPagamento", "periodicidade"].includes(chave) ? "Remuneração e pagamento" : ["categoriaId", "admissao", "demissao", "observacao"].includes(chave) ? "Datas e classificação" : "Identificação";
+    if (recurso === "contas") return ["periodicidade", "recorrenciaFim"].includes(chave) ? "Recorrência" : ["status", "pagamento", "formaPagamento", "documento"].includes(chave) ? "Pagamento e documento" : chave === "observacao" ? "Observações" : "Lançamento";
+    return ["descricao", "ativa"].includes(chave) ? "Detalhes e situação" : "Classificação na DRE";
+  };
+  const secoes = new Map<string, CampoForm[]>();
+  for (const campo of campos.filter((c) => !c.visivel || c.visivel(valores))) {
+    const nome = secaoDoCampo(campo.chave);
+    secoes.set(nome, [...(secoes.get(nome) ?? []), campo]);
+  }
 
   const visiveis = React.useMemo(() => {
     const q = filtro.trim().toLowerCase();
@@ -180,7 +194,8 @@ export function Cadastro<T extends { id: string }>({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="finance-registry">
+      <FinanceNav />
       {faltaMigracao && (
         <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-r2 border border-warn/40 bg-warn/10">
           <AlertTriangle className="w-4 h-4 text-warn shrink-0 mt-0.5" />
@@ -190,27 +205,30 @@ export function Cadastro<T extends { id: string }>({
 
       {resumo}
 
-      <Panel>
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b border-line">
-          <div className="relative min-w-0 flex-[1_1_9rem] max-w-xs">
+        <div className="finance-registry-toolbar">
+          <div className="finance-search relative min-w-0">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
             <Input
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
               placeholder={`Buscar ${singular.toLowerCase()}`}
+              aria-label={`Buscar ${singular.toLowerCase()}`}
               className="pl-8"
             />
           </div>
-          <span className="text-[12px] text-ink-3 num">
-            {visiveis.length} {visiveis.length === 1 ? "linha" : "linhas"}
+          <span className="finance-count num" role="status">
+            {visiveis.length} {visiveis.length === 1 ? "registro" : "registros"}
           </span>
+          {mobileCards && <button type="button" onClick={() => setTabelaMobile((v) => !v)} aria-pressed={tabelaMobile} className="min-h-11 rounded-r1 border border-line-2 px-3 text-[14px] text-ink-2 md:hidden">{tabelaMobile ? "Ver lista" : "Ver tabela"}</button>}
           <div className="ml-auto">
-            <Button onClick={novo}>
+            <Button onClick={novo} variant="primary">
               <Plus className="w-3.5 h-3.5" />
-              Novo
+              Adicionar {singular.toLowerCase()}
             </Button>
           </div>
         </div>
+
+      <Panel className="min-w-0 overflow-hidden">
 
         {visiveis.length === 0 ? (
           <div className="p-6">
@@ -218,7 +236,7 @@ export function Cadastro<T extends { id: string }>({
           </div>
         ) : (
           <>
-          <div className={cn("overflow-x-auto", mobileCards && "hidden md:block")}>
+          <div className={cn("overflow-x-auto", mobileCards && !tabelaMobile && "hidden md:block")} role="region" aria-label={`Tabela de ${titulo.toLowerCase()}`} tabIndex={0}>
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-line">
@@ -259,14 +277,16 @@ export function Cadastro<T extends { id: string }>({
                         <button
                           onClick={() => editar(l)}
                           title="Editar"
-                          className="w-7 h-7 flex items-center justify-center rounded-r1 text-ink-3 hover:bg-panel-3 hover:text-ink transition-colors"
+                          aria-label={`Editar ${singular.toLowerCase()}`}
+                          className="w-10 h-10 flex items-center justify-center rounded-r1 text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setConfirmar(l)}
                           title="Apagar"
-                          className="w-7 h-7 flex items-center justify-center rounded-r1 text-ink-3 hover:bg-down/15 hover:text-down transition-colors"
+                          aria-label={`Apagar ${singular.toLowerCase()}`}
+                          className="w-10 h-10 flex items-center justify-center rounded-r1 text-ink-2 hover:bg-down/15 hover:text-down transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -277,15 +297,15 @@ export function Cadastro<T extends { id: string }>({
               </tbody>
             </table>
           </div>
-          {mobileCards && <div className="divide-y divide-line md:hidden">
+          {mobileCards && !tabelaMobile && <div className="divide-y divide-line md:hidden">
             {visiveis.map((l) => (
-              <article key={l.id} className="p-4">
-                <div className="mb-3 text-[14px] font-semibold text-ink">{colunas[0]?.render(l)}</div>
-                <dl className="space-y-2 text-[13px]">
+              <article key={l.id} className="finance-record">
+                <h3>{colunas[0]?.render(l)}</h3>
+                <dl>
                   {colunas.slice(1).map((c) => (
-                    <div key={c.chave} className="flex items-start gap-3">
-                      <dt className="w-20 shrink-0 text-[12px] text-ink-3">{c.titulo}</dt>
-                      <dd className={cn("min-w-0 flex-1 break-words text-ink-2", c.numerica && "num")}>{c.render(l)}</dd>
+                    <div key={c.chave}>
+                      <dt>{c.titulo}</dt>
+                      <dd className={cn(c.numerica && "num")}>{c.render(l)}</dd>
                     </div>
                   ))}
                 </dl>
@@ -302,7 +322,7 @@ export function Cadastro<T extends { id: string }>({
 
       {aberto && (
         <Sheet
-          title={aberto.id ? `Editar ${singular.toLowerCase()}` : `Nova ${singular.toLowerCase()}`}
+          title={aberto.id ? `Editar ${singular.toLowerCase()}` : `Adicionar ${singular.toLowerCase()}`}
           subtitle={titulo}
           onClose={() => setAberto(null)}
           width="560px"
@@ -316,10 +336,8 @@ export function Cadastro<T extends { id: string }>({
             </>
           }
         >
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {campos
-              .filter((c) => !c.visivel || c.visivel(valores))
-              .map((c) => (
+          <div className="finance-form">
+            {[...secoes].map(([nome, camposDaSecao]) => <fieldset key={nome}><legend>{nome}</legend>{camposDaSecao.map((c) => (
                 <Field
                   key={c.chave}
                   label={c.obrigatorio ? `${c.rotulo} *` : c.rotulo}
@@ -332,13 +350,13 @@ export function Cadastro<T extends { id: string }>({
                     onChange={(v) => set(c.chave, v)}
                   />
                 </Field>
-              ))}
+              ))}</fieldset>)}
 
             {erro && (
-              <p className="col-span-2 text-[12px] text-down leading-relaxed">{erro}</p>
+              <p role="alert" className="text-[14px] text-down leading-relaxed">{erro}</p>
             )}
             {aviso && (
-              <p className="col-span-2 text-[12px] text-warn leading-relaxed">{aviso}</p>
+              <p role="status" className="text-[14px] text-warn leading-relaxed">{aviso}</p>
             )}
           </div>
         </Sheet>

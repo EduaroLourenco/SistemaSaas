@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Brand } from "@/components/ui/brand";
 import { useRouter } from "next/navigation";
 import { clienteNavegador } from "@/lib/supabase/navegador";
@@ -59,34 +60,19 @@ export default function Entrar() {
   }
 
   return (
-    <main className="gerizo-entry">
-      <section className="gerizo-entry-story" aria-labelledby="entry-story-title">
-        <Brand descriptor />
-        <div>
-          <p className="gerizo-eyebrow">Seu próximo movimento</p>
-          <h2 id="entry-story-title">Menos ruído.<br />Mais direção<span>.</span></h2>
-          <p>Vendas, produtos e decisões. Encontre o que importa e faça a operação andar.</p>
-        </div>
-        <div className="gerizo-operation-art" aria-hidden="true">
-          <div><span>01 / ENTENDER</span><strong>O cenário</strong><i /><i /><i /></div>
-          <ArrowUpRight size={32} />
-          <div><span>02 / DECIDIR</span><strong>O próximo passo</strong><b>Olhar. Comparar. Agir.</b></div>
-        </div>
-        <p className="gerizo-entry-signature">GERIZO / INTELIGÊNCIA DE MERCADO</p>
-      </section>
+    <main className="gerizo-entry gerizo-entry--renewed">
       <section className="gerizo-entry-access">
       <div className="w-full max-w-[380px]">
         {/* Marca oficial: estas telas são as primeiras que o cliente vê. */}
-        <div className="mb-7 gerizo-entry-mobile-brand">
+        <div className="mb-12">
           <Brand descriptor />
         </div>
 
-        <p className="gerizo-eyebrow">Sua mesa de operação</p>
         <h1 className="text-[32px] font-semibold text-ink tracking-tight">
-          Bom ter você aqui.
+          Entrar
         </h1>
         <p className="text-[13px] text-ink-2 mt-1 mb-6">
-          Entre para acompanhar o negócio e cuidar do próximo passo.
+          Acesse sua empresa.
         </p>
 
         <form onSubmit={entrar} className="flex flex-col gap-3.5">
@@ -144,7 +130,7 @@ export default function Entrar() {
                 Entrando
               </>
             ) : (
-              <>Entrar na operação <ArrowUpRight size={17} /></>
+              <>Entrar <ArrowUpRight size={17} /></>
             )}
           </Button>
         </form>
@@ -153,7 +139,17 @@ export default function Entrar() {
           Sem acesso? Peça a quem administra a operação — contas são criadas
           por dentro do sistema.
         </p>
+        <nav aria-label="Informações legais" className="mt-8 flex gap-5 border-t border-line pt-4 text-[12px] text-ink-3"><Link className="inline-flex min-h-11 items-center hover:text-ink" href="/privacidade">Privacidade</Link><Link className="inline-flex min-h-11 items-center hover:text-ink" href="/termos">Termos de uso</Link></nav>
       </div>
+      </section>
+      <section className="gerizo-entry-story" aria-labelledby="entry-story-title">
+        <p className="text-[14px] font-medium text-ink-2">Inteligência de mercado</p>
+        <div>
+          <div className="entry-composition" aria-hidden="true"><i /><i /><i /><span /></div>
+          <h2 id="entry-story-title">Clareza para<br />cada decisão<span>.</span></h2>
+          <p>Sua operação de e-commerce, em perspectiva.</p>
+        </div>
+        <p className="text-[12px] text-ink-3">Gerizo</p>
       </section>
     </main>
   );

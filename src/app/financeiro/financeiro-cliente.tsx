@@ -11,6 +11,7 @@ import { Tabs, Input, Select } from "@/components/ui/controls";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import { AlertCircle, ArrowRight } from "lucide-react";
+import { FinanceNav } from "@/components/financeiro/nav";
 import { DreMensal, ResumoDre } from "@/components/financeiro/dre-mensal";
 import type { Resultado, LinhaMargem, Dimensao } from "@/lib/dados/margem";
 import type { CampoCusto } from "@/lib/financeiro-resumo";
@@ -71,7 +72,7 @@ function Linha({
     >
       <div className="min-w-0">
         <span
-          className={`text-[13px] ${
+          className={`text-[14px] ${
             forte ? "font-semibold text-ink" : "text-ink-2"
           }`}
         >
@@ -88,8 +89,8 @@ function Linha({
             : forte
               ? "text-[14px] font-semibold text-ink"
               : tipo === "custo"
-                ? "text-[13px] text-ink-2"
-                : "text-[13px] text-ink"
+                ? "text-[14px] text-ink-2"
+                : "text-[14px] text-ink"
         }`}
       >
         {valor == null ? "—" : tipo === "custo" && valor > 0 ? `− ${money(valor)}` : money(valor)}
@@ -112,7 +113,7 @@ function Linha({
 function GrupoDre({ titulo, explicacao }: { titulo: string; explicacao: string }) {
   return (
     <div className="mt-3.5 mb-1 pt-2 border-t border-line-2 flex items-baseline gap-2 flex-wrap">
-      <span className="text-[12px] font-semibold uppercase tracking-[0.07em] text-ink-2">
+      <span className="text-[14px] font-semibold text-ink-2">
         {titulo}
       </span>
       <span className="text-[12px] text-ink-3">{explicacao}</span>
@@ -184,8 +185,6 @@ export default function FinanceiroCliente({
     <>
       <PageHeader
         title="Financeiro"
-        breadcrumb="Financeiro"
-        description="Do bruto ao que sobra"
         filters={
           <BarraFiltros>
             <Filtro rotulo="De">
@@ -226,7 +225,8 @@ export default function FinanceiroCliente({
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className="finance-page">
+        <FinanceNav />
         {/*
           A cobertura vem ANTES dos números, e não depois.
           Estava depois, embaixo dos quatro indicadores — o que fazia a
@@ -239,7 +239,7 @@ export default function FinanceiroCliente({
           <Panel className="px-4 py-3 flex items-start gap-3 border-warn/40 bg-warn-wash">
             <AlertCircle className="w-4 h-4 text-warn shrink-0 mt-0.5" strokeWidth={2} />
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] text-ink">
+              <p className="text-[14px] text-ink">
                 <span className="font-semibold">
                   Custos completos em {pct(r.cobertura, 1)} da receita
                 </span>{" "}
@@ -261,12 +261,10 @@ export default function FinanceiroCliente({
 
         <ResumoDre r={r} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,380px)_1fr] gap-3">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)] gap-5">
           {/* ── DRE ── */}
-          <Panel className="p-4 h-fit">
-            <p className="text-[13px] font-semibold text-ink mb-2.5">
-              Resultado do período
-            </p>
+          <Panel className="finance-statement h-fit">
+            <div className="finance-statement-title"><h2>Demonstrativo</h2><span>Período selecionado</span></div>
 
             <Linha rotulo="Receita bruta" valor={r.receitaBruta} tipo="receita" />
             <Linha rotulo="Cancelamentos" valor={r.cancelamentos} />
@@ -327,8 +325,8 @@ export default function FinanceiroCliente({
             ) : (
               <div className="border-t border-line mt-1 pt-2">
                 <div className="flex items-baseline justify-between gap-4">
-                  <span className="text-[13px] font-semibold text-ink">Resultado</span>
-                  <span className="num text-[13px] text-ink-3">—</span>
+                  <span className="text-[14px] font-semibold text-ink">Resultado</span>
+                  <span className="num text-[14px] text-ink-3">—</span>
                 </div>
                 <p className="text-[12px] text-ink-3 leading-relaxed mt-1">
                   Complete os custos dos produtos para apurar o resultado da operação.
@@ -354,7 +352,7 @@ export default function FinanceiroCliente({
               DRE da esquerda, aberta por um eixo de cada vez.
             */}
             <div className="px-4 py-3 border-b border-line">
-              <p className="text-[13px] font-semibold text-ink">
+              <p className="text-[14px] font-semibold text-ink">
                 Receita, custos e margem por
               </p>
               <p className="text-[12px] text-ink-3 mt-0.5">
@@ -367,7 +365,7 @@ export default function FinanceiroCliente({
               onChange={setDim}
             />
 
-            <div className="overflow-x-auto max-h-[640px]">
+            <div className="finance-table" role="region" aria-label="Resultado por dimensão" tabIndex={0}>
               <table className="w-full border-collapse min-w-[780px]">
                 <thead className="bg-panel-2 sticky top-0 z-10">
                   <tr>
@@ -386,31 +384,31 @@ export default function FinanceiroCliente({
                 <tbody>
                   {linhas.map((l) => (
                     <tr key={l.chave} className="hover:bg-panel-2/50">
-                      <td className={`${td} text-[12.5px] text-ink`}>
-                        <span className="truncate block max-w-[220px]">
+                      <td className={`${td} text-[14px] text-ink`}>
+                        <span className="block min-w-[220px] max-w-[320px] [overflow-wrap:anywhere]">
                           {l.rotulo}
                         </span>
                       </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-2`}>
+                      <td className={`${td} text-right num text-[14px] text-ink-2`}>
                         {count(l.unidades)}
                       </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink`}>
+                      <td className={`${td} text-right num text-[14px] text-ink`}>
                         {moneyShort(l.receita)}
                       </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
+                      <td className={`${td} text-right num text-[14px] text-ink-3`}>
                         <CustoConhecido linha={l} campo="comissao" />
                       </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
+                      <td className={`${td} text-right num text-[14px] text-ink-3`}>
                         <CustoConhecido linha={l} campo="frete" />
                       </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-3`}>
+                      <td className={`${td} text-right num text-[14px] text-ink-3`}>
                         <CustoConhecido linha={l} campo="mercadoria" />
                       </td>
                       <td className={`${td} text-right`}>
                         {l.margem != null ? (
                           <div className="flex flex-col items-end leading-tight">
                             <span
-                              className={`num text-[13px] font-semibold ${
+                              className={`num text-[14px] font-semibold ${
                                 l.margem >= 0 ? "text-up" : "text-down"
                               }`}
                             >
@@ -445,7 +443,7 @@ export default function FinanceiroCliente({
                     <tr>
                       <td
                         colSpan={8}
-                        className="px-3 py-8 text-center text-[13px] text-ink-3"
+                        className="px-3 py-8 text-center text-[14px] text-ink-3"
                       >
                         Nenhuma venda no período.
                       </td>

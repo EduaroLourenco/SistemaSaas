@@ -334,7 +334,7 @@ export function TabelaBI({
                   className="sticky left-0 z-10 bg-panel text-left px-3 py-2.5
                              border-r border-line font-normal max-w-[190px] sm:max-w-[320px]"
                 >
-                  <span className="text-[12.5px] text-ink block leading-snug line-clamp-2">
+                  <span className="text-[12.5px] text-ink block leading-snug [overflow-wrap:anywhere]">
                     {a.titulo}
                   </span>
                   <span className="num text-[11px] text-ink-3 block mt-0.5">

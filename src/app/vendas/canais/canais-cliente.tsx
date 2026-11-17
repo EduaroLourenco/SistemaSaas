@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
@@ -346,52 +349,8 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
         }
       />
 
-      <PageBody>
-        {/* cartão por canal */}
-        <div className="gerizo-channel-ranking">
-          {[...visiveis].sort((a, b) => b.faturamento - a.faturamento).map((c, index) => (
-            <div key={c.id} className="gerizo-channel-row panel panel-1 px-4 py-3">
-              <span className="gerizo-channel-position">{String(index + 1).padStart(2, "0")}</span>
-              <span className="flex items-center gap-1.5 mb-2 min-w-0">
-                <span
-                  className="w-2 h-2 rounded-[2px] shrink-0"
-                  style={{ background: CANAL_CORES[c.id] }}
-                />
-                <span className="text-[13px] font-medium text-ink-2">
-                  {c.nome}
-                </span>
-              </span>
-              <p className="num text-[18px] font-semibold text-ink leading-none">
-                {money(c.faturamento)}
-              </p>
-              <div className="mt-2">
-                <Delta value={c.delta} />
-              </div>
-              <div className="gerizo-channel-bar" aria-label={`${c.nome}: ${pct(c.participacao)} do faturamento total`}><i style={{ width: `${Math.max(0, Math.min(100, c.participacao))}%`, background: CANAL_CORES[c.id] ?? "var(--brand)" }} /><span>{pct(c.participacao)} do total</span></div>
-              <div className="mt-3 pt-2.5 border-t border-line grid grid-cols-2 gap-y-1.5">
-                <span className="text-[12px] uppercase tracking-[0.04em] font-semibold text-ink-3">
-                  Pedidos
-                </span>
-                <span className="num text-[12px] text-ink text-right">
-                  {count(c.pedidos)}
-                </span>
-                <span className="text-[12px] uppercase tracking-[0.04em] font-semibold text-ink-3">
-                  Ticket
-                </span>
-                <span className="num text-[12px] text-ink text-right">
-                  {money(c.ticket)}
-                </span>
-                <span className="text-[12px] uppercase tracking-[0.04em] font-semibold text-ink-3">
-                  Margem
-                </span>
-                <span className="num text-[12px] text-ink text-right">
-                  {pct(c.margem)}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
+      <PageBody className={decisaoCss.workspace}>
+        <HeroMetric label="Faturamento dos canais selecionados" value={money(total)} hint={`${count(visiveis.length)} canais · recorte ativo`} />
         {/* evolução */}
         <Panel className="overflow-hidden">
           <PanelHeader
@@ -419,7 +378,7 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
                 {visiveis.map((c) => (
                   <Line
                     key={c.id}
-                    type="monotone"
+                    type="linear"
                     dataKey={c.id}
                     name={CANAL_NOMES[c.id]}
                     stroke={CANAL_CORES[c.id]}
@@ -441,6 +400,51 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
             />
           </div>
         </Panel>
+
+        {/* cartão por canal */}
+        <div className="decision-metric-strip">
+          {[...visiveis].sort((a, b) => b.faturamento - a.faturamento).map((c, index) => (
+            <div key={c.id} className="gerizo-channel-row panel panel-1 px-4 py-3">
+              <span className="gerizo-channel-position">{String(index + 1).padStart(2, "0")}</span>
+              <span className="flex items-center gap-1.5 mb-2 min-w-0">
+                <span
+                  className="w-2 h-2 rounded-[2px] shrink-0"
+                  style={{ background: CANAL_CORES[c.id] }}
+                />
+                <span className="text-[13px] font-medium text-ink-2">
+                  {c.nome}
+                </span>
+              </span>
+              <p className="num text-[18px] font-semibold text-ink leading-none">
+                {money(c.faturamento)}
+              </p>
+              <div className="mt-2">
+                <Delta value={c.delta} />
+              </div>
+              <div className="gerizo-channel-bar" aria-label={`${c.nome}: ${pct(c.participacao)} do faturamento total`}><i style={{ width: `${Math.max(0, Math.min(100, c.participacao))}%`, background: CANAL_CORES[c.id] ?? "var(--brand)" }} /><span>{pct(c.participacao)} do total</span></div>
+              <div className="mt-3 pt-2.5 border-t border-line grid grid-cols-2 gap-y-1.5">
+                <span className="text-[12px] tracking-normal font-semibold text-ink-3">
+                  Pedidos
+                </span>
+                <span className="num text-[12px] text-ink text-right">
+                  {count(c.pedidos)}
+                </span>
+                <span className="text-[12px] tracking-normal font-semibold text-ink-3">
+                  Ticket
+                </span>
+                <span className="num text-[12px] text-ink text-right">
+                  {money(c.ticket)}
+                </span>
+                <span className="text-[12px] tracking-normal font-semibold text-ink-3">
+                  Margem
+                </span>
+                <span className="num text-[12px] text-ink text-right">
+                  {pct(c.margem)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
 
         {/* tabela comparativa */}
         <Panel className="overflow-hidden">

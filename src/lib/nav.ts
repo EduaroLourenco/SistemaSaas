@@ -1,6 +1,8 @@
 import {
   LayoutDashboard,
   CalendarDays,
+  Package,
+  ShoppingBag,
   TrendingUp,
   Tags,
   Calculator,
@@ -72,6 +74,8 @@ const area = (i: number): NavItem => ({ label: AREAS[i].label, href: AREAS[i].it
 /** Estrutura de no máximo 2 níveis. */
 export const NAV: NavGroup[] = [
   { label: "Visão geral", icon: LayoutDashboard, href: "/" },
+  { label: "Alertas", icon: Bell, href: "/alertas" },
+  { label: "Conversar", icon: MessagesSquare, href: "/conversa" },
   {
     label: "Planejamento",
     icon: CalendarDays,
@@ -90,11 +94,10 @@ export const NAV: NavGroup[] = [
    * dela.
    */
   { label: "Tráfego pago", icon: Megaphone, href: "/anuncios/trafego-pago" },
-  { label: "Produtos e preços", icon: Tags, href: "/produtos" },
-  { label: "Precificação", icon: Calculator, href: "/produtos/precificacao" },
-  { label: "Conversar", icon: MessagesSquare, href: "/conversa" },
-  { label: "Alertas", icon: Bell, href: "/alertas" },
-  { label: "Importar", icon: Upload, href: "/importar" },
+  { label: "Produtos", icon: Package, items: [
+    { label: "Produtos e preços", href: "/produtos" },
+    { label: "Precificação", href: "/produtos/precificacao" },
+  ] },
   {
     label: "Vendas",
     icon: TrendingUp,
@@ -123,7 +126,7 @@ export const NAV: NavGroup[] = [
    */
   {
     label: "Mercado Livre",
-    icon: Tags,
+    icon: ShoppingBag,
     items: [
       /* O termômetro vem primeiro: é a tela que se abre de manhã, antes de
          qualquer análise. */
@@ -176,6 +179,7 @@ export const NAV: NavGroup[] = [
 ];
 
 export const NAV_FOOTER: NavGroup[] = [
+  { label: "Importar dados", icon: Upload, href: "/importar" },
   /*
    * "Integrações" era uma tela de vitrine, sem nada ligado. O que importa
    * dela — conectar a conta do canal — vive em /integracoes/canais, e é
@@ -196,6 +200,6 @@ export const NAV_FOOTER: NavGroup[] = [
 export const MOBILE_TABS = [
   { label: "Visão", href: "/", icon: LayoutDashboard },
   { label: "Vendas", href: "/vendas/canais", icon: TrendingUp },
-  { label: "Meli", href: "/anuncios/analise", icon: Tags },
-  { label: "Importar", href: "/importar", icon: Upload },
+  { label: "Meli", href: "/mercado-livre", icon: ShoppingBag },
+  { label: "Alertas", href: "/alertas", icon: Bell },
 ];

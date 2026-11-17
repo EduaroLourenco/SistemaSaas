@@ -5,7 +5,7 @@ import { Pagination, usePagination } from "./pagination";
 import { cn } from "@/lib/utils";
 import { Button } from "./primitives";
 import { baixarCsv, type Coluna as ColunaCsv } from "@/lib/exportar";
-import { Download, ChevronRight } from "lucide-react";
+import { Download, ChevronRight, ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 
 /**
  * Tabela que vira cartão no celular.
@@ -53,7 +53,20 @@ export function Tabela<T>({
   onLinhaClick?: (linha: T) => void;
   className?: string;
 }) {
-  const { visible, pagination } = usePagination(linhas);
+  const [ordem, setOrdem] = React.useState<{id:string;asc:boolean}|null>(null);
+  const [modoTabela, setModoTabela] = React.useState(false);
+  const ordenadas = React.useMemo(() => {
+    const coluna = colunas.find(c => c.id === ordem?.id);
+    if (!ordem || !coluna?.bruto) return linhas;
+    return [...linhas].sort((a,b) => {
+      const x=coluna.bruto!(a),y=coluna.bruto!(b);
+      if(x==null)return y==null?0:1;
+      if(y==null)return -1;
+      return (typeof x==="number"&&typeof y==="number"?x-y:String(x).localeCompare(String(y),"pt-BR",{numeric:true}))*(ordem.asc?1:-1);
+    });
+  },[linhas,colunas,ordem]);
+  const ordenar=(id:string)=>setOrdem(atual=>({id,asc:atual?.id===id?!atual.asc:true}));
+  const { visible, pagination } = usePagination(ordenadas);
   const exportaveis = React.useMemo(
     () =>
       colunas
@@ -69,12 +82,20 @@ export function Tabela<T>({
 
   return (
     <div className={className}>
+      <div className="gerizo-mobile-table-tools sm:hidden">
+        <div role="group" aria-label="Visualização dos resultados">
+          <button type="button" aria-pressed={!modoTabela} onClick={()=>setModoTabela(false)}>Resumo</button>
+          <button type="button" aria-pressed={modoTabela} onClick={()=>setModoTabela(true)}>Tabela</button>
+        </div>
+        {colunas.some(c=>c.bruto) && <label>Ordenar por<select aria-label="Ordenar resultados por" value={ordem?.id??""} onChange={e=>setOrdem(e.target.value?{id:e.target.value,asc:true}:null)}><option value="">Ordem original</option>{colunas.filter(c=>c.bruto).map(c=><option key={c.id} value={c.id}>{c.cabecalho}</option>)}</select></label>}
+        {ordem && <button type="button" onClick={()=>ordenar(ordem.id)} aria-label="Inverter ordenação">{ordem.asc?"Crescente ↑":"Decrescente ↓"}</button>}
+      </div>
       {nomeExportacao && exportaveis.length > 0 && (
         <div className="flex justify-end mb-2">
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => baixarCsv(nomeExportacao, linhas, exportaveis)}
+            onClick={() => baixarCsv(nomeExportacao, ordenadas, exportaveis)}
             title={`Exporta as ${linhas.length} resultados dos filtros atuais`}
           >
             <Download className="w-3 h-3" strokeWidth={2.25} />
@@ -84,20 +105,22 @@ export function Tabela<T>({
       )}
 
       {/* ── tela larga: tabela ── */}
-      <div className="gerizo-table-scroll hidden sm:block" tabIndex={0} role="region" aria-label="Tabela de resultados">
+      <div className={cn("gerizo-table-scroll", modoTabela ? "block" : "hidden sm:block")} tabIndex={0} role="region" aria-label="Tabela de resultados">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-line">
               {colunas.map((c) => (
                 <th
                   key={c.id}
+                  scope="col"
+                  aria-sort={ordem?.id === c.id ? ordem.asc ? "ascending" : "descending" : undefined}
                   className={cn(
                     "label py-2 px-2 first:pl-0 last:pr-0 whitespace-nowrap",
                     c.alinhar === "dir" ? "text-right" : "text-left",
                     c.larguraClasse
                   )}
                 >
-                  {c.cabecalho}
+                  {c.bruto ? <button type="button" onClick={()=>ordenar(c.id)} className="inline-flex min-h-11 items-center gap-2 text-left text-[14px] font-medium">{c.cabecalho}{ordem?.id===c.id ? ordem.asc ? <ArrowUp size={14}/> : <ArrowDown size={14}/> : <ChevronsUpDown size={14}/>}</button> : c.cabecalho}
                 </th>
               ))}
             </tr>
@@ -121,7 +144,7 @@ export function Tabela<T>({
                   <td
                     key={c.id}
                     className={cn(
-                      "py-2 px-2 first:pl-0 last:pr-0 text-[13px] text-ink-2",
+                      "py-3 px-3 text-[14px] text-ink-2",
                       c.alinhar === "dir" && "text-right"
                     )}
                   >
@@ -135,7 +158,7 @@ export function Tabela<T>({
       </div>
 
       {/* ── celular: um cartão por linha ── */}
-      <div className="sm:hidden flex flex-col gap-2">
+      <div className={cn("gerizo-mobile-records sm:hidden flex flex-col", modoTabela && "hidden")}>
         {visible.map((l) => (
           <Cartao
             key={chave(l)}
@@ -167,7 +190,7 @@ function Cartao<T>({
   const ocultas = colunas.filter((c) => !visiveis.includes(c));
 
   return (
-    <div className="panel px-3 py-2.5">
+    <div className="gerizo-mobile-record min-w-0">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 flex flex-col gap-1">
           {visiveis.map((c) => (

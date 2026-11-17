@@ -138,15 +138,15 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
         }
       />
 
-      <PageBody>
-        <Panel className="px-4 py-3">
+      <PageBody className="presentation-workspace">
+        <div className="border-b border-line pb-4">
           <p className="text-[12px] text-ink-2">
             <span className="font-semibold text-ink">Formato: </span>
             {descricaoFormato}
           </p>
-        </Panel>
+        </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-3">
+        <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
           <Panel className="overflow-hidden h-fit">
             <PanelHeader
               title="Indicadores"
@@ -192,9 +192,9 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
             />
 
             {roteiro.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
                 {roteiro.map((s, i) => (
-                  <div key={s.id} className="panel panel-1 px-4 py-3.5">
+                  <div key={s.id} className="presentation-preview panel p-6">
                     <div className="flex items-start justify-between gap-3">
                       <span className="min-w-0">
                         <span className="flex items-center gap-2">
@@ -212,7 +212,7 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
                       <Delta value={s.delta} inverse={s.inverso} />
                     </div>
 
-                    <p className="num text-[20px] font-semibold text-ink mt-3 leading-none">
+                    <p className="num text-[32px] font-semibold tracking-tight text-ink mt-5 leading-tight">
                       {valorFormatado(s)}
                     </p>
                     <p className="text-[12px] text-ink-2 mt-2 leading-relaxed">
@@ -227,7 +227,7 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
       </PageBody>
 
       {emTelaCheia && roteiro.length > 0 && (
-        <ModoApresentacao slides={roteiro} onSair={() => setEmTelaCheia(false)} />
+        <ModoApresentacao slides={roteiro} recorte={[intervalo.de, intervalo.ate].map(d => d.split("-").reverse().join("/")).join(" a ")} onSair={() => setEmTelaCheia(false)} />
       )}
     </>
   );
@@ -239,13 +239,25 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
 
 function ModoApresentacao({
   slides,
+  recorte,
   onSair,
 }: {
   slides: Slide[];
+  recorte: string;
   onSair: () => void;
 }) {
   const [i, setI] = React.useState(0);
   const s = slides[i];
+  const dialogo = React.useRef<HTMLDialogElement>(null);
+  React.useEffect(() => {
+    const elemento = dialogo.current;
+    const anterior = document.activeElement as HTMLElement | null;
+    if (elemento && !elemento.open) elemento.showModal();
+    return () => {
+      if (elemento?.open) elemento.close();
+      requestAnimationFrame(() => { if (anterior?.isConnected) anterior.focus(); });
+    };
+  }, []);
 
   const avancar = React.useCallback(
     () => setI((v) => Math.min(v + 1, slides.length - 1)),
@@ -255,8 +267,15 @@ function ModoApresentacao({
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "ArrowRight" || e.key === " ") avancar();
-      else if (e.key === "ArrowLeft") voltar();
+      if (e.key === "Tab" && dialogo.current) {
+        const controles = [...dialogo.current.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden");
+        const primeiro = controles[0], ultimo = controles.at(-1);
+        if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo?.focus(); }
+        else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro?.focus(); }
+        return;
+      }
+      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); avancar(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); voltar(); }
       else if (e.key === "Escape") onSair();
     }
     document.addEventListener("keydown", onKey);
@@ -267,18 +286,18 @@ function ModoApresentacao({
     s.formato === "money" ? moneyShort(v) : count(v);
 
   return (
-    <div className="fixed inset-0 z-50 bg-ground flex flex-col">
+    <dialog ref={dialogo} className="presentation-screen fixed inset-0 z-50 bg-ground flex flex-col" aria-label="Apresentação em tela cheia" onCancel={(event) => { event.preventDefault(); onSair(); }}>
       {/* topo */}
       <div className="flex items-center justify-between gap-3 px-4 sm:px-8 h-14 shrink-0">
         <span className="flex items-center gap-2 min-w-0">
           <Presentation className="w-4 h-4 text-ink-3 shrink-0" strokeWidth={1.75} />
-          <span className="text-[12px] text-ink-3 truncate">
-            Reunião · 25 de agosto de 2026
+          <span className="text-[12px] leading-4 text-ink-3">
+            Reunião · {recorte}
           </span>
         </span>
         <button
           onClick={onSair}
-          className="w-9 h-9 rounded-r1 flex items-center justify-center text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
+          className="w-9 h-9 shrink-0 rounded-r1 flex items-center justify-center text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
           aria-label="Sair da apresentação"
         >
           <X className="w-5 h-5" />
@@ -400,6 +419,6 @@ function ModoApresentacao({
         aria-label="Próximo slide"
         className="sm:hidden absolute right-0 top-14 bottom-14 w-1/3"
       />
-    </div>
+    </dialog>
   );
 }

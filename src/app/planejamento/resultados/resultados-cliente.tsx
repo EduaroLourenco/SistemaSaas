@@ -21,6 +21,7 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { AXIS, GRID } from "@/components/ui/chart";
 import { money, moneyShort, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
 import type {
   DadosResultados,
   LinhaPromocao,
@@ -67,8 +68,6 @@ export default function ResultadosCliente({ dados }: { dados: DadosResultados })
     <>
       <PageHeader
         title="Resultados das campanhas"
-        breadcrumb="Planejamento"
-        description="O que foi feito, contra o que se compara, e se deu certo"
         actions={
           <Link
             href="/planejamento"
@@ -81,7 +80,7 @@ export default function ResultadosCliente({ dados }: { dados: DadosResultados })
       <PageBody>
         {dados.aviso && (
           <Panel className="px-4 py-3 border-warn/40">
-            <p className="text-[13px] text-ink-2">{dados.aviso}</p>
+            <p className="text-[14px] text-ink-2">{dados.aviso}</p>
           </Panel>
         )}
 
@@ -94,7 +93,8 @@ export default function ResultadosCliente({ dados }: { dados: DadosResultados })
           onChange={setAba}
         />
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <HeroMetric label="Registros acompanhados" value={count(lista.length)} hint={aba === "planejamento" ? "Campanhas e ações do planejamento" : "Promoções processadas do Mercado Livre"} />
+        <MetricStrip>
           <Contador rotulo="Deram certo" valor={contar(lista, "deu certo")} tom="text-up" />
           <Contador rotulo="Neutras" valor={contar(lista, "neutra")} tom="text-ink" />
           <Contador rotulo="Não deram certo" valor={contar(lista, "não deu certo")} tom="text-down" />
@@ -103,7 +103,7 @@ export default function ResultadosCliente({ dados }: { dados: DadosResultados })
             valor={lista.length - contar(lista, "deu certo") - contar(lista, "neutra") - contar(lista, "não deu certo")}
             tom="text-ink-3"
           />
-        </div>
+        </MetricStrip>
 
         {aba === "planejamento" ? (
           <>
@@ -179,10 +179,10 @@ export default function ResultadosCliente({ dados }: { dados: DadosResultados })
 
 function Contador({ rotulo, valor, tom }: { rotulo: string; valor: number; tom: string }) {
   return (
-    <Panel className="px-4 py-3">
-      <p className={cn("num text-[24px] font-semibold leading-none", tom)}>{count(valor)}</p>
-      <p className="mt-1.5 text-[12px] text-ink-3">{rotulo}</p>
-    </Panel>
+    <div className="min-w-0 px-4 py-5">
+      <p className="text-[14px] text-ink-2">{rotulo}</p>
+      <p className={cn("num mt-2 text-[32px] font-semibold leading-10 tracking-tight", tom)}>{count(valor)}</p>
+    </div>
   );
 }
 
@@ -213,14 +213,14 @@ function Cabeca({
     >
       <Seta className="mt-0.5 h-4 w-4 text-ink-3 md:mt-0" aria-hidden />
       <span className="min-w-0">
-        <span className="block truncate text-[14px] font-medium text-ink">{titulo}</span>
+        <span className="block text-[16px] font-semibold leading-6 text-ink [overflow-wrap:anywhere]">{titulo}</span>
         <span className="num block text-[12px] text-ink-3">{sub}</span>
       </span>
       {colunas.map((c) => (
         <span key={c.rotulo} className="col-start-2 flex items-baseline justify-between gap-2 md:col-start-auto md:block md:text-right">
           <span className="text-[11px] text-ink-3 md:hidden">{c.rotulo}</span>
           <span>
-            <span className={cn("num block text-[13px] font-semibold text-ink", c.cor)}>{c.valor}</span>
+            <span className={cn("num block text-[14px] font-semibold text-ink", c.cor)}>{c.valor}</span>
             {c.sub && <span className="num block text-[11px] text-ink-3">{c.sub}</span>}
           </span>
         </span>
@@ -269,13 +269,13 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
   ];
   return (
     <div className="flex flex-col gap-5 bg-panel-2 px-4 pb-5 pt-2 md:pl-10">
-      <p className="text-[13px] leading-relaxed text-ink">
+      <p className="text-[14px] leading-relaxed text-ink">
         <Badge tone={TOM[l.veredito]}>{l.veredito}</Badge> <span className="ml-1">{l.leitura}</span>
       </p>
 
       <section>
         <h3 className="label mb-2">O que foi feito</h3>
-        <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 text-[14px] sm:grid-cols-2 lg:grid-cols-3">
           {campos.map(([k, v]) => (
             <p key={k} className="min-w-0">
               <span className="text-ink-3">{k}: </span>
@@ -284,7 +284,7 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
           ))}
         </div>
         {(f.ideia || f.foco || f.hipotese) && (
-          <div className="mt-2 flex flex-col gap-1 text-[13px]">
+          <div className="mt-2 flex flex-col gap-1 text-[14px]">
             {f.ideia && (
               <p>
                 <span className="text-ink-3">A ideia: </span>
@@ -310,7 +310,7 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
             <summary className="cursor-pointer text-[12px] text-ink-3">
               Passos: {feitos} de {f.checklist.length} feitos
             </summary>
-            <ul className="mt-1 flex flex-col gap-0.5 text-[13px]">
+            <ul className="mt-1 flex flex-col gap-0.5 text-[14px]">
               {f.checklist.map((c, i) => (
                 <li key={i} className={cn("flex items-center gap-1.5", c.feito ? "text-ink" : "text-ink-3")}>
                   <Check className={cn("h-3.5 w-3.5", c.feito ? "text-up" : "opacity-30")} /> {c.texto}
@@ -320,14 +320,14 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
           </details>
         )}
         {(f.fechamento.funcionou || f.fechamento.problemas || f.fechamento.proximoPasso) && (
-          <div className="mt-3 flex flex-col gap-1 text-[13px]">
+          <div className="mt-3 flex flex-col gap-1 text-[14px]">
             {f.fechamento.funcionou && <p><span className="text-ink-3">O que funcionou: </span>{f.fechamento.funcionou}</p>}
             {f.fechamento.problemas && <p><span className="text-ink-3">Problemas: </span>{f.fechamento.problemas}</p>}
             {f.fechamento.proximoPasso && <p><span className="text-ink-3">Próximo passo: </span>{f.fechamento.proximoPasso}</p>}
           </div>
         )}
         {!l.skus && !f.canais.length && (
-          <p className="mt-3 text-[13px]">
+          <p className="mt-3 text-[14px]">
             <Link href="/planejamento" className="font-medium text-brand hover:underline">
               Escolher produtos e canal
             </Link>
@@ -340,7 +340,7 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
           <section>
             <h3 className="label mb-2">Comparação</h3>
             <div className="overflow-x-auto rounded-r1 border border-line bg-panel">
-              <table className="w-full text-[13px]">
+              <table className="w-full text-[14px]">
                 <thead>
                   <tr className="text-[12px] text-ink-3">
                     <th className="px-3 py-2 text-left font-semibold"></th>
@@ -387,7 +387,7 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
               {l.restoAtual != null ? ` · cinza = ${l.produtosSaoDoCanal ? "outros canais" : "resto"}` : ""}
             </h3>
             <div className="h-[220px] rounded-r1 border border-line bg-panel p-2">
-              <ResponsiveContainer width="100%" height="100%">
+              {l.serie.some((dia) => dia.acao > 0) && (l.restoAtual == null || l.serie.some((dia) => dia.resto > 0)) ? <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={indexar(l.serie)} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
                   <CartesianGrid {...GRID} />
                   <ReferenceArea yAxisId="a" x1={l.anteriorInicio} x2={l.anteriorFim} fill="var(--panel-3)" fillOpacity={0.7} />
@@ -419,9 +419,9 @@ function DetalheAcao({ l }: { l: LinhaResultado }) {
                     <Line yAxisId="a" dataKey="resto" stroke="var(--ink-3)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
                   )}
                 </LineChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer> : <p className="flex h-full items-center justify-center px-4 text-[14px] text-ink-3">Sem base não nula para comparar as séries em índice 100. Os valores em reais continuam disponíveis abaixo.</p>}
             </div>
-
+            <details className="mt-3"><summary className="flex min-h-11 cursor-pointer items-center text-[14px] font-medium text-brand">Ver valores por dia</summary><div className="max-h-80 overflow-auto rounded-r1 border border-line bg-panel" role="region" aria-label="Receita diária da ação e do restante do canal" tabIndex={0}><table className="w-full min-w-[400px] text-[14px]"><thead className="sticky top-0 bg-panel-2"><tr><th scope="col" className="px-4 py-3 text-left font-medium">Dia</th><th scope="col" className="px-4 py-3 text-right font-medium">Ação</th><th scope="col" className="px-4 py-3 text-right font-medium">Restante</th></tr></thead><tbody>{l.serie.map((dia) => <tr key={dia.data} className="border-t border-line"><th scope="row" className="px-4 py-3 text-left font-normal text-ink-2">{dataBr(dia.data)}</th><td className="num px-4 py-3 text-right">{money(dia.acao)}</td><td className="num px-4 py-3 text-right">{money(dia.resto)}</td></tr>)}</tbody></table></div></details>
           </section>
 
           {l.produtos.length > 0 && (
@@ -487,7 +487,7 @@ function Linha3({
 function TabelaProdutos({ produtos }: { produtos: ProdutoResultado[] }) {
   return (
     <div className="overflow-x-auto rounded-r1 border border-line bg-panel">
-      <table className="w-full min-w-[820px] text-[13px]">
+      <table className="w-full min-w-[820px] text-[14px]">
         <thead>
           <tr className="text-[12px] text-ink-3">
             <th className="px-3 py-2 text-left font-semibold">Produto</th>
@@ -575,13 +575,13 @@ function LinhaPromo({ p }: { p: LinhaPromocao }) {
       />
       {aberta && (
         <div className="flex flex-col gap-5 bg-panel-2 px-4 pb-5 pt-2 md:pl-10">
-          <p className="text-[13px] leading-relaxed text-ink">
+          <p className="text-[14px] leading-relaxed text-ink">
             <Badge tone={TOM[p.veredito]}>{p.veredito}</Badge> <span className="ml-1">{p.leitura}</span>
           </p>
           <section>
             <h3 className="label mb-2">Comparação · {p.dias} dias antes e depois do processamento</h3>
             <div className="overflow-x-auto rounded-r1 border border-line bg-panel">
-              <table className="w-full text-[13px]">
+              <table className="w-full text-[14px]">
                 <thead>
                   <tr className="text-[12px] text-ink-3">
                     <th className="px-3 py-2 text-left font-semibold"></th>
@@ -615,7 +615,7 @@ function LinhaPromo({ p }: { p: LinhaPromocao }) {
             <section>
               <h3 className="label mb-2">Anúncios que entraram, dos que mais venderam</h3>
               <div className="overflow-x-auto rounded-r1 border border-line bg-panel">
-                <table className="w-full min-w-[640px] text-[13px]">
+                <table className="w-full min-w-[640px] text-[14px]">
                   <thead>
                     <tr className="text-[12px] text-ink-3">
                       <th className="px-3 py-2 text-left font-semibold">Anúncio</th>

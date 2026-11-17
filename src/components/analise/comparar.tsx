@@ -184,7 +184,7 @@ export function CompararAnuncios({
                 </Badge>
               )}
             </span>
-            <p className="text-[13px] font-medium text-ink leading-snug line-clamp-2">
+            <p className="text-[13px] font-medium text-ink leading-snug [overflow-wrap:anywhere]">
               {i.titulo}
             </p>
             <p className="num text-[12px] text-ink-3 mt-1">{i.mlb}</p>

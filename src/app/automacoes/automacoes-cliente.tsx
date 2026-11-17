@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationMethod } from "@/components/analise/operation-layout";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { Badge, Button, EmptyState, Panel, Skeleton } from "@/components/ui/primitives";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -213,7 +214,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
     return (
       <>
         <PageHeader title="Automações" />
-        <PageBody>
+        <PageBody className="op-workspace op-automacoes">
           <EmptyState
             title="Nenhuma conta do Mercado Livre conectada"
             description="Conecte uma conta em Canais e contas para ver as promoções abertas."
@@ -235,19 +236,6 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
             <RefreshCw size={15} className={atualizando ? "animate-spin" : undefined} />
             {atualizando ? "Puxando…" : "Atualizar"}
           </Button>
-          <div className="flex gap-1 rounded-r1 bg-panel-3 p-[3px]">
-            {([["promocoes", "Promoções"], ["fila", `Fila${fila.linhas.length ? ` (${fila.linhas.length})` : ""}`], ["ads", "Tráfego pago"]] as const).map(([k, r]) => (
-              <button
-                key={k} onClick={() => setTema(k)} aria-selected={tema === k}
-                className={[
-                  "rounded-[7px] px-3.5 py-[7px] text-[13px] font-semibold transition",
-                  tema === k ? "bg-panel text-ink shadow-1" : "text-ink-2 hover:text-ink",
-                ].join(" ")}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
           </div>
         }
         filters={
@@ -267,7 +255,21 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
           )
         }
       />
-      <PageBody>
+      <PageBody className="op-workspace op-automacoes">
+          <div className="flex gap-1 rounded-r1 bg-panel-3 p-[3px]">
+            {([["promocoes", "Promoções"], ["fila", `Fila${fila.linhas.length ? ` (${fila.linhas.length})` : ""}`], ["ads", "Tráfego pago"]] as const).map(([k, r]) => (
+              <button
+                key={k} onClick={() => setTema(k)} aria-pressed={tema === k}
+                className={[
+                  "rounded-[7px] px-3.5 py-[7px] text-[14px] font-semibold transition",
+                  tema === k ? "bg-panel text-ink shadow-1" : "text-ink-2 hover:text-ink",
+                ].join(" ")}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+
         {tema === "ads" && <Ads dados={ads} />}
         {tema === "fila" && (
           <FilaAprovacao
@@ -324,7 +326,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
 
         {dados.falhas.length > 0 && (
           <Panel className="mt-4 border-down/40 bg-down-wash/40">
-            <div className="flex items-start gap-2 p-4 text-[13px]">
+            <div className="flex items-start gap-2 p-4 text-[14px]">
               <AlertTriangle size={16} className="mt-0.5 shrink-0 text-down" />
               <div>
                 {dados.falhas.map((f) => (
@@ -337,7 +339,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
 
         {(folgas.faltaMigracao || erroFolga) && (
           <Panel className="mt-4 border-warn/40 bg-warn-wash/40">
-            <div className="flex items-start gap-2 p-4 text-[13px]">
+            <div className="flex items-start gap-2 p-4 text-[14px]">
               <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warn" />
               <p>{erroFolga ?? folgas.faltaMigracao}</p>
             </div>
@@ -372,27 +374,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
  * novo a cada resposta do canal. Subir conta a história: está carregando,
  * e está crescendo.
  */
-function Sobe({ valor }: { valor: number }) {
-  const [v, setV] = React.useState(valor);
-  const anterior = React.useRef(valor);
-  React.useEffect(() => {
-    const de = anterior.current;
-    anterior.current = valor;
-    if (de === valor) return;
-    const inicio = performance.now();
-    let vivo = true;
-    const passo = (agora: number) => {
-      if (!vivo) return;
-      const t = Math.min(1, (agora - inicio) / 420);
-      /* Desacelera no fim: o número assenta em vez de parar seco. */
-      setV(Math.round(de + (valor - de) * (1 - Math.pow(1 - t, 3))));
-      if (t < 1) requestAnimationFrame(passo);
-    };
-    requestAnimationFrame(passo);
-    return () => { vivo = false; };
-  }, [valor]);
-  return <>{count(v)}</>;
-}
+function Sobe({ valor }: { valor: number }) { return <>{count(valor)}</>; }
 
 
 /** O que a revisão manda para a rota — o mesmo formato do envio. */
@@ -666,7 +648,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
         <div className="flex items-center gap-2.5">
           <FotoAnuncio src={i.foto} alt="" className="h-9 w-9 shrink-0 rounded-r1" />
           <div className="min-w-0">
-            <p className="truncate text-[12.5px] font-medium text-ink">{i.titulo ?? i.mlb}</p>
+            <p className="truncate text-[14px] font-medium text-ink">{i.titulo ?? i.mlb}</p>
             <p className="font-mono text-[10.5px] text-ink-3">{i.sku ?? "sem SKU"} · {i.mlb}</p>
           </div>
         </div>
@@ -681,7 +663,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
         const n = janelasPorMlb.get(i.mlb) ?? 1;
         return (
           <div className="min-w-0">
-            <p className="font-mono text-[11.5px] text-ink">{janela(i.inicio, i.fim)}</p>
+            <p className="font-mono text-[14px] text-ink">{janela(i.inicio, i.fim)}</p>
             {n > 1 && <p className="text-[10.5px] text-ink-3">{n} janelas neste anúncio</p>}
           </div>
         );
@@ -725,7 +707,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
             }}
             onClick={(e) => e.stopPropagation()}
             className={[
-              "w-[104px] rounded-r1 border bg-panel px-2 py-1 text-right font-mono text-[12.5px]",
+              "w-[104px] rounded-r1 border bg-panel px-2 py-1 text-right font-mono text-[14px]",
               acimaDoTeto ? "border-down text-down" : "border-line-2 text-brand-2 font-bold",
             ].join(" ")}
             title={acimaDoTeto ? `O canal propôs ${money(teto)} — acima disso ele recusa` : undefined}
@@ -777,7 +759,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
             key={p.contaId}
             type="button"
             onClick={() => onTrocarConta(p)}
-            className="min-h-11 rounded-r1 border border-line bg-panel-2 px-3 text-[12.5px] font-semibold text-ink-2 hover:border-brand-edge hover:text-ink"
+            className="min-h-11 rounded-r1 border border-line bg-panel-2 px-3 text-[14px] font-semibold text-ink-2 hover:border-brand-edge hover:text-ink"
           >
             ver {contaCurta(p.contaNome)}
           </button>
@@ -785,7 +767,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
         {dados.truncado && <Badge tone="warn">lista cortada em 2.000 itens</Badge>}
         {/* A régua é da campanha, não da lista: por isso mora aqui, e
             não na barra de filtros. */}
-        <label className="ml-auto flex min-h-11 items-center gap-2 text-[12.5px] font-semibold text-ink-2">
+        <label className="ml-auto flex min-h-11 items-center gap-2 text-[14px] font-semibold text-ink-2">
           Folga abaixo do piso
           <input
             type="number" min={0} max={30} step={0.5} value={folga}
@@ -797,7 +779,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
               if (bruto === "") return;
               onMudarFolga(Math.min(30, Math.max(0, Number(bruto) || 0)));
             }}
-            className="h-11 w-[84px] rounded-r1 border border-line bg-panel px-2 text-right font-mono text-[13px] text-ink focus:border-brand"
+            className="h-11 w-[84px] rounded-r1 border border-line bg-panel px-2 text-right font-mono text-[14px] text-ink focus:border-brand"
           />
         </label>
       </div>
@@ -812,7 +794,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
           <button
             key={k} onClick={() => setAba(k)} aria-selected={aba === k}
             className={[
-              "min-h-[42px] whitespace-nowrap border-b-2 px-3 text-[13px] font-semibold transition",
+              "min-h-[42px] whitespace-nowrap border-b-2 px-3 text-[14px] font-semibold transition",
               aba === k ? "border-brand text-brand-2" : "border-transparent text-ink-2 hover:text-ink",
             ].join(" ")}
           >
@@ -821,7 +803,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel-2 px-4 py-2.5 text-[12.5px]">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel-2 px-4 py-2.5 text-[14px]">
         <Badge tone={nossoPreco ? "info" : "neutral"}>
           {nossoPreco ? "preço nosso" : "preço do canal"}
         </Badge>
@@ -877,7 +859,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
       {marcados.size > 0 && (
         <div className="flex flex-wrap items-center gap-3 border-t border-line bg-panel-2 px-4 py-3">
           <span className="font-mono text-[18px] font-extrabold text-ink">{count(marcados.size)}</span>
-          <span className="text-[12.5px] text-ink-2">marcados</span>
+          <span className="text-[14px] text-ink-2">marcados</span>
           <Button className="ml-auto" onClick={() => setMarcados(new Set())}>Limpar</Button>
           <Button
             onClick={() =>
@@ -969,36 +951,45 @@ function Revisao({ conta, itens, porMlb, aoFechar }: {
       {!erro && !r && <Skeleton className="h-40 w-full" />}
       {r && (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          <div className="flex flex-wrap items-center gap-2 text-[14px]">
             <Badge tone="up">{count(r.vao)} vão</Badge>
             {r.ficam > 0 && <Badge tone="down">{count(r.ficam)} ficam de fora</Badge>}
             <span className="text-ink-2">conta {r.conta}</span>
           </div>
 
           {!r.escritaConectada && (
-            <Panel className="border-warn/40 bg-warn-wash/40 p-3 text-[12.5px]">
+            <Panel className="border-warn/40 bg-warn-wash/40 p-3 text-[14px]">
               Esta conta não autorizou o sistema a alterar promoções. Em Canais e contas,
               clique em “Permitir alterações” — sem isso o envio nem começa.
             </Panel>
           )}
 
-          <div className="max-h-[52vh] space-y-2 overflow-y-auto">
+          <div className="space-y-3">
             {r.linhas.map((l) => {
               const i = porMlb.get(l.mlb);
+              const pedido = itens.find((item) => item.mlb === l.mlb);
               return (
                 <div key={l.mlb} className="rounded-r1 border border-line p-3">
                   <div className="flex items-start gap-2">
                     <Badge tone={l.vai ? "up" : "down"}>{l.vai ? "vai" : "fica"}</Badge>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-medium text-ink">{i?.titulo ?? l.mlb}</p>
+                      <p className="truncate text-[14px] font-medium text-ink">{i?.titulo ?? l.mlb}</p>
                       <p className="font-mono text-[11px] text-ink-3">{i?.sku ?? "sem SKU"} · {l.mlb}</p>
                     </div>
                   </div>
                   {l.vai ? (
-                    <pre className="mt-2 overflow-x-auto rounded bg-panel-2 p-2 font-mono text-[11px] text-ink-2">
+                    <>
+                    <dl className="my-4 grid grid-cols-2 gap-4 text-[14px]">
+                      <div><dt className="text-ink-3">Oferta revisada</dt><dd className="num mt-1 text-[20px] font-semibold text-ink">{pedido?.preco == null ? "—" : money(pedido.preco)}</dd></div>
+                      <div><dt className="text-ink-3">Piso de referência</dt><dd className="num mt-1 text-[20px] font-semibold text-ink">{i?.piso == null ? "—" : money(i.piso)}</dd></div>
+                      <div><dt className="text-ink-3">Oferta do canal</dt><dd className="num mt-1 text-ink">{i?.precoCanal == null ? "—" : money(i.precoCanal)}</dd></div>
+                      <div><dt className="text-ink-3">Estoque</dt><dd className="num mt-1 text-ink">{pedido?.estoque == null ? "—" : count(pedido.estoque)}</dd></div>
+                    </dl>
+                    <OperationMethod title="Detalhes técnicos da solicitação"><pre className="overflow-x-auto rounded bg-panel-2 p-3 font-mono text-[12px] text-ink-2">
 {l.metodo} {l.caminho}
 {JSON.stringify(l.corpo, null, 2)}
-                    </pre>
+                    </pre></OperationMethod>
+                    </>
                   ) : (
                     <p className="mt-2 text-[12px] text-down">{l.motivo}</p>
                   )}
@@ -1079,7 +1070,7 @@ function Ads({ dados }: { dados: DadosTrafegoPago }) {
         </Button>
         {marcados.size > 0 && (
           <>
-            <span className="text-[12.5px] text-ink-2">
+            <span className="text-[14px] text-ink-2">
               <b className="font-mono text-ink">{count(marcados.size)}</b> marcados
             </span>
             <Button onClick={() => setMarcados(new Set())}>Limpar</Button>
@@ -1103,7 +1094,7 @@ function Ads({ dados }: { dados: DadosTrafegoPago }) {
               sortValue: (l: LinhaAnuncioAds) => l.titulo,
               cell: (l: LinhaAnuncioAds) => (
                 <div className="min-w-0">
-                  <p className="truncate text-[12.5px] font-medium text-ink">{l.titulo}</p>
+                  <p className="truncate text-[14px] font-medium text-ink">{l.titulo}</p>
                   <p className="font-mono text-[10.5px] text-ink-3">{l.sku} · {l.mlb} · {l.conta}</p>
                 </div>
               ) },

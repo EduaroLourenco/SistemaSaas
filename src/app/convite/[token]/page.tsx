@@ -1,3 +1,4 @@
+import { Brand } from "@/components/ui/brand";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { clienteServidor } from "@/lib/supabase/servidor";
@@ -42,9 +43,9 @@ function Aviso({
   acoes?: { href: string; rotulo: string }[];
 }) {
   return (
-    <main className="min-h-screen grid place-items-center px-4 bg-canvas">
-      <div className="w-full max-w-sm flex flex-col gap-4 text-center">
-        <h1 className="text-[18px] font-semibold text-ink">{titulo}</h1>
+    <main className="access-page">
+      <div className="access-panel flex flex-col gap-5">
+        <Brand className="mb-6" /><h1 className="text-[28px] font-semibold text-ink">{titulo}</h1>
         <p className="text-[13px] text-ink-2 leading-relaxed">{texto}</p>
         {acoes.length > 0 && (
           <div className="flex items-center justify-center gap-4">

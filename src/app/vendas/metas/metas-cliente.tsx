@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric, WorkflowSteps } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
@@ -210,11 +213,11 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
       <PageHeader
         title="Metas"
         breadcrumb="Vendas"
-        description="Defina o mês; o sistema divide por canal e por dia"
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
+        <WorkflowSteps steps={["Definir meta", "Distribuir por canal", "Ajustar por dia"]} current={salvo ? 2 : valorTotal > 0 ? 1 : 0} />
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
@@ -228,6 +231,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
           </Panel>
         )}
 
+        <HeroMetric label="Meta do mês" value={valorTotal > 0 ? money(valorTotal) : "—"} hint={`${MESES[mes - 1]} de ${ano} · receita líquida`} />
         {/* ── Definir ── */}
         <Panel className="p-4">
           <div className="flex items-end gap-3 flex-wrap">

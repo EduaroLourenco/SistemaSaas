@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+
+
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import Link from "next/link";
@@ -174,7 +177,8 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
         <Button className="min-h-11" disabled={pendente || !datas.de || !datas.ate || datas.de > datas.ate} onClick={aplicarPeriodo}>{pendente ? "Carregando…" : "Aplicar período"}</Button>
       </div>} />
     <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
+      <div className="decision-operation-strip"><div><h2 className="decision-surface-title">Catálogo de produtos</h2><p className="mt-1 text-[14px] text-ink-2">{count(linhas.length)} SKUs · {colunas.length} canais · {dataBr(dados.de)} a {dataBr(dados.ate)}</p></div><span className="text-[14px] text-ink-3">Preços vendidos e última leitura de vitrine</span></div>
       <div role="group" aria-label="Canais na tabela" className="flex max-w-full flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-ink-2">Canais na tabela</span>
         <div className="max-w-full"><SeletorCanais grupos={dados.opcoes} selecionados={selecionados} aoAplicar={mudarCanais} /></div>
@@ -215,7 +219,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
           {visible.map(l => <article key={l.chave} className="gerizo-mobile-record">
             <h2 className="gerizo-record-title">{l.titulo || "Produto sem nome"}</h2>
             {l.sku ? <Link className="gerizo-record-open block py-2" href={historico(l.sku)} prefetch={false}>SKU {l.sku} · Histórico →</Link> : <p>Sem SKU</p>}
-            <details><summary>Preços por canal</summary>
+            <details open><summary>Preços por canal</summary>
               {colunas.map(c => { const d = l.canais[c.id]; return <section key={c.id} className="gerizo-product-channel">
                 <h3>{c.nome}</h3>
                 <dl><div><dt>Vendido (médio)</dt><dd>{d?.vendido == null ? semDado : money(d.vendido)}</dd></div>
@@ -232,7 +236,7 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
             <caption className="sr-only">Preço médio vendido, curva ABC por faturamento e unidades no período; preço de vitrine na última leitura da API. Valores ausentes aparecem como Sem dado.</caption>
             <thead className="sticky top-0 z-20 bg-panel-2">
               <tr>
-                <th rowSpan={2} scope="col" aria-sort={ordem.metrica === "sku" ? (ordem.desc ? "descending" : "ascending") : "none"} className="sticky left-0 z-30 w-36 min-w-36 max-w-36 border-b border-r border-line bg-panel-2 px-3 py-3 text-left font-semibold text-ink sm:w-56 sm:min-w-56 sm:max-w-56">
+                <th rowSpan={2} scope="col" aria-sort={ordem.metrica === "sku" ? (ordem.desc ? "descending" : "ascending") : "none"} className="sticky left-0 z-30 w-36 min-w-36 max-w-36 border-b border-r border-line bg-panel-2 px-3 py-3 text-left font-semibold text-ink sm:w-72 sm:min-w-72 sm:max-w-80">
                   <button type="button" onClick={() => alternar("", "sku")} className="inline-flex min-h-9 items-center gap-1 hover:underline">
                     SKU / Produto
                     <span aria-hidden className="text-[10px] text-ink-3">{ordem.metrica === "sku" ? (ordem.desc ? "▼" : "▲") : "↕"}</span>
@@ -248,9 +252,9 @@ export default function ProdutosCliente({ dados }: { dados: DadosProdutosPrecos 
               </React.Fragment>)}</tr>
             </thead>
             <tbody>{visible.map(l => <tr key={l.chave} className="group">
-              <th scope="row" className="sticky left-0 z-10 w-36 min-w-36 max-w-36 border-b border-r border-line bg-panel px-3 py-3 text-left align-top font-normal group-hover:bg-panel-2 sm:w-56 sm:min-w-56 sm:max-w-56">
+              <th scope="row" className="sticky left-0 z-10 w-36 min-w-36 max-w-36 border-b border-r border-line bg-panel px-3 py-3 text-left align-top font-normal group-hover:bg-panel-2 sm:w-72 sm:min-w-72 sm:max-w-80">
                 {l.sku ? <Link href={historico(l.sku)} prefetch={false} className="block break-words font-semibold text-brand hover:underline" title="Abrir histórico e estoques deste SKU">{l.sku}</Link> : <span className="font-semibold text-ink-2">Sem SKU</span>}
-                <span className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-ink-3" title={l.titulo}>{l.titulo}</span>
+                <span className="mt-2 block text-[14px] leading-5 text-ink-2 [overflow-wrap:anywhere]" title={l.titulo}>{l.titulo}</span>
               </th>
               {colunas.map(c => {
                 const d = l.canais[c.id];

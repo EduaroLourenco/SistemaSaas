@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationMethod } from "@/components/analise/operation-layout";
 import { Panel, Button } from "@/components/ui/primitives";
 import { ErroComSaida } from "@/components/ui/leitura";
 import { cn } from "@/lib/utils";
-import { Send, Loader2, Database, Sparkles, RotateCcw, TrendingUp, Ban, Package, MousePointerClick, ChevronRight } from "lucide-react";
+import { Send, Loader2, Database, RotateCcw, ChevronRight } from "lucide-react";
 
 /**
  * Conversa sobre a operação.
@@ -165,17 +166,13 @@ export default function Conversa() {
     <>
       <PageHeader
         title="Conversar"
-        breadcrumb="Operação"
-        description="Converse sobre vendas, produtos e anúncios"
       />
 
-      <PageBody>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
-          <Panel className="lg:col-span-2 flex flex-col overflow-hidden min-w-0 h-[calc(100dvh-var(--topbar)-220px)] min-h-[400px] lg:h-[calc(100dvh-var(--topbar)-170px)] lg:min-h-[520px]">
+      <PageBody className="op-workspace op-conversa op-chat">
+        <div className="mx-auto w-full max-w-[840px]">
+          <OperationMethod title="Sobre as respostas"><p>A conversa usa os dados atuais da empresa selecionada. Você pode conferir as consultas junto de cada resposta.</p></OperationMethod>
+          <Panel className="op-conversation flex flex-col overflow-hidden min-w-0">
             <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-wash text-brand">
-                <Sparkles className="h-4 w-4" />
-              </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[14px] font-semibold text-ink">
                   {vazio ? "Nova conversa" : "Conversa sobre a operação"}
@@ -199,17 +196,12 @@ export default function Conversa() {
               )}
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-6 md:px-6" aria-live="polite" aria-busy={pensando}>
               {vazio && (
-                <div className="m-auto flex max-w-md flex-col items-center gap-2 py-8 text-center">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-wash text-brand">
-                    <Sparkles className="h-5 w-5" />
-                  </span>
-                  <p className="text-[15px] font-semibold text-ink">Pergunte sobre a operação</p>
-                  <p className="text-[13px] text-ink-2 leading-relaxed">
-                    Compare resultados, encontre quedas e tire dúvidas.
-                    As fontes consultadas acompanham cada resposta.
-                  </p>
+                <div className="m-auto w-full max-w-xl py-6">
+                  <h2 className="mb-2 text-[24px] font-semibold leading-8 tracking-tight text-ink">Pergunte sobre a operação</h2>
+                  <p className="mb-6 text-[14px] leading-6 text-ink-2">As fontes consultadas acompanham cada resposta.</p>
+                  <div className="grid gap-3 sm:grid-cols-2">{SUGESTOES.map((sugestao) => <button key={sugestao} type="button" onClick={() => perguntar(sugestao)} disabled={pensando} className="flex min-h-[76px] items-start justify-between gap-4 rounded-r2 border border-line bg-panel p-4 text-left text-[14px] leading-5 text-ink-2 hover:border-brand-edge hover:bg-brand-wash hover:text-brand disabled:opacity-60"><span>{sugestao}</span><ChevronRight size={16} className="mt-0.5 shrink-0" aria-hidden="true"/></button>)}</div>
                 </div>
               )}
 
@@ -218,7 +210,7 @@ export default function Conversa() {
               ))}
 
               {aguardando && (
-                <span className="inline-flex items-center gap-2 text-[12.5px] text-warn">
+                <span className="inline-flex items-center gap-2 text-[14px] text-warn">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   {aguardando}
                 </span>
@@ -243,7 +235,7 @@ export default function Conversa() {
               <div ref={fim} />
             </div>
 
-            <div className="border-t border-line px-4 py-3 flex flex-col gap-2.5">
+            <div className="border-t border-line px-4 py-4 flex flex-col gap-3 md:px-6">
               {!vazio && !pensando && (
                 <div className="flex gap-2 overflow-x-auto pb-0.5">
                   {SUGESTOES.map((s) => (
@@ -251,7 +243,7 @@ export default function Conversa() {
                       key={s}
                       type="button"
                       onClick={() => perguntar(s)}
-                      className="shrink-0 rounded-full border border-line-2 bg-panel px-3 py-1.5 text-[12.5px] text-ink-2 hover:text-ink hover:bg-panel-3"
+                      className="shrink-0 rounded-full border border-line-2 bg-panel px-3 py-1.5 text-[14px] text-ink-2 hover:text-ink hover:bg-panel-3"
                     >
                       {s}
                     </button>
@@ -295,45 +287,7 @@ export default function Conversa() {
             </div>
           </Panel>
 
-          <div className="flex flex-col gap-3 min-w-0">
-            <Panel className="overflow-hidden">
-              <div className="px-4 pt-4 pb-2">
-                <p className="text-[15px] font-semibold text-ink">Sugestões</p>
-                <p className="text-[12px] text-ink-3">Comece com uma pergunta</p>
-              </div>
-              <div className="flex flex-col gap-2 px-3 pb-3">
-                {SUGESTOES.map((s, i) => {
-                  const Icone = [TrendingUp, Ban, Package, MousePointerClick][i] ?? Sparkles;
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => perguntar(s)}
-                      disabled={pensando}
-                      className="flex items-center gap-3 rounded-r2 border border-line bg-panel px-3 py-2.5 text-left hover:bg-panel-3 disabled:opacity-60"
-                    >
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${["bg-up-wash text-up", "bg-warn-wash text-warn", "bg-info-wash text-info", "bg-brand-wash text-brand"][i] ?? "bg-brand-wash text-brand"}`}>
-                        <Icone className="h-4 w-4" />
-                      </span>
-                      <span className="flex-1 text-[13px] text-ink">{s}</span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" />
-                    </button>
-                  );
-                })}
-              </div>
-            </Panel>
 
-            <Panel className="p-4">
-              <p className="flex items-center gap-2 text-[14px] font-semibold text-ink">
-                <Database className="h-4 w-4 text-ink-3" />
-                Como a resposta é feita
-              </p>
-              <p className="mt-1.5 text-[12.5px] text-ink-2 leading-relaxed">
-                A conversa usa os dados atuais da empresa selecionada.
-                Você pode conferir as consultas junto de cada resposta.
-              </p>
-            </Panel>
-          </div>
         </div>
       </PageBody>
     </>
@@ -350,7 +304,7 @@ function Bolha({
   if (mensagem.papel === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] px-3.5 py-2.5 rounded-r2 bg-info-wash text-ink text-[14px] leading-relaxed whitespace-pre-wrap break-words">
+        <div className="max-w-[85%] px-3.5 py-2.5 rounded-r2 bg-brand-wash text-ink text-[14px] leading-relaxed whitespace-pre-wrap break-words">
           {mensagem.texto}
         </div>
       </div>
@@ -359,9 +313,6 @@ function Bolha({
 
   return (
     <div className="flex gap-3">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-wash text-brand">
-        <Sparkles className="h-4 w-4" />
-      </span>
       <div className="min-w-0 flex-1 flex flex-col gap-2">
         {/* As consultas como blocos: o que foi lido para responder. */}
         {(mensagem.consultas?.length ?? 0) > 0 && (
@@ -380,12 +331,12 @@ function Bolha({
         )}
 
         {mensagem.texto ? (
-          <div className="rounded-r2 border border-line bg-panel px-3.5 py-2.5 text-[14px] text-ink leading-relaxed break-words flex flex-col gap-2">
+          <div className="px-0 py-1 text-[16px] text-ink leading-7 break-words flex flex-col gap-2">
             <Formatado texto={mensagem.texto} />
           </div>
         ) : (
           pensando && (
-            <span className="inline-flex items-center gap-2 text-[12.5px] text-ink-3">
+            <span className="inline-flex items-center gap-2 text-[14px] text-ink-3">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Consultando os dados…
             </span>
@@ -439,7 +390,7 @@ function Formatado({ texto }: { texto: string }) {
     const [cab, ...corpo] = tabela;
     blocos.push(
       <div key={blocos.length} className="overflow-x-auto rounded-r1 border border-line bg-panel">
-        <table className="w-full text-[13px]">
+        <table className="w-full text-[14px]">
           <thead>
             <tr className="text-left text-[12px] font-semibold text-ink-2">
               {cab.map((c, i) => (

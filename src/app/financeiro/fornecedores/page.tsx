@@ -22,10 +22,8 @@ export default async function Pagina() {
     <>
       <PageHeader
         title="Fornecedores"
-        breadcrumb="Financeiro"
-        description="Quem cobra, e como cobra"
       />
-      <PageBody>
+      <PageBody className="finance-page">
         <FornecedoresCliente
           linhas={dados.linhas}
           categorias={dados.categorias}

@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric } from "@/components/ui/workspace";
+
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
@@ -407,7 +410,7 @@ export default function ComparativoDiario({
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
         <div className="mb-3">
           <PainelExclusoes
             exclusoes={dados.exclusoes}
@@ -417,13 +420,13 @@ export default function ComparativoDiario({
         </div>
 
         {/* ── seleção de períodos ───────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="decision-metric-strip">
           {ROTULOS_COLUNA.map((rotulo, i) => {
             const valor = rascunho[i];
             const livre = livreDe(valor);
             const periodo = resolverPeriodo(valor);
             return (
-              <Panel key={rotulo} className="px-3 py-2.5 min-w-0">
+              <Panel key={rotulo} className="!rounded-none !border-0 px-4 py-4 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <span
                     className="w-2.5 h-2.5 rounded-[3px] shrink-0"
@@ -526,6 +529,7 @@ export default function ComparativoDiario({
           </Button>
         </div>
 
+        <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">{colunas.map((c,i)=><HeroMetric key={c.slot} label={`${c.periodo.rotulo}${i===0 ? " · base" : ""}`} value={money(base === "dia" ? c.resumo.receitaLiquida / c.resumo.dias : c.resumo.receitaLiquida)} hint={`${c.periodo.intervalo} · receita líquida${base === "dia" ? " por dia" : ""}`} />)}</div>
         {/* ── tabela comparativa ────────────────────────────── */}
         <Panel className="overflow-hidden">
           <PanelHeader

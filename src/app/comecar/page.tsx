@@ -24,8 +24,8 @@ export default async function Comecar() {
     (sessao.user.user_metadata?.empresa as string | undefined)?.trim() ?? "";
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-10 bg-ground">
-      <div className="w-full max-w-[360px]">
+    <main className="access-page">
+      <div className="access-panel">
         {/* Marca oficial: estas telas são as primeiras que o cliente vê. */}
         <div className="mb-7">
           <Brand descriptor />

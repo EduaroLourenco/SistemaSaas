@@ -5,6 +5,7 @@ import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Download, Loader2, AlertCircle, Package, Sparkles, ChartNoAxesCombined, CalendarDays, Megaphone, Tags, type LucideIcon } from "lucide-react";
 import { Disclosure } from "@/components/ui/disclosure";
+import { WorkspaceNav } from "@/components/layout/workspace-nav";
 
 /**
  * Exportações.
@@ -121,13 +122,13 @@ export default function Exportacoes() {
       <PageHeader
         title="Exportações"
         breadcrumb="Relatórios"
-        description="Seus resultados prontos para analisar e compartilhar"
       />
 
-      <PageBody>
+      <PageBody className="export-workspace management-workspace">
+        <WorkspaceNav area="relatorios" />
         {/* O pacote fica antes da lista: é o que a maioria quer quando
             chega aqui, e os arquivos avulsos são o caso específico. */}
-        <Panel className="p-4 mb-3">
+        <Panel className="export-feature">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -176,7 +177,7 @@ export default function Exportacoes() {
 
         {/* Evolução por anúncio: a planilha que responde "por que caiu"
             sem precisar cruzar três exportações à mão. */}
-        <Panel className="p-4 mb-3">
+        <Panel className="export-row">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0 flex-1">
               <p className="text-[14px] font-semibold text-ink mb-1.5">
@@ -232,11 +233,11 @@ export default function Exportacoes() {
             title="Formatos disponíveis"
             hint="Arquivos gerados com os dados atuais"
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 p-3">
+          <div className="divide-y divide-line px-5">
             {FORMATOS.map((f) => (
-              <div key={f.id} className="rounded-r2 border border-line bg-panel p-4 flex flex-col gap-3">
-                <span className={`grid h-12 w-12 place-items-center rounded-r2 ${f.tom}`} aria-hidden="true"><f.icone size={24} strokeWidth={1.7} /></span>
-                <span>
+              <div key={f.id} className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-x-4 gap-y-4 py-5 md:grid-cols-[24px_minmax(0,1fr)_140px] md:items-center">
+                <span className="pt-1 text-ink-3" aria-hidden="true"><f.icone size={20} strokeWidth={1.75} /></span>
+                <span className="min-w-0">
                   <span className="flex flex-wrap items-start justify-between gap-2 mb-2">
                     <span className="text-[13.5px] font-semibold text-ink">
                       {f.titulo}
@@ -250,7 +251,7 @@ export default function Exportacoes() {
                 {/* Secundário: a ação principal da tela é o pacote completo. */}
                 <Button
                   variant="default"
-                  className="mt-auto w-full"
+                  className="col-start-2 w-fit md:col-start-auto md:w-full"
                   onClick={() => exportar(f)}
                   disabled={baixando !== null}
                 >

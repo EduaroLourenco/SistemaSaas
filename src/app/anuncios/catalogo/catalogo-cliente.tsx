@@ -5,6 +5,7 @@ import * as React from "react";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationMethod } from "@/components/analise/operation-layout";
 import { DisputaPainel } from "./disputa-painel";
 import type { DadosDisputa } from "@/lib/dados/disputa-catalogo";
 import {
@@ -419,9 +420,8 @@ export default function CatalogoAnuncios({
     <>
       <PageHeader
         mobileFilters={false}
-        title="Catálogo"
+        title="Disputa de catálogo"
         breadcrumb="Anúncios"
-        description="Preço, comissão e situação por MLB"
         actions={
           <>
             <Button size="sm" variant="primary" disabled={sincronizando} onClick={sincronizar}>
@@ -540,7 +540,7 @@ export default function CatalogoAnuncios({
         }
       />
 
-      <PageBody>
+      <PageBody className="op-workspace op-anuncios-catalogo">
         {/* A disputa primeiro: "estou ganhando o catálogo?" é a pergunta
             que o nome da tela promete, e a lista de anúncios responde
             outra. */}
@@ -549,7 +549,7 @@ export default function CatalogoAnuncios({
         {erroSync && (
           <Panel className="px-4 py-3 flex items-start gap-2.5 border-down/30">
             <TriangleAlert className="w-4 h-4 text-down shrink-0 mt-0.5" strokeWidth={2} />
-            <p className="text-[12.5px] text-ink-2">
+            <p className="text-[14px] text-ink-2">
               <span className="font-semibold text-ink">Não deu para atualizar. </span>
               {erroSync} O que está na tela é a última leitura guardada.
             </p>
@@ -608,7 +608,7 @@ export default function CatalogoAnuncios({
         )}
 
         {/* ── Indicadores da carteira ────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="op-stat-strip">
           <StatTile
             label="Anúncios no catálogo"
             value={count(resumo.total)}
@@ -637,6 +637,38 @@ export default function CatalogoAnuncios({
           />
         </div>
 
+        {/* ── Tabela ─────────────────────────────────────────── */}
+        <Panel className="overflow-hidden">
+          <PanelHeader
+            title="Anúncios"
+            hint="clique numa linha para abrir a ficha do anúncio"
+            action={
+              <span className="num text-[12px] text-ink-3">
+                {filtrados.length}
+              </span>
+            }
+          />
+          <DataTable
+            columns={colunas}
+            rows={filtrados}
+            rowKey={(i) => i.mlb}
+            defaultSort={{ key: "preco", dir: "desc" }}
+            onRowClick={setSelecionado}
+            empty={
+              <EmptyState
+                icon={SearchX}
+                title="Nenhum anúncio encontrado"
+                description="Ajuste a busca ou limpe os filtros."
+                action={
+                  <Button size="sm" onClick={limparFiltros}>
+                    Limpar filtros
+                  </Button>
+                }
+              />
+            }
+          />
+        </Panel>
+        <OperationMethod title="Composição da carteira">
         {/* ── Composição da carteira ─────────────────────────── */}
         <div className="grid lg:grid-cols-2 gap-4">
           <Panel>
@@ -675,37 +707,7 @@ export default function CatalogoAnuncios({
           </Panel>
         </div>
 
-        {/* ── Tabela ─────────────────────────────────────────── */}
-        <Panel className="overflow-hidden">
-          <PanelHeader
-            title="Anúncios"
-            hint="clique numa linha para abrir a ficha do anúncio"
-            action={
-              <span className="num text-[12px] text-ink-3">
-                {filtrados.length}
-              </span>
-            }
-          />
-          <DataTable
-            columns={colunas}
-            rows={filtrados}
-            rowKey={(i) => i.mlb}
-            defaultSort={{ key: "preco", dir: "desc" }}
-            onRowClick={setSelecionado}
-            empty={
-              <EmptyState
-                icon={SearchX}
-                title="Nenhum anúncio encontrado"
-                description="Ajuste a busca ou limpe os filtros."
-                action={
-                  <Button size="sm" onClick={limparFiltros}>
-                    Limpar filtros
-                  </Button>
-                }
-              />
-            }
-          />
-        </Panel>
+        </OperationMethod>
       </PageBody>
 
       {selecionado && (
@@ -726,7 +728,7 @@ export default function CatalogoAnuncios({
                   key={t}
                   onClick={() => setTipo(t)}
                   className={
-                    "flex-1 h-11 rounded-r1 border text-[13px] font-medium transition-colors " +
+                    "flex-1 h-11 rounded-r1 border text-[14px] font-medium transition-colors " +
                     (tipo === t
                       ? "border-brand bg-brand-wash text-brand"
                       : "border-line text-ink-2")
@@ -746,7 +748,7 @@ export default function CatalogoAnuncios({
                   key={s}
                   onClick={() => setStatus(s)}
                   className={
-                    "h-11 rounded-r1 border text-[13px] font-medium transition-colors " +
+                    "h-11 rounded-r1 border text-[14px] font-medium transition-colors " +
                     (status === s
                       ? "border-brand bg-brand-wash text-brand"
                       : "border-line text-ink-2")
@@ -887,7 +889,7 @@ function OrigemDosDados({
       width="560px"
     >
       <div className="px-4 py-3.5 border-b border-line">
-        <p className="text-[12.5px] text-ink-2 leading-relaxed">
+        <p className="text-[14px] text-ink-2 leading-relaxed">
           {sincronizadoEm ? (
             <>
               A última leitura do canal foi em{" "}
@@ -970,7 +972,7 @@ function FichaAnuncio({
               href={linkDoAnuncio(item.mlb)!}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 h-8 max-sm:h-11 inline-flex items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] text-ink hover:bg-panel-3 transition-colors"
+              className="flex-1 h-8 max-sm:h-11 inline-flex items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[14px] text-ink hover:bg-panel-3 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Abrir no Mercado Livre
@@ -1048,7 +1050,7 @@ function FichaAnuncio({
                 content={<ChartTooltip formatter={(v) => money(v)} />}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="preco"
                 name="Preço praticado"
                 stroke="var(--s1)"
@@ -1065,6 +1067,7 @@ function FichaAnuncio({
             { label: "Preço praticado", color: "var(--s1)" },
           ]}
         />
+        <OperationMethod title="Ver valores das 12 semanas"><div className="overflow-x-auto"><table className="w-full text-[14px]"><thead><tr><th className="py-3 text-left font-medium text-ink-2">Semana</th><th className="py-3 text-right font-medium text-ink-2">Preço praticado</th></tr></thead><tbody>{serie.map((p)=><tr key={p.semana} className="border-t border-line"><td className="py-3 text-ink-2">{p.semana}</td><td className="num py-3 text-right">{money(p.preco)}</td></tr>)}</tbody></table></div></OperationMethod>
       </div>
 
       {/* ficha cadastral */}

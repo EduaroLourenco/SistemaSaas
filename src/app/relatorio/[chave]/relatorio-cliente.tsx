@@ -46,14 +46,20 @@ function Delta({ valor, invertido = false, miudo = false }: { valor: number | nu
 /** Explicação que aparece ao passar o mouse ou tocar. */
 function Dica({ texto, children }: { texto: string; children: React.ReactNode }) {
   const [aberto, setAberto] = React.useState(false);
+  const id = React.useId();
   return (
     <span className="relative inline-flex items-center gap-1">
       {children}
       <button
         type="button"
-        onClick={() => setAberto((v) => !v)}
+        onClick={() => setAberto(true)}
+        onFocus={() => setAberto(true)}
+        onBlur={() => setAberto(false)}
+        onKeyDown={(e) => { if (e.key === "Escape") setAberto(false); }}
+        aria-expanded={aberto}
+        aria-describedby={aberto ? id : undefined}
         onMouseEnter={() => setAberto(true)}
-        onMouseLeave={() => setAberto(false)}
+        onMouseLeave={(e) => { if (document.activeElement !== e.currentTarget) setAberto(false); }}
         aria-label="O que é isto"
         className="w-3.5 h-3.5 rounded-full border border-line text-[12px] leading-none text-ink-3 hover:border-brand hover:text-brand shrink-0"
       >
@@ -61,6 +67,7 @@ function Dica({ texto, children }: { texto: string; children: React.ReactNode })
       </button>
       {aberto && (
         <span
+          id={id}
           role="tooltip"
           className="absolute left-0 top-full mt-1.5 z-30 w-[260px] panel panel-2 px-3 py-2 text-[12px] leading-relaxed text-ink-2 normal-case font-normal tracking-normal"
         >
@@ -171,12 +178,12 @@ function Secao({
 }) {
   return (
     <section id={id} className="scroll-mt-16">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-b border-line pb-2 mb-4">
-        <div>
+      <div className="flex min-w-0 max-w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-b border-line pb-2 mb-4">
+        <div className="min-w-0 max-w-full">
           <h2 className="text-[17px] font-semibold text-ink tracking-tight">{titulo}</h2>
           {chamada && <p className="text-[12.5px] text-ink-3 mt-0.5">{chamada}</p>}
         </div>
-        {acao}
+        {acao && <div className="min-w-0 max-w-full">{acao}</div>}
       </div>
       {children}
     </section>
@@ -315,7 +322,7 @@ function Kpi({
 
 function GradeKpi({ m, janelas }: { m: Metricas; janelas: Relatorio["janelas"] }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+    <div className="report-metrics">
       <Kpi nome="Receita" chave="receita" v={m.receita} formato={(n) => reais(n)} janelas={janelas} />
       <Kpi nome="Pedidos" chave="pedidos" v={m.pedidos} formato={(n) => numero(n)} janelas={janelas} />
       <Kpi nome="Ticket médio" chave="ticket" v={m.ticket} formato={(n) => reais(n)} janelas={janelas} />
@@ -408,7 +415,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
   const prioridades = dados.prioridades.filter((x) => x.prazo === abaPrioridade);
 
   return (
-    <div className="min-h-screen bg-ground">
+    <div className="public-report min-h-screen bg-ground">
       {/* ── Cabeçalho ── */}
       <header className="border-b border-line bg-panel">
         <div className="max-w-[1180px] mx-auto px-5 py-5">
@@ -498,7 +505,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
       </div>
 
       {/* ── Índice fixo ── */}
-      <nav className="sticky top-0 z-20 border-b border-line bg-panel/95 backdrop-blur">
+      <nav aria-label="Seções do relatório" className="report-index sticky top-0 z-20 border-b border-line bg-panel">
         <div className="max-w-[1180px] mx-auto px-5 flex gap-1 overflow-x-auto py-1.5">
           {SECOES.map((s) => (
             <a
@@ -533,13 +540,17 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
           })}
         </div>
 
+        <section className="report-executive" aria-label="Resumo do período">
+          <div><p className="text-[14px] text-ink-2">Receita no período</p><p className="report-executive-value num">{reais(dados.operacao.receita.atual)}</p><div className="mt-3 flex flex-wrap items-center gap-2"><Delta valor={dados.operacao.receita.contraAnterior} /><span className="text-[14px] text-ink-2">contra o período anterior</span></div></div>
+          <dl><div><dt>Pedidos</dt><dd>{numero(dados.operacao.pedidos.atual)}</dd></div><div><dt>Unidades</dt><dd>{numero(dados.operacao.unidades.atual)}</dd></div><div><dt>Ticket médio</dt><dd>{reais(dados.operacao.ticket.atual)}</dd></div></dl>
+        </section>
         {/* ══ Prioridades ══ */}
         <Secao
           id="prioridades"
           titulo="O que atacar"
           chamada="Cada item traz o número que o justifica. Nada aqui é sugestão de causa — é o que os dados mostram."
           acao={
-            <div className="flex gap-1 p-0.5 rounded-r1 bg-ground border border-line">
+            <div className="flex min-w-0 max-w-full gap-1 overflow-x-auto p-0.5 rounded-r1 bg-ground border border-line" role="group" aria-label="Prazo das prioridades">
               {([["semana", "Resolve nesta semana"], ["longo", "Prioridade que leva tempo"]] as const).map(([v, r]) => (
                 <button
                   key={v}
@@ -622,7 +633,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
         {/* ══ Por loja ══ */}
         <Secao id="lojas" titulo="Loja por loja" chamada="Clique na linha para abrir a série do canal.">
           <div className="panel overflow-hidden">
-            <table className="w-full text-[12.5px]">
+            <div className="report-table-scroll" role="region" aria-label="Tabela do relatório, com rolagem horizontal" tabIndex={0}><table className="w-full text-[12.5px]">
               <thead>
                 <tr className="border-b border-line text-ink-3">
                   <th className="text-left font-medium px-3.5 py-2">Canal</th>
@@ -669,7 +680,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                   </React.Fragment>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
           <Interpretacao
             id="lojas"
@@ -714,7 +725,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
           </div>
 
           <div className="panel overflow-x-auto">
-            <table className="w-full text-[12px] min-w-[900px]">
+            <div className="report-table-scroll" role="region" aria-label="Tabela do relatório, com rolagem horizontal" tabIndex={0}><table className="w-full text-[12px] min-w-[900px]">
               <thead>
                 <tr className="border-b border-line text-ink-3">
                   <th className="text-left font-medium px-3 py-2">Curva</th>
@@ -770,7 +781,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           </div>
           {produtosFiltrados.length > quantos && (
             <div className="flex items-center gap-3 mt-2.5">
@@ -827,7 +838,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
 
           {dados.catalogo.perdendoLista.length > 0 && (
             <div className="panel overflow-hidden mt-4">
-              <table className="w-full text-[12px]">
+              <div className="report-table-scroll" role="region" aria-label="Tabela do relatório, com rolagem horizontal" tabIndex={0}><table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-line text-ink-3">
                     <th className="text-left font-medium px-3 py-2">SKU</th>
@@ -850,7 +861,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           )}
           <Interpretacao
@@ -986,7 +997,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
               {dados.trafegoPago.anunciosNoVermelho.length > 0 && (
                 <div className="panel px-4 py-3.5 mt-4">
                   <p className="label mb-2">Anúncios em que a mídia pesa mais que o retorno</p>
-                  <table className="w-full text-[12px]">
+                  <div className="report-table-scroll" role="region" aria-label="Tabela do relatório, com rolagem horizontal" tabIndex={0}><table className="w-full text-[12px]">
                     <tbody>
                       {dados.trafegoPago.anunciosNoVermelho.map((a) => (
                         <tr key={a.mlb} className="border-b border-line last:border-0">
@@ -996,7 +1007,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 </div>
               )}
             </>
@@ -1150,7 +1161,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                     </Dica>
                   </p>
                   <div className="panel overflow-x-auto">
-                    <table className="w-full text-[12.5px]">
+                    <div className="report-table-scroll" role="region" aria-label="Tabela do relatório, com rolagem horizontal" tabIndex={0}><table className="w-full text-[12.5px]">
                       <thead>
                         <tr className="text-ink-3 text-left">
                           <th className="font-normal px-3.5 py-2">Anúncio</th>
@@ -1174,7 +1185,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </table></div>
                   </div>
                 </div>
               )}
@@ -1278,7 +1289,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
         {/* ══ Dados e pendências ══ */}
         <Secao id="dados" titulo="Estado dos dados e pendências" chamada="O que sustenta cada número, e o que falta para a leitura ficar completa.">
           <div className="panel overflow-hidden">
-            <table className="w-full text-[12.5px]">
+            <div className="report-table-scroll" role="region" aria-label="Tabela do relatório, com rolagem horizontal" tabIndex={0}><table className="w-full text-[12.5px]">
               <tbody>
                 {dados.estadoDados.map((f) => (
                   <tr key={f.fonte} className="border-b border-line last:border-0">
@@ -1293,7 +1304,7 @@ export function RelatorioCliente({ dados, chave }: { dados: Relatorio; chave: st
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           <button
@@ -1531,7 +1542,7 @@ function SkuEntreCanais({ x }: { x: SkuMulticanal }) {
 
       {aberto && (
         <div className="border-t border-line overflow-x-auto">
-          <table className="w-full text-[12px] min-w-[860px]">
+          <div className="report-table-scroll" role="region" aria-label="Tabela do relatório, com rolagem horizontal" tabIndex={0}><table className="w-full text-[12px] min-w-[860px]">
             <thead>
               <tr className="text-ink-3 border-b border-line">
                 <th className="text-left font-medium px-4 py-2">Canal</th>
@@ -1585,7 +1596,7 @@ function SkuEntreCanais({ x }: { x: SkuMulticanal }) {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>

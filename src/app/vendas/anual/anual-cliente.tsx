@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Badge, Delta } from "@/components/ui/primitives";
@@ -333,157 +336,35 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
         }
       />
 
-      <PageBody className="gerizo-annual">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatTile
-            label="Receita do ano"
-            value={money(resumo.receita)}
-            delta={resumo.deltaReceita}
-            hint="vs. ano anterior"
-            spark={serie.map((m) => m.receita)}
-          />
-          <StatTile
-            label="Pedidos"
-            value={count(resumo.pedidos)}
-            delta={resumo.deltaPedidos}
-            hint="vs. ano anterior"
-            spark={serie.map((m) => m.pedidos)}
-          />
-          <StatTile
-            label="Ticket médio"
-            value={money(resumo.ticket)}
-            delta={resumo.deltaTicket}
-            hint="vs. ano anterior"
-            spark={serie.map((m) => derivar(m).ticket)}
-          />
-          <StatTile
-            label="Atingimento da meta"
-            value={pct(resumo.pctMeta)}
-            hint={`${moneyShort(resumo.receita)} de ${moneyShort(total.meta)}`}
-          />
+      <PageBody className={`gerizo-annual ${decisaoCss.workspace}`}>
+        <div className="decision-comparison">
+          <HeroMetric label={`Receita de ${ANO}`} value={money(resumo.receita)} delta={resumo.deltaReceita} hint={`${nomeEscopo(escopo)} · comparação com o ano anterior`}>
+            <div className="mt-5 border-t border-line pt-4"><p className="text-[14px] text-ink-2">Meta do ano</p><p className="mt-1 text-[24px] font-semibold tabular-nums text-ink">{money(total.meta)}</p><Progress value={resumo.pctMeta} tone={faixaMeta(resumo.pctMeta)} className="mt-3" /></div>
+          </HeroMetric>
+          <MetricStrip>
+            <StatTile label="Pedidos" value={count(resumo.pedidos)} delta={resumo.deltaPedidos} hint="vs. ano anterior" />
+            <StatTile label="Ticket médio" value={money(resumo.ticket)} delta={resumo.deltaTicket} hint="vs. ano anterior" />
+            <StatTile label="Atingimento da meta" value={pct(resumo.pctMeta)} hint={`${moneyShort(resumo.receita)} de ${moneyShort(total.meta)}`} />
+          </MetricStrip>
         </div>
 
-        {/* ── Realizado vs. meta ─────────────────────────────── */}
-        <Panel>
-          <PanelHeader
-            title="Receita realizada vs. meta"
-            hint="barras por mês · linha de acumulado no eixo da direita"
-            action={
-              <Badge tone={faixaMeta(totalD.pctMeta)}>
-                <span className="num">{pct(totalD.pctMeta)}</span>
-                <span className="ml-1 font-medium hidden sm:inline">do ano</span>
-              </Badge>
-            }
-          />
-          <div className="px-2 pt-3 pb-2">
-            <div className="h-[240px] md:h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={dadosGrafico}
-                  margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                >
+        <div className="decision-chart-pair">
+          {(["mensal", "acumulado"] as const).map((visao) => <Panel key={visao} className="min-w-0 overflow-hidden">
+            <PanelHeader title={visao === "mensal" ? "Receita por mês" : "Receita acumulada"} hint={visao === "mensal" ? "Realizado e meta · R$" : "Do início do ano até cada mês · R$"} />
+            <div className="h-[220px] min-w-0 px-2 pt-4 md:h-[280px]">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <ComposedChart data={dadosGrafico} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid {...GRID} />
-                  <XAxis
-                    dataKey="mes"
-                    {...AXIS}
-                    interval={0}
-                    tickFormatter={(v: string) => (estreito ? v.slice(0, 1) : v)}
-                  />
-                  <YAxis
-                    yAxisId="l"
-                    {...AXIS}
-                    width="auto"
-                    tickFormatter={(v: number) => moneyShort(v)}
-                  />
-                  <YAxis
-                    yAxisId="r"
-                    orientation="right"
-                    {...AXIS}
-                    width="auto"
-                    hide={estreito}
-                    tickFormatter={(v: number) => moneyShort(v)}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "var(--panel-3)" }}
-                    content={<ChartTooltip formatter={(v) => money(v)} />}
-                  />
-                  <Bar
-                    yAxisId="l"
-                    dataKey="receita"
-                    name="Receita realizada"
-                    fill="var(--annual-revenue)"
-                    radius={[3, 3, 0, 0]}
-                    isAnimationActive={false}
-                  />
-                  {!estreito && (
-                    <Bar
-                      yAxisId="l"
-                      dataKey="meta"
-                      name="Meta"
-                      fill="var(--annual-target)"
-                      radius={[3, 3, 0, 0]}
-                      isAnimationActive={false}
-                    />
-                  )}
-                  {estreito && (
-                    <Line
-                      yAxisId="l"
-                      type="monotone"
-                      dataKey="meta"
-                      name="Meta"
-                      stroke="var(--annual-target)"
-                      strokeWidth={1.5}
-                      strokeDasharray="4 3"
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                  )}
-                  {!estreito && (
-                    <Line
-                      yAxisId="r"
-                      type="monotone"
-                      dataKey="acumulado"
-                      name="Receita acumulada"
-                      stroke="var(--annual-accumulated)"
-                      strokeWidth={1.75}
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                  )}
-                  {!estreito && (
-                    <Line
-                      yAxisId="r"
-                      type="monotone"
-                      dataKey="metaAcumulada"
-                      name="Meta acumulada"
-                      stroke="var(--annual-target-accumulated)"
-                      strokeWidth={1.5}
-                      strokeDasharray="4 3"
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                  )}
+                  <XAxis dataKey="mes" {...AXIS} minTickGap={18} />
+                  <YAxis {...AXIS} width={72} tickFormatter={(v: number) => moneyShort(v)} />
+                  <Tooltip cursor={{ fill: "var(--panel-3)" }} content={<ChartTooltip formatter={(v) => money(v)} />} />
+                  {visao === "mensal" ? <><Bar dataKey="receita" name="Receita realizada" fill="var(--brand)" radius={[3,3,0,0]} isAnimationActive={false} /><Bar dataKey="meta" name="Meta" fill="var(--line-2)" radius={[3,3,0,0]} isAnimationActive={false} /></> : <><Line type="linear" dataKey="acumulado" name="Receita acumulada" stroke="var(--brand)" strokeWidth={2.5} dot={false} isAnimationActive={false} /><Line type="linear" dataKey="metaAcumulada" name="Meta acumulada" stroke="var(--ink-3)" strokeWidth={2} dot={false} isAnimationActive={false} /></>}
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-            <Legend
-              className="px-2 pt-3"
-              items={
-                estreito
-                  ? [
-                      { label: "Receita realizada", color: "var(--annual-revenue)" },
-                      { label: "Meta", color: "var(--annual-target)" },
-                    ]
-                  : [
-                      { label: "Receita realizada", color: "var(--annual-revenue)" },
-                      { label: "Meta", color: "var(--annual-target)" },
-                      { label: "Receita acumulada", color: "var(--annual-accumulated)" },
-                      { label: "Meta acumulada", color: "var(--annual-target-accumulated)" },
-                    ]
-              }
-            />
-          </div>
-        </Panel>
+            <Legend className="px-5 py-4" items={[{label: visao === "mensal" ? "Receita realizada" : "Receita acumulada", color:"var(--brand)"},{label: visao === "mensal" ? "Meta" : "Meta acumulada",color:"var(--ink-3)"}]} />
+          </Panel>)}
+        </div>
 
         {/* ── Tabela densa ───────────────────────────────────── */}
         <Panel className="overflow-hidden">
@@ -505,14 +386,14 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
             >
               <thead>
                 <tr className="bg-panel-2">
-                  <th className="sticky left-0 z-20 bg-panel-2 h-9 px-3 border-b border-r border-line text-left font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap">
+                  <th className="sticky left-0 z-20 bg-panel-2 h-11 px-3 border-b border-r border-line text-left font-semibold text-[14px] tracking-normal text-ink-3 whitespace-nowrap">
                     Mês
                   </th>
                   {colunas.map((c) => (
                     <th
                       key={c.key}
                       style={{ width: `${c.width}px` }}
-                      className="h-9 px-3 border-b border-line text-right font-semibold text-[12px] uppercase tracking-[0.04em] text-ink-3 whitespace-nowrap"
+                      className="h-11 px-3 border-b border-line text-right font-semibold text-[14px] tracking-normal text-ink-3 whitespace-nowrap"
                     >
                       {c.header}
                     </th>
@@ -613,7 +494,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                           { l: "Líquida", v: moneyShort(d.receitaLiquida) },
                         ].map((k) => (
                           <span key={k.l} className="flex flex-col min-w-0">
-                            <span className="text-[12px] uppercase tracking-[0.04em] text-ink-3 font-semibold truncate">
+                            <span className="text-[14px] tracking-normal text-ink-3 font-semibold truncate">
                               {k.l}
                             </span>
                             <span className="num text-[13px] text-ink break-words">
@@ -656,7 +537,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
                   { l: "% da meta", v: pct(totalD.pctMeta) },
                 ].map((k) => (
                   <span key={k.l} className="flex flex-col min-w-0">
-                    <span className="text-[12px] uppercase tracking-[0.04em] text-ink-3 font-semibold truncate">
+                    <span className="text-[14px] tracking-normal text-ink-3 font-semibold truncate">
                       {k.l}
                     </span>
                     <span className="num text-[13px] font-semibold text-ink break-words">

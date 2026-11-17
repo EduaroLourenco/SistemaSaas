@@ -17,6 +17,8 @@ import {
   X,
   Undo2,
   Trash2,
+  PanelLeft,
+  CalendarCheck2,
 } from "lucide-react";
 import { type Dados, type Item, formatarData } from "@/lib/planejamento/modelo";
 import type { Oportunidade } from "@/lib/planejamento/sazonal";
@@ -89,6 +91,7 @@ export default function EstudioShell({
   children: ReactNode;
 }) {
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null);
+  const [campanhasAbertas, setCampanhasAbertas] = useState(false);
   const campanhas = dados.itens.filter((i) => i.natureza === "campanha");
   const campanha = campanhas.find((i) => i.id === selecionada);
   const acoes = dados.itens.filter(
@@ -101,10 +104,11 @@ export default function EstudioShell({
   );
   const feitas = acoes.filter((i) => i.status === "Concluída").length;
   const tabs = [
+    { nome: "Hoje", icon: CalendarCheck2 },
     { nome: "Quadro", icon: LayoutGrid },
     { nome: "Mapa", icon: Network },
     { nome: "Calendário", icon: CalendarDays },
-    { nome: "Onde focar agora", titulo: "Prioridades", icon: Compass },
+    { nome: "Onde focar agora", titulo: "Foco", icon: Compass },
   ];
   return (
     <>
@@ -112,9 +116,10 @@ export default function EstudioShell({
         {/* "MARKETING & OPERAÇÃO / Estúdio de campanhas" saiu: sobrescrito
             com um nome que o menu não usa, e duas linhas de chapéu antes
             do primeiro dado. */}
-        <h1>Planejamento</h1>
+        <h1>Calendário e campanhas</h1>
         <div className="st-top-actions">
           <span className="st-company">{dados.empresa}</span>
+          <button type="button" className="st-secondary" aria-expanded={campanhasAbertas} aria-controls="st-campaign-navigation" onClick={() => setCampanhasAbertas((v) => !v)}><PanelLeft size={16} />Campanhas</button>
           <button className="st-secondary" onClick={datas}>
             <Sparkles size={15} />
             Datas
@@ -129,10 +134,11 @@ export default function EstudioShell({
           </button>
         </div>
       </header>
-      <div className="st-layout">
-        <aside className="st-sidebar">
+      <div className={`st-layout ${campanhasAbertas ? "" : "st-layout--wide"}`}>
+        <aside id="st-campaign-navigation" className="st-sidebar" hidden={!campanhasAbertas}>
           <button
             className={`st-project-nav ${!selecionada ? "selected" : ""}`}
+            aria-pressed={!selecionada}
             onClick={() => selecionar("")}
           >
             <LayoutGrid size={16} />
@@ -141,6 +147,7 @@ export default function EstudioShell({
           </button>
           <button
             className={`st-project-nav ${selecionada === "soltas" ? "selected" : ""}`}
+            aria-pressed={selecionada === "soltas"}
             onClick={() => selecionar("soltas")}
           >
             <FolderOpen size={16} />
@@ -149,12 +156,13 @@ export default function EstudioShell({
               {dados.itens.filter((i) => i.natureza === "acao" && !i.campanha_id).length}
             </small>
           </button>
-          <div className="st-sidebar-label">CAMPANHAS</div>
+          <div className="st-sidebar-label">Campanhas</div>
           <div className="st-project-list">
             {campanhas.map((c) => (
               <button
                 key={c.id}
                 className={`st-project-nav ${selecionada === c.id ? "selected" : ""}`}
+                aria-pressed={selecionada === c.id}
                 onClick={() => selecionar(c.id)}
               >
                 <span
@@ -185,6 +193,7 @@ export default function EstudioShell({
           </button>
           <button
             className={`st-project-nav ${aba === "Grupos de produtos" ? "selected" : ""}`}
+            aria-pressed={aba === "Grupos de produtos"}
             onClick={grupos}
           >
             <Layers size={16} />
@@ -257,7 +266,7 @@ export default function EstudioShell({
                     : (campanha?.titulo ??
                       (selecionada === "soltas"
                         ? "Ações soltas"
-                        : "Planejamento"))}
+                        : aba === "Hoje" ? "Hoje" : "Todas as campanhas"))}
                 </h2>
                 {campanha?.detalhes.objetivo && (
                   <p>{campanha.detalhes.objetivo}</p>
@@ -306,16 +315,14 @@ export default function EstudioShell({
               </div>
             )}
           </div>
-          {!campanha && selecionada !== "soltas" && aba !== "Grupos de produtos" && (
-            <Hoje dados={dados} hoje={hoje} abrir={abrirItem} />
-          )}
           <div className="st-toolbar">
             <nav aria-label="Visualizações do planejamento">
               {tabs.map(({ nome, titulo, icon: Icon }) => (
                 <button
                   className={aba === nome ? "active" : ""}
+                  aria-pressed={aba === nome}
                   key={nome}
-                  onClick={() => mudarAba(nome)}
+                  onClick={(event) => { mudarAba(nome); event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" }); }}
                 >
                   <Icon size={15} />
                   {titulo ?? nome}
@@ -349,7 +356,7 @@ export default function EstudioShell({
               </button>
             </div>
           </div>
-          <div className="st-view-body">{children}</div>
+          <div className="st-view-body">{aba === "Hoje" && <Hoje dados={dados} hoje={hoje} abrir={abrirItem} />}{children}</div>
         </section>
       </div>
       {(aviso || erro) && (

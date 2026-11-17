@@ -94,8 +94,8 @@ export default function Cadastro() {
 
   if (confirme) {
     return (
-      <main className="min-h-screen flex items-center justify-center px-4 py-10 bg-ground">
-        <div className="w-full max-w-[340px]">
+      <main className="access-page">
+        <div className="access-panel">
           <MailCheck className="w-7 h-7 text-brand" strokeWidth={1.75} />
           <h1 className="text-[19px] font-semibold text-ink tracking-tight mt-4">
             Confirme seu e-mail
@@ -126,8 +126,8 @@ export default function Cadastro() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-10 bg-ground">
-      <div className="w-full max-w-[340px]">
+    <main className="access-page">
+      <div className="access-panel">
         {/* Marca oficial: estas telas são as primeiras que o cliente vê. */}
         <div className="mb-7">
           <Brand descriptor />

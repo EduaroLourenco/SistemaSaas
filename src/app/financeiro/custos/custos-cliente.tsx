@@ -5,6 +5,7 @@ import type { GrupoRecorte } from "@/lib/recorte";
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { FinanceNav } from "@/components/financeiro/nav";
 import { Button, Panel, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select, Field } from "@/components/ui/controls";
 import { money, pct, count } from "@/lib/format";
@@ -96,7 +97,7 @@ function Celula({
           if (rascunho !== null) onChange(ler(rascunho));
           setRascunho(null);
         }}
-        className="num w-full h-8 px-2 pr-6 text-right text-[13px] text-ink bg-transparent border border-line rounded-r1 placeholder:text-ink-3 focus:border-brand focus:bg-panel transition-colors"
+        className="num w-full h-8 px-2 pr-6 text-right text-[14px] text-ink bg-transparent border border-line rounded-r1 placeholder:text-ink-3 focus:border-brand focus:bg-panel transition-colors"
       />
       {sufixo && (
         <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[12px] text-ink-3 pointer-events-none">
@@ -127,7 +128,7 @@ function Par({
   return (
     <div className="flex flex-col items-end leading-tight">
       <span
-        className={`num text-[13px] font-medium ${
+        className={`num text-[14px] font-medium ${
           praticado == null
             ? "text-ink-3"
             : melhor
@@ -222,6 +223,7 @@ export default function CustosCliente({
     });
   }
   const [aba, setAba] = React.useState<Aba>("sku");
+  const [skuTabelaMobile, setSkuTabelaMobile] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [aviso, setAviso] = React.useState<string | null>(null);
   const [salvando, setSalvando] = React.useState(false);
@@ -394,53 +396,49 @@ export default function CustosCliente({
     <>
       <PageHeader
         title="Custos"
-        breadcrumb="Financeiro"
-        description="O que falta para fechar margem"
         actions={<CadastroProdutos aoMudar={setAviso} />}
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className="finance-page">
+        <FinanceNav />
         {aviso && (
           <Panel className="px-4 py-3 mb-3 border-brand/30">
-            <p className="text-[13px] text-ink">{aviso}</p>
+            <p className="text-[14px] text-ink">{aviso}</p>
           </Panel>
         )}
         {linhas.length === 0 && (
           <Panel className="p-5 mb-3">
             <p className="text-[15px] font-semibold text-ink">Nenhum produto cadastrado ainda</p>
-            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink-2">
+            <p className="mt-1 max-w-2xl text-[14px] leading-relaxed text-ink-2">
               Comece por <strong>Trazer produtos</strong>: cria um produto para cada SKU que já foi anunciado ou
               vendido. Depois <strong>Baixar planilha</strong>, preencha custo, embalagem, imposto e peso, e{" "}
               <strong>Subir planilha</strong>. Produto que nunca vendeu entra por <strong>Novo produto</strong>.
             </p>
           </Panel>
         )}
-        <Panel className="p-4 mb-3">
+        <section className="finance-cost-summary" aria-label="Cobertura dos custos por SKU">
           <div className="flex items-center gap-6 flex-wrap">
             <div>
-              <p className="text-[22px] font-semibold text-ink num leading-none">
-                {count(completos)}
-                <span className="text-[13px] text-ink-3 font-normal">
+              <p className="text-[14px] text-ink-2 mb-2">SKUs com margem calculável</p>
+              <strong className="text-ink">
+                {count(completos)}</strong>
+                <span className="ml-2 text-[20px] text-ink-3 font-normal">
                   {" "}de {count(linhas.length)}
                 </span>
-              </p>
-              <p className="text-[12px] text-ink-3 mt-1">
-                SKUs com margem calculável
-              </p>
             </div>
-            <p className="text-[12.5px] text-ink-2 leading-relaxed max-w-lg">
+            <p className="text-[14px] text-ink-2 leading-relaxed max-w-lg">
               Em cada célula: em cima o <span className="font-medium text-ink">praticado</span> (o que a venda revelou),
               embaixo o <span className="text-ink-3">de tabela</span>. Faltando um custo, a margem fica vazia e a coluna diz
               o que falta.
             </p>
           </div>
-        </Panel>
+        </section>
 
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
-            <p className="text-[13px] text-ink-2">{erro}</p>
+            <p className="text-[14px] text-ink-2">{erro}</p>
           </Panel>
         )}
 
@@ -449,31 +447,31 @@ export default function CustosCliente({
           Mercadoria, embalagem, alíquota e peso são do produto e não mudam
           com o período; comissão, frete e preço médio mudam.
         */}
-        <Panel className="px-3 py-2.5 mb-3 flex items-center gap-2 flex-wrap">
-          <span className="label shrink-0">Recorte</span>
+        <div className="finance-cost-controls" aria-label="Recorte do custo praticado">
+          <label>De
           <Input
             type="date"
             value={inicio}
             onChange={(e) => aplicarRecorte("inicio", e.target.value)}
             className="w-[150px]"
           />
-          <span className="text-[12px] text-ink-3">até</span>
+          </label><label>Até
           <Input
             type="date"
             value={fim}
             onChange={(e) => aplicarRecorte("fim", e.target.value)}
             className="w-[150px]"
           />
-          <SelectRecorte
+          </label><label>Canal<SelectRecorte
             grupos={opcoes}
             valor={canalId}
             onChange={(v) => aplicarRecorte("canal", v)}
             className="w-[240px]"
-          />
-          <span className="text-[12px] text-ink-3 ml-auto">
+          /></label>
+          <small>
             O recorte muda o praticado. O cadastro é do produto e não muda.
-          </span>
-        </Panel>
+          </small>
+        </div>
 
         <Panel className="overflow-hidden">
           <Tabs
@@ -502,6 +500,7 @@ export default function CustosCliente({
                 >
                   Só os incompletos
                 </Button>
+                <button type="button" aria-pressed={skuTabelaMobile} onClick={() => setSkuTabelaMobile((v) => !v)} className="min-h-11 rounded-r1 border border-line-2 px-3 text-[14px] text-ink-2 md:hidden">{skuTabelaMobile ? "Ver lista" : "Ver tabela"}</button>
                 <Button
                   onClick={() =>
                     setSelecionados((s) =>
@@ -557,7 +556,7 @@ export default function CustosCliente({
                 */
                 <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line bg-brand-wash flex-wrap">
                   <ArrowDownToLine className="w-4 h-4 text-brand shrink-0" />
-                  <span className="text-[12.5px] text-ink">
+                  <span className="text-[14px] text-ink">
                     <b className="num">{selecionados.size}</b> selecionado
                     {selecionados.size > 1 ? "s" : ""} · preencher
                   </span>
@@ -572,7 +571,7 @@ export default function CustosCliente({
                       </option>
                     ))}
                   </Select>
-                  <span className="text-[12.5px] text-ink-2">com</span>
+                  <span className="text-[14px] text-ink-2">com</span>
                   <Input
                     inputMode="decimal"
                     placeholder="valor"
@@ -609,7 +608,12 @@ export default function CustosCliente({
                 </div>
               )}
 
-              <div className="overflow-x-auto">
+              {!skuTabelaMobile && <div className="divide-y divide-line md:hidden">{paginaSkus.map((l) => <article key={l.produtoId} className="p-4">
+                <div className="flex items-start gap-3"><input type="checkbox" aria-label={`Selecionar ${l.sku}`} checked={selecionados.has(l.produtoId)} onChange={() => alternar(l.produtoId)} className="mt-1" /><div className="min-w-0"><h3 className="text-[16px] font-semibold leading-6 text-ink [overflow-wrap:anywhere]">{l.titulo || l.sku}</h3><p className="mt-1 font-mono text-[12px] text-ink-3">{l.sku}</p></div></div>
+                <dl className="mt-4 grid grid-cols-2 gap-4 text-[14px]"><div><dt className="text-[12px] text-ink-3">Margem realizada</dt><dd className={cn("num mt-1 font-semibold", l.margemUnidade != null && l.margemUnidade < 0 ? "text-down" : "text-ink")}>{l.margemUnidade == null ? "—" : money(l.margemUnidade)}</dd><p className="mt-1 text-[12px] text-ink-3">{l.margemPct == null ? `Falta ${l.faltando.join(", ")}` : pct(l.margemPct, 1)}</p></div><div><dt className="text-[12px] text-ink-3">Preço médio vendido</dt><dd className="num mt-1 font-semibold text-ink">{l.precoMedio == null ? "—" : money(l.precoMedio)}</dd><p className="mt-1 text-[12px] text-ink-3">{count(l.unidades)} unidades</p></div></dl>
+                <details className="mt-4 border-t border-line"><summary className="flex min-h-11 cursor-pointer items-center text-[14px] font-medium text-brand">Editar custos do produto</summary><div className="grid grid-cols-2 gap-4 pb-3">{(Object.keys(ROTULO_CAMPO) as CampoEditavel[]).map((campo) => <label key={campo} className="min-w-0 text-[14px] text-ink-2"><span className="mb-2 block">{ROTULO_CAMPO[campo]}</span><Celula valor={valorDe(l, campo)} rotulo={`${ROTULO_CAMPO[campo]} de ${l.sku}`} sufixo={campo === "pesoKg" ? "kg" : campo === "aliquotaImpostos" || campo === "margemMinimaPct" ? "%" : undefined} disabled={campo === "margemMinimaPct" && !margemConfiguravel} onChange={(v) => editar(l.produtoId, campo, v)} /></label>)}</div><Button variant="primary" disabled={!edicoes.size || salvando} onClick={salvarSku} className="mb-3 w-full">{salvando ? "Gravando…" : "Gravar alterações"}</Button></details>
+              </article>)}</div>}
+              <div className={cn("finance-table overflow-x-auto", !skuTabelaMobile && "hidden md:block")} role="region" aria-label="Tabela completa de custos por SKU" tabIndex={0}>
                 <table className="w-full border-collapse min-w-[1100px]">
                   <thead className="bg-panel-2">
                     <tr>
@@ -662,7 +666,7 @@ export default function CustosCliente({
                           />
                         </td>
                         <td className={td}>
-                          <p className="num text-[12.5px] text-ink font-medium">
+                          <p className="num text-[14px] text-ink font-medium">
                             {l.sku}
                           </p>
                           <p className="text-[12px] text-ink-3 break-words max-w-[240px]">
@@ -670,7 +674,7 @@ export default function CustosCliente({
                           </p>
                         </td>
                         <td className={`${td} text-right`}>
-                          <p className="num text-[12.5px] text-ink-2">
+                          <p className="num text-[14px] text-ink-2">
                             {l.unidades ? count(l.unidades) : "—"}
                           </p>
                           {l.receita > 0 && (
@@ -680,7 +684,7 @@ export default function CustosCliente({
                           )}
                         </td>
                         <td className={`${td} text-right`}>
-                          <span className="num text-[12.5px] text-ink-2">
+                          <span className="num text-[14px] text-ink-2">
                             {l.precoMedio != null ? money(l.precoMedio) : "—"}
                           </span>
                         </td>
@@ -690,7 +694,7 @@ export default function CustosCliente({
                             anúncio. Quando as duas divergem, é sinal de
                             anúncio fora da tarifa que se supunha pagar.
                           */}
-                          <span className="num text-[12.5px] text-ink-2">
+                          <span className="num text-[14px] text-ink-2">
                             {l.comissaoCanal != null ? pct(l.comissaoCanal, 2) : "—"}
                           </span>
                         </td>
@@ -714,7 +718,7 @@ export default function CustosCliente({
                         <td className={`${td} text-right`}>
                           {l.ads?.investimento ? (
                             <div className="flex flex-col items-end leading-tight">
-                              <span className="num text-[12.5px] text-ink-2">{l.ads.tacosPct != null ? pct(l.ads.tacosPct, 1) : "sem venda"}</span>
+                              <span className="num text-[14px] text-ink-2">{l.ads.tacosPct != null ? pct(l.ads.tacosPct, 1) : "sem venda"}</span>
                               <span className="num text-[12px] text-ink-3">{money(l.ads.investimento)}</span>
                             </div>
                           ) : (
@@ -754,7 +758,7 @@ export default function CustosCliente({
                           {l.margemUnidade != null ? (
                             <div className="flex flex-col items-end leading-tight">
                               <span
-                                className={`num text-[13px] font-semibold ${
+                                className={`num text-[14px] font-semibold ${
                                   l.margemUnidade >= 0 ? "text-up" : "text-down"
                                 }`}
                               >
@@ -792,7 +796,7 @@ export default function CustosCliente({
           {/* ══ Frete por faixa de peso ══ */}
           {aba === "frete" && (
             <div className="p-4">
-              <p className="text-[12.5px] text-ink-2 leading-relaxed max-w-2xl mb-3">
+              <p className="text-[14px] text-ink-2 leading-relaxed max-w-2xl mb-3">
                 O frete de partida, antes de existir venda. Faixa sem canal vale
                 para todos; onde o canal tem tabela própria, a linha específica
                 ganha da geral. Assim que houver pedido com frete informado, a
@@ -919,7 +923,7 @@ export default function CustosCliente({
           {/* ══ Custos do canal ══ */}
           {aba === "canal" && (
             <div className="p-4">
-              <p className="text-[12.5px] text-ink-2 leading-relaxed max-w-2xl mb-3">
+              <p className="text-[14px] text-ink-2 leading-relaxed max-w-2xl mb-3">
                 Despesa de canal separada por como se comporta no tempo. A
                 distinção decide o que dá para projetar: a fixa entra inteira na
                 previsão do mês que vem, a variável recorrente entra pela média,
@@ -1013,10 +1017,10 @@ export default function CustosCliente({
                     <tbody>
                       {despesas.map((d) => (
                         <tr key={d.id}>
-                          <td className={`${td} num text-[12.5px] text-ink-2`}>
+                          <td className={`${td} num text-[14px] text-ink-2`}>
                             {d.competencia.slice(0, 7).split("-").reverse().join("/")}
                           </td>
-                          <td className={`${td} text-[12.5px] text-ink-2`}>
+                          <td className={`${td} text-[14px] text-ink-2`}>
                             {d.canalNome ?? "Todos"}
                           </td>
                           <td className={td}>
@@ -1025,8 +1029,8 @@ export default function CustosCliente({
                                 d.natureza}
                             </Badge>
                           </td>
-                          <td className={`${td} text-[12.5px] text-ink`}>{d.descricao}</td>
-                          <td className={`${td} text-right num text-[12.5px] text-ink`}>
+                          <td className={`${td} text-[14px] text-ink`}>{d.descricao}</td>
+                          <td className={`${td} text-right num text-[14px] text-ink`}>
                             {money(d.valor)}
                           </td>
                           <td className={`${td} text-center`}>
@@ -1066,7 +1070,7 @@ export default function CustosCliente({
                           {a.competencia.slice(0, 7).split("-").reverse().join("/")} ·{" "}
                           {a.canalNome}
                         </p>
-                        <p className="num text-[13px] text-ink font-medium">
+                        <p className="num text-[14px] text-ink font-medium">
                           {money(a.valor)}
                         </p>
                       </div>

@@ -65,6 +65,7 @@ export function BuscaGlobal() {
   const [termo, setTermo] = React.useState("");
   const [ativo, setAtivo] = React.useState(0);
   const campo = React.useRef<HTMLInputElement>(null);
+  const dialog = React.useRef<HTMLDialogElement>(null);
 
   const indice = React.useMemo(montarIndice, []);
 
@@ -88,11 +89,18 @@ export function BuscaGlobal() {
 
   React.useEffect(() => {
     if (aberta) {
+      const elemento = dialog.current;
+      const anterior = document.activeElement as HTMLElement | null;
+      elemento?.showModal();
       setTermo("");
       setAtivo(0);
       // espera a folha montar para focar
       const t = setTimeout(() => campo.current?.focus(), 30);
-      return () => clearTimeout(t);
+      return () => {
+        clearTimeout(t);
+        if (elemento?.open) elemento.close();
+        requestAnimationFrame(() => { if (anterior?.isConnected) anterior.focus(); });
+      };
     }
   }, [aberta]);
 
@@ -146,7 +154,9 @@ export function BuscaGlobal() {
       {/* gatilho no topo */}
       <button
         onClick={() => setAberta(true)}
-        className="hidden lg:flex items-center gap-2 h-9 w-[clamp(240px,32vw,480px)] px-3 rounded-r1 border border-line bg-panel text-ink-3 hover:bg-panel-3 transition-colors"
+        aria-label="Buscar uma tela"
+        aria-haspopup="dialog"
+        className="hidden lg:flex items-center gap-2 h-9 w-[clamp(200px,24vw,360px)] px-3 rounded-r1 border border-line bg-panel-2 text-ink-3 hover:bg-panel-3 transition-colors"
       >
         <Search className="w-3.5 h-3.5 shrink-0" />
         <span className="text-[12px] flex-1 text-left">Buscar uma tela…</span>
@@ -164,12 +174,7 @@ export function BuscaGlobal() {
       </button>
 
       {aberta && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[10vh] px-4">
-          <div
-            className="absolute inset-0"
-            style={{ background: "var(--veil)" }}
-            onClick={() => setAberta(false)}
-          />
+        <dialog ref={dialog} aria-label="Buscar telas" className="gerizo-search" onCancel={(event) => { event.preventDefault(); setAberta(false); }} onClick={(event) => { if (event.target === event.currentTarget) setAberta(false); }}>
 
           <div
             className="relative w-full max-w-xl bg-panel border border-line rounded-r3 overflow-hidden"
@@ -179,6 +184,7 @@ export function BuscaGlobal() {
               <Search className="w-4 h-4 text-ink-3 shrink-0" />
               <input
                 ref={campo}
+                aria-label="Nome da tela"
                 value={termo}
                 onChange={(e) => {
                   setTermo(e.target.value);
@@ -190,6 +196,7 @@ export function BuscaGlobal() {
               />
               <button
                 onClick={() => setAberta(false)}
+                aria-label="Fechar busca"
                 className="w-7 h-7 shrink-0 flex items-center justify-center rounded-r1 text-ink-3 hover:bg-panel-3 hover:text-ink transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -203,7 +210,7 @@ export function BuscaGlobal() {
                   <span className="num text-ink">{termo}</span>
                 </p>
                 <p className="text-[12px] text-ink-3 mt-1">
-                  Tente o código do anúncio, o SKU ou parte do título.
+                  Tente parte do nome de uma tela ou área.
                 </p>
               </div>
             ) : (
@@ -254,7 +261,7 @@ export function BuscaGlobal() {
               <span className="num text-[12px] text-ink-3">esc fechar</span>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
     </>
   );

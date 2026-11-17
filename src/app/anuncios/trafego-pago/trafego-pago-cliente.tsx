@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
@@ -7,7 +10,7 @@ import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { SemFonte } from "@/components/ui/sem-fonte";
 import { atualizarFiltrosTrafego, urlTrafego } from "@/lib/trafego-pago-filtros";
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AXIS, GRID } from "@/components/ui/chart";
+import { AXIS, GRID, ChartTooltip } from "@/components/ui/chart";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, Button } from "@/components/ui/primitives";
 import { Tabs, Input } from "@/components/ui/controls";
@@ -500,7 +503,6 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       <PageHeader
         title="Tráfego pago"
         breadcrumb="Anúncios"
-        description="Investimento, vendas atribuídas e margem por anúncio."
         filters={
           <BarraFiltros>
             <Filtro rotulo="Canais" composto>
@@ -537,7 +539,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
         {pendente && <p role="status" className="text-[12px] text-ink-3">Atualizando seleção…</p>}
         {/* ── O gasto dia a dia, no período do calendário ──
             Esta é a única parte que aceita qualquer intervalo: a rotina
@@ -556,42 +558,11 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                   : "sem faturamento no período"}
               </p>
             </div>
-            <div className="mt-3 h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={dados.serie} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                  <CartesianGrid {...GRID} />
-                  <XAxis dataKey="data" {...AXIS} tickFormatter={dataBr} minTickGap={28} />
-                  <YAxis {...AXIS} width="auto" tickFormatter={(v) => moneyShort(Number(v))} />
-                  <Tooltip
-                    cursor={{ fill: "var(--panel-3)" }}
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload?.length) return null;
-                      const d = payload[0].payload as (typeof dados.serie)[number];
-                      const tacos = d.receita > 0 ? (d.investimento * 100) / d.receita : null;
-                      return (
-                        <div className="panel px-2.5 py-2 text-[12px]" style={{ boxShadow: "var(--sh-3)" }}>
-                          <p className="mb-1 font-semibold text-ink-2">{dataBr(String(label))}</p>
-                          <p className="num">mídia {d.midiaInformada === false ? "sem registro" : money(d.investimento)}</p>
-                          <p className="num">faturamento {money(d.receita)}</p>
-                          {tacos != null && d.midiaInformada !== false && <p className="num">TACoS {pct(tacos, 1)}</p>}
-                        </div>
-                      );
-                    }}
-                  />
-                  <Bar dataKey="investimento" fill="var(--s1)" fillOpacity={0.6} isAnimationActive={false} />
-                  <Line
-                    dataKey="receita"
-                    stroke="var(--s3)"
-                    strokeWidth={1.5}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+            <div className="decision-chart-pair mt-4">
+              {([{chave:"investimento",nome:"Investimento em mídia",cor:"var(--brand)"},{chave:"receita",nome:"Faturamento",cor:"var(--ink-2)"}] as const).map(grafico=><section key={grafico.chave} className="min-w-0"><h3 className="text-[14px] font-medium text-ink">{grafico.nome} · R$</h3><div className="mt-3 h-[200px] min-w-0 md:h-[240px]"><ResponsiveContainer width="100%" height="100%" minWidth={0}><ComposedChart data={dados.serie} margin={{top:4,right:4,left:0,bottom:0}}><CartesianGrid {...GRID}/><XAxis dataKey="data" {...AXIS} tickFormatter={dataBr} minTickGap={28}/><YAxis {...AXIS} width={76} tickFormatter={v=>moneyShort(Number(v))}/><Tooltip labelFormatter={v=>dataBr(String(v))} content={<ChartTooltip formatter={money}/>}/>{grafico.chave === "investimento" ? <Bar dataKey={grafico.chave} name={grafico.nome} fill={grafico.cor} isAnimationActive={false}/> : <Line type="linear" dataKey={grafico.chave} name={grafico.nome} stroke={grafico.cor} strokeWidth={2.5} dot={false} isAnimationActive={false}/>}</ComposedChart></ResponsiveContainer></div></section>)}
             </div>
-            <p className="mt-1 text-[11px] text-ink-3">
-              Barras: mídia · linha: faturamento. Datas deste gráfico independem do relatório abaixo.
-            </p>
+            <p className="mt-4 text-[14px] text-ink-2">Recorte do gráfico: {dataBr(dados.periodo.de)} a {dataBr(dados.periodo.ate)}. As datas são independentes do relatório por anúncio.</p>
+            <details className="decision-method mt-4"><summary>Ver dados diários</summary><div className="decision-table" role="region" tabIndex={0} aria-label="Investimento e faturamento diários"><table className="w-full min-w-[480px]"><thead><tr><th>Data</th><th>Mídia</th><th>Faturamento</th><th>Receita atribuída</th></tr></thead><tbody>{dados.serie.map(d=><tr key={d.data} className="border-t border-line"><th scope="row">{dataBr(d.data)}</th><td>{d.midiaInformada === false ? "Sem registro" : money(d.investimento)}</td><td>{money(d.receita)}</td><td>{money(d.receitaAds)}</td></tr>)}</tbody></table></div></details>
           </Panel>
         ) : <Panel className="p-4 text-[13px] text-ink-2">Sem dado diário neste intervalo.</Panel>}
 
@@ -601,17 +572,21 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
             Um por vez, e não a soma: os relatórios do canal se sobrepõem
             (agosto aparece em sete janelas), e somá-los contava o mesmo
             gasto várias vezes. */}
-        <Panel className="p-4">
-          <p className="label mb-2">Relatório do canal</p>
+        <section className="decision-data-tools">
+          <p className="text-[14px] font-medium text-ink-2">Relatório por anúncio</p>
           <select aria-label="Relatório por anúncio" value={filtros.janela} onChange={(e) => navegar({ janela: e.target.value })} className="min-h-11 w-full max-w-xl rounded-r1 border border-line bg-panel px-3 text-sm text-ink">{periodos.map((p) => <option key={`${p.inicio}|${p.fim}`} value={`${p.inicio}|${p.fim}`}>{p.rotulo} · {money(p.investimento)}</option>)}</select>
           <p className="mt-2.5 text-[12px] leading-relaxed text-ink-3">
             {dados.contasDoRelatorio?.join(" · ") || "Conta selecionada"} · Indicadores e tabelas usam este intervalo.
           </p>
           {dados.contaNaoIdentificada && <p className="mt-2 text-xs text-warn">Anúncio sem conta · TACoS indisponível</p>}
-        </Panel>
+        </section>
+
+        <HeroMetric label="Margem depois da mídia" value={totais.sobraAposMidia == null ? "—" : money(totais.sobraAposMidia)} hint={`Margem de contribuição ${totais.margem == null ? "—" : money(totais.margem)} menos ${money(totais.investimento)} de mídia · cobertura de custos ${pct(totais.coberturaMargem,0)}`}>
+          <div className="grid gap-5 sm:grid-cols-2"><div><p className="text-[14px] text-ink-2">Quanto o canal credita à mídia</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.atribuicao == null ? "—" : pct(totais.atribuicao,1)}</p><p className="mt-2 text-[14px] leading-6 text-ink-3">{money(totais.receitaAtribuida)} atribuídos sobre {money(totais.receitaReal)} nos pedidos desses anúncios. São medidas diferentes.</p></div><div><p className="text-[14px] text-ink-2">Receita indireta</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.receitaAtribuida > 0 ? pct(totais.receitaIndireta / totais.receitaAtribuida * 100,1) : "—"}</p><p className="mt-2 text-[14px] leading-6 text-ink-3">O clique e a compra ocorreram em anúncios diferentes. Entra no ROAS publicado.</p></div></div>
+        </HeroMetric>
 
         {/* ── Os cinco números da janela escolhida ── */}
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+        <MetricStrip>
           <Numero rotulo="Investido" valor={money(totais.investimento)} ajuda={`${count(linhas.length)} anúncios`} />
           <Numero
             rotulo="TACoS"
@@ -642,7 +617,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
             valor={money(totais.receitaTotalConta)}
             ajuda="base do TACoS"
           />
-        </div>
+        </MetricStrip>
 
         <Disclosure title="Conferir os valores da conta">
           <p>TACoS: {money(totais.investimento)} ÷ {money(totais.receitaTotalConta)}. Faturamento de pedidos válidos das contas listadas no relatório, incluindo vendas sem mídia.</p>
@@ -669,63 +644,6 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           </p>
         </Disclosure>
 
-        {/* ── O número que decide ── */}
-        <Panel className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div>
-              <p className="text-[12px] text-ink-3 mb-1">
-                Margem depois de pagar a mídia
-              </p>
-              {totais.sobraAposMidia != null ? (
-                <p
-                  className={`num text-[24px] font-semibold leading-none ${
-                    totais.sobraAposMidia >= 0 ? "text-up" : "text-down"
-                  }`}
-                >
-                  {money(totais.sobraAposMidia)}
-                </p>
-              ) : (
-                <p className="text-[13px] text-ink-3">
-                  precisa do custo dos SKUs
-                </p>
-              )}
-              <p className="text-[12px] text-ink-3 mt-1.5 leading-relaxed">
-                Margem de contribuição {totais.margem != null ? money(totais.margem) : "—"} menos{" "}
-                {money(totais.investimento)} de mídia. Cobre{" "}
-                <span className="num">{pct(totais.coberturaMargem, 0)}</span> dos
-                anúncios com mídia.
-              </p>
-            </div>
-
-            <div>
-              <p className="text-[12px] text-ink-3 mb-1">
-                Quanto o canal credita à mídia
-              </p>
-              <p className="num text-[24px] font-semibold text-ink leading-none">
-                {totais.atribuicao != null ? pct(totais.atribuicao, 1) : "—"}
-              </p>
-              <p className="text-[12px] text-ink-3 mt-1.5 leading-relaxed">
-                {moneyShort(totais.receitaAtribuida)} atribuídos sobre{" "}
-                {moneyShort(totais.receitaReal)} nos pedidos desses anúncios. São medidas diferentes.
-              </p>
-            </div>
-
-            <div>
-              <p className="text-[12px] text-ink-3 mb-1">Receita indireta</p>
-              <p className="num text-[24px] font-semibold text-ink leading-none">
-                {totais.receitaAtribuida > 0
-                  ? pct((totais.receitaIndireta * 100) / totais.receitaAtribuida, 1)
-                  : "—"}
-              </p>
-              {/* A indireta é o que mais distorce a leitura do ROAS por
-                  anúncio: o clique foi num, a compra foi noutro. */}
-              <p className="text-[12px] text-ink-3 mt-1.5 leading-relaxed">
-                A pessoa clicou no anúncio e comprou outra coisa. Entra no ROAS
-                publicado, mas não é venda daquele anúncio.
-              </p>
-            </div>
-          </div>
-        </Panel>
 
         {conferencia && (conferencia.diario == null || Math.abs(conferencia.relatorio - conferencia.diario) > 1 || conferencia.registrosRegistrados < conferencia.registrosEsperados) && (
           <Panel className="flex items-start gap-2.5 border-warn/30 px-4 py-3">
@@ -968,7 +886,7 @@ function Numero({
       <p className="text-[12px] text-ink-3">{rotulo}</p>
       <p
         className={cn(
-          "num mt-1 text-[19px] font-semibold leading-none",
+          "num mt-2 text-[24px] font-semibold leading-8",
           tom === "down" ? "text-down" : tom === "up" ? "text-up" : "text-ink"
         )}
       >

@@ -6,7 +6,7 @@ import {
   PageHeader,
   PageBody,
 } from "@/components/layout/app-shell";
-import { Button, Panel, PanelHeader, Delta } from "@/components/ui/primitives";
+import { Panel, PanelHeader, Delta } from "@/components/ui/primitives";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
@@ -31,7 +31,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Download, CalendarDays, ArrowUpRight } from "lucide-react";
+import { CalendarDays, ArrowUpRight, ChevronDown } from "lucide-react";
 
 const PERIODOS = ["7 dias", "30 dias", "90 dias", "Ano"];
 
@@ -157,11 +157,12 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
       header: "Produto",
       mobile: "title",
       cell: (r) => (
-        <span className="font-medium text-ink block break-words max-w-[190px] 2xl:max-w-[320px]">
+        <span className="block min-w-[220px] max-w-[340px] font-medium text-ink [overflow-wrap:anywhere]">
           {r.titulo}
         </span>
       ),
       sortValue: (r) => r.titulo,
+      sticky: true,
     },
     {
       key: "sku",
@@ -214,14 +215,10 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
     <>
       <PageHeader
         title="Visão geral"
-        breadcrumb="OPERAÇÃO / PANORAMA"
         inlineFilters
-        description={
-          canalAtual ? canalAtual.nome : "Consolidado de todos os canais"
-        }
         actions={
           <>
-            <span className="num hidden sm:inline-flex items-center gap-1.5 text-[12px] text-ink-3">
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-3 tabular-nums">
               <CalendarDays className="w-3.5 h-3.5" />
               {recorte.intervalo}
             </span>
@@ -235,7 +232,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
               um canal cobre a queda de outro e a semana parece estável —
               só olhando um por vez dá para responder "quem caiu".
             */}
-            <Filtro rotulo="Canal">
+            <Filtro rotulo="Canal" composto>
               <SeletorCanal
                 compact
                 canais={dados.canaisInfo.map((c) => ({
@@ -248,16 +245,18 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 rotuloTodos="Todos os canais"
               />
             </Filtro>
-            <Filtro rotulo="Período">
-              <div className="flex items-center gap-1 p-0.5 rounded-r1 bg-panel-3 border border-line">
+            <Filtro rotulo="Período" composto>
+              <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-r1 bg-panel-3 p-1" role="group" aria-label="Período de análise">
                 {PERIODOS.map((p) => (
                   <button
                     key={p}
+                    type="button"
+                    aria-pressed={periodo === p}
                     onClick={() => setPeriodo(p)}
                     className={
-                      "h-6 px-2.5 rounded-[4px] text-[12px] font-medium transition-colors whitespace-nowrap " +
+                      "min-h-9 px-3 rounded-[6px] text-[14px] font-medium transition-colors whitespace-nowrap " +
                       (periodo === p
-                        ? "bg-panel text-ink shadow-[var(--sh-1)]"
+                        ? "bg-panel text-brand"
                         : "text-ink-3 hover:text-ink")
                     }
                   >
@@ -270,13 +269,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         }
       />
 
-      <PageBody className="gerizo-overview">
-        <nav className="gerizo-workbench" aria-label="Atalhos da operação">
-          <span>Atalhos</span>
-          <Link href="/vendas/queda">Investigar uma queda <ArrowUpRight size={14} /></Link>
-          <Link href="/produtos">Comparar produtos <ArrowUpRight size={14} /></Link>
-          <Link href="/planejamento">Planejamento <ArrowUpRight size={14} /></Link>
-        </nav>
+      <PageBody className="home-overview">
         {/* Fontes ficam em Integrações por decisão do usuário. Aqui, só o aviso de atraso. */}
         {dados.fontes.piorAtraso !== null && dados.fontes.piorAtraso >= 2 && (
           <Link
@@ -297,8 +290,8 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
         />
 
         <PulsoOperacao recorte={recorte} />
-        <div className="gerizo-section-heading"><h2>Indicadores</h2></div>
-        <div className="gerizo-overview-signals grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <FilaRecomendacoes itens={dados.recomendacoes} semDados={dados.vazio} />
+        <section aria-label="Indicadores do período" className="home-metric-strip grid min-w-0 grid-cols-1 gap-px overflow-hidden rounded-r2 border border-line bg-line sm:grid-cols-2 xl:grid-cols-4">
           {KPIS.filter((k) => k.id !== "faturamento" && k.id !== "pedidos").map((k) => {
             /*
              * Conversão sem visita não é zero, é desconhecido. Mostrar
@@ -306,7 +299,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
              * e alguém mexe no anúncio quando o problema é a importação
              * de visitas não ter chegado.
              */
-            const semBase = k.id === "conversao" && !temVisitas;
+            const semBase = recorte.dias === 0 || (k.id === "conversao" && !temVisitas);
             return (
               <StatTile
                 key={k.id}
@@ -314,17 +307,16 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 value={semBase ? "—" : formatKpi(k.value, k.format)}
                 delta={semBase ? undefined : k.delta}
                 inverse={k.inverse}
-                hint={semBase ? "sem visita registrada no recorte" : k.hint}
+                hint={semBase ? recorte.dias === 0 ? "Sem dados neste recorte" : "sem visita registrada no recorte" : k.hint}
                 spark={semBase ? undefined : k.spark}
                 ajuda={k.ajuda}
+                className="!rounded-none !border-0 !bg-panel !px-4 !py-5 !shadow-none"
               />
             );
           })}
-        </div>
+        </section>
 
-
-        <FilaRecomendacoes itens={dados.recomendacoes} />
-        <details className="gerizo-deep-dive"><summary>Histórico de vendas</summary>
+        <details className="home-history group min-w-0 border-y border-line py-1"><summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-medium text-ink-2">Histórico de vendas <ChevronDown size={16} className="transition-transform group-open:rotate-180" aria-hidden="true" /></summary>
         <div className="gerizo-overview-charts grid grid-cols-1 xl:grid-cols-3 gap-3">
           <Panel className="xl:col-span-2 overflow-hidden">
             <PanelHeader
@@ -342,12 +334,6 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                   data={FATURAMENTO_30D}
                   margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
                 >
-                  <defs>
-                    <linearGradient id="gFat" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--s1)" stopOpacity={0.18} />
-                      <stop offset="100%" stopColor="var(--s1)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid {...GRID} />
                   <XAxis
                     dataKey="data"
@@ -368,12 +354,12 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                     labelFormatter={(l) => (typeof l === "string" ? shortDate(l) : l)}
                   />
                   <Area
-                    type="monotone"
+                    type="linear"
                     dataKey="faturamento"
                     name="Faturamento"
-                    stroke="var(--s1)"
-                    strokeWidth={1.75}
-                    fill="url(#gFat)"
+                    stroke="var(--brand)"
+                    strokeWidth={2.5}
+                    fill="var(--brand-wash)"
                     isAnimationActive={false}
                   />
                 </AreaChart>
@@ -422,6 +408,16 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 }))}
               />
             </div>
+            <details className="border-t border-line text-[12px] text-ink-2">
+              <summary className="flex min-h-11 cursor-pointer items-center px-4">Ver dados por canal e semana</summary>
+              <div className="max-h-80 overflow-auto border-t border-line" tabIndex={0} role="region" aria-label="Participação por canal nas últimas 12 semanas">
+                <table className="w-full border-collapse text-[12px] tabular-nums">
+                  <caption className="sr-only">Faturamento semanal por canal em milhares de reais</caption>
+                  <thead className="sticky top-0 bg-panel-2"><tr><th scope="col" className="px-3 py-2 text-left font-medium">Semana</th>{canaisNaSerie.map((canal) => <th key={canal} scope="col" className="whitespace-nowrap px-3 py-2 text-right font-medium">{CANAL_NOMES[canal]} · R$ mil</th>)}</tr></thead>
+                  <tbody>{CANAIS_12_SEMANAS.map((semana) => <tr key={semana.semana} className="border-t border-line"><th scope="row" className="px-3 py-2 text-left font-normal">{semana.semana}</th>{canaisNaSerie.map((canal) => <td key={canal} className="px-3 py-2 text-right">{semana[canal] == null ? "—" : Number(semana[canal]).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}</td>)}</tr>)}</tbody>
+                </table>
+              </div>
+            </details>
           </Panel>
         </div>
 
@@ -429,18 +425,21 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
 
 
         {/* Top SKUs e canais lado a lado, como na referência aprovada. */}
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 items-start">
+        <div className="home-insights grid grid-cols-1 gap-5 items-start xl:grid-cols-5">
           <Panel className="overflow-hidden xl:col-span-3 min-w-0">
             <PanelHeader
               title="Produtos com maior receita"
               hint={canalAtual ? `no período · ${canalAtual.nome}` : "no período"}
               action={
+                <div className="flex flex-wrap items-center gap-3">
+                <Link href="/produtos" className="inline-flex min-h-11 items-center gap-1 text-[14px] text-ink-2 hover:text-brand">Comparar <ArrowUpRight size={14} aria-hidden="true" /></Link>
                 <Link
                   href={linkVerTodos}
-                  className="h-7 px-2 inline-flex items-center rounded-r1 text-[12.5px] text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
+                  className="inline-flex min-h-11 items-center gap-1 text-[14px] font-medium text-brand hover:underline"
                 >
-                  Ver todos
+                  Ver todos <ArrowUpRight size={14} aria-hidden="true" />
                 </Link>
+                </div>
               }
             />
             <DataTable
@@ -453,32 +452,28 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
 
         {/* Resumo dos canais — lista, um por linha: cabe na coluna estreita e
             o olho desce comparando receita e variação na mesma vertical. */}
-        <Panel className="overflow-hidden xl:col-span-2 min-w-0">
+        <Panel className="order-first min-w-0 overflow-hidden xl:order-none xl:col-span-2">
           <PanelHeader
             title="Canais"
             hint={
               canalAtual
-                ? "faturamento e variação no período · todos os canais, para comparar"
-                : "faturamento e variação no período"
+                ? "no período · todos os canais"
+                : "faturamento no período"
             }
           />
           <ul className="divide-y divide-line">
             {CANAIS.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 px-4 py-2.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-[3px] shrink-0"
-                  style={{ background: CANAL_CORES[c.id] }}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-medium text-ink">{c.nome}</span>
-                  <span className="num text-[12px] text-ink-3">{pct(c.participacao)} do total</span>
-                </span>
-                <span className="num text-[13px] font-semibold text-ink whitespace-nowrap">
-                  {money(c.faturamento)}
-                </span>
-                <span className="w-[72px] shrink-0 text-right">
+              <li key={c.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 px-4 py-4">
+                <div className="flex min-w-0 items-start gap-2">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-[2px]" style={{ background: CANAL_CORES[c.id] }} aria-hidden="true" />
+                  <span className="text-[14px] font-medium text-ink [overflow-wrap:anywhere]">{c.nome}</span>
+                </div>
+                <span className="text-right text-[14px] font-semibold text-ink tabular-nums [overflow-wrap:anywhere]">{money(c.faturamento)}</span>
+                <span className="pl-4 text-[12px] text-ink-3 tabular-nums">{pct(c.participacao)} do total</span>
+                <span className="text-right">
                   <Delta value={c.delta} />
                 </span>
+                <span className="col-span-2 ml-4 h-1 overflow-hidden rounded-full bg-panel-3" aria-hidden="true"><span className="block h-full rounded-full" style={{ width: `${c.participacao}%`, background: CANAL_CORES[c.id] }} /></span>
               </li>
             ))}
           </ul>
@@ -488,7 +483,7 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
           Quedas por SKU no fim: os totais dizem QUANTO, esta seção diz
           ONDE. Vem depois porque só faz sentido depois de saber que caiu.
         */}
-        <SkusEmQueda itens={dados.quedas} />
+        <SkusEmQueda itens={dados.quedas} semDados={dados.vazio} />
       </PageBody>
     </>
   );

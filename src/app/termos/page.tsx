@@ -1,3 +1,4 @@
+import { Brand } from "@/components/ui/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -14,8 +15,8 @@ export const metadata: Metadata = { title: "Termos de uso" };
 export default function Termos() {
   return (
     <main className="min-h-screen bg-ground text-ink">
-      <article className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-12 text-[15px] leading-relaxed">
-        <header className="flex flex-col gap-2">
+      <article className="editorial-page flex flex-col gap-8">
+        <header className="flex flex-col gap-2 border-b border-line pb-8"><Brand className="mb-6" />
           <span className="label">gerizo</span>
           <h1 className="text-[26px] font-semibold">Termos de uso</h1>
           <p className="text-ink-2">Atualizados em 11 de outubro de 2026.</p>

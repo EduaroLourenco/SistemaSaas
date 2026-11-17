@@ -356,8 +356,8 @@ export function NovaCampanha({
     [modelo, setModelo] = useState(MODELOS[0]);
   return (
     <Painel
-      titulo="O que vamos colocar em movimento?"
-      subtitulo="Comece do zero ou use um roteiro. Tudo continua editável."
+      titulo="Nova campanha"
+      subtitulo="Defina o nome, a data e um roteiro inicial."
       fechar={() => {
         if (!ocupado) fechar();
       }}

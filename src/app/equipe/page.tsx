@@ -1,3 +1,4 @@
+import { WorkspaceNav } from "@/components/layout/workspace-nav";
 import { carregarEquipe } from "@/lib/dados/equipe";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import EquipeCliente from "./equipe-cliente";
@@ -28,7 +29,7 @@ export default async function Pagina() {
             : "Quem entra, e com qual permissão"
         }
       />
-      <PageBody>
+      <PageBody className="management-workspace"><WorkspaceNav />
         <EquipeCliente equipe={equipe} />
       </PageBody>
     </>

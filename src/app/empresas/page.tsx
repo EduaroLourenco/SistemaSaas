@@ -1,3 +1,4 @@
+import { WorkspaceNav } from "@/components/layout/workspace-nav";
 import { carregarEmpresas } from "@/lib/dados/empresas";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import EmpresasCliente from "./empresas-cliente";
@@ -28,7 +29,7 @@ export default async function Pagina() {
             : "As empresas a que você tem acesso"
         }
       />
-      <PageBody>
+      <PageBody className="management-workspace"><WorkspaceNav />
         <EmpresasCliente dados={dados} />
       </PageBody>
     </>

@@ -27,14 +27,14 @@
 /* ── o resumo ── */
 .auto-resumo { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 .auto-resumo .big {
-  font-family: var(--f-num); font-size: 58px; font-weight: 700;
+  font-family: var(--f-ui); font-size: 56px; font-weight: 600;
   line-height: .86; letter-spacing: -.055em;
 }
-.auto-resumo .leg { font-size: 14.5px; color: var(--ink-2); max-width: 28ch; line-height: 1.35; padding-bottom: 4px; }
+.auto-resumo .leg { font-size: 14px; color: var(--ink-2); max-width: 28ch; line-height: 1.35; padding-bottom: 4px; }
 /* O prazo não quebra no meio: "em até 9 / dias" lia como dois números. */
 .auto-resumo .leg b { color: var(--ink); font-weight: 650; white-space: nowrap; }
 .auto-resto { margin: 16px 0 0; font-size: 13px; color: var(--ink-3); line-height: 1.6; }
-.auto-resto b { font-family: var(--f-num); font-weight: 650; color: var(--ink-2); letter-spacing: -.01em; }
+.auto-resto b { font-family: var(--f-ui); font-weight: 650; color: var(--ink-2); letter-spacing: -.01em; }
 
 /* ── o filtro: texto com sublinhado, não pílula ── */
 .auto-filtros {
@@ -43,7 +43,7 @@
 }
 .auto-filtros::-webkit-scrollbar { display: none; }
 .auto-filtros button {
-  flex: 0 0 auto; min-height: 44px; font-size: 13.5px; font-weight: 550;
+  flex: 0 0 auto; min-height: 44px; font-size: 14px; font-weight: 550;
   color: var(--ink-3); position: relative; white-space: nowrap;
 }
 .auto-filtros button[aria-pressed="true"] { color: var(--ink); font-weight: 680; }
@@ -53,8 +53,8 @@
 
 /* ── a lista: uma superfície só, sem caixa ── */
 .auto-grupo h2 {
-  margin: 0; padding: 18px 2px 7px; font-size: 11px; font-weight: 700;
-  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+  margin: 0; padding: 18px 2px 7px; font-size: 14px; font-weight: 600;
+  letter-spacing: 0; text-transform: none; color: var(--ink-3);
 }
 .auto-cab,
 .auto-linha {
@@ -63,8 +63,8 @@
   align-items: center;
 }
 .auto-cab {
-  padding: 9px 2px 7px; font-size: 10.5px; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--line);
+  padding: 9px 2px 7px; font-size: 14px; letter-spacing: 0;
+  text-transform: none; color: var(--ink-3); border-bottom: 1px solid var(--line);
 }
 /* Rótulo longo em coluna estreita encostava no vizinho: "AGEND.ESPERANDO". */
 .auto-cab span:nth-child(n + 3) { text-align: right; padding-left: 8px; }
@@ -75,7 +75,7 @@
 }
 .auto-linha:hover { background: var(--panel); }
 .auto-linha .dia {
-  font-family: var(--f-num); font-size: 18px; font-weight: 700;
+  font-family: var(--f-ui); font-size: 18px; font-weight: 700;
   letter-spacing: -.04em; color: var(--ink-3);
 }
 .auto-linha .dia i { font-style: normal; font-size: 11px; font-weight: 600; margin-left: 1px; }
@@ -84,7 +84,7 @@
 .auto-linha .id { min-width: 0; padding-right: 14px; }
 .auto-linha .nm { display: block; font-size: 14.5px; font-weight: 620; letter-spacing: -.008em; overflow-wrap: anywhere; }
 .auto-linha .sub { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-3); overflow-wrap: anywhere; }
-.auto-linha .col { font-family: var(--f-num); font-size: 14px; text-align: right; letter-spacing: -.02em; color: var(--ink-2); }
+.auto-linha .col { font-family: var(--f-ui); font-size: 14px; text-align: right; letter-spacing: -.02em; color: var(--ink-2); }
 .auto-linha .col.pe { font-weight: 700; color: var(--ink); }
 .auto-linha.urg .col.pe { color: var(--down); }
 .auto-linha .ate { font-size: 11.5px; text-align: right; color: var(--ink-3); }
@@ -92,7 +92,7 @@
 .auto-linha[aria-expanded="true"] .nm { color: var(--brand-2); }
 
 @media (max-width: 720px) {
-  .auto-resumo .big { font-size: 50px; }
+  .auto-resumo .big { font-size: 48px; }
   .auto-cab { display: none; }
   /* Áreas explícitas: esconder duas colunas num grid de seis faz o resto
      se reposicionar sozinho, e a linha vira sopa. */
@@ -113,3 +113,10 @@
     color: var(--ink-3); letter-spacing: 0;
   }
 }
+
+.auto-lista { padding:24px;border:1px solid var(--line);border-radius:16px;background:var(--panel); }
+.auto-filtros { scrollbar-width:thin; }
+.auto-filtros::-webkit-scrollbar { display:block;height:6px; }
+.auto-grupo h2 { padding-top:24px;padding-bottom:12px; }
+.auto-linha { padding-block:14px;min-height:64px; }
+@media(max-width:767px){.auto-lista{padding:16px;border-radius:12px}.auto-filtros{gap:16px}.auto-linha{padding-block:16px}}

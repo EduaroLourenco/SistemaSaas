@@ -62,7 +62,7 @@ const grupos = [
 export default function Guia() {
   return <>
     <PageHeader title="Guia das telas" description="O que olhar, onde investigar e como decidir." />
-    <PageBody>
+    <PageBody className="guide-workspace"><nav className="guide-index" aria-label="Índice do guia">{grupos.map((g,i)=><a key={g.nome} href={`#guia-${i}`}>{g.nome}</a>)}</nav>
       <Panel className="p-5">
         <h2 className="text-sm font-semibold text-ink">Uma rotina de cinco minutos</h2>
         <ol className="mt-3 grid gap-3 text-sm text-ink-2 md:grid-cols-3">
@@ -72,9 +72,9 @@ export default function Guia() {
         </ol>
         <p className="mt-4 text-xs text-ink-3">Se um número parecer estranho, confira primeiro empresa, conta, período e Fontes de dados.</p>
       </Panel>
-      {grupos.map((g) => <section key={g.nome} className="space-y-3">
+      {grupos.map((g,i) => <section key={g.nome} id={`guia-${i}`} className="guide-section space-y-4">
         <h2 className="text-sm font-semibold text-ink">{g.nome}</h2>
-        <div className="grid gap-3 lg:grid-cols-2">{g.telas.map(([nome, href, uso, olhar]) => <Panel key={href} className="p-4">
+        <div className="guide-entries">{g.telas.map(([nome, href, uso, olhar]) => <Panel key={href} className="guide-entry">
           <Link href={href} className="flex items-center justify-between gap-3 text-sm font-semibold text-ink hover:text-brand">{nome}<ArrowUpRight size={16} className="shrink-0 text-brand" /></Link>
           <p className="mt-2 text-sm text-ink-2">{uso}</p>
           <Disclosure title="O que olhar"><p>{olhar}</p></Disclosure>

@@ -1,0 +1,39 @@
+.workspace { --decision-section-gap: 24px; }
+.workspace > * + * { margin-top: var(--decision-section-gap); }
+.workspace :global(.decision-metric-strip) { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr)); gap:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--panel); }
+.workspace :global(.decision-metric-strip) > * { min-width:0; border:0; border-radius:0; box-shadow:none; padding:20px; border-right:1px solid var(--line); background:transparent; }
+.workspace :global(.decision-metric-strip) > :last-child { border-right:0; }
+.workspace :global(.decision-surface-title) { font-size:20px; line-height:28px; font-weight:600; letter-spacing:-.025em; }
+.workspace :global(.decision-data-tools) { display:flex; align-items:end; flex-wrap:wrap; gap:12px; padding:16px 0; border-block:1px solid var(--line); }
+.workspace :global(.decision-comparison) { display:grid; gap:24px; grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); align-items:start; }
+.workspace :global(.decision-calendar) { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:20px; align-items:start; }
+.workspace :global(.decision-calendar) > * { min-width:0; }
+.workspace :global(.decision-hero-value) { display:block; font-size:clamp(36px,4.3vw,56px); line-height:1.15; font-weight:600; letter-spacing:-.045em; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.workspace :global(.decision-hero) { padding:24px; border:1px solid var(--line); border-radius:16px; background:var(--panel); }
+.workspace :global(.decision-chart-pair) { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.workspace :global(.decision-table) { max-width:100%; overflow:auto; border:1px solid var(--line); border-radius:12px; }
+.workspace :global(.decision-table) :is(th,td) { padding:12px 16px; font-size:14px; text-align:right; }
+.workspace :global(.decision-table) :is(th,td):first-child { text-align:left; position:sticky; left:0; background:var(--panel); }
+.workspace :global(.decision-table) thead { position:sticky; top:0; background:var(--panel-2); }
+.workspace :global(.decision-table) th { font-weight:500; }
+.workspace :global(.decision-ranked-days) { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.workspace :global(.decision-ranked-days) > * { border:0; border-right:1px solid var(--line); border-radius:0; box-shadow:none; }
+.workspace :global(.decision-ranked-days) > :last-child { border-right:0; }
+.workspace :global(.decision-operation-strip) { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:16px 0; border-bottom:1px solid var(--line); }
+.workspace :global(.decision-method) { border-top:1px solid var(--line); padding:16px 0; color:var(--ink-2); font-size:14px; line-height:1.6; }
+.workspace :global(.decision-method) > summary { display:flex; align-items:center; min-height:44px; font-weight:500; cursor:pointer; }
+.workspace :global(.decision-method) > :not(summary) { margin-top:12px; }
+@media(max-width:1100px) { .workspace :global(.decision-calendar) { grid-template-columns:1fr; } }
+@media(max-width:767px) {
+ .workspace { --decision-section-gap:20px; }
+ .workspace :global(.decision-comparison), .workspace :global(.decision-chart-pair) { grid-template-columns:1fr; }
+ .workspace :global(.decision-hero) { padding:20px 16px; }
+ .workspace :global(.decision-hero-value) { font-size:48px; }
+ .workspace :global(.decision-metric-strip) { grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr)); }
+ .workspace :global(.decision-metric-strip) > * { padding:16px; border-bottom:1px solid var(--line); }
+ .workspace :global(.decision-ranked-days) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .workspace :global(.decision-ranked-days) > * { border-bottom:1px solid var(--line); }
+ .workspace :global(.decision-data-tools) { align-items:stretch; }
+ .workspace :is(button,summary,a[role="button"]) { min-height:44px; }
+ .workspace :is(input,textarea,select) { font-size:16px; }
+}

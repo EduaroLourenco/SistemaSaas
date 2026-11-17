@@ -1,0 +1,15 @@
+import path from "node:path";
+import fs from "node:fs";
+import type { NextConfig } from "next";
+const root = path.resolve(process.cwd(), "../../..");
+const source = process.env.GERIZO_QA_SOURCE_DIR || path.join(root, "src");
+if (!fs.existsSync(path.join(process.cwd(), "public"))) fs.symlinkSync(path.join(root, "public"), path.join(process.cwd(), "public"), "junction");
+const relativeSource = path.relative(process.cwd(), source).replaceAll("\\", "/");
+const runtimeConfig = JSON.stringify({extends: "./tsconfig.json", compilerOptions: {paths: {"@/*": [relativeSource + "/*"]}}}, null, 2) + "\n";
+const runtimePath = path.join(process.cwd(), "tsconfig.runtime.json");
+if (!fs.existsSync(runtimePath) || fs.readFileSync(runtimePath, "utf8") !== runtimeConfig) fs.writeFileSync(runtimePath, runtimeConfig);
+const stylesheet = `@import "${path.relative(path.join(process.cwd(), "app"), path.join(source, "app/globals.css")).replaceAll("\\", "/")}";\n@source "${path.relative(path.join(process.cwd(), "app"), source).replaceAll("\\", "/")}";\n`;
+const stylePath = path.join(process.cwd(), "app/qa-utilities.css");
+if (!fs.existsSync(stylePath) || fs.readFileSync(stylePath, "utf8") !== stylesheet) fs.writeFileSync(stylePath, stylesheet);
+const nextConfig: NextConfig = { typescript: {tsconfigPath: "tsconfig.runtime.json"}, turbopack: { root }, webpack: (config) => { config.cache = false; return config; }, devIndicators: false };
+export default nextConfig;

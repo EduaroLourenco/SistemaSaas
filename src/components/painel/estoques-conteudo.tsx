@@ -4,6 +4,7 @@ import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge } from "@/components/ui/primitives";
 import { BotaoAtualizar } from "@/components/painel/botao-atualizar";
 import { Disclosure } from "@/components/ui/disclosure";
+import { WorkspaceNav } from "@/components/layout/workspace-nav";
 import type { carregarEstoques } from "@/lib/dados/estoques";
 
 const numero = (n: number | null) => n == null ? "—" : Number(n).toLocaleString("pt-BR");
@@ -17,7 +18,8 @@ export function EstoquesConteudo({ d, p = {} }: { d: Awaited<ReturnType<typeof c
   const paginar = (n: number) => { const qs = new URLSearchParams(); for (const [k, v] of Object.entries(p)) if (typeof v === "string") qs.set(k, v); qs.set("pagina", String(n)); return `?${qs}`; };
   return <>
     <PageHeader title="Estoques e origens" description="Canal e ERP, separados por depósito." actions={<BotaoAtualizar />} />
-    <PageBody>
+    <PageBody className="management-workspace inventory-workspace">
+      <WorkspaceNav />
       {!d.instalada && <Panel className="p-4"><p className="text-sm">A estrutura de estoques precisa ser instalada no banco: <strong>db/37_estoques_e_origem_dados.sql</strong>.</p></Panel>}
       {d.erro && <p role="alert" className="text-sm text-down">{d.erro}</p>}
       <div className="grid gap-3 lg:grid-cols-3">
@@ -41,18 +43,22 @@ export function EstoquesConteudo({ d, p = {} }: { d: Awaited<ReturnType<typeof c
         </form>
       </Disclosure>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-3"><p>{d.total.toLocaleString("pt-BR")} saldos · zero significa sem disponível · — significa não informado</p><Link href="/integracoes/canais" className="flex items-center gap-1 text-brand">Conexões <ArrowUpRight size={13} /></Link></div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="inventory-list">
         {d.saldos.map((s) => {
           const fonte = fontes.get(s.integracao_id);
           const antiga = fonte?.iniciadaEm && s.consultado_em < fonte.iniciadaEm;
-          return <Panel key={s.id} className="p-4">
+          return <Panel key={s.id} className="inventory-record">
+            <div className="inventory-identity">
             <div className="flex items-start justify-between gap-2"><span className="text-[11px] font-semibold text-brand">{s.origem === "erp" ? "ERP" : "CANAL"}</span><span className="text-[11px] text-ink-3">{quando(s.consultado_em)}{antiga ? " · anterior" : ""}</span></div>
             <p className="mt-1 text-xs text-ink-3">{fonte?.nome ?? s.provedor}</p>
-            <p className="mt-3 text-[13px] font-semibold text-ink break-words">{s.sku || "Sem SKU"}</p><p className="mt-0.5 line-clamp-2 text-xs text-ink-2" title={s.titulo}>{s.titulo}</p>
-            <div className="mt-4 rounded-xl bg-panel-2 p-3"><p className="flex items-center gap-1.5 text-xs text-ink-2"><Warehouse size={14} />{s.local_nome}</p><div className="mt-2 flex items-baseline gap-2"><strong className={`num text-3xl ${s.disponivel === 0 ? "text-down" : "text-ink"}`}>{numero(s.disponivel)}</strong><span className="text-xs text-ink-3">disponível</span></div>
+            <p className="mt-3 text-[14px] font-semibold text-ink break-words">{s.sku || "Sem SKU"}</p><p className="mt-1 text-[14px] leading-6 text-ink-2 [overflow-wrap:anywhere]">{s.titulo}</p>
+            </div>
+            <div className="inventory-location"><p className="flex items-center gap-1.5 text-[14px] text-ink-2"><Warehouse size={16} />{s.local_nome}</p><div className="mt-2 flex items-baseline gap-2"><strong className={`num text-[32px] font-semibold ${s.disponivel === 0 ? "text-down" : "text-ink"}`}>{numero(s.disponivel)}</strong><span className="text-xs text-ink-3">disponível</span></div>
               {(s.fisico != null || s.reservado != null) && <p className="mt-2 text-xs text-ink-3">Físico: {numero(s.fisico)} · Reservado: {numero(s.reservado)}</p>}</div>
+            <div className="inventory-details">
             {s.anuncios.length > 0 && <Disclosure title={`${s.anuncios.length} anúncio${s.anuncios.length > 1 ? "s compartilham" : " usa"} este saldo`}><div className="flex flex-wrap gap-2">{s.anuncios.map((mlb) => <Link key={mlb} className="text-brand underline" href={`/anuncios/catalogo?q=${encodeURIComponent(mlb)}`}>{mlb}</Link>)}</div></Disclosure>}
             {s.observacao && <p className="mt-2 text-[11px] text-ink-3">{s.observacao}</p>}
+            </div>
           </Panel>;
         })}
       </div>

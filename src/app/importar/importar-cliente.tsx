@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationSteps, OperationMethod } from "@/components/analise/operation-layout";
 import { Panel, PanelHeader, Button, Badge } from "@/components/ui/primitives";
 import { FileDrop } from "@/components/ui/controls";
 import { Leitura, TudoCerto, ErroComSaida } from "@/components/ui/leitura";
@@ -350,12 +351,12 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
       <PageHeader
         title="Importar dados"
         breadcrumb="Dados"
-        description="Conecte seus canais ou envie uma planilha"
       />
 
-      <PageBody>
-        <ol className="gerizo-process-track" aria-label="Etapas da importação"><li><span>01</span><strong>Escolha a fonte</strong><small>Conexão ou planilha original</small></li><li><span>02</span><strong>Confira a prévia</strong><small>Veja o que será importado</small></li><li><span>03</span><strong>Confirme o envio</strong><small>Grave depois de revisar</small></li></ol>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <PageBody className="op-workspace op-importar">
+        <OperationSteps steps={["Fonte", "Arquivo", "Conferência", "Resultado"]} current={feito ? 3 : previa ? 2 : arquivo ? 1 : 0} />
+        <OperationMethod title="Conexões e outras fontes">
+        <div className="op-source-list">
           {cartoes.map((c) => (
             <Panel key={c.titulo} className="flex flex-col gap-3 p-4">
               <div className="flex items-start gap-3">
@@ -364,16 +365,16 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[15px] font-semibold text-ink">{c.titulo}</span>
-                  <span className="block text-[12.5px] text-ink-2 leading-snug">{c.texto}</span>
+                  <span className="block text-[14px] text-ink-2 leading-snug">{c.texto}</span>
                 </span>
               </div>
-              <span className="flex items-center gap-2 text-[12.5px] text-ink-2">
+              <span className="flex items-center gap-2 text-[14px] text-ink-2">
                 <span className={cn("h-2 w-2 rounded-full", c.ok ? "bg-up" : "bg-line-2")} />
                 {c.estado}
               </span>
               <Link
                 href={c.href}
-                className="mt-auto inline-flex min-h-11 md:min-h-9 items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] font-medium text-brand hover:bg-brand-wash"
+                className="mt-auto inline-flex min-h-11 md:min-h-9 items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[14px] font-medium text-brand hover:bg-brand-wash"
               >
                 {c.acao}
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -382,9 +383,12 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
           ))}
         </div>
 
+        </OperationMethod>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
           <div id="importar-planilha" className="lg:col-span-2 flex flex-col gap-3 min-w-0 scroll-mt-20">
-          <Panel className="p-4">
+          <Panel className="op-upload">
+            <div className="op-section-title"><h2>Enviar planilha</h2><p>Exportação original · formato detectado automaticamente</p></div>
             <FileDrop
               hint="Arraste a planilha ou clique para escolher"
               accept=".xlsx, .xls"
@@ -407,7 +411,7 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
               <div className="flex flex-col items-center gap-1.5 text-ink-2">
                 <span className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-[13px]">
+                  <span className="text-[14px]">
                     {enviando ? "Enviando o arquivo…" : "Lendo a planilha…"}
                   </span>
                 </span>
@@ -444,9 +448,9 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
 
           </div>
 
-          <Panel className="p-4 flex flex-col gap-3 bg-up-wash/35 border-up/15">
+          <Panel className="op-import-guide p-5 flex flex-col gap-4">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-r2 bg-up-wash text-up">
+              <span className="flex h-9 w-9 items-center justify-center rounded-r1 bg-panel-3 text-ink-2">
                 <BookOpen className="h-4 w-4" />
               </span>
               <span>
@@ -457,12 +461,12 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
             <ol className="flex flex-col gap-3">
               {passos.map(([t, d], i) => (
                 <li key={t} className="flex gap-3">
-                  <span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-up-wash text-[12px] font-semibold text-up">
+                  <span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-r1 bg-panel-3 text-[12px] font-semibold text-ink-2">
                     {i + 1}
                   </span>
                   <span>
-                    <span className="block text-[13px] font-semibold text-ink">{t}</span>
-                    <span className="block text-[12.5px] text-ink-2 leading-snug">{d}</span>
+                    <span className="block text-[14px] font-semibold text-ink">{t}</span>
+                    <span className="block text-[14px] text-ink-2 leading-snug">{d}</span>
                   </span>
                 </li>
               ))}
@@ -470,13 +474,13 @@ export default function ImportarCliente({ origens, recentes }: { origens: Origen
           </Panel>
         </div>
 
-        <Panel className="overflow-hidden">
+        <Panel className="op-primary-table overflow-hidden">
           <PanelHeader title="Últimas importações" hint="as oito mais recentes desta empresa" />
           {recentes.length === 0 ? (
-            <p className="px-5 py-4 text-[13px] text-ink-3">Nenhuma planilha importada ainda.</p>
+            <p className="px-5 py-4 text-[14px] text-ink-3">Nenhuma planilha importada ainda.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
+              <table className="w-full text-[14px]">
                 <thead>
                   <tr className="text-left text-[12px] font-semibold text-ink-2">
                     <th className="px-5 py-2">Arquivo</th>
@@ -650,7 +654,7 @@ function Resultado({
                 key={`${r.canal}-${r.conta}`}
                 className="flex items-center justify-between gap-3 py-1.5 border-b border-line last:border-0"
               >
-                <span className="text-[13px] text-ink min-w-0 truncate">
+                <span className="text-[14px] text-ink min-w-0 truncate">
                   {r.canal}
                   {/* A conta só aparece onde há mais de uma. Repeti-la em
                       canal de conta única sugeria que os canais
@@ -672,7 +676,7 @@ function Resultado({
         <Panel className="p-4 border-down/30">
           <span className="flex items-center gap-2 mb-2">
             <ShieldAlert className="w-4 h-4 text-down" strokeWidth={2.25} />
-            <p className="text-[13px] font-semibold text-ink">
+            <p className="text-[14px] font-semibold text-ink">
               Canais sem apelido cadastrado
             </p>
           </span>
@@ -688,7 +692,7 @@ function Resultado({
                 key={`${n.marketplace}-${n.conta}`}
                 className="flex items-center justify-between gap-3 py-1.5 border-b border-line last:border-0"
               >
-                <span className="num text-[12.5px] text-ink min-w-0 truncate">
+                <span className="num text-[14px] text-ink min-w-0 truncate">
                   {n.marketplace}
                   {n.conta && <span className="text-ink-3"> / {n.conta}</span>}
                 </span>
@@ -704,7 +708,7 @@ function Resultado({
       {previa.orfaos.map((o) => (
         <Panel key={o.descricao} className="p-4">
           <p className="label mb-1.5">{o.descricao}</p>
-          <p className="text-[13px] text-ink mb-1.5">
+          <p className="text-[14px] text-ink mb-1.5">
             <span className="num font-semibold">{count(o.total)}</span> sem
             correspondência
           </p>
@@ -777,7 +781,7 @@ function Resultado({
                 {previa.contasDisponiveis.map((c) => (
                   <label
                     key={c.id}
-                    className="flex items-center gap-2 text-[13px] text-ink cursor-pointer"
+                    className="flex items-center gap-2 text-[14px] text-ink cursor-pointer"
                   >
                     <input
                       type="radio"

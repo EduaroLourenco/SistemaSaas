@@ -53,22 +53,16 @@ export function Sparkline({
 }) {
   const color = `var(--${tone})`;
   const points = data.map((v, i) => ({ i, v }));
-  const id = React.useId().replace(/:/g, "");
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={points} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
-        <defs>
-          <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.22} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
         <Area
-          type="monotone"
+          type="linear"
           dataKey="v"
           stroke={color}
-          strokeWidth={1.5}
-          fill={`url(#${id})`}
+          strokeWidth={2}
+          fill={color}
+          fillOpacity={0.06}
           isAnimationActive={false}
         />
       </AreaChart>
@@ -108,6 +102,7 @@ export function StatTile({
     <div
       className={cn(
         "gerizo-stat-tile @container panel panel-1 px-3 md:px-4 py-3.5 flex flex-col justify-between min-w-0",
+        value.startsWith("R$") && value.length > 13 && "gerizo-stat-tile--wide",
         className
       )}
     >
@@ -118,8 +113,8 @@ export function StatTile({
 
       <div className="mt-1.5 flex items-center justify-between gap-3 min-w-0">
         <div className="min-w-0">
-          <p className="gerizo-metric-value num leading-tight font-bold text-ink [font-size:clamp(16px,8.5cqw,26px)]">
-            {value}
+          <p className="gerizo-metric-value num leading-tight font-semibold text-ink [font-size:clamp(24px,8.5cqw,32px)]">
+            {value.replace(/\u00a0/g, " ")}
           </p>
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1.5 min-w-0">
             {delta !== undefined && <Delta value={delta} inverse={inverse} />}

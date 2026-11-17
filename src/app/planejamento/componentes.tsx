@@ -24,12 +24,14 @@ export function Painel({
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const el = ref.current;
+    const focoAnterior = document.activeElement as HTMLElement | null;
     el?.showModal();
     const anterior = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       el?.close();
       document.body.style.overflow = anterior;
+      requestAnimationFrame(() => { if (focoAnterior?.isConnected) focoAnterior.focus(); });
     };
   }, []);
   return (
@@ -44,7 +46,6 @@ export function Painel({
     >
       <header className="pl-drawer-head">
         <div>
-          <p className="pl-eyebrow">PLANEJAMENTO</p>
           <h2>{titulo}</h2>
           {subtitulo && <p>{subtitulo}</p>}
         </div>

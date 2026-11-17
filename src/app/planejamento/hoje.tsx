@@ -77,7 +77,7 @@ export default function Hoje({
         </div>
         <div className="hj-pills">
           <span className="hj-pill">
-            <b>{correndo.length}</b> campanhas correndo
+            <b>{correndo.length}</b> campanhas no ar
           </span>
           {atrasadas.length > 0 && (
             <span className="hj-pill ruim">
@@ -91,11 +91,11 @@ export default function Hoje({
       </div>
       {atrasadas.length > 0 && (
         <>
-          <div className="hj-secao ruim">ATRASADAS</div>
+          <h3 className="hj-secao ruim">Atrasadas</h3>
           <ul className="hj-lista">{atrasadas.map(linha)}</ul>
         </>
       )}
-      <div className="hj-secao">HOJE, {dia(hoje)}</div>
+      <h3 className="hj-secao">Hoje · {dia(hoje)}</h3>
       {noAr.length ? (
         <ul className="hj-lista">{noAr.map(linha)}</ul>
       ) : (
@@ -103,6 +103,7 @@ export default function Hoje({
           {acoes.length ? "nenhuma ação hoje" : "nenhuma ação cadastrada"}
         </p>
       )}
+      {chegando.length > 0 && <><h3 className="hj-secao">Próximos 7 dias</h3><ul className="hj-lista">{chegando.map(linha)}</ul></>}
     </section>
   );
 }

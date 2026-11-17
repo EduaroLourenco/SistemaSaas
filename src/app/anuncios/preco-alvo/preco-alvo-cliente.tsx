@@ -5,6 +5,7 @@ import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-su
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import "@/components/analise/operation-pages.css";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Input, Select, Field } from "@/components/ui/controls";
@@ -124,21 +125,21 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
       <PageHeader
         title="Preço-alvo"
         breadcrumb="Anúncios"
-        description="O preço que fecha a margem que você quer"
         badge={<Badge tone="warn">Em desenvolvimento</Badge>}
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className="op-workspace op-anuncios-preco-alvo">
+        <div className="op-section-title"><h2>Margem desejada por canal</h2><p>{count(calculaveis.length)} de {count(visiveis.length)} produtos com custo completo</p></div>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
-            <p className="text-[13px] text-ink-2">{erro}</p>
+            <p className="text-[14px] text-ink-2">{erro}</p>
           </Panel>
         )}
 
         {/* ── Canal e margens-alvo ── */}
-        <Panel className="p-4">
+        <Panel className="op-target-controls p-4 md:p-6">
           <div className="flex items-end gap-3 flex-wrap">
             <Field label="Canal">
               <Select
@@ -181,7 +182,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
           </div>
 
           {!tipos.length && (
-            <p className="text-[12.5px] text-ink-2 mt-3 leading-relaxed">
+            <p className="text-[14px] text-ink-2 mt-3 leading-relaxed">
               Este canal não tem alíquota cadastrada, então não há como calcular
               preço. Clique em <span className="font-medium">Comissões do canal</span>{" "}
               e informe a taxa que ele cobra.
@@ -192,7 +193,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
         {/* ── Cadastro de alíquota ── */}
         {editando && (
           <Panel className="p-4 mb-3">
-            <p className="text-[13px] font-semibold text-ink mb-1">
+            <p className="text-[14px] font-semibold text-ink mb-1">
               Comissões de {canais.find((c) => c.id === canalId)?.nome}
             </p>
             <p className="text-[12px] text-ink-3 mb-3 max-w-2xl leading-relaxed">
@@ -310,7 +311,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
         )}
 
         {/* ── Tabela ── */}
-        <Panel className="overflow-hidden">
+        <Panel className="op-primary-table overflow-hidden">
           <div className="flex items-center gap-2 p-3 border-b border-line flex-wrap">
             <Input
               placeholder="Buscar SKU ou título"
@@ -371,13 +372,13 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                 {visiveis.slice(0, 200).map((l) => (
                   <tr key={l.produtoId} className="hover:bg-panel-2/50">
                     <td className={td}>
-                      <p className="num text-[12.5px] text-ink font-medium">{l.sku}</p>
+                      <p className="num text-[14px] text-ink font-medium">{l.sku}</p>
                       <p className="text-[12px] text-ink-3 break-words max-w-[220px]">
                         {l.titulo}
                       </p>
                     </td>
                     <td className={`${td} text-right`}>
-                      <span className="num text-[12.5px] text-ink-2">
+                      <span className="num text-[14px] text-ink-2">
                         {l.mercadoria != null
                           ? money(l.mercadoria + (l.embalagem ?? 0))
                           : "—"}
@@ -386,7 +387,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                     <td className={`${td} text-right`}>
                       {l.frete != null ? (
                         <div className="flex flex-col items-end leading-tight">
-                          <span className="num text-[12.5px] text-ink-2">
+                          <span className="num text-[14px] text-ink-2">
                             {money(l.frete)}
                           </span>
                           <span className="text-[12px] text-ink-3">
@@ -424,14 +425,14 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                       return (
                         <React.Fragment key={chave}>
                           <td className={`${td} text-right border-l border-line`}>
-                            <span className="num text-[12.5px] text-ink">
+                            <span className="num text-[14px] text-ink">
                               {c.precoAtual != null ? money(c.precoAtual) : "—"}
                             </span>
                           </td>
                           <td className={`${td} text-right`}>
                             {c.atual ? (
                               <span
-                                className={`num text-[12.5px] font-medium ${
+                                className={`num text-[14px] font-medium ${
                                   noAlvo ? "text-up" : "text-down"
                                 }`}
                               >
@@ -444,7 +445,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                           <td className={`${td} text-right`}>
                             {alvo?.ok ? (
                               <div className="flex flex-col items-end leading-tight">
-                                <span className="num text-[12.5px] font-semibold text-ink">
+                                <span className="num text-[14px] font-semibold text-ink">
                                   {money(alvo.preco)}
                                 </span>
                                 {c.precoAtual != null && (
@@ -486,7 +487,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
                   <tr>
                     <td
                       colSpan={3 + tipos.length * 3}
-                      className="px-3 py-8 text-center text-[13px] text-ink-3"
+                      className="px-3 py-8 text-center text-[14px] text-ink-3"
                     >
                       Nenhum produto encontrado.
                     </td>

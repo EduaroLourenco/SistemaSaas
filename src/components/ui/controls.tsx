@@ -110,7 +110,7 @@ export const Input = React.forwardRef<
       className={cn(
         "h-10 px-3 rounded-r1 border bg-panel text-[14px] text-ink w-full",
         "placeholder:text-ink-3 transition-colors focus:border-brand",
-        invalid ? "border-down" : "border-line",
+        invalid ? "border-down" : "border-line-2",
         props.type === "number" || props.inputMode === "decimal"
           ? "num text-right"
           : "",
@@ -152,7 +152,7 @@ export function Select({
     <div className="relative">
       <select
         className={cn(
-          "h-10 pl-3 pr-8 rounded-r1 border border-line bg-panel text-[13px] text-ink w-full",
+          "h-10 pl-3 pr-8 rounded-r1 border border-line-2 bg-panel text-[14px] text-ink w-full",
           "appearance-none transition-colors focus:border-brand cursor-pointer",
           className
         )}
@@ -399,8 +399,12 @@ export function Sheet({
   const descriptionId = React.useId();
   React.useEffect(() => {
     const dialog = ref.current;
+    const anterior = document.activeElement as HTMLElement | null;
     if (dialog && !dialog.open) dialog.showModal();
-    return () => { if (dialog?.open) dialog.close(); };
+    return () => {
+      if (dialog?.open) dialog.close();
+      requestAnimationFrame(() => { if (anterior?.isConnected) anterior.focus(); });
+    };
   }, []);
 
   return (
@@ -414,7 +418,7 @@ export function Sheet({
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
       <div className="flex h-full min-h-0 flex-col bg-panel text-ink">
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line px-6 py-5">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line px-6 py-5" style={{ paddingTop: "calc(20px + env(safe-area-inset-top))" }}>
           <div className="min-w-0">
             <h2 id={titleId} className="text-[20px] font-semibold leading-snug">{title}</h2>
             {subtitle && <p id={descriptionId} className="mt-1 text-[13px] leading-relaxed text-ink-2">{subtitle}</p>}

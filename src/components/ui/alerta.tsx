@@ -43,16 +43,11 @@ const ROTULO = { critico: "Crítico", atencao: "Atenção", info: "Informativo" 
  * leitura e o gráfico (a prova) continuam ali, na segunda camada: um clique
  * abre. Antes cada alerta ocupava ~300px e cinco deles enchiam a tela.
  */
-export function CartaoAlerta({ alerta }: { alerta: Alerta }) {
+export function CartaoAlerta({ alerta, emLista = false }: { alerta: Alerta; emLista?: boolean }) {
   const t = TOM[alerta.severidade];
   const Icone = t.icone;
   const [aberto, setAberto] = React.useState(false);
-  /*
-   * O id do degradê vem de useId, não do id do alerta: este é
-   * "cancelamento-<nome do canal>", e nome com espaço ("Madeira Madeira")
-   * quebra o url(#…) — o preenchimento caía em cinza chapado.
-   */
-  const gid = "g" + React.useId().replace(/[^a-zA-Z0-9]/g, "");
+  const detalheId = React.useId();
 
   const formatar = React.useCallback(
     (v: number) =>
@@ -72,54 +67,58 @@ export function CartaoAlerta({ alerta }: { alerta: Alerta }) {
       : "var(--info)";
 
   return (
-    <div className="panel">
-      <div className="flex items-start sm:items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3">
-        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", t.fundo)}>
-          <Icone className={cn("h-[18px] w-[18px]", t.cor)} strokeWidth={2.25} />
-        </span>
+    <article className={emLista ? "min-w-0" : "panel"}>
+      <div className="flex min-w-0 flex-wrap items-start gap-x-4 gap-y-3 p-4 md:items-center md:p-5">
+        {!emLista && <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", t.fundo)}>
+          <Icone aria-hidden="true" className={cn("h-[18px] w-[18px]", t.cor)} strokeWidth={2.25} />
+        </span>}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
             <Badge tone={t.badge}>{ROTULO[alerta.severidade]}</Badge>
-            <p className="text-[14px] font-semibold text-ink leading-snug min-w-0">{alerta.titulo}</p>
+            <h3 className="min-w-0 text-[16px] font-semibold leading-6 text-ink [overflow-wrap:anywhere]">{alerta.titulo}</h3>
           </div>
-          <p className="num mt-1 text-[12.5px] leading-relaxed text-ink-2 break-words">
-            {alerta.numeros.map((n) => `${n.rotulo} ${n.valor}`).join(" · ")}
-          </p>
+          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+            {alerta.numeros.map((n, i) => (
+              <div key={i} className="min-w-0">
+                <dt className="text-[12px] leading-[18px] text-ink-3">{n.rotulo}</dt>
+                <dd className="num text-[16px] font-medium leading-6 text-ink [overflow-wrap:anywhere]">{n.valor}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
+        <div className="flex w-full shrink-0 items-center justify-end gap-2 md:w-auto">
         {alerta.destino && (
           <Link
             href={alerta.destino.href}
-            className="hidden sm:inline-flex h-9 shrink-0 items-center gap-1 rounded-r1 border border-line-2 bg-panel px-3 text-[12.5px] font-medium text-ink hover:bg-panel-3"
+            aria-label={`Investigar: ${alerta.titulo}`}
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-r1 border border-line-2 bg-panel px-3 text-[14px] font-medium text-ink hover:bg-panel-3"
           >
             Investigar
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         )}
         <button
           type="button"
           onClick={() => setAberto((v) => !v)}
           aria-expanded={aberto}
+          aria-controls={detalheId}
           aria-label={aberto ? "Esconder detalhes" : "Ver detalhes e evolução"}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-r1 text-ink-3 hover:bg-panel-3 hover:text-ink"
+          className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-r1 px-3 text-[14px] font-medium text-ink-2 hover:bg-panel-3 hover:text-ink"
         >
-          <ChevronDown className={cn("h-4 w-4 transition-transform", aberto && "rotate-180")} />
+          Evidência
+          <ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", aberto && "rotate-180")} />
         </button>
+        </div>
       </div>
 
       {aberto && (
-        <div className="border-t border-line px-4 py-3 sm:pl-[68px]">
-          <p className="text-[13px] text-ink-2 leading-relaxed">{alerta.leitura}</p>
+        <div id={detalheId} className="border-t border-line bg-panel-2 p-4 md:p-5">
+          <p className="text-[14px] leading-6 text-ink-2">{alerta.leitura}</p>
 
           {alerta.evidencia.length > 1 && (
-            <div className="mt-3 h-[110px] -ml-1">
+            <div className="mt-4 h-[180px] min-w-0" role="img" aria-label={`Evolução de ${alerta.titulo}. Valores disponíveis em Ver dados da evolução.`}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={alerta.evidencia} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={cor} stopOpacity={0.22} />
-                      <stop offset="100%" stopColor={cor} stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
                   <XAxis dataKey="rotulo" {...AXIS} interval="preserveStartEnd" />
                   <YAxis {...AXIS} width={38} tickFormatter={(v) => formatar(Number(v))} hide />
                   <Tooltip
@@ -134,16 +133,29 @@ export function CartaoAlerta({ alerta }: { alerta: Alerta }) {
                       );
                     }}
                   />
-                  <Area type="monotone" dataKey="valor" stroke={cor} strokeWidth={1.75} fill={`url(#${gid})`} isAnimationActive={false} />
+                  <Area type="linear" dataKey="valor" stroke={cor} strokeWidth={2} fill={cor} fillOpacity={0.08} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           )}
 
+          {alerta.evidencia.length > 0 && (
+            <details className="mt-3">
+              <summary className="flex min-h-11 cursor-pointer items-center text-[14px] font-medium text-brand">Ver dados da evolução</summary>
+              <div className="overflow-x-auto" role="region" aria-label="Dados da evolução" tabIndex={0}>
+                <table className="w-full text-[14px]">
+                  <caption className="sr-only">Valores que sustentam o alerta</caption>
+                  <thead><tr className="border-b border-line text-ink-2"><th scope="col" className="py-3 text-left font-medium">Período</th><th scope="col" className="py-3 text-right font-medium">Valor</th></tr></thead>
+                  <tbody>{alerta.evidencia.map((p, i) => <tr key={i} className="border-b border-line last:border-0"><th scope="row" className="py-3 text-left font-normal text-ink-2">{p.rotulo}</th><td className="num py-3 text-right font-medium text-ink">{formatar(p.valor)}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </details>
+          )}
+
           {alerta.destino && (
             <Link
               href={alerta.destino.href}
-              className="mt-2.5 inline-flex items-center gap-1 text-[12.5px] font-medium text-brand hover:underline underline-offset-2"
+              className="mt-3 inline-flex min-h-11 items-center gap-2 text-[14px] font-medium text-brand underline-offset-2 hover:underline"
             >
               {alerta.destino.texto}
               <ArrowRight className="h-3 w-3" strokeWidth={2.5} />
@@ -151,6 +163,6 @@ export function CartaoAlerta({ alerta }: { alerta: Alerta }) {
           )}
         </div>
       )}
-    </div>
+    </article>
   );
 }

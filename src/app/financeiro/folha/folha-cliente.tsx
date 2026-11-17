@@ -94,7 +94,7 @@ export default function FolhaCliente({
         <div className="flex flex-col gap-0.5 min-w-0">
           <span className="text-ink font-medium">{f.nome}</span>
           {(f.cargo || f.setor) && (
-            <span className="text-[12px] text-ink-3 truncate max-w-xs">
+            <span className="text-[12px] text-ink-3 [overflow-wrap:anywhere] max-w-xs">
               {[f.cargo, f.setor].filter(Boolean).join(" · ")}
             </span>
           )}
@@ -196,16 +196,16 @@ export default function FolhaCliente({
           <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden">
             <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
               <span className="label">Na equipe</span>
-              <span className="num text-[19px] font-semibold text-ink">{naEquipe.length}</span>
+              <span className="num text-[24px] font-semibold text-ink">{naEquipe.length}</span>
             </div>
             <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
               <span className="label">Custo mensal</span>
-              <span className="num text-[19px] font-semibold text-ink">{money(custoTotal)}</span>
+              <span className="num text-[24px] font-semibold text-ink">{money(custoTotal)}</span>
               <span className="text-[12px] text-ink-3">bruto + benefícios + encargos</span>
             </div>
             <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
               <span className="label">Líquido somado</span>
-              <span className="num text-[19px] font-semibold text-ink">
+              <span className="num text-[24px] font-semibold text-ink">
                 {liquidoTotal > 0 ? money(liquidoTotal) : "—"}
               </span>
               {semLiquido > 0 && (
@@ -216,7 +216,7 @@ export default function FolhaCliente({
             </div>
             <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
               <span className="label">Competências fechadas</span>
-              <span className="num text-[19px] font-semibold text-ink">{folha.length}</span>
+              <span className="num text-[24px] font-semibold text-ink">{folha.length}</span>
               <span className="text-[12px] text-ink-3">
                 {folha.length === 0 ? "nenhum mês lançado ainda" : "meses com folha gravada"}
               </span>

@@ -25,11 +25,9 @@ import { BuscaGlobal } from "./busca-global";
 import { Brand } from "@/components/ui/brand";
 import { Sheet, FilterSheet } from "@/components/ui/controls";
 import { Disclosure } from "@/components/ui/disclosure";
-import { TelaGerizo } from "./carregando-gerizo";
 import { ehGdf3, gravarGdf3, useTituloGdf3 } from "@/lib/marca-gdf3";
 import { BotaoAtualizar } from "@/components/painel/botao-atualizar";
 import { NavegacaoArea } from "./navegacao-area";
-import { RoteiroArea } from "./roteiro-area";
 
 /* ══ Marca — monograma neutro, sem nome definido ══════════════ */
 
@@ -79,18 +77,23 @@ function ThemeToggle() {
   const [dark, setDark] = React.useState(false);
 
   React.useEffect(() => {
-    const saved = localStorage.getItem("tema");
-    const isDark =
-      saved === "dark" ||
-      (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    setDark(isDark);
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const sincronizar = () => {
+      const tema = document.documentElement.getAttribute("data-theme");
+      setDark(tema === "dark" || (!tema && media.matches));
+    };
+    sincronizar();
+    const observer = new MutationObserver(sincronizar);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    media.addEventListener("change", sincronizar);
+    return () => { observer.disconnect(); media.removeEventListener("change", sincronizar); };
   }, []);
 
   function toggle() {
     const next = !dark;
     setDark(next);
     document.documentElement.setAttribute("data-theme", next ? "dark" : "light");
-    localStorage.setItem("tema", next ? "dark" : "light");
+    try { localStorage.setItem("tema", next ? "dark" : "light"); } catch {}
   }
 
   return (
@@ -125,7 +128,7 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
       className={cn(
-        "group flex items-center justify-between gap-2 min-h-9 py-1.5 pl-8 pr-2 rounded-r1 text-[13px] transition-colors",
+        "group flex items-center justify-between gap-2 min-h-10 py-2 pl-9 pr-3 rounded-r1 text-[14px] transition-colors",
         active
           ? "gerizo-nav-active font-semibold"
           : "text-ink-2 hover:bg-panel-3 hover:text-ink"
@@ -167,13 +170,13 @@ function NavSection({
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}
         className={cn(
-          "flex items-center gap-2.5 min-h-10 px-2.5 rounded-r1 text-[13px] font-medium transition-colors",
+          "flex items-center gap-3 min-h-10 px-3 rounded-r1 text-[14px] font-medium transition-colors",
           active
             ? "gerizo-nav-active font-semibold"
             : "text-ink-2 hover:bg-panel-3 hover:text-ink"
         )}
       >
-        <Icon className="w-4 h-4 shrink-0" strokeWidth={1.9} />
+        <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
         <span className="truncate">{group.label}</span>
       </Link>
     );
@@ -186,12 +189,12 @@ function NavSection({
         aria-expanded={open}
         aria-controls={sectionId}
         className={cn(
-          "w-full flex items-center gap-2.5 min-h-10 px-2.5 rounded-r1 text-[13px] font-medium transition-colors",
+          "w-full flex items-center gap-3 min-h-10 px-3 rounded-r1 text-[14px] font-medium transition-colors",
           hasActive ? "text-ink" : "text-ink-2 hover:text-ink",
           "hover:bg-panel-3"
         )}
       >
-        <Icon className="w-4 h-4 shrink-0" strokeWidth={1.9} />
+        <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
         <span className="truncate flex-1 text-left">{group.label}</span>
         <ChevronDown
           className={cn(
@@ -216,6 +219,9 @@ function NavSection({
   );
 }
 
+const ORDEM_AREAS = ["Visão geral", "Alertas", "Conversar", "Vendas", "Mercado Livre", "Produtos", "Tráfego pago", "Planejamento", "Financeiro", "Relatórios"];
+const NAV_ORDENADA = [...NAV].sort((a, b) => ORDEM_AREAS.indexOf(a.label) - ORDEM_AREAS.indexOf(b.label));
+
 function NavTree({
   pathname,
   onNavigate,
@@ -225,7 +231,7 @@ function NavTree({
 }) {
   return (
     <nav aria-label="Navegação principal" className="flex flex-col gap-1 px-3 py-4">
-      {NAV.map((g) => (
+      {NAV_ORDENADA.map((g) => (
         <NavSection
           key={g.label}
           group={g}
@@ -234,14 +240,7 @@ function NavTree({
         />
       ))}
       <div className="h-px bg-line my-4 mx-2" />
-      {NAV_FOOTER.map((g) => (
-        <NavSection
-          key={g.label}
-          group={g}
-          pathname={pathname}
-          onNavigate={onNavigate}
-        />
-      ))}
+      <NavSection group={{ label: "Administração", icon: Settings, items: NAV_FOOTER.flatMap((g) => g.href ? [{ label: g.label, href: g.href }] : g.items ?? []) }} pathname={pathname} onNavigate={onNavigate} />
     </nav>
   );
 }
@@ -253,7 +252,7 @@ function MobileTabBar({ pathname, onMore }: { pathname: string; onMore: () => vo
   return <nav aria-label="Navegação" className="gerizo-mobile-nav md:hidden">
     {MOBILE_TABS.map((t) => {
       const Icon = t.icon;
-      const active = pathname === t.href || (t.href.startsWith("/vendas") && pathname.startsWith("/vendas/")) || (t.href.startsWith("/anuncios") && ["/anuncios/", "/promocoes/", "/mercado-livre"].some((p) => pathname.startsWith(p)));
+      const active = pathname === t.href || (t.href.startsWith("/vendas") && pathname.startsWith("/vendas/")) || (t.href === "/mercado-livre" && ["/anuncios/", "/promocoes/", "/mercado-livre", "/automacoes"].some((p) => pathname.startsWith(p)) && pathname !== "/anuncios/trafego-pago");
       return <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined}>
         <Icon size={21} aria-hidden="true" /><span>{t.label}</span>
       </Link>;
@@ -327,35 +326,10 @@ function useMenuLateral(pathname: string) {
   return { aberto, alternar };
 }
 
-/*
- * Abertura do app: a tela da marca vai JÁ NO HTML do servidor (o estado
- * começa ligado e o servidor desenha), então roda só com CSS desde o
- * primeiro byte — antes, ao tocar no ícone, a tela ficava branca até o
- * JavaScript chegar e ligar a animação. Sai quando a tela está pronta (sem
- * esqueleto, aria-busy) e a palavra já se formou (1,1s desde o início da
- * página). Navegação dentro do app não remonta a moldura, então só a
- * abertura passa por aqui.
- */
-function useAbertura() {
-  const [ligada, setLigada] = React.useState(true);
-  React.useEffect(() => {
-    const t = window.setInterval(() => {
-      const pronta = !document.querySelector('main [aria-busy="true"]');
-      if (pronta && performance.now() >= 1100) {
-        window.clearInterval(t);
-        setLigada(false);
-      }
-    }, 100);
-    return () => window.clearInterval(t);
-  }, []);
-  return ligada;
-}
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = React.useState(false);
   const menu = useMenuLateral(pathname);
-  const abertura = useAbertura();
 
   React.useEffect(() => {
     setMoreOpen(false);
@@ -367,7 +341,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-full">
-      {abertura && <TelaGerizo id="gerizo-abertura" />}
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-r1 focus:bg-panel focus:p-3">Ir para o conteúdo</a>
       {/* barra superior */}
       <header className="fixed top-0 inset-x-0 z-40 bg-panel border-b border-line">
@@ -382,7 +355,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={menu.alternar}
             aria-label={menu.aberto ? "Recolher menu" : "Abrir menu"}
             title={menu.aberto ? "Recolher menu" : "Abrir menu"}
-            className="hidden md:flex h-8 w-7 shrink-0 items-center justify-center rounded-r1 text-ink-3 hover:bg-panel-3 hover:text-ink"
+            aria-expanded={menu.aberto}
+            aria-controls="gerizo-menu-lateral"
+            className="hidden md:flex h-9 w-9 shrink-0 items-center justify-center rounded-r1 text-ink-3 hover:bg-panel-3 hover:text-ink"
           >
             {menu.aberto ? <PanelLeftClose className="h-[18px] w-[18px]" /> : <PanelLeftOpen className="h-[18px] w-[18px]" />}
           </button>
@@ -416,25 +391,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* rail lateral */}
       <aside
+        id="gerizo-menu-lateral"
         className={cn(
-          "gerizo-sidebar hidden md:flex flex-col fixed left-0 bottom-0 z-30 bg-panel border-r border-line transition-transform duration-200",
-          !menu.aberto && "-translate-x-full"
+          "gerizo-sidebar hidden md:flex flex-col fixed left-0 bottom-0 z-30 bg-panel-2"
         )}
-        style={{ top: "var(--topbar)", width: "var(--rail)" }}
-        aria-hidden={!menu.aberto}
-        inert={!menu.aberto}
+        style={{ top: "var(--topbar)", width: menu.aberto ? "var(--rail)" : "64px" }}
       >
         <div className="flex-1 overflow-y-auto">
-          <NavTree pathname={pathname} />
+          {menu.aberto ? <NavTree pathname={pathname} /> : <nav aria-label="Navegação recolhida" className="flex flex-col items-center gap-1 py-4">
+            {NAV_ORDENADA.map((group) => {
+              const Icon = group.icon;
+              const active = group.href ? group.href === pathname : group.items?.some((item) => item.href === pathname || item.rotas?.includes(pathname));
+              return <Link key={group.label} href={group.href ?? group.items![0].href} title={group.label} aria-label={group.label} aria-current={active ? "page" : undefined} className={cn("grid h-11 w-11 place-items-center rounded-r1 text-ink-2 hover:bg-panel-3", active && "gerizo-nav-active")}><Icon size={19} strokeWidth={1.75} /></Link>;
+            })}
+            <button type="button" onClick={menu.alternar} aria-label="Abrir navegação completa" className="mt-3 grid h-11 w-11 place-items-center rounded-r1 text-ink-2 hover:bg-panel-3"><Menu size={19} /></button>
+          </nav>}
         </div>
-        <RodapeEmpresa />
+        {menu.aberto && <RodapeEmpresa />}
       </aside>
 
       {/* conteúdo */}
       <main
         id="conteudo"
         tabIndex={-1}
-        className={cn("min-w-0 pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0 transition-[padding] duration-200", menu.aberto && "md:pl-[var(--rail)]")}
+        className={cn("min-w-0 pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0", menu.aberto ? "md:pl-[var(--rail)]" : "md:pl-16")}
         style={{ paddingTop: "var(--topbar)" }}
       >
         {children}
@@ -442,11 +422,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <MobileTabBar pathname={pathname} onMore={() => setMoreOpen(true)} />
 
-      {moreOpen && <Sheet title="Menu" onClose={() => setMoreOpen(false)}>
+      {moreOpen && <Sheet title="Todas as áreas" onClose={() => setMoreOpen(false)}>
         <RodapeEmpresa />
         <div className="px-4 py-3"><BotaoAtualizar compacto /></div>
         <NavTree pathname={pathname} onNavigate={() => setMoreOpen(false)} />
-        <div className="mx-4 mb-5 flex items-center justify-between border-t border-line pt-3"><span className="text-ink-2">Aparência</span><ThemeToggle /></div>
+        <div className="mx-4 mb-5 flex items-center justify-between border-t border-line pt-3"><span className="text-ink-2">Aparência e conta</span><div className="flex items-center gap-2"><ThemeToggle /><MenuConta paraCima /></div></div>
       </Sheet>}
     </div>
   );
@@ -456,17 +436,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
  * Menu da conta no avatar: Configurações e Sair. Até aqui o avatar só
  * levava a Configurações, e não existia jeito nenhum de sair da conta.
  */
-function MenuConta() {
+function MenuConta({ paraCima = false }: { paraCima?: boolean }) {
   const [aberto, setAberto] = React.useState(false);
   const [saindo, setSaindo] = React.useState(false);
   const caixa = React.useRef<HTMLDivElement>(null);
+  const acionador = React.useRef<HTMLButtonElement>(null);
+  const menuId = React.useId();
 
   React.useEffect(() => {
     if (!aberto) return;
+    caixa.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const fora = (e: MouseEvent) => {
       if (!caixa.current?.contains(e.target as Node)) setAberto(false);
     };
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setAberto(false);
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") { setAberto(false); acionador.current?.focus(); } };
     document.addEventListener("mousedown", fora);
     document.addEventListener("keydown", esc);
     return () => {
@@ -487,12 +470,21 @@ function MenuConta() {
   }
 
   return (
-    <div ref={caixa} className="relative">
+    <div ref={caixa} className="gerizo-account relative" onKeyDown={(event) => {
+      if (!aberto || !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const itens = [...(caixa.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+      const atual = itens.indexOf(document.activeElement as HTMLElement);
+      const proximo = event.key === "Home" ? 0 : event.key === "End" ? itens.length - 1 : (atual + (event.key === "ArrowDown" ? 1 : -1) + itens.length) % itens.length;
+      itens[proximo]?.focus();
+    }}>
       <button
+        ref={acionador}
         type="button"
         onClick={() => setAberto((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={aberto}
+        aria-controls={menuId}
         aria-label="Conta"
         title="Conta"
         className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel-3 text-ink-2 hover:text-ink"
@@ -500,7 +492,7 @@ function MenuConta() {
         <UserRound size={17} />
       </button>
       {aberto && (
-        <div role="menu" className="absolute right-0 top-11 z-50 w-52 rounded-r2 border border-line bg-panel p-1 shadow-[var(--sh-3)]">
+        <div id={menuId} role="menu" className={cn("absolute right-0 z-50 w-52 rounded-r2 border border-line bg-panel p-1 shadow-[var(--sh-3)]", paraCima ? "bottom-11" : "top-11")}>
           <Link
             href="/configuracoes"
             role="menuitem"
@@ -588,7 +580,7 @@ export function PageHeader({ title, breadcrumb, description, badge, actions, fil
   const mobile = React.useSyncExternalStore(subscribeMobile, isMobile, serverMobile);
   const [openFilters, setOpenFilters] = React.useState(false);
   return (
-    <header className={cn("gerizo-page-header px-4 pt-5 pb-1 md:px-6 md:pt-5", inlineFilters && "gerizo-page-header--inline", compact && "gerizo-page-header--compact")}>
+    <header className={cn("gerizo-page-header px-4 pt-5 pb-1 md:px-6 md:pt-5", mobileFilters && "gerizo-page-header--sheet-filters", inlineFilters && "gerizo-page-header--inline", compact && "gerizo-page-header--compact")}>
       {breadcrumb && <p className="mb-1.5 text-[12px] font-medium text-ink-3">{breadcrumb}</p>}
       <div className="gerizo-header-row flex flex-wrap items-center justify-between gap-4">
         {/* Base de 14rem: com `flex-1` puro o título encolhia até zero e os
@@ -596,7 +588,7 @@ export function PageHeader({ title, breadcrumb, description, badge, actions, fil
             palavra por linha. Assim, se os botões não cabem ao lado, descem. */}
         <div className="min-w-0 flex-[1_1_14rem]">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-[25px] font-bold leading-tight tracking-[-0.035em] text-ink md:text-[30px]">{title}</h1>
+            <h1 className="text-[24px] font-semibold leading-8 tracking-[-0.035em] text-ink md:text-[28px] md:leading-9">{title}</h1>
             {badge}
           </div>
           {description && (description.length > 115
@@ -612,7 +604,7 @@ export function PageHeader({ title, breadcrumb, description, badge, actions, fil
       {!inlineFilters && filters && (!mobile || !mobileFilters) && <div className="gerizo-filters-zone mt-4 min-w-0">{filters}</div>}
       {inlineFilters && filters && mobile && !mobileFilters && <div className="mt-4 min-w-0">{filters}</div>}
       {filters && mobile && mobileFilters && openFilters && <FilterSheet onClose={() => setOpenFilters(false)} applyLabel="Ver resultados">{filters}</FilterSheet>}
-      {areaNavigation && <><React.Suspense fallback={null}><NavegacaoArea /></React.Suspense><RoteiroArea /></>}
+      {areaNavigation && <React.Suspense fallback={null}><NavegacaoArea /></React.Suspense>}
     </header>
   );
 }

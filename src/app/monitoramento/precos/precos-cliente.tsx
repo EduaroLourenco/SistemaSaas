@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationMethod } from "@/components/analise/operation-layout";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
 import { SemFonte } from "@/components/ui/sem-fonte";
@@ -146,7 +147,7 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
     return (
       <>
         <PageHeader title="Preços" breadcrumb="Monitoramento" />
-        <PageBody>
+        <PageBody className="op-workspace op-monitoramento-precos">
           <SemFonte
             titulo="Nenhuma venda importada"
             origem="O preço praticado sai dos itens de pedido. Importe a listagem de pedidos e esta tela se preenche sozinha."
@@ -163,7 +164,6 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
       <PageHeader
         title="Preços praticados"
         breadcrumb="Monitoramento"
-        description="O que o cliente pagou, por SKU — média ponderada pela quantidade"
         filters={
           <>
             <SeletorCanal canais={dados.canais} valor={canal} onChange={setCanal} />
@@ -184,14 +184,14 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="SKU, produto ou MLB"
                 className="w-full h-7 pl-8 pr-3 rounded-r1 bg-panel border border-line
-                           text-[12.5px] text-ink outline-none focus:border-brand"
+                           text-[14px] text-ink outline-none focus:border-brand"
               />
             </span>
           </>
         }
       />
 
-      <PageBody>
+      <PageBody className="op-workspace op-monitoramento-precos">
         {selecionado && (
           <Panel className="overflow-hidden">
             <PanelHeader
@@ -212,83 +212,30 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
                 )
               }
             />
-            <div className="h-[300px] px-2 pt-3 pb-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={mesAberto == null ? serieMensal : serieDiaria}
-                  margin={{ top: 6, right: 10, left: 0, bottom: 0 }}
-                  onClick={(e) => {
-                    if (mesAberto != null) return;
-                    const i = e?.activeTooltipIndex;
-                    if (typeof i === "number" && serieMensal[i]?.preco != null) {
-                      setMesAberto(i);
-                    }
-                  }}
-                >
-                  <CartesianGrid {...GRID} />
-                  <XAxis dataKey="rotulo" {...AXIS} />
-                  <YAxis
-                    yAxisId="preco"
-                    {...AXIS}
-                    width={64}
-                    domain={["auto", "auto"]}
-                    tickFormatter={(v: number) => money(v)}
-                  />
-                  <YAxis yAxisId="un" orientation="right" {...AXIS} width={38} />
-                  <Tooltip
-                    cursor={{ fill: "var(--panel-3)" }}
-                    content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      const p = payload[0].payload as Ponto;
-                      if (p.preco == null) {
-                        return (
-                          <div className="panel px-2.5 py-2" style={{ boxShadow: "var(--sh-3)" }}>
-                            <p className="text-[12px] text-ink-2">Sem venda no período</p>
-                          </div>
-                        );
-                      }
-                      return (
-                        <div className="panel px-2.5 py-2 min-w-[190px]" style={{ boxShadow: "var(--sh-3)" }}>
-                          <p className="num text-[12px] font-semibold text-ink-2 mb-1.5">
-                            {p.chave}
-                          </p>
-                          <p className="num text-[14px] font-semibold text-ink">
-                            {money(p.preco)}
-                          </p>
-                          <p className="text-[12px] text-ink-3 mt-1">
-                            {count(p.unidades)} un ·{" "}
-                            {p.min != null && p.max != null && p.min !== p.max
-                              ? `${money(p.min)} a ${money(p.max)}`
-                              : "preço único"}
-                          </p>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Bar
-                    yAxisId="un"
-                    dataKey="unidades"
-                    fill="var(--panel-3)"
-                    isAnimationActive={false}
-                    radius={[2, 2, 0, 0]}
-                  />
-                  <Line
-                    yAxisId="preco"
-                    type="monotone"
-                    dataKey="preco"
-                    stroke="var(--brand)"
-                    strokeWidth={2}
-                    dot={{ r: 3, strokeWidth: 0, fill: "var(--brand)" }}
-                    connectNulls={false}
-                    isAnimationActive={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
+              <p className="text-[14px] text-ink-2">Preço médio ponderado e unidades em escalas independentes</p>
+              <label className="flex items-center gap-2 text-[14px] text-ink-2">Detalhar período
+                <select value={mesAberto == null ? "ano" : String(mesAberto)} onChange={(e) => setMesAberto(e.target.value === "ano" ? null : Number(e.target.value))} className="min-h-10 rounded-r1 border border-line-2 bg-panel px-3 text-ink"><option value="ano">Ano completo</option>{serieMensal.map((p, i) => <option key={p.chave} value={i} disabled={p.preco == null}>{p.rotulo}</option>)}</select>
+              </label>
             </div>
+            <div className="grid min-w-0 gap-6 p-4 xl:grid-cols-2 md:p-5">
+              {(["preco", "unidades"] as const).map((metrica) => <section key={metrica} className="min-w-0" aria-label={metrica === "preco" ? "Evolução do preço médio" : "Evolução das unidades"}>
+                <h3 className="mb-3 text-[14px] font-medium text-ink-2">{metrica === "preco" ? "Preço médio · R$" : "Unidades vendidas"}</h3>
+                <div className="h-[220px] min-w-0 md:h-[260px]">
+                  <ResponsiveContainer width="100%" height="100%"><ComposedChart data={mesAberto == null ? serieMensal : serieDiaria} margin={{ top: 6, right: 8, left: 0, bottom: 0 }} onClick={(e) => { if (mesAberto != null) return; const i = e?.activeTooltipIndex; if (typeof i === "number" && serieMensal[i]?.preco != null) setMesAberto(i); }}>
+                    <CartesianGrid {...GRID} /><XAxis dataKey="rotulo" {...AXIS} minTickGap={28}/>
+                    <YAxis {...AXIS} width={metrica === "preco" ? 80 : 42} tickFormatter={(v: number) => metrica === "preco" ? money(v) : count(v)} domain={metrica === "preco" ? ["auto", "auto"] : [0, "auto"]}/>
+                    <Tooltip content={({active,payload}) => {if(!active || !payload?.length)return null; const p=payload[0].payload as Ponto; return <div className="panel p-3 text-[14px]"><p className="text-ink-3">{p.chave}</p><p className="num font-semibold">{metrica === "preco" ? p.preco == null ? "Sem venda no período" : money(p.preco) : count(p.unidades) + " un"}</p>{p.min != null && p.max != null && <p className="mt-1 text-[12px] text-ink-2">{money(p.min)} a {money(p.max)}</p>}</div>; }}/>
+                    {metrica === "preco" ? <Line type="linear" dataKey="preco" name="Preço médio" stroke="var(--brand)" strokeWidth={2.5} dot={false} connectNulls={false} isAnimationActive={false}/> : <Bar dataKey="unidades" name="Unidades" fill="var(--info)" radius={[2,2,0,0]} isAnimationActive={false}/>}
+                  </ComposedChart></ResponsiveContainer>
+                </div>
+              </section>)}
+            </div>
+            <div className="px-5"><OperationMethod title="Ver dados da evolução"><div className="overflow-auto" tabIndex={0} role="region" aria-label="Valores de preço e unidades"><table className="op-table"><thead><tr><th>Período</th><th>Preço médio</th><th>Mínimo</th><th>Máximo</th><th>Unidades</th></tr></thead><tbody>{(mesAberto == null ? serieMensal : serieDiaria).map((p)=><tr key={p.chave}><td>{p.chave}</td><td className="num">{p.preco == null ? "—" : money(p.preco)}</td><td className="num">{p.min == null ? "—" : money(p.min)}</td><td className="num">{p.max == null ? "—" : money(p.max)}</td><td className="num">{count(p.unidades)}</td></tr>)}</tbody></table></div></OperationMethod></div>
           </Panel>
         )}
 
-        <Panel className="overflow-hidden">
+        <Panel className="op-primary-table overflow-hidden">
           <PanelHeader
             title="SKUs vendidos"
             hint="clique para ver a evolução de preço"
@@ -297,7 +244,7 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
             }
           />
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[13px]">
+            <table className="w-full border-collapse text-[14px]">
               <thead>
                 <tr className="border-b border-line">
                   <th className="text-left px-3 py-2 min-w-[240px]">
@@ -317,6 +264,10 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
                   return (
                     <tr
                       key={s.sku}
+                      tabIndex={0}
+                      aria-expanded={ativo}
+                      aria-label={`Evolução de preço de ${s.titulo}`}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                       onClick={() => {
                         setAberto(ativo ? null : s.sku);
                         setMesAberto(null);
@@ -377,7 +328,7 @@ export default function MonitoramentoPrecos({ dados }: { dados: DadosPrecos }) {
           {filtrados.length > limite && (
             <button
               onClick={() => setLimite((l) => l + 50)}
-              className="w-full py-2.5 text-[12.5px] text-ink-2 hover:text-ink
+              className="w-full py-2.5 text-[14px] text-ink-2 hover:text-ink
                          hover:bg-panel-2 border-t border-line"
             >
               Mostrar mais {Math.min(50, filtrados.length - limite)}

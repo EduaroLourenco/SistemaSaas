@@ -4,7 +4,8 @@ import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, AlertCircle, CheckCircle2, List, Table2 } from "lucide-react";
+import { count } from "@/lib/format";
 import type { DadosEnvios, EnvioMeli } from "@/lib/dados/envios-meli";
 
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -22,31 +23,56 @@ function limiteBr(e: EnvioMeli) {
 const compraBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 function Dias({ dias }: { dias: number | null }) {
-  if (dias == null) return <span className="text-[13px] text-ink-3">sem prazo</span>;
+  if (dias == null) return <span className="text-[14px] text-ink-3">Sem prazo</span>;
   const tom = dias < 0 ? "text-down" : dias <= 1 ? "text-warn" : "text-ink";
   const rotulo = dias < 0 ? "atrasado" : dias === 0 ? "hoje" : dias === 1 ? "dia" : "dias";
   return (
     <span className="inline-flex items-baseline gap-1.5">
-      <span className={cn("num text-[28px] font-bold leading-none tracking-[-0.03em]", tom)}>
+      <span className={cn("num text-[24px] font-semibold leading-8 tracking-tight", tom)}>
         {dias < 0 ? `−${-dias}` : dias === 0 ? "0" : dias}
       </span>
-      <span className={cn("text-[12px] font-semibold", tom)}>{rotulo}</span>
+      <span className={cn("text-[14px] font-medium", tom)}>{rotulo}</span>
     </span>
   );
 }
 
-type Chave = "dias" | "limite" | "pedido" | "conta" | "situacao";
+type Chave = "dias" | "limite" | "produto" | "pedido" | "conta" | "situacao";
+
+const ORDENACAO: { valor: Chave; rotulo: string }[] = [
+  { valor: "dias", rotulo: "Prazo restante" },
+  { valor: "limite", rotulo: "Enviar até" },
+  { valor: "produto", rotulo: "Produto" },
+  { valor: "pedido", rotulo: "Pedido" },
+  { valor: "conta", rotulo: "Conta" },
+  { valor: "situacao", rotulo: "Situação" },
+];
+
+function Produtos({ envio }: { envio: EnvioMeli }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      {envio.itens.map((i, k) => (
+        <div key={k} className="min-w-0">
+          <p className="text-[14px] leading-5 text-ink [overflow-wrap:anywhere]">
+            <span className="num font-semibold">{i.quantidade}×</span> {i.titulo}
+          </p>
+          {i.sku && <p className="mt-1 font-mono text-[12px] leading-[18px] text-ink-3 [overflow-wrap:anywhere]">{i.sku}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
   const [conta, setConta] = React.useState("");
   const [ordem, setOrdem] = React.useState<{ chave: Chave; asc: boolean }>({ chave: "dias", asc: true });
+  const [tabelaMobile, setTabelaMobile] = React.useState(false);
 
   const lista = React.useMemo(() => {
     const base = dados.envios.filter((e) => !conta || e.conta === conta);
     const val = (e: EnvioMeli) =>
       ordem.chave === "dias" || ordem.chave === "limite"
         ? (e.limite ?? "9999")
-        : ordem.chave === "pedido" ? e.pedido : ordem.chave === "conta" ? e.conta : e.situacao;
+        : ordem.chave === "pedido" ? e.pedido : ordem.chave === "conta" ? e.conta : ordem.chave === "produto" ? e.itens.map((i) => i.titulo).join(" ") : e.situacao;
     return [...base].sort((a, b) => {
       const x = val(a), y = val(b);
       return (x < y ? -1 : x > y ? 1 : 0) * (ordem.asc ? 1 : -1);
@@ -60,36 +86,40 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
     { r: "Amanhã", v: n((d) => d === 1), tom: "text-warn" },
     { r: "Depois", v: n((d) => d >= 2), tom: "text-ink" },
   ];
+  const falhasVisiveis = dados.falhas.filter((f) => !conta || f.conta === conta);
+  const consultaIncompleta = falhasVisiveis.length > 0;
+  const semContas = dados.contas.length === 0;
 
   const ordenar = (chave: Chave) => setOrdem((o) => ({ chave, asc: o.chave === chave ? !o.asc : true }));
-  const Cab = ({ chave, children, className }: { chave: Chave; children: React.ReactNode; className?: string }) => (
-    <button type="button" onClick={() => ordenar(chave)} className={cn("flex items-center gap-1 text-left", className)}>
-      {children}
-      {ordem.chave === chave && (ordem.asc ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-    </button>
-  );
-
-  const COLS = "md:grid-cols-[110px_130px_1fr_150px_110px_170px]";
+  const colunas: { chave: Chave; rotulo: string; largura: string }[] = [
+    { chave: "dias", rotulo: "Restam", largura: "w-[110px]" },
+    { chave: "limite", rotulo: "Enviar até", largura: "w-[140px]" },
+    { chave: "produto", rotulo: "Produto", largura: "min-w-[260px]" },
+    { chave: "pedido", rotulo: "Pedido", largura: "w-[160px]" },
+    { chave: "conta", rotulo: "Conta", largura: "w-[150px]" },
+    { chave: "situacao", rotulo: "Situação", largura: "w-[180px]" },
+  ];
 
   return (
     <>
       <PageHeader
-        title="Envios Mercado Livre"
-        badge={<span className="num text-[12px] text-ink-3">
-          leitura das {new Date(dados.geradoEm).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })}
+        title="Envios"
+        badge={<span className="text-[12px] text-ink-3">
+          Leitura de {new Date(dados.geradoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
         </span>}
       />
       <PageBody>
         {/* Uma faixa de filtro acima de tudo que ela recorta */}
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="flex min-w-0 flex-wrap gap-2" role="group" aria-label="Filtrar envios por conta">
           {["", ...dados.contas].map((c) => (
             <button
               key={c || "todas"}
               type="button"
+              aria-pressed={conta === c}
               onClick={() => setConta(c)}
               className={cn(
-                "min-h-11 rounded-full border px-4 text-[14px] font-semibold",
-                conta === c ? "border-brand bg-brand-wash text-brand" : "border-line bg-panel text-ink-2"
+                "min-h-11 min-w-0 rounded-r1 border px-4 py-2 text-left text-[14px] font-medium [overflow-wrap:anywhere]",
+                conta === c ? "border-brand bg-brand-wash text-brand" : "border-line-2 bg-panel text-ink-2 hover:text-ink"
               )}
             >
               {c ? curto(c) : "Todas"}
@@ -97,64 +127,96 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
           ))}
         </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {resumo.map((s) => (
-            <Panel key={s.r} className="px-4 py-3">
-              <div className="text-[12px] font-medium text-ink-3">{s.r}</div>
-              <div className={cn("num text-[48px] font-bold leading-none tracking-[-0.04em]", s.v ? s.tom : "text-ink-3")}>{s.v}</div>
-            </Panel>
-          ))}
-        </div>
-
-        {dados.falhas.map((f) => (
-          <div key={f.conta} className="mb-3 rounded-lg bg-down-wash px-4 py-2 text-[14px] text-down">
-            {curto(f.conta)}: {f.motivo}
+        {falhasVisiveis.map((f) => (
+          <div key={f.conta} role="status" className="flex items-start gap-3 rounded-r1 bg-down-wash p-4 text-[14px] leading-5 text-down">
+            <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+            <p className="min-w-0 [overflow-wrap:anywhere]"><span className="font-semibold">{f.conta}</span>: {f.motivo}</p>
           </div>
         ))}
 
-        <Panel className="overflow-hidden">
-          <div className={cn("hidden gap-4 border-b border-line px-4 py-2.5 text-[12px] font-semibold text-ink-3 md:grid", COLS)}>
-            <Cab chave="dias">Restam</Cab>
-            <Cab chave="limite">Enviar até</Cab>
-            <span>Produto</span>
-            <Cab chave="pedido">Pedido</Cab>
-            <Cab chave="conta">Conta</Cab>
-            <Cab chave="situacao">Situação</Cab>
+        <section aria-label="Resumo de envios" className="grid min-w-0 gap-5 border-b border-line pb-6 lg:grid-cols-[minmax(160px,1fr)_minmax(0,3fr)] lg:items-end lg:gap-8">
+          <div>
+            <p className="mb-2 text-[14px] font-medium text-ink-2">{consultaIncompleta ? "Pendentes nas contas consultadas" : "Envios pendentes"}</p>
+            <p className="num text-[48px] font-semibold leading-[56px] tracking-[-0.045em] text-ink md:text-[56px] md:leading-[64px]">{semContas ? "—" : count(lista.length)}</p>
           </div>
+          <dl className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+            {resumo.map((s) => <div key={s.r}>
+              <dt className="mb-1 text-[14px] text-ink-2">{s.r}</dt>
+              <dd className={cn("num text-[24px] font-semibold leading-8 tracking-tight", s.v ? s.tom : "text-ink-3")}>{semContas ? "—" : count(s.v)}</dd>
+            </div>)}
+          </dl>
+        </section>
 
-          {lista.length === 0 && (
-            <div className="px-4 py-10 text-center text-[15px] text-ink-3">Nenhum envio pendente</div>
-          )}
-
-          {lista.map((e) => (
-            <div
-              key={e.pedido}
-              className={cn("grid items-start gap-x-4 gap-y-1 border-b border-line px-4 py-3 last:border-b-0", COLS)}
-            >
-              <div className="flex items-center justify-between md:block">
-                <Dias dias={e.dias} />
-                <span className="text-[14px] font-semibold text-ink md:hidden">{limiteBr(e) ?? "—"}</span>
-              </div>
-              <div className="hidden text-[14px] font-semibold text-ink md:block">{limiteBr(e) ?? "—"}</div>
-              <div className="min-w-0">
-                {e.itens.map((i, k) => (
-                  <div key={k} className="text-[14px] leading-snug text-ink">
-                    <span className="num font-semibold">{i.quantidade}×</span> {i.titulo}
-                    {i.sku && <span className="num text-ink-3"> · {i.sku}</span>}
-                  </div>
-                ))}
-              </div>
-              <div className="num text-[13px] text-ink-2">
-                {e.pedido}
-                <div className="text-ink-3">compra {compraBr(e.compra)}</div>
-              </div>
-              <div className="text-[14px] text-ink-2">{curto(e.conta)}</div>
-              <div>
-                <Badge tone={e.dias != null && e.dias < 0 ? "down" : "neutral"}>{e.situacao}</Badge>
+        {lista.length === 0 ? (
+          <Panel className="flex items-start gap-3 p-5">
+            {consultaIncompleta || semContas ? <AlertCircle aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-ink-3" /> : <CheckCircle2 aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-up" />}
+            <div>
+              <h2 className="text-[16px] font-semibold text-ink">{consultaIncompleta ? "Consulta incompleta" : semContas ? "Nenhuma conta disponível" : "Nenhum envio pendente"}</h2>
+              <p className="mt-1 text-[14px] leading-6 text-ink-2">{consultaIncompleta ? "Não foi possível consultar todas as contas deste recorte. Confira as falhas acima." : semContas ? "Não há contas de Mercado Livre disponíveis nesta leitura." : conta ? `Nenhum envio pendente em ${conta}.` : "Nenhum envio pendente nas contas consultadas."}</p>
+            </div>
+          </Panel>
+        ) : (
+          <Panel className="min-w-0 overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
+              <h2 className="text-[16px] font-semibold text-ink">Fila de envios <span className="num ml-1 font-normal text-ink-3">{count(lista.length)}</span></h2>
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-2 md:w-auto">
+                <label className="flex min-w-0 flex-1 items-center gap-2 text-[14px] text-ink-2 md:hidden">
+                  <span className="sr-only">Ordenar envios por</span>
+                  <select aria-label="Ordenar envios por" value={ordem.chave} onChange={(e) => setOrdem({ chave: e.target.value as Chave, asc: true })} className="h-11 min-w-0 flex-1 rounded-r1 border border-line-2 bg-panel px-3 text-[16px] text-ink">
+                    {ORDENACAO.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
+                  </select>
+                </label>
+                <button type="button" onClick={() => setOrdem((o) => ({ ...o, asc: !o.asc }))} aria-label={ordem.asc ? "Alterar para ordem decrescente" : "Alterar para ordem crescente"} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-r1 border border-line-2 text-ink-2 md:hidden">
+                  {ordem.asc ? <ArrowUp aria-hidden="true" size={18} /> : <ArrowDown aria-hidden="true" size={18} />}
+                </button>
+                <button type="button" onClick={() => setTabelaMobile((v) => !v)} aria-pressed={tabelaMobile} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-r1 border border-line-2 px-3 text-[14px] font-medium text-ink-2 md:hidden">
+                  {tabelaMobile ? <List aria-hidden="true" size={18} /> : <Table2 aria-hidden="true" size={18} />}{tabelaMobile ? "Lista" : "Tabela"}
+                </button>
+                <span className="hidden text-[12px] text-ink-3 md:block">{ordem.chave === "dias" && ordem.asc ? "Do prazo mais próximo ao mais distante" : `Por ${ORDENACAO.find((o) => o.valor === ordem.chave)?.rotulo.toLowerCase()} · ${ordem.asc ? "crescente" : "decrescente"}`}</span>
               </div>
             </div>
-          ))}
-        </Panel>
+
+            <div className={cn("min-w-0 overflow-x-auto", !tabelaMobile && "hidden md:block")} role="region" aria-label="Tabela de envios, com rolagem horizontal" tabIndex={0}>
+              <table className="w-full min-w-[1000px] table-fixed text-left text-[14px]">
+                <caption className="sr-only">Envios pendentes no recorte selecionado. Ordenação pelo cabeçalho das colunas.</caption>
+                <thead className="sticky top-0 z-10 bg-panel-2">
+                  <tr>{colunas.map((c, i) => (
+                    <th key={c.chave} scope="col" aria-sort={ordem.chave === c.chave ? ordem.asc ? "ascending" : "descending" : "none"} className={cn("border-b border-line px-4 py-1", c.largura, i === 0 && "sticky left-0 z-20 bg-panel-2")}>
+                      <button type="button" onClick={() => ordenar(c.chave)} className="inline-flex min-h-11 items-center gap-2 text-left text-[14px] font-medium text-ink-2 hover:text-ink">
+                        {c.rotulo}
+                        {ordem.chave === c.chave && (ordem.asc ? <ArrowUp aria-hidden="true" size={14} /> : <ArrowDown aria-hidden="true" size={14} />)}
+                      </button>
+                    </th>
+                  ))}</tr>
+                </thead>
+                <tbody>{lista.map((e) => <tr key={`${e.conta}-${e.pedido}`} className="group border-b border-line last:border-0">
+                  <td className="sticky left-0 z-1 bg-panel px-4 py-4 align-top"><Dias dias={e.dias} /></td>
+                  <td className="px-4 py-4 align-top font-medium text-ink">{limiteBr(e) ?? <span className="font-normal text-ink-3">Sem prazo</span>}</td>
+                  <td className="px-4 py-4 align-top"><Produtos envio={e} /></td>
+                  <td className="px-4 py-4 align-top"><span className="num text-ink-2 [overflow-wrap:anywhere]">{e.pedido}</span><p className="mt-1 text-[12px] text-ink-3">Compra {compraBr(e.compra)}</p></td>
+                  <td className="px-4 py-4 align-top leading-5 text-ink-2 [overflow-wrap:anywhere]">{e.conta}</td>
+                  <td className="px-4 py-4 align-top"><Badge className="whitespace-normal" tone={e.dias != null && e.dias < 0 ? "down" : "neutral"}>{e.situacao}</Badge></td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+
+            <div className={cn("divide-y divide-line md:hidden", tabelaMobile && "hidden")}>
+              {lista.map((e) => <article key={`${e.conta}-${e.pedido}`} aria-label={`Pedido ${e.pedido}`} className="min-w-0 p-4">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                  <Dias dias={e.dias} />
+                  <div className="text-right"><p className="text-[12px] leading-[18px] text-ink-3">Enviar até</p><p className="text-[14px] font-semibold leading-5 text-ink">{limiteBr(e) ?? "Sem prazo"}</p></div>
+                </div>
+                <Produtos envio={e} />
+                <dl className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-4 gap-y-3 text-[14px]">
+                  <div><dt className="text-[12px] text-ink-3">Pedido</dt><dd className="num mt-1 text-ink-2 [overflow-wrap:anywhere]">{e.pedido}</dd></div>
+                  <div><dt className="text-[12px] text-ink-3">Compra</dt><dd className="num mt-1 text-ink-2">{compraBr(e.compra)}</dd></div>
+                  <div className="col-span-2"><dt className="text-[12px] text-ink-3">Conta</dt><dd className="mt-1 text-ink-2 [overflow-wrap:anywhere]">{e.conta}</dd></div>
+                  <div className="col-span-2"><dt className="sr-only">Situação</dt><dd><Badge className="whitespace-normal" tone={e.dias != null && e.dias < 0 ? "down" : "neutral"}>{e.situacao}</Badge></dd></div>
+                </dl>
+              </article>)}
+            </div>
+          </Panel>
+        )}
       </PageBody>
     </>
   );

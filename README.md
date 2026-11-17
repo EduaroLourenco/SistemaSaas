@@ -1,55 +1,35 @@
-# Plataforma
+# Gerizo
 
-Sistema unificado de operação de e-commerce. **Fase 1: front-end estático.**
-Sem banco, sem API, sem autenticação — todos os números vêm de `src/mock/`.
+Plataforma de operação e análise de e-commerce com Next.js App Router, React, Supabase, múltiplas empresas e integrações reais. src/mock fornece referências de contratos e dados sintéticos de teste; o produto usa os dados autorizados pela sessão.
 
-```bash
-npm run dev -- --port 3010
-```
+## Desenvolvimento
 
-## Decisões travadas
+    npm run dev -- --port 3010
+    npx next typegen
+    npx tsc --noEmit
+    npm run build
 
-| | |
-|---|---|
-| Paleta | Grafite + verde-petróleo `#0F5C57` (escuro: `#3AA396`) |
-| Tema | Claro por padrão, escuro completo, respeita o sistema |
-| Densidade | Compacta (linha de 32px); `data-density="comfortable"` sobe para 42px |
-| Tipografia | Inter na interface, JetBrains Mono tabular em **todo** número |
-| Proibido | `backdrop-blur`, gradiente de fundo, sombra colorida, card que flutua no hover |
-| Nome | Ainda não definido — monograma neutro como placeholder |
+Leia AGENTS.md e os guias da versão instalada em node_modules/next/dist/docs antes de alterar APIs do framework. Não versione arquivos de ambiente, tokens ou dados de clientes.
 
-## Estrutura
+## Interface
 
-```
-src/
-  app/
-    page.tsx                    Visão geral            ← piloto
-    vendas/canais/              Vendas por canal       ← piloto
-    anuncios/analise/           Análise de anúncios    ← piloto
-    …                           23 rotas reservadas (ComingSoon)
-  components/
-    layout/app-shell.tsx        Casca, navegação, PageHeader, PageBody
-    ui/primitives.tsx           Button, Panel, Badge, Delta, EmptyState, Skeleton
-    ui/stat-tile.tsx            StatTile, Sparkline
-    ui/data-table.tsx           Tabela densa + cartões no mobile
-    ui/chart.tsx                Cores de série, eixos, tooltip, legenda
-  lib/
-    format.ts                   money, count, pct, delta — toda saída numérica passa aqui
-    nav.ts                      Árvore de navegação e barra inferior do mobile
-  mock/index.ts                 Dados estáticos, tipados no formato da API futura
-```
+Tokens de superfície, texto, marca e estado em src/app/globals.css. Composições compartilhadas em src/app/workspace.css; análises, operação e estúdio têm estilos próprios de área. Inter na interface, números tabulares e códigos monoespaçados quando pertinentes. Temas claro/escuro/sistema e densidade compacta/confortável persistem no navegador.
 
-## Trocar mock por API (fase 3)
+A navegação usa sidebar agrupada, contexto de empresa, navegação de área e barra mobile. As URLs e rotas deliberadamente ocultas permanecem. Cálculos, dados e permissões continuam nos módulos existentes; componentes visuais recebem seus resultados.
 
-Cada export de `src/mock/` tem o mesmo formato que a rota real vai devolver.
-A troca é uma linha por tela: `import { CANAIS } from "@/mock"` vira um `fetch`.
+## Prévia e verificações isoladas
 
-## Fonte dos módulos
+scripts/redesign/preview-app renderiza os componentes reais das 61 rotas com fixtures sintéticas e APIs locais de escrita bloqueadas. Não é um modo de autenticação do produto. Consulte o README do harness para executar em http://127.0.0.1:3017.
 
-Portados de projetos anteriores, mantidos intocados como referência somente-leitura:
+    node scripts/redesign/verificar-todas-rotas.mjs
+    node scripts/redesign/verificar-interface.mjs
+    node scripts/redesign/verificar-contraste.mjs
+    node scripts/redesign/testar-offline.mjs
 
-- `Downloads/Sistema Saas E commerce/src/` — análise de anúncios, promoções, busca-preço
-- `Downloads/Sistema Saas E commerce/probel-marketplace/` — KPIs, canais, semanal/anual
+Os logs ficam em output/redesign, fora do histórico. Não é necessário gerar screenshots. A suíte histórica contém testes que escrevem no banco: não execute scripts/testar-tudo.mjs indiscriminadamente contra o ambiente real. O runner offline seleciona testes inspecionados e bloqueia rede.
 
-As bibliotecas de `src/lib/` do projeto Next antigo (`excel-analise`, `derived-metrics`,
-`report-generator`) entram na fase 3.
+O script legado npm run lint usa next lint, removido na versão instalada. Essa limitação e a fixture antiga do teste de atualização são registradas nos resultados.
+
+## Redesign
+
+O inventário, a paridade por área e os resultados estão em docs/redesign. A cobertura distingue implementação, verificações de navegador e fluxos que ainda dependem de sessão de teste autorizada. Fixtures não comprovam autenticação, RLS, integração ou gravação real.

@@ -19,10 +19,8 @@ export default async function Pagina() {
     <>
       <PageHeader
         title="Categorias"
-        breadcrumb="Financeiro"
-        description="Como o custo é agrupado na DRE"
       />
-      <PageBody>
+      <PageBody className="finance-page">
         <CategoriasCliente linhas={categorias} />
       </PageBody>
     </>

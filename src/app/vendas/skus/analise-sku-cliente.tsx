@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { MetricStrip } from "@/components/ui/workspace";
+
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
@@ -467,7 +470,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
@@ -475,8 +478,9 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
           </Panel>
         )}
 
+        <div className="decision-operation-strip"><h2 className="decision-surface-title">Investigar produtos</h2><p className="text-[14px] text-ink-2">{count(totais.skus)} SKUs com venda · períodos e canais comparáveis</p></div>
         {/* ── Resumo ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <MetricStrip>
           {[
             { r: "SKUs com venda", v: count(totais.skus) },
             { r: "Receita", v: moneyShort(totais.receita) },
@@ -497,7 +501,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
               )}
             </Panel>
           ))}
-        </div>
+        </MetricStrip>
 
         <Panel className="overflow-hidden">
           <Tabs

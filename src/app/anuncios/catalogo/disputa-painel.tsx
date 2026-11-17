@@ -274,7 +274,7 @@ export function DisputaPainel({ disputa }: { disputa: DadosDisputa }) {
         title="Disputa de catálogo"
         hint={`${total} anúncios de catálogo · medição de ${disputa.primeiroDia ? dataBr(disputa.primeiroDia) : "—"} a ${disputa.ultimoDia ? dataBr(disputa.ultimoDia) : "—"} (${disputa.diasNaJanela} dias)`}
       />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 border-b border-line">
+      <div className="op-stat-strip !rounded-none !border-x-0 !border-t-0">
         <StatTile
           label="Ganhando ou dividindo"
           value={count(ganhandoOuDividindo)}

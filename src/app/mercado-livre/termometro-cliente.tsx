@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
@@ -143,7 +146,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
       <>
         <PageHeader title="Termômetro" breadcrumb="Mercado Livre" description="A leitura operacional do dia." />
         <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
           <Panel>
             <PanelHeader
               title="Nenhuma conta do Mercado Livre nesta empresa"
@@ -205,36 +208,41 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           </BarraFiltros>
         }
       />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
+        {/* ── O que fazer hoje, antes de qualquer gráfico ─────────── */}
+        <Panel className="overflow-hidden">
+          <PanelHeader title="Precisa de olho hoje" hint={`${dados.atencao.length} ponto(s), do mais grave para o menos.`} />
+          {dados.atencao.length === 0 ? (
+            <p className="px-4 py-6 text-[13px] text-ink-3">Nada fora do esperado nas regras que a tela checa.</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {dados.atencao.map((a) => (
+                <li key={a.chave} className="flex items-start gap-2.5 px-4 py-3">
+                  <TriangleAlert
+                    className={cn("w-4 h-4 shrink-0 mt-0.5", a.gravidade === "alta" ? "text-down" : a.gravidade === "media" ? "text-warn" : "text-ink-3")}
+                    strokeWidth={2}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium text-ink">{a.titulo}</p>
+                    <p className="text-[12px] text-ink-2">{a.detalhe}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
         {/* ── O termômetro ───────────────────────────────────────── */}
         <Panel className="overflow-hidden">
-          <div className="grid gap-0 md:grid-cols-[minmax(0,300px)_1fr]">
-            <div className="flex flex-col justify-center gap-2 border-b border-line p-5 md:border-b-0 md:border-r">
-              <span className="label">Ritmo da semana</span>
-              <div className="flex items-center gap-3">
-                <l.Icone className="w-8 h-8 shrink-0" strokeWidth={1.75} style={{ color: l.cor }} />
-                <div className="min-w-0">
-                  <p className="num text-[30px] font-bold leading-none text-ink">
-                    {varReceita == null ? "—" : `${varReceita > 0 ? "+" : ""}${Math.round(varReceita)}%`}
-                  </p>
-                  <Badge tone={l.tom}>{l.rotulo}</Badge>
-                </div>
-              </div>
-              <p className="text-[12.5px] text-ink-2">
-                {money(r.receita)} contra {money(r.receitaAnterior)} nos mesmos{" "}
-                {dados.diasCorridos === 1 ? "1 dia" : `${dados.diasCorridos} dias`} da semana anterior.
-              </p>
-              {dados.parcial && (
-                <p className="text-[12px] text-ink-3">
-                  Hoje ({dataBr(dados.hoje)}) fica fora da conta: o dia não terminou.
-                </p>
-              )}
-            </div>
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+            <HeroMetric className="!border-0 !rounded-none" label={dados.parcial ? `Hoje · ${dataBr(dados.hoje)} · em andamento` : `Último dia · ${dataBr(dados.hoje)}`} value={dados.dia ? money(dados.dia.receita) : "—"} delta={dados.dia ? varPct(dados.dia.receita, dados.dia.anterior?.receita ?? null) : undefined} hint={dados.dia ? `${count(dados.dia.pedidos)} pedidos · ${count(dados.dia.unidades)} unidades` : "Sem dado diário"}>
+              <div className="mt-4 border-t border-line pt-4 text-[14px] leading-6 text-ink-2"><p><Badge tone={l.tom}>{l.rotulo}</Badge> <span className="ml-2 font-semibold">{varReceita == null ? "—" : `${varReceita > 0 ? "+" : ""}${Math.round(varReceita)}%`} na semana</span></p><p className="mt-2">{money(r.receita)} contra {money(r.receitaAnterior)} nos mesmos {dados.diasCorridos} dias da semana anterior.</p>{dados.parcial && <p className="mt-2 text-[12px] text-ink-3">Hoje fica fora do ritmo da semana: o dia não terminou.</p>}</div>
+            </HeroMetric>
 
             {/* A barra do termômetro: escala de -50% a +50%, com o zero no meio. */}
             <div className="p-5 flex flex-col justify-center gap-4">
               <div>
-                <div className="relative h-7 rounded-full overflow-hidden" style={{ background: "linear-gradient(90deg, var(--down) 0%, var(--warn) 30%, var(--panel-3) 50%, var(--up) 100%)" }}>
+                <div className="relative h-7 rounded-full overflow-hidden" style={{ background: "var(--panel-3)" }}>
                   <div
                     className="absolute top-0 bottom-0 w-[3px] bg-ink rounded-full"
                     style={{ left: `${Math.min(99, Math.max(1, 50 + (varReceita ?? 0) / 2))}%` }}
@@ -268,29 +276,6 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           </div>
         </Panel>
 
-        {/* ── O que fazer hoje, antes de qualquer gráfico ─────────── */}
-        <Panel className="overflow-hidden">
-          <PanelHeader title="Precisa de olho hoje" hint={`${dados.atencao.length} ponto(s), do mais grave para o menos.`} />
-          {dados.atencao.length === 0 ? (
-            <p className="px-4 py-6 text-[13px] text-ink-3">Nada fora do esperado nas regras que a tela checa.</p>
-          ) : (
-            <ul className="divide-y divide-line">
-              {dados.atencao.map((a) => (
-                <li key={a.chave} className="flex items-start gap-2.5 px-4 py-3">
-                  <TriangleAlert
-                    className={cn("w-4 h-4 shrink-0 mt-0.5", a.gravidade === "alta" ? "text-down" : a.gravidade === "media" ? "text-warn" : "text-ink-3")}
-                    strokeWidth={2}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-ink">{a.titulo}</p>
-                    <p className="text-[12px] text-ink-2">{a.detalhe}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
-
         {/* ── Dia a dia ──────────────────────────────────────────── */}
         <Panel className="overflow-hidden">
           <PanelHeader
@@ -307,6 +292,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
                     key={v}
                     type="button"
                     onClick={() => setMetrica(v)}
+                    aria-pressed={metrica === v}
                     className={cn(
                       "min-h-9 rounded-r1 border px-2.5 text-[12px] font-medium transition-colors",
                       metrica === v ? "border-brand bg-brand text-brand-ink" : "border-line-2 bg-panel text-ink-2 hover:bg-panel-3"
@@ -328,7 +314,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
                 }}>
                 <CartesianGrid {...GRID} />
                 <XAxis dataKey="dia" {...AXIS} />
-                <YAxis {...AXIS} tickFormatter={formatar} width={54} />
+                <YAxis {...AXIS} tickFormatter={formatar} width={76} />
                 <Tooltip
                   formatter={(v, nome) => [formatar(Number(v) || 0), nome === "atual" ? "esta semana" : "semana anterior"]}
                   labelFormatter={(_, p) => {
@@ -337,8 +323,8 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
                   }}
                   contentStyle={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12 }}
                 />
-                <Bar dataKey="atual" name="atual" fill="var(--s1)" radius={[4, 4, 0, 0]} maxBarSize={44} cursor="pointer" />
-                <Line dataKey="anterior" name="anterior" stroke="var(--ink-3)" strokeWidth={2} strokeDasharray="4 3" dot={{ r: 3 }} />
+                <Bar dataKey="atual" name="atual" fill="var(--brand)" radius={[4, 4, 0, 0]} maxBarSize={44} cursor="pointer" />
+                <Line dataKey="anterior" name="anterior" stroke="var(--ink-3)" strokeWidth={2}  dot={{ r: 3 }} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -368,14 +354,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
         </Panel>
 
         {/* ── Hoje, mídia e ticket ───────────────────────────────── */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatTile
-            label={dados.parcial ? `Hoje (${dataBr(dados.hoje)}) · parcial` : `Último dia (${dataBr(dados.hoje)})`}
-            value={money(dados.dia?.receita ?? 0)}
-            hint={`${count(dados.dia?.pedidos ?? 0)} pedidos · ${count(dados.dia?.unidades ?? 0)} unidades`}
-            delta={varPct(dados.dia?.receita ?? 0, dados.dia?.anterior?.receita ?? null)}
-            ajuda="Comparado com o MESMO dia da semana passada, não com ontem: sábado não se parece com terça."
-          />
+        <MetricStrip>
           <StatTile
             label="Ticket médio da semana"
             value={r.ticket == null ? "—" : money(r.ticket)}
@@ -397,7 +376,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
             inverse
             ajuda="Quantas visitas o canal entrega por pedido fechado. Subir significa que está custando mais tráfego para vender o mesmo."
           />
-        </div>
+        </MetricStrip>
 
         {/* ── O que aconteceu, no mesmo eixo do gráfico de cima ──── */}
         {dados.acontecimentos.length > 0 && (

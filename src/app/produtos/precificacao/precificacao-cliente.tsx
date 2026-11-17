@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
+
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -57,22 +60,25 @@ function Grade<T>({ linhas, colunas, chave, linhaInteira }: {
   }, [linhas, colunas, ordem]);
 
   return (
-    <div className="overflow-auto rounded-r3 border border-line bg-panel">
+    <div className="max-w-full overflow-auto rounded-r2 border border-line bg-panel" role="region" aria-label="Tabela de preços e custos" tabIndex={0}>
       <table className="w-full border-separate border-spacing-0 text-[13.5px]">
         <thead>
           <tr>
             {colunas.map((c, i) => (
               <th
                 key={c.id}
-                onClick={() => setOrdem((o) => ({ id: c.id, dir: o?.id === c.id && o.dir === -1 ? 1 : -1 }))}
+                scope="col"
+                aria-sort={ordem?.id === c.id ? ordem.dir === -1 ? "descending" : "ascending" : "none"}
                 className={cn(
                   "sticky top-0 cursor-pointer select-none whitespace-nowrap border-b border-line bg-panel-2 px-3 py-2.5 text-[12px] font-medium text-ink-3",
                   c.esq ? "text-left" : "text-right",
                   i === 0 && "left-0 z-20"
                 )}
               >
-                {c.titulo}
-                {ordem?.id === c.id ? (ordem.dir === -1 ? " ↓" : " ↑") : ""}
+                <button type="button" onClick={() => setOrdem((o) => ({ id: c.id, dir: o?.id === c.id && o.dir === -1 ? 1 : -1 }))} className="inline-flex min-h-11 items-center gap-2 text-[14px] text-ink-2">
+                  {c.titulo}
+                  {ordem?.id === c.id ? (ordem.dir === -1 ? " ↓" : " ↑") : ""}
+                </button>
               </th>
             ))}
           </tr>
@@ -129,7 +135,7 @@ export default function PrecificacaoCliente({ dados }: { dados: DadosPrecificaca
     return (
       <>
         <PageHeader title="Precificação" />
-        <PageBody><EmptyState title="Nenhuma empresa selecionada" /></PageBody>
+        <PageBody className={decisaoCss.workspace}><EmptyState title="Nenhuma empresa selecionada" /></PageBody>
       </>
     );
   }
@@ -187,7 +193,7 @@ export default function PrecificacaoCliente({ dados }: { dados: DadosPrecificaca
   return (
     <>
       <PageHeader title="Precificação" badge={<Badge>{dados.empresa}</Badge>} filters={filtros} mobileFilters={false} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
         <Tabs
           className="-mx-4 md:-mx-6"
           tabs={[
@@ -414,16 +420,7 @@ function Precos({ ctx, onCotar }: { ctx: Contexto; onCotar: (produtoId: string) 
   return (
     <>
       {vendido > 0 ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile
-            className="col-span-2"
-            label={`Margem de contribuição${semImposto ? " · sem imposto" : ""}${semCusto ? " · com produto sem custo" : ""}`}
-            value={money(contrib)}
-            hint={`${pct((contrib / vendido) * 100)} do vendido · Ads medido`}
-          />
-          <StatTile label="Vendido" value={money(vendido)} hint={`${dados.de.slice(8)}/${dados.de.slice(5, 7)} a ${dados.ate.slice(8)}/${dados.ate.slice(5, 7)}`} />
-          <StatTile label="Recebido" value={money(recebido)} hint={`${pct((recebido / vendido) * 100)} do vendido · do canal`} />
-        </div>
+        <HeroMetric label={`Margem de contribuição${semImposto ? " · sem imposto" : ""}${semCusto ? " · com produto sem custo" : ""}`} value={money(contrib)} hint={`${pct(contrib / vendido * 100)} do vendido · Ads medido`}><MetricStrip><StatTile label="Vendido" value={money(vendido)} hint={`${dados.de.slice(8)}/${dados.de.slice(5,7)} a ${dados.ate.slice(8)}/${dados.ate.slice(5,7)}`} /><StatTile label="Recebido" value={money(recebido)} hint={`${pct(recebido / vendido * 100)} do vendido · do canal`} /></MetricStrip></HeroMetric>
       ) : (
         <Panel className="px-4 py-4">
           <p className="text-[18px] font-semibold text-ink-2">Sem venda neste canal</p>
@@ -623,8 +620,9 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
   );
 
   return (
-    <div className="space-y-4">
-      <Panel className="p-4">
+    <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+      <Panel className="p-5 xl:sticky xl:top-[calc(var(--topbar)+24px)]">
+        <h2 className="mb-5 text-[20px] font-semibold tracking-tight text-ink">Produto e medidas</h2>
         <Field label="Produto" className="mb-3 max-w-[480px]">
           <Select value={produtoId ?? ""} onChange={(e) => onProduto(e.target.value || null)}>
             <option value="">Produto novo</option>
@@ -633,7 +631,7 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
             ))}
           </Select>
         </Field>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4">
           {campo("custo", "Custo (R$)")}
           {campo("embalagem", "Embalagem (R$)")}
           {campo("peso", "Peso (kg)")}
@@ -661,7 +659,7 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
         </div>
       </Panel>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2">
         {dados.canais.map((c) => {
           const r = c.codigo === "mercado_livre" ? meli : contaDoCanal(c.codigo);
           const faixaCat = r.efetiva.tipos[0].faixaCategoria;
@@ -769,10 +767,7 @@ function Contribuicao({ ctx }: { ctx: Contexto }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile className="col-span-2" label={`Contribuição estimada · Ads ${pct(ctx.adsPct)}`} value={money(T.lucro)} hint={T.vendido ? `${pct((T.lucro / T.vendido) * 100)} de ${money(T.vendido)} · ${T.un} un.` : "escolha as quantidades"} />
-        <StatTile label="Realizado 30 dias" value={rVend ? money(rLucro) : "—"} hint={rVend ? `${pct((rLucro / rVend) * 100)} de ${money(rVend)} · Ads medido` : "sem venda no canal"} />
-      </div>
+      <HeroMetric label={`Contribuição estimada · Ads ${pct(ctx.adsPct)}`} value={money(T.lucro)} hint={T.vendido ? `${pct(T.lucro / T.vendido * 100)} de ${money(T.vendido)} · ${T.un} un.` : "Escolha as quantidades"}><StatTile label="Realizado 30 dias" value={rVend ? money(rLucro) : "—"} hint={rVend ? `${pct(rLucro / rVend * 100)} de ${money(rVend)} · Ads medido` : "sem venda no canal"} /></HeroMetric>
       <Grade
         linhas={linhas}
         chave={(x) => x.k}

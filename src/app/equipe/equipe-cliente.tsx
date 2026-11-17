@@ -90,7 +90,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="team-workspace management-workspace flex flex-col gap-8">
       {erro && (
         <Panel className="px-3.5 py-2.5 border-down">
           <p className="text-[12.5px] text-down">{erro}</p>
@@ -99,7 +99,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
 
       {/* ── Convidar ───────────────────────────────────────── */}
       {administra && (
-        <div className="space-y-3">
+        <div className="management-section">
           <SectionTitle
             title="Convidar alguém"
             hint="O convite vale 7 dias e vira um link para você mandar"
@@ -131,7 +131,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
                 />
               </Field>
               <Field label="Permissão" className="sm:w-52">
-                <Select value={papel} onChange={(e) => setPapel(e.target.value as Papel)}>
+                <Select aria-label="Permissão" value={papel} onChange={(e) => setPapel(e.target.value as Papel)}>
                   {PAPEIS.filter(
                     // Administrador não cria proprietário — o banco recusa, e
                     // oferecer a opção só produziria um erro depois do clique.
@@ -157,12 +157,12 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
 
       {/* ── Convites pendentes ─────────────────────────────── */}
       {equipe.convites.length > 0 && (
-        <div className="space-y-3">
+        <div className="management-section">
           <SectionTitle
             title={`Convites em aberto (${equipe.convites.length})`}
             hint="Ainda não aceitos"
           />
-          <div className="flex flex-col gap-2">
+          <div className="management-records">
             {equipe.convites.map((c) => (
               <Panel key={c.id} className="px-4 py-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -214,7 +214,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
                         size="sm"
                         variant="danger"
                         disabled={ocupado}
-                        title="Cancelar convite"
+                        title="Cancelar convite" aria-label={`Cancelar convite para ${c.email}`}
                         onClick={() => chamar({ acao: "cancelar", conviteId: c.id })}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -229,9 +229,9 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
       )}
 
       {/* ── Quem já entra ──────────────────────────────────── */}
-      <div className="space-y-3">
+      <div className="management-section">
         <SectionTitle title={`Com acesso (${equipe.membros.length})`} />
-        <div className="flex flex-col gap-2">
+        <div className="management-records">
           {equipe.membros.map((m) => (
             <Panel key={m.id} className="px-4 py-3">
               <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -248,6 +248,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
                   {administra && !m.euMesmo ? (
                     <Select
                       className="w-40"
+                      aria-label={`Permissão de ${m.nome ?? m.email}`}
                       value={m.papel}
                       disabled={ocupado}
                       onChange={(e) =>
@@ -270,7 +271,7 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
                       size="sm"
                       variant="danger"
                       disabled={ocupado}
-                      title="Remover da empresa"
+                      title="Remover da empresa" aria-label={`Remover ${m.nome ?? m.email} da empresa`}
                       onClick={() => {
                         if (
                           confirm(

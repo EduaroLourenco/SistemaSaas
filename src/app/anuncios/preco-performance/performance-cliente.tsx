@@ -4,6 +4,7 @@ import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationSummary, OperationMethod } from "@/components/analise/operation-layout";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Input, Select, Segmented } from "@/components/ui/controls";
@@ -238,18 +239,18 @@ export default function PerformancePrecoCliente({
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className="op-workspace op-anuncios-preco-performance">
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
-            <p className="text-[13px] text-ink-2">{erro}</p>
+            <p className="text-[14px] text-ink-2">{erro}</p>
           </Panel>
         )}
 
         {avisoVitrine && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-warn/40 bg-warn-wash">
             <AlertCircle className="w-4 h-4 text-warn shrink-0 mt-0.5" />
-            <p className="text-[12.5px] text-ink-2 leading-relaxed">
+            <p className="text-[14px] text-ink-2 leading-relaxed">
               <span className="font-semibold text-ink tracking-wide">{avisoVitrine}</span>{" "}
               A coluna <span className="font-medium text-ink-2">Vitrine / desconto</span> é
               a única que depende do canal; todo o resto vem dos pedidos e continua
@@ -266,49 +267,19 @@ export default function PerformancePrecoCliente({
         )}
 
 
-        {/* ── Resumo ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {[
-            { r: "SKUs com venda", v: count(resumo.total) },
-            {
-              r: "Com preço de referência",
-              v: count(resumo.comEvidencia),
-              nota: "passaram no piso de evidência",
-            },
-            {
-              r: "Acima do melhor preço",
-              v: count(resumo.acimaDoMelhor),
-              alerta: resumo.acimaDoMelhor > 0,
-            },
-            {
-              r: "Subiu e caiu venda",
-              v: count(resumo.subiuECaiu),
-              alerta: resumo.subiuECaiu > 0,
-              nota: "preço acima e ritmo abaixo",
-            },
-          ].map((k) => (
-            <Panel key={k.r} className="p-3">
-              <p className="text-[12px] text-ink-3 mb-1">{k.r}</p>
-              <p
-                className={`num text-[18px] font-semibold leading-none ${
-                  k.alerta ? "text-down" : "text-ink"
-                }`}
-              >
-                {k.v}
-              </p>
-              {k.nota && (
-                <p className="text-[12px] text-ink-3 mt-1.5">{k.nota}</p>
-              )}
-            </Panel>
-          ))}
-        </div>
+        <OperationSummary label="Evidência de preço no recorte" items={[
+          {label: "SKUs com venda", value: count(resumo.total)},
+          {label: "Com preço de referência", value: count(resumo.comEvidencia), hint: "Passaram no piso de evidência"},
+          {label: "Acima do melhor preço", value: count(resumo.acimaDoMelhor), tone: resumo.acimaDoMelhor > 0 ? "warn" : undefined},
+          {label: "Subiu e caiu venda", value: count(resumo.subiuECaiu), hint: "Preço acima e ritmo abaixo", tone: resumo.subiuECaiu > 0 ? "warn" : undefined},
+        ]} />
 
         {/* ── Gráfico do SKU aberto ── */}
         {detalhe && (
           <Panel className="p-4 mb-3">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-ink">
+                <p className="text-[14px] font-semibold text-ink">
                   <span className="num">{detalhe.sku}</span> — unidades por dia
                   em cada preço
                 </p>
@@ -386,6 +357,7 @@ export default function PerformancePrecoCliente({
               </ResponsiveContainer>
             </div>
 
+            <OperationMethod title="Ver dados por faixa de preço"><div className="overflow-auto" tabIndex={0} role="region" aria-label="Valores por faixa de preço"><table className="op-table"><thead><tr><th>Preço</th><th>Unidades</th><th>Dias</th><th>Unidades/dia</th><th>Receita/dia</th><th>Comissão</th></tr></thead><tbody>{detalhe.faixas.map((f,i)=><tr key={i}><td className="num">{money(f.preco)}</td><td className="num">{count(f.unidades)}</td><td className="num">{count(f.dias)}</td><td className="num">{f.unDia}</td><td className="num">{money(f.receitaDia)}</td><td className="num">{f.comissaoPct == null ? "—" : pct(f.comissaoPct,2)}</td></tr>)}</tbody></table></div></OperationMethod>
             {/* Barras cinza são faixas sem evidência: existem no gráfico
                 para mostrar que houve venda ali, e não competem pelo
                 título de melhor preço. */}
@@ -398,7 +370,7 @@ export default function PerformancePrecoCliente({
         )}
 
         {/* ── Lista ── */}
-        <Panel className="overflow-hidden">
+        <Panel className="op-primary-table overflow-hidden">
           <div className="flex items-center gap-2 p-3 border-b border-line flex-wrap">
             <Segmented
               options={[
@@ -458,7 +430,7 @@ export default function PerformancePrecoCliente({
                           >
                             {l.curva}
                           </Badge>
-                          <span className="num text-[12.5px] text-ink font-medium">
+                          <span className="num text-[14px] text-ink font-medium">
                             {l.sku}
                           </span>
                         </div>
@@ -466,13 +438,13 @@ export default function PerformancePrecoCliente({
                           {l.titulo}
                         </p>
                       </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-2`}>
+                      <td className={`${td} text-right num text-[14px] text-ink-2`}>
                         {count(l.unidades)}
                       </td>
                       <td className={`${td} text-right`}>
                         {l.melhor ? (
                           <div className="flex flex-col items-end leading-tight">
-                            <span className="num text-[13px] font-semibold text-up">
+                            <span className="num text-[14px] font-semibold text-up">
                               {money(l.melhor.preco)}
                             </span>
                             <span className="num text-[12px] text-ink-3">
@@ -485,7 +457,7 @@ export default function PerformancePrecoCliente({
                           </span>
                         )}
                       </td>
-                      <td className={`${td} text-right num text-[12.5px] text-ink-2`}>
+                      <td className={`${td} text-right num text-[14px] text-ink-2`}>
                         {l.melhor ? l.melhor.unDia : "—"}
                       </td>
                       {/* O último preço é o que a comparação usa: a média
@@ -494,7 +466,7 @@ export default function PerformancePrecoCliente({
                       <td className={`${td} text-right`}>
                         {l.precoUltimo != null ? (
                           <div className="flex flex-col items-end leading-tight">
-                            <span className="num text-[13px] text-ink font-medium">
+                            <span className="num text-[14px] text-ink font-medium">
                               {money(l.precoUltimo)}
                             </span>
                             <span className="num text-[12px] text-ink-3">
@@ -511,7 +483,7 @@ export default function PerformancePrecoCliente({
                           patamar ou um ponto fora da curva. */}
                       <td className={`${td} text-right`}>
                         {l.precoRecente != null ? (
-                          <span className="num text-[12.5px] text-ink-2">
+                          <span className="num text-[14px] text-ink-2">
                             {money(l.precoRecente)}
                           </span>
                         ) : (
@@ -524,7 +496,7 @@ export default function PerformancePrecoCliente({
                       <td className={`${td} text-right`}>
                         {l.precoVitrine != null ? (
                           <div className="flex flex-col items-end leading-tight">
-                            <span className="num text-[12.5px] text-ink-2">
+                            <span className="num text-[14px] text-ink-2">
                               {money(l.precoVitrine)}
                             </span>
                             {l.precoUltimo != null && l.precoVitrine > 0 && (
@@ -543,7 +515,7 @@ export default function PerformancePrecoCliente({
                       <td className={`${td} text-right`}>
                         {l.variacao != null ? (
                           <span
-                            className={`num text-[12.5px] font-medium ${
+                            className={`num text-[14px] font-medium ${
                               l.variacao > 2
                                 ? "text-down"
                                 : l.variacao < -2
@@ -562,7 +534,7 @@ export default function PerformancePrecoCliente({
                         {l.impacto != null ? (
                           <div className="flex flex-col items-end leading-tight">
                             <span
-                              className={`num text-[12.5px] font-medium ${
+                              className={`num text-[14px] font-medium ${
                                 l.impacto < -20 ? "text-down" : l.impacto > 20 ? "text-up" : "text-ink-2"
                               }`}
                             >

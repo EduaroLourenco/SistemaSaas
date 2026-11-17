@@ -333,7 +333,7 @@ export default function CanaisCliente({
   ];
 
   const abas = (
-    <div className="flex items-center gap-1 p-0.5 rounded-r2 border border-line bg-panel w-fit">
+    <div className="workspace-tabs flex min-w-0 max-w-full items-center gap-1 overflow-x-auto border-b border-line pb-1" role="group" aria-label="Cadastro e conexões">
       {(
         [
           ["contas", `Contas de venda (${contas.length})`],
@@ -345,9 +345,10 @@ export default function CanaisCliente({
         <button
           key={chave}
           type="button"
+          aria-pressed={aba === chave}
           onClick={() => setAba(chave)}
           className={
-            "px-3 py-1.5 rounded-r1 text-[12.5px] font-medium transition-colors " +
+            "min-h-11 shrink-0 px-4 rounded-r1 text-[14px] font-medium transition-colors " +
             (aba === chave
               ? "bg-brand/10 text-brand"
               : "text-ink-2 hover:text-ink hover:bg-line/40")

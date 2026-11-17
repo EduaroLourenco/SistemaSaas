@@ -13,7 +13,7 @@ export type Column<T> = {
   /** Célula do desktop. */
   cell: (row: T) => React.ReactNode;
   /** Valor para ordenação. Omitir torna a coluna não-ordenável. */
-  sortValue?: (row: T) => number | string;
+  sortValue?: (row: T) => number | string | null;
   /** Papel no cartão do mobile: título, métrica em destaque, ou oculto. */
   mobile?: "title" | "subtitle" | "metric" | "hidden";
   width?: string;
@@ -68,6 +68,8 @@ export function DataTable<T>({
     return [...rows].sort((a, b) => {
       const va = col.sortValue!(a);
       const vb = col.sortValue!(b);
+      if (va == null) return vb == null ? 0 : 1;
+      if (vb == null) return -1;
       if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
       return String(va).localeCompare(String(vb), "pt-BR") * dir;
     });
@@ -114,7 +116,7 @@ export function DataTable<T>({
           {onRowClick && <button className="gerizo-record-open" type="button" onClick={() => onRowClick(row)}>Abrir detalhes →</button>}
         </article>)}
       </div> : <div className={cn("gerizo-table-scroll gerizo-data-table", className)} tabIndex={0} role="region" aria-label="Tabela de resultados. Deslize para ver todas as colunas.">
-        <table className="w-full border-collapse text-[13px]" style={{ minWidth: shown.length > 6 ? 920 : shown.length > 3 ? 620 : undefined }}>
+        <table className="w-full border-collapse text-[14px]" style={{ minWidth: shown.length > 6 ? 920 : shown.length > 3 ? 620 : undefined }}>
           <thead>
             <tr className="bg-panel-2">
               {shown.map((c) => {

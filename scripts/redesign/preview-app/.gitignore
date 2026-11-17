@@ -1,0 +1,8 @@
+.next/
+next-env.d.ts
+public/
+tsconfig.tsbuildinfo
+tsconfig.runtime.json
+AGENTS.md
+CLAUDE.md
+app/qa-utilities.css

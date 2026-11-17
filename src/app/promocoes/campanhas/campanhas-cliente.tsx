@@ -3,8 +3,9 @@
 import * as React from "react";
 import { PromocoesPorSku } from "@/components/promocoes/por-sku";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationSummary } from "@/components/analise/operation-layout";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
-import { Segmented } from "@/components/ui/controls";
+import { Segmented, Sheet } from "@/components/ui/controls";
 import { SemFonte } from "@/components/ui/sem-fonte";
 import { money, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -108,7 +109,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
     return (
       <>
         <PageHeader title="Campanhas" breadcrumb="Promoções" />
-        <PageBody>
+        <PageBody className="op-workspace op-promocoes-campanhas">
           <SemFonte
             titulo="Nenhuma campanha processada"
             origem="As campanhas saem das planilhas da Central de Promoções: o nome de cada uma vem na própria planilha. Processe uma e ela aparece aqui, com quantos itens participaram e quantos ficaram de fora."
@@ -123,7 +124,6 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
       <PageHeader
         title="Campanhas"
         breadcrumb="Promoções"
-        description="Decisões da última rodada de cada campanha"
         filters={
           <>
             <Segmented
@@ -141,7 +141,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                 aria-label="Data inicial das campanhas"
                 value={de}
                 onChange={(e) => setDe(e.target.value)}
-                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline-none focus:border-brand"
+                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px] text-ink outline-none focus:border-brand"
               />
               <span className="text-[12px] text-ink-3">até</span>
               <input
@@ -149,7 +149,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                 aria-label="Data final das campanhas"
                 value={ate}
                 onChange={(e) => setAte(e.target.value)}
-                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline-none focus:border-brand"
+                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px] text-ink outline-none focus:border-brand"
               />
             </span>
             <span className="relative shrink-0 w-full sm:w-56">
@@ -160,15 +160,20 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Nome da campanha"
                 className="w-full h-7 pl-8 pr-3 rounded-r1 bg-panel border border-line
-                           text-[12.5px] text-ink outline-none focus:border-brand"
+                           text-[14px] text-ink outline-none focus:border-brand"
               />
             </span>
           </>
         }
       />
 
-      <PageBody>
-        <Panel className="overflow-hidden">
+      <PageBody className="op-workspace op-promocoes-campanhas">
+        <OperationSummary label="Última rodada das campanhas filtradas" items={[
+          { label: "Participam", value: count(totais.participam), hint: `${count(totais.itens)} itens analisados · confirme a participação no canal` },
+          { label: "Campanhas", value: count(linhas.length), hint: "no recorte selecionado" },
+          { label: "Itens analisados", value: count(totais.itens) },
+        ]} />
+        <Panel className="op-primary-table overflow-hidden">
           <PanelHeader
             title="Adesão por campanha"
             hint="aprovadas pelo sistema · confirme a participação no canal"
@@ -185,7 +190,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
             }
           />
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[13px]">
+            <table className="w-full border-collapse text-[14px]">
               <thead>
                 <tr className="border-b border-line">
                   <th className="text-left px-3 py-2 min-w-[260px]">
@@ -210,7 +215,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                       <td className="px-3 py-2">
                         <button aria-expanded={expandida === c.id} onClick={() => setExpandida(expandida === c.id ? null : c.id)} className="flex min-h-10 items-center gap-2 min-w-0 text-left">
                           <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", expandida === c.id && "rotate-180")} />
-                          <span className="text-[12.5px] font-medium text-ink">
+                          <span className="text-[14px] font-medium text-ink">
                             {c.nome}
                           </span>
                           <Badge tone={c.temReducao ? "brand" : "neutral"}>
@@ -258,6 +263,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                         <button
                           onClick={() => { setAApagar(c); setErro(null); }}
                           title="Apagar esta campanha e seu histórico"
+                          aria-label={`Apagar ${c.nome} e seu histórico`}
                           className="p-1 rounded-r1 text-ink-3 hover:text-down hover:bg-panel-3"
                         >
                           <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -314,7 +320,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
               .map((h) => (
                 <li key={h.id} className="px-4 py-2.5 flex items-baseline justify-between gap-3">
                   <span className="min-w-0">
-                    <p className="text-[12.5px] text-ink truncate">{h.titulo}</p>
+                    <p className="text-[14px] text-ink truncate">{h.titulo}</p>
                     <p className="num text-[12px] text-ink-3">
                       {h.sku} · {h.mlb} · {h.campanha}
                     </p>
@@ -330,7 +336,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
                 </li>
               ))}
             {!dados.historico.some((h) => !h.aprovado && h.tags.includes("quase")) && (
-              <li className="px-4 py-6 text-center text-[13px] text-ink-3">
+              <li className="px-4 py-6 text-center text-[14px] text-ink-3">
                 Nenhum item ficou de fora por pouco nas rodadas processadas.
               </li>
             )}
@@ -368,22 +374,14 @@ function ConfirmarApagar({
   onConfirmar: () => void;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onCancelar}
-    >
-      <div
-        className="w-full max-w-md rounded-r2 bg-panel border border-line shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-4 py-3 border-b border-line">
-          <p className="text-[13px] font-semibold text-ink">Apagar esta campanha?</p>
-        </div>
+    <Sheet title="Apagar esta campanha?" onClose={onCancelar} width="520px" footer={<>
+      <button onClick={onCancelar} disabled={apagando} className="h-11 rounded-r1 border border-line-2 px-4 text-[14px] text-ink-2 hover:bg-panel-2 disabled:opacity-50">Cancelar</button>
+      <button onClick={onConfirmar} disabled={apagando} className="inline-flex h-11 items-center gap-2 rounded-r1 bg-down px-4 text-[14px] font-medium text-white disabled:opacity-60">{apagando && <Loader2 className="h-4 w-4 animate-spin" />}{apagando ? "Apagando" : "Apagar campanha"}</button>
+    </>}>
+        <div className="p-5 space-y-4">
+          <p className="text-[14px] text-ink-2 break-words">{campanha.nome}</p>
 
-        <div className="px-4 py-3 space-y-3">
-          <p className="text-[12.5px] text-ink-2 break-words">{campanha.nome}</p>
-
-          <ul className="text-[12.5px] text-ink-2 space-y-1">
+          <ul className="text-[14px] text-ink-2 space-y-1">
             <li>
               <span className="num text-ink">{count(campanha.itens)}</span> linhas de
               histórico e suas ofertas
@@ -406,26 +404,6 @@ function ConfirmarApagar({
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-line flex justify-end gap-2">
-          <button
-            onClick={onCancelar}
-            disabled={apagando}
-            className="h-7 px-3 rounded-r1 border border-line-2 text-[12.5px] text-ink-2
-                       hover:bg-panel-2 disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onConfirmar}
-            disabled={apagando}
-            className="h-7 px-3 rounded-r1 bg-down text-white text-[12.5px] font-medium
-                       inline-flex items-center gap-1.5 disabled:opacity-60"
-          >
-            {apagando && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {apagando ? "Apagando" : "Apagar"}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }

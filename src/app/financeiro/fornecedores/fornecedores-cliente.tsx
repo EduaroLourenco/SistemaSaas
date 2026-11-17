@@ -68,7 +68,7 @@ export default function FornecedoresCliente({
         <div className="flex flex-col gap-0.5 min-w-0">
           <span className="text-ink font-medium">{f.nomeFantasia || f.razaoSocial}</span>
           {f.nomeFantasia && (
-            <span className="text-[12px] text-ink-3 truncate max-w-xs">{f.razaoSocial}</span>
+            <span className="text-[12px] text-ink-3 [overflow-wrap:anywhere] max-w-xs">{f.razaoSocial}</span>
           )}
         </div>
       ),
@@ -78,7 +78,7 @@ export default function FornecedoresCliente({
       titulo: "CNPJ",
       render: (f) =>
         f.cnpj ? (
-          <span className="num text-[12.5px] text-ink-2">{cnpjBonito(f.cnpj)}</span>
+          <span className="num text-[14px] text-ink-2">{cnpjBonito(f.cnpj)}</span>
         ) : (
           <span className="text-ink-3">—</span>
         ),
@@ -97,7 +97,7 @@ export default function FornecedoresCliente({
       chave: "condicao",
       titulo: "Condição",
       render: (f) => (
-        <span className="text-ink-2 text-[12.5px]">
+        <span className="text-ink-2 text-[14px]">
           {f.condicaoPagamento || "—"}
           {f.diaVencimento ? (
             <span className="text-ink-3"> · dia {f.diaVencimento}</span>

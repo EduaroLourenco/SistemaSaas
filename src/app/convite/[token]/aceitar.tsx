@@ -1,4 +1,5 @@
 "use client";
+import { Brand } from "@/components/ui/brand";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -52,10 +53,10 @@ export default function AceitarConvite({
   }
 
   return (
-    <main className="min-h-screen grid place-items-center px-4 bg-canvas">
-      <div className="w-full max-w-sm flex flex-col gap-4">
+    <main className="access-page">
+      <div className="access-panel flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-[18px] font-semibold text-ink">Entrar em {empresa}</h1>
+          <Brand className="mb-6" /><h1 className="text-[28px] font-semibold text-ink">Entrar em {empresa}</h1>
           <p className="text-[13px] text-ink-2 leading-relaxed">
             Você entra como <b className="text-ink">{papel}</b>.
           </p>

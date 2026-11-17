@@ -55,7 +55,7 @@ export default function Planejamento({
   const [dados, setDados] = useState(iniciais),
     [referencia, setReferencia] = useState(hoje),
     [visao, setVisao] = useState("Mês"),
-    [aba, setAba] = useState("Quadro");
+    [aba, setAba] = useState("Hoje");
   const [selecionada, setSelecionada] = useState("");
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [ficha, setFicha] = useState<Item | null>(null);

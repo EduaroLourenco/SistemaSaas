@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { MetricStrip, WorkflowSteps } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Badge, Button, Panel, PanelHeader } from "@/components/ui/primitives";
@@ -596,7 +599,8 @@ export default function VendasLancamentos({ dados, automacao = {} }: { dados: Da
         }
       />
 
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
+        <WorkflowSteps steps={["Escolher conta e mês", "Conferir e editar", "Salvar lançamentos"]} current={semConta ? 0 : 1} />
         {fontesAutomaticas && Object.values(fontesAutomaticas).some(Boolean) && <Panel className="mb-3 p-3.5"><p className="text-xs text-ink-2"><Lock className="mr-1 inline h-3.5 w-3.5" /> Campos da API são apenas leitura. {fontesAutomaticas.vendas ? `Vendas: ${fontesAutomaticas.vendas}. ` : ""}{fontesAutomaticas.visitas ? `Visitas: ${fontesAutomaticas.visitas}. ` : ""}{fontesAutomaticas.ads ? `Mídia: ${fontesAutomaticas.ads}.` : ""}</p></Panel>}
         {/* Antes de tudo: sem isso a pessoa preenche o mês e descobre no
             Salvar que não dava. */}
@@ -616,7 +620,7 @@ export default function VendasLancamentos({ dados, automacao = {} }: { dados: Da
           </Panel>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <MetricStrip>
           <StatTile
             label="Receita bruta do mês"
             value={total.receita > 0 ? money(total.receita) : "—"}
@@ -642,7 +646,7 @@ export default function VendasLancamentos({ dados, automacao = {} }: { dados: Da
             inverse
             hint={`ADS ${moneyShort(total.ads)} sobre a receita`}
           />
-        </div>
+        </MetricStrip>
 
         <Panel className="overflow-hidden">
           <PanelHeader

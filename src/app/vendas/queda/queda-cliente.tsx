@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
@@ -23,7 +26,7 @@ import { Segmented, Select } from "@/components/ui/controls";
 import { SeletorCanais } from "@/components/ui/seletor-canais";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Pagination, usePagination } from "@/components/ui/pagination";
-import { AXIS, GRID } from "@/components/ui/chart";
+import { AXIS, GRID, ChartTooltip } from "@/components/ui/chart";
 import { money, moneyShort, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { COLUNAS_QUEDA, colunaTexto, ordenarFiltrarQueda, type ColunaQueda } from "@/lib/queda-filtros";
@@ -331,7 +334,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
         }
       />
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
         {dados.vazio ? (
           <Panel>
             <EmptyState
@@ -343,23 +346,11 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
         ) : (
           <>
             {/* ── O resumo: quanto mudou, e para onde foi a queda ── */}
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-              <Panel className="p-4">
-                <p className="label">Receita no recorte</p>
-                <p className="num mt-1 text-[24px] font-semibold text-ink">{money(dados.totalAgora)}</p>
-                <p className="num mt-1 text-[13px] text-ink-2">
-                  antes {money(dados.totalAntes)} ·{" "}
-                  <span className={variacao < 0 ? "text-down" : "text-up"}>
-                    {variacao > 0 ? "+" : "−"}
-                    {money(Math.abs(variacao))}
-                    {dados.totalAntes > 0 && ` (${pct((variacao / dados.totalAntes) * 100)})`}
-                  </span>
-                </p>
-                <p className="mt-3 text-[12px] leading-relaxed text-ink-3">
-                  Abra um produto para conferir seus canais e anúncios.
-                </p>
-              </Panel>
-              <Panel className="p-4 lg:col-span-2">
+            <div className="decision-comparison">
+              <HeroMetric label="Variação de receita" value={`${variacao > 0 ? "+" : variacao < 0 ? "−" : ""}${money(Math.abs(variacao))}`} delta={dados.totalAntes > 0 ? (variacao / dados.totalAntes) * 100 : undefined} hint={`${dataBr(dados.de)} a ${dataBr(dados.ate)} contra ${dataBr(dados.deAnterior)} a ${dataBr(dados.ateAnterior)}`}>
+                <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4 text-[14px]"><div><dt className="text-ink-3">Antes</dt><dd className="mt-1 font-semibold text-ink tabular-nums">{money(dados.totalAntes)}</dd></div><div><dt className="text-ink-3">Agora</dt><dd className="mt-1 font-semibold text-ink tabular-nums">{money(dados.totalAgora)}</dd></div></dl>
+              </HeroMetric>
+              <Panel className="p-5">
                 <p className="label">Para onde foi a queda</p>
                 <p className="num mt-1 text-[13px] text-ink-2">
                   {money(Math.abs(quedaTotal))} perdidos em {count(porCausa.reduce((s, [, x]) => s + x.itens, 0))}{" "}
@@ -735,8 +726,7 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
 
       {aba === "evolucao" && <div>
         <p className="label mb-1.5">
-          Dia a dia · barras = receita · {temVitrine ? "laranja = preço anunciado · " : ""}roxo = preço vendido no dia
-          {temVisita ? " · pontilhado = visitas" : ""}
+          Dia a dia · receita, preços e visitas em escalas independentes
         </p>
         {erro ? (
           <p className="text-[12px] text-down">{erro}</p>
@@ -745,67 +735,28 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
             Carregando…
           </p>
         ) : (
-          <div className="h-[220px] rounded-r1 border border-line bg-panel p-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={serie} margin={{ top: 6, right: 4, left: 0, bottom: 0 }} onClick={(e) => { if (e.activeLabel) setDiaEscolhido(String(e.activeLabel)); }}>
-                <CartesianGrid {...GRID} />
-                <ReferenceArea yAxisId="r" x1={dados.deAnterior} x2={dados.ateAnterior} fill="var(--panel-3)" fillOpacity={0.6} />
-                <XAxis dataKey="data" {...AXIS} tickFormatter={dataBr} minTickGap={24} />
-                <YAxis yAxisId="r" {...AXIS} width="auto" tickFormatter={(v) => moneyShort(Number(v))} />
-                <YAxis yAxisId="p" orientation="right" {...AXIS} width="auto" tickCount={3} tickFormatter={(v) => money(Number(v))} domain={["auto", "auto"]} />
-                {temVisita && <YAxis yAxisId="v" hide />}
-                <Tooltip
-                  cursor={{ fill: "var(--panel-3)" }}
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload?.length) return null;
-                    const d = payload[0].payload as DiaQueda;
-                    return (
-                      <div className="panel px-2.5 py-2 text-[12px]" style={{ boxShadow: "var(--sh-3)" }}>
-                        <p className="mb-1 font-semibold text-ink-2">{dataBr(String(label))}</p>
-                        <p className="num">receita {money(d.receita)} · {d.unidades} un</p>
-                        {d.visitas != null && <p className="num">visitas {count(d.visitas)}</p>}
-                        {d.precoVitrine != null && <p className="num">vitrine {money(d.precoVitrine)}</p>}
-                        {d.precoVendido != null && <p className="num">vendido {money(d.precoVendido)}</p>}
-                        {d.estoque != null && <p className="num">estoque {count(d.estoque)}</p>}
-                      </div>
-                    );
-                  }}
-                />
-                <Bar yAxisId="r" dataKey="receita" fill="var(--s1)" fillOpacity={0.55} isAnimationActive={false} />
-                {/* Anunciado: retratos com buracos entre eles (o semanal, o catálogo),
-                    por isso pontos ligados só onde há dias seguidos. Vendido: só em dia
-                    com venda, e ligar os pontos inventaria uma tendência. */}
-                {temVitrine && (
-                  <Line
-                    yAxisId="p"
-                    dataKey="precoVitrine"
-                    stroke="var(--warn)"
-                    strokeWidth={2}
-                    dot={{ r: 2, fill: "var(--warn)" }}
-                    isAnimationActive={false}
-                  />
-                )}
-                <Line
-                  yAxisId="p"
-                  dataKey="precoVendido"
-                  stroke="var(--s4)"
-                  strokeOpacity={0}
-                  dot={{ r: 3, fill: "var(--s4)" }}
-                  isAnimationActive={false}
-                />
-                {temVisita && (
-                  <Line
-                    yAxisId="v"
-                    dataKey="visitas"
-                    stroke="var(--s3)"
-                    strokeDasharray="4 3"
-                    strokeWidth={1.5}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                )}
-              </ComposedChart>
-            </ResponsiveContainer>
+          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+            {[
+              { titulo: "Receita por dia", moeda: true, barras: true, series: [{chave:"receita",nome:"Receita",cor:"var(--brand)"}] },
+              { titulo: "Preço anunciado e vendido", moeda: true, barras: false, series: [...(temVitrine ? [{chave:"precoVitrine",nome:"Anunciado",cor:"var(--warn)"}] : []),{chave:"precoVendido",nome:"Vendido",cor:"var(--brand)"}] },
+              ...(temVisita ? [{ titulo:"Visitas por dia", moeda:false, barras:false, series:[{chave:"visitas",nome:"Visitas",cor:"var(--info)"}] }] : []),
+            ].map((grafico) => <section key={grafico.titulo} className="min-w-0 rounded-r2 border border-line bg-panel p-4">
+              <h4 className="text-[14px] font-medium text-ink">{grafico.titulo}</h4>
+              <div className="mt-3 h-[200px] min-w-0" aria-label={grafico.titulo}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <ComposedChart data={serie} margin={{top:6,right:4,left:0,bottom:0}} onClick={(e) => {if(e.activeLabel)setDiaEscolhido(String(e.activeLabel));}}>
+                    <CartesianGrid {...GRID} />
+                    <ReferenceArea x1={dados.deAnterior} x2={dados.ateAnterior} fill="var(--panel-3)" fillOpacity={0.6} />
+                    <XAxis dataKey="data" {...AXIS} tickFormatter={dataBr} minTickGap={32} />
+                    <YAxis {...AXIS} width={76} tickFormatter={(v) => grafico.moeda ? moneyShort(Number(v)) : count(Number(v))} />
+                    <Tooltip content={<ChartTooltip formatter={(v) => grafico.moeda ? money(v) : count(v)} />} labelFormatter={(v) => dataBr(String(v))} />
+                    {grafico.series.map((item) => grafico.barras ? <Bar key={item.chave} dataKey={item.chave} name={item.nome} fill={item.cor} isAnimationActive={false} /> : <Line key={item.chave} type="linear" dataKey={item.chave} name={item.nome} stroke={item.cor} strokeWidth={2} dot={item.chave === "precoVendido" ? {r:3} : false} connectNulls={false} isAnimationActive={false} />)}
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="mt-2 text-[12px] text-ink-3">{grafico.series.map(item=>item.nome).join(" · ")}</p>
+            </section>)}
+            <details className="decision-method lg:col-span-2"><summary>Ver todos os dados por dia</summary><div className="decision-table" role="region" aria-label="Evidência diária" tabIndex={0}><table className="w-full min-w-[720px]"><thead><tr>{["Data","Receita","Unidades","Vitrine","Vendido","Visitas","Estoque"].map(t=><th key={t} scope="col">{t}</th>)}</tr></thead><tbody>{serie.map(d=><tr key={d.data} className="border-t border-line"><th scope="row">{dataBr(d.data)}</th><td>{money(d.receita)}</td><td>{count(d.unidades)}</td><td>{d.precoVitrine == null ? "—" : money(d.precoVitrine)}</td><td>{d.precoVendido == null ? "—" : money(d.precoVendido)}</td><td>{d.visitas == null ? "—" : count(d.visitas)}</td><td>{d.estoque == null ? "—" : count(d.estoque)}</td></tr>)}</tbody></table></div></details>
           </div>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-2"><p className="text-[11px] text-ink-3">Cinza: período anterior.</p><input type="date" aria-label="Dia do detalhe" min={dados.deAnterior} max={dados.ate} value={diaEscolhido} onChange={(e) => setDiaEscolhido(e.target.value)} onBlur={(e) => setDiaEscolhido(e.target.value)} className="min-h-10 rounded-r1 border border-line bg-panel px-2 text-xs" /></div>

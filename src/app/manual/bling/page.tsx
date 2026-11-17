@@ -1,3 +1,4 @@
+import { Brand } from "@/components/ui/brand";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Manual da integração com o Bling" };
@@ -13,8 +14,8 @@ export const metadata: Metadata = { title: "Manual da integração com o Bling" 
 export default function ManualBling() {
   return (
     <main className="min-h-screen bg-ground text-ink">
-      <article className="mx-auto max-w-2xl px-4 py-12 flex flex-col gap-8 text-[15px] leading-relaxed">
-        <header className="flex flex-col gap-2">
+      <article className="editorial-page flex flex-col gap-8">
+        <header className="flex flex-col gap-2 border-b border-line pb-8"><Brand className="mb-6" />
           <span className="label">Manual</span>
           <h1 className="text-[26px] font-semibold">Integração com o Bling</h1>
           <p className="text-ink-2">

@@ -1,14 +1,14 @@
 .pl-root {
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* O estúdio conserva seus modos, mas compartilha o acabamento da operação. */
 .pl-root .pl-calendar-panel,
-.pl-root .pl-campaign { border-radius: var(--r2); box-shadow: var(--sh-1); }
+.pl-root .pl-campaign { border-radius: var(--r2); box-shadow: none; }
 .pl-root .pl-calendar-toolbar { background: var(--panel-2); border-radius: var(--r2) var(--r2) 0 0; }
 .pl-root .pl-campaign { transition: border-color 140ms ease, box-shadow 140ms ease; }
-.pl-root .pl-campaign:hover { border-color: var(--brand-edge); box-shadow: var(--sh-2); }
+.pl-root .pl-campaign:hover { border-color: var(--brand-edge); box-shadow: none; }
 .pl-root .pl-stats strong { font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
 .pl-root .pl-section-nav nav button.active { color: var(--brand); }
 .pl-strategy-intro {
@@ -68,7 +68,7 @@
 .pl-ad small,
 .pl-learning small {
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: 12px;
 }
 .pl-ad > svg {
   flex-shrink: 0;
@@ -116,7 +116,7 @@
 }
 .pl-metrics small,
 .pl-metrics span {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-2);
 }
 .pl-focus-heading {
@@ -149,7 +149,7 @@
   margin-bottom: 18px;
 }
 .pl-focus-filters .pl-chip span {
-  font-size: 10px;
+  font-size: 12px;
   opacity: 0.7;
 }
 .pl-priorities {
@@ -187,7 +187,7 @@
 }
 .pl-priority small {
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: 12px;
 }
 .pl-focus-aside {
   display: grid;
@@ -204,7 +204,7 @@
 }
 .pl-horizon small {
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: 12px;
 }
 @media (max-width: 1080px) {
   .pl-focus-layout {
@@ -355,7 +355,7 @@
 }
 .pl-eyebrow {
   color: var(--brand);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 1.8px;
   display: flex;
@@ -407,7 +407,7 @@
   border: 0;
 }
 .pl-stats span {
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 1.2px;
   color: var(--ink-2);
   white-space: nowrap;
@@ -497,7 +497,7 @@
   letter-spacing: -0.4px;
 }
 .pl-calendar-toolbar input[type="date"] {
-  font-size: 11px;
+  font-size: 12px;
   padding: 5px 6px;
   max-width: 124px;
 }
@@ -515,7 +515,7 @@
 }
 .pl-segment button.active {
   background: var(--panel);
-  box-shadow: var(--sh-1);
+  box-shadow: none;
   color: var(--ink);
   font-weight: 600;
 }
@@ -526,7 +526,7 @@
   align-items: center;
   padding: 0 18px 14px;
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: 12px;
   flex-wrap: wrap;
 }
 .pl-calendar-options label {
@@ -551,7 +551,7 @@
 }
 .pl-weekdays span {
   padding: 10px 12px;
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 1.2px;
   color: var(--ink-2);
 }
@@ -594,7 +594,7 @@
 .pl-date > button:first-child {
   width: 25px;
   height: 25px;
-  font-size: 11px;
+  font-size: 12px;
   border-radius: 50%;
   font-weight: 500;
 }
@@ -631,7 +631,7 @@
   border-left: 3px solid;
   background: var(--brand-wash);
   color: var(--ink);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.3;
   text-align: left;
   min-height: 28px;
@@ -653,7 +653,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--ink-2);
-  font-size: 9px;
+  font-size: 12px;
 }
 .pl-event.data {
   background: var(--warn-wash);
@@ -674,7 +674,7 @@
 }
 .pl-calendar-help {
   padding: 12px 16px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--ink-2);
   display: flex;
   gap: 5px;
@@ -691,7 +691,7 @@
 }
 .pl-channel-header > * {
   padding: 12px 8px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .pl-channel-header .today {
   color: var(--brand);
@@ -710,7 +710,7 @@
 .pl-channel-row small {
   display: block;
   font-weight: 400;
-  font-size: 9px;
+  font-size: 12px;
   color: var(--ink-2);
   margin-top: 6px;
 }
@@ -734,7 +734,7 @@
 .pl-channel-empty {
   grid-column: 1/-1;
   color: var(--ink-3);
-  font-size: 11px;
+  font-size: 12px;
   padding: 25px;
 }
 .pl-section-title {
@@ -770,7 +770,7 @@
 }
 .pl-campaign:hover {
   border-color: var(--brand-edge);
-  box-shadow: var(--sh-1);
+  box-shadow: none;
 }
 .pl-campaign h3 {
   font-weight: 600;
@@ -785,7 +785,7 @@
 }
 .pl-campaign small {
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: 12px;
 }
 .pl-campaign-foot {
   display: flex;
@@ -794,7 +794,7 @@
   padding-top: 13px;
   margin-top: 16px;
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: 12px;
 }
 .pl-badge {
   display: inline-flex;
@@ -802,7 +802,7 @@
   background: var(--panel-3);
   border-radius: 5px;
   color: var(--ink-2);
-  font-size: 10px;
+  font-size: 12px;
 }
 .pl-empty {
   padding: 48px 20px;
@@ -859,12 +859,12 @@
 }
 .pl-date-tile span {
   color: var(--ink-2);
-  font-size: 10px;
+  font-size: 12px;
   text-transform: uppercase;
 }
 .pl-opportunity small {
   color: var(--ink-2);
-  font-size: 10px;
+  font-size: 12px;
 }
 .pl-opportunity h4 {
   font-weight: 600;
@@ -875,11 +875,11 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--brand);
 }
 .pl-footnote {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--ink-2);
   margin-top: 25px;
   line-height: 1.8;
@@ -929,8 +929,8 @@
   border-left: 1px solid var(--line);
   background: var(--panel);
   color: var(--ink);
-  font-size: 13px;
-  box-shadow: var(--sh-3);
+  font-size: 14px;
+  box-shadow: none;
   overflow-y: auto;
 }
 .pl-drawer::backdrop {
@@ -964,7 +964,7 @@
   background: var(--panel);
 }
 .pl-editor-tabs button {
-  font-size: 11px;
+  font-size: 12px;
   padding: 14px 0;
   white-space: nowrap;
   border-bottom: 2px solid transparent;
@@ -1037,7 +1037,7 @@
   padding: 6px 9px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-2);
   background: var(--panel);
 }
@@ -1088,7 +1088,7 @@
   background: var(--brand-wash);
   border-radius: 7px;
   color: var(--brand);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
 }
 .pl-related {
@@ -1106,13 +1106,13 @@
   display: block;
   margin-top: 4px;
   color: var(--ink-2);
-  font-size: 10px;
+  font-size: 12px;
 }
 .pl-products-summary {
   display: flex;
   justify-content: space-between;
   padding: 12px 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-2);
 }
 .pl-products-summary button {
@@ -1142,14 +1142,14 @@
 }
 .pl-product strong {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
 }
 .pl-product small {
   display: block;
   color: var(--ink-2);
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 4px;
 }
 .pl-task {
@@ -1212,7 +1212,7 @@
   gap: 4px;
   margin-top: 10px;
   color: var(--brand);
-  font-size: 10px;
+  font-size: 12px;
 }
 .pl-promo {
   padding: 14px 0;
@@ -1221,18 +1221,18 @@
 }
 .pl-promo strong {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
 }
 .pl-promo small {
   display: block;
   margin: 6px 0;
   color: var(--ink-2);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.6;
 }
 .pl-promo p {
   padding: 8px 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.8;
 }
 .pl-promo p span {
@@ -1254,7 +1254,7 @@
   margin-bottom: 10px;
 }
 .pl-season small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--ink-2);
 }
 .pl-season > .pl-between:last-child {
@@ -1314,7 +1314,7 @@
     gap: 17px;
   }
   .pl-section-nav nav button {
-    font-size: 11px;
+    font-size: 12px;
   }
   .pl-opportunity-grid {
     grid-template-columns: 1fr;
@@ -1360,7 +1360,7 @@
     gap: 15px;
   }
   .pl-stats span {
-    font-size: 8px;
+    font-size: 12px;
     letter-spacing: 0.5px;
   }
   .pl-section-nav nav {

@@ -1,4 +1,5 @@
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import "@/components/analise/operation-pages.css";
 import { SemFonte } from "@/components/ui/sem-fonte";
 
 /*
@@ -9,11 +10,11 @@ import { SemFonte } from "@/components/ui/sem-fonte";
 export default function Pagina() {
   return (
     <>
-      <PageHeader title="Fretes" breadcrumb="Monitoramento" />
-      <PageBody>
+      <PageHeader title="Fretes" badge={<span className="text-[14px] text-ink-3">Consulta por anúncio e CEP</span>} />
+      <PageBody className="op-workspace op-monitoramento-fretes">
         <SemFonte
-          titulo="Depende da API do Mercado Livre"
-          origem="Frete por anúncio e CEP é consulta ao vivo — nenhuma planilha traz esse número. A rota /api/monitoramento/frete já existe e passa a responder quando as credenciais do canal forem configuradas."
+          titulo="Consulta de frete indisponível"
+          origem="O frete por anúncio e CEP depende da conexão com o Mercado Livre. Esse dado não está disponível em planilhas; confira a conexão do canal para consultar prazos e valores reais."
         />
       </PageBody>
     </>

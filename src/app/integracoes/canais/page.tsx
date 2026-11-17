@@ -1,3 +1,4 @@
+import { WorkspaceNav } from "@/components/layout/workspace-nav";
 import { carregarCanais } from "@/lib/dados/canais";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import CanaisCliente from "./canais-cliente";
@@ -35,7 +36,7 @@ export default async function Pagina({
         breadcrumb="Integrações"
         description="Onde a empresa vende, com quais contas, e de qual ERP vêm os pedidos"
       />
-      <PageBody>
+      <PageBody className="management-workspace"><WorkspaceNav />
         <CanaisCliente
           canais={canais}
           contas={contas}

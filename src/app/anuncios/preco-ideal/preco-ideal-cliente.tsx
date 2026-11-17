@@ -3,6 +3,7 @@
 import * as React from "react";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationSummary, OperationMethod } from "@/components/analise/operation-layout";
 import {
   BarraFiltros,
   Filtro,
@@ -26,7 +27,6 @@ import {
   Select,
   Sheet,
 } from "@/components/ui/controls";
-import { StatTile } from "@/components/ui/stat-tile";
 import { AXIS, GRID, ChartTooltip } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import {
@@ -352,7 +352,6 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
         mobileFilters={false}
         title="Lógica de promoção"
         breadcrumb="Anúncios"
-        description="Onde a Fórmula base entra: o preço mínimo de campanha, por MLB, e o desvio do que está no ar"
         actions={
           <>
             <Button
@@ -458,7 +457,13 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
         }
       />
 
-      <PageBody>
+      <PageBody className="op-workspace op-anuncios-preco-ideal">
+        <OperationSummary label="Preço de referência do relatório selecionado" items={[
+          {label: "Desvio médio", value: pct(resumo.medio), hint: `Base ${dataBR(relatorio.dataBase)} · comissão negociada ${pct(resumo.comissao)}`},
+          {label: "No alvo", value: count(resumo.alvo), hint: `${pct((resumo.alvo / (resumo.total || 1)) * 100, 0)} do relatório`},
+          {label: "Acima do ideal", value: count(resumo.acima), hint: "Preço praticado maior que o alvo"},
+          {label: "Abaixo do ideal", value: count(resumo.abaixo), hint: `${money(Math.abs(resumo.economia))} de diferença para o preço de referência`},
+        ]} />
         {/* ── Relatórios importados ──────────────────────────── */}
         <Panel className="overflow-hidden">
           <PanelHeader
@@ -481,30 +486,6 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
             ))}
           </div>
         </Panel>
-
-        {/* ── Indicadores do relatório ───────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatTile
-            label="No alvo"
-            value={count(resumo.alvo)}
-            hint={`${pct((resumo.alvo / (resumo.total || 1)) * 100, 0)} do relatório`}
-          />
-          <StatTile
-            label="Acima do ideal"
-            value={count(resumo.acima)}
-            hint="preço praticado maior que o alvo"
-          />
-          <StatTile
-            label="Abaixo do ideal"
-            value={count(resumo.abaixo)}
-            hint={`${money(Math.abs(resumo.economia))} deixados na mesa`}
-          />
-          <StatTile
-            label="Desvio médio"
-            value={pct(resumo.medio)}
-            hint={`comissão negociada ${pct(resumo.comissao)}`}
-          />
-        </div>
 
         {/* ── Distribuição do desvio ─────────────────────────── */}
         <Panel className="overflow-hidden">
@@ -538,6 +519,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <div className="px-4"><OperationMethod title="Ver contagem por faixa de desvio"><dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">{distribuicao.map((d)=><div key={d.faixa}><dt className="text-[14px] text-ink-2">{d.faixa}</dt><dd className="num mt-1 text-[20px] font-semibold">{count(d.itens)}</dd></div>)}</dl></OperationMethod></div>
           <div className="px-4 py-3 border-t border-line">
             <p className="text-[12px] text-ink-2">
               <span className="font-semibold text-ink">Leitura: </span>
@@ -604,7 +586,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
                   key={f}
                   onClick={() => setFaixa(f)}
                   className={
-                    "h-11 rounded-r1 border text-[13px] font-medium transition-colors " +
+                    "h-11 rounded-r1 border text-[14px] font-medium transition-colors " +
                     (faixa === f
                       ? "border-brand bg-brand-wash text-brand"
                       : "border-line text-ink-2")
@@ -624,7 +606,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
                   key={t}
                   onClick={() => setTipo(t)}
                   className={
-                    "flex-1 h-11 rounded-r1 border text-[13px] font-medium transition-colors " +
+                    "flex-1 h-11 rounded-r1 border text-[14px] font-medium transition-colors " +
                     (tipo === t
                       ? "border-brand bg-brand-wash text-brand"
                       : "border-line text-ink-2")
@@ -676,7 +658,7 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
                   key={r.id}
                   onClick={() => setRelId(r.id)}
                   className={
-                    "flex items-center justify-between gap-2 h-11 px-3 rounded-r1 border text-[13px] font-medium transition-colors " +
+                    "flex items-center justify-between gap-2 h-11 px-3 rounded-r1 border text-[14px] font-medium transition-colors " +
                     (r.id === relatorio.id
                       ? "border-brand bg-brand-wash text-brand"
                       : "border-line text-ink-2")
@@ -762,7 +744,7 @@ function ComparativoLinha({
           <span className="num text-[19px] font-semibold text-ink leading-none">
             {money(linha.precoPraticado)}
           </span>
-          <span className="num text-[13px] text-ink-3">
+          <span className="num text-[14px] text-ink-3">
             ideal {money(linha.precoIdeal)}
           </span>
         </div>

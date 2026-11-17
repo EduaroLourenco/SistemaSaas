@@ -290,9 +290,9 @@ function EvolucaoMargem({ mensal }: { mensal: Resultado[] }) {
             {/* zero só aparece quando há prejuízo em algum mês */}
             {min < 0 && <ReferenceLine y={0} stroke="var(--down)" strokeDasharray="3 3" />}
             <Tooltip content={<ChartTooltip formatter={(v) => pct(Number(v))} />} />
-            <Line type="monotone" dataKey="margem" name="Margem de contribuição" stroke="var(--brand)" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
+            <Line type="linear" dataKey="margem" name="Margem de contribuição" stroke="var(--brand)" strokeWidth={2} dot={false} isAnimationActive={false} />
             {temResultado && (
-              <Line type="monotone" dataKey="resultado" name="Resultado" stroke="var(--up)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
+              <Line type="linear" dataKey="resultado" name="Resultado" stroke="var(--up)" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
             )}
           </LineChart>
         </ResponsiveContainer>
@@ -391,30 +391,14 @@ export function ResumoDre({ r }: { r: Resultado }) {
   ];
 
   return (
-    <section className="gerizo-finance-story">
-      <div className="gerizo-finance-intro">
-        <div><h2>Resultado financeiro</h2><p>{parcial ? "A leitura ainda é parcial. Complete os custos antes de concluir sobre a margem." : "Custos incluídos no resultado."}</p></div>
-        <div className="gerizo-coverage"><span>Cobertura dos custos <strong>{pct(r.cobertura, 1)}</strong></span><div role="progressbar" aria-label="Cobertura dos custos" aria-valuenow={Math.max(0, Math.min(100, r.cobertura))} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(0, Math.min(100, r.cobertura))}%` }} /></div><small>{moneyShort(r.receitaSemCusto)} de receita sem custo cadastrado</small></div>
+    <section className="finance-overview" aria-label="Resultado e cobertura do período">
+      <div className="finance-focal">
+        <div className="flex flex-wrap items-center justify-between gap-3"><p className="finance-focal-label">Resultado da operação</p><span className={cn("rounded-r1 px-2 py-1 text-[12px] font-medium", parcial ? "bg-warn-wash text-warn" : "bg-up-wash text-up")}>{parcial ? "Cobertura parcial" : "Custos completos"}</span></div>
+        <strong className={cn("finance-focal-number", r.resultado != null && r.resultado < 0 && "text-down")} aria-label={r.resultado == null ? "Resultado ainda indisponível" : money(r.resultado)}>{r.resultado == null ? "—" : money(r.resultado).replace(/\u00a0/g, " ")}</strong>
+        <p className="finance-focal-note">{r.resultado == null ? "Complete os custos por SKU para apurar o resultado da operação." : r.resultadoPct != null ? pct(r.resultadoPct, 1) + " da receita apurada" : "Resultado do período selecionado"}</p>
+        <div className="finance-coverage"><span>Custos completos em <strong className="num text-ink">{pct(r.cobertura, 1)}</strong> da receita</span><div role="progressbar" aria-label="Cobertura dos custos" aria-valuenow={Math.max(0, Math.min(100, r.cobertura))} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(0, Math.min(100, r.cobertura))}%` }} /></div></div>
       </div>
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-      {cartoes.map((c) => (
-        <div key={c.k} className="gerizo-stat-tile @container panel panel-1 min-w-0 px-3.5 py-3.5 flex flex-col gap-1.5">
-          <span className="flex items-center gap-2">
-            <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-full", c.tom)} aria-hidden="true"><c.icone size={16} /></span>
-            <span className="label leading-snug">{c.k}</span>
-          </span>
-          <span
-            className={cn(
-              "gerizo-metric-value num leading-tight font-bold [font-size:clamp(16px,8.5cqw,26px)]",
-              c.ruim ? "text-down" : "text-ink"
-            )}
-          >
-            {c.v}
-          </span>
-          <span className="text-[12px] text-ink-3 num break-words">{c.sub}</span>
-        </div>
-      ))}
-    </div>
+      <dl className="finance-overview-secondary">{cartoes.map((c) => <div key={c.k}><dt>{c.k === "Resultado" ? "Margem do resultado" : c.k}</dt><dd className={c.ruim ? "text-down" : "text-ink"}>{c.v.replace(/\u00a0/g, " ")}</dd><p>{c.sub}</p></div>)}</dl>
     </section>
   );
 }

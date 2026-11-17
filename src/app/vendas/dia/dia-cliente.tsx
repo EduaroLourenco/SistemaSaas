@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
@@ -133,7 +136,7 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
       <>
         <PageHeader title="Dia" breadcrumb="Vendas" filters={filtros || undefined} />
         <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
           <Panel className="p-6">
             <EmptyState
               icon={CalendarDays}
@@ -167,11 +170,12 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
         filters={filtros || undefined}
       />
 
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
         <AvisoFalha a={dados.atualizacao} />
 
+        <div className="decision-calendar">
         {/* ── O mês em calendário: escolhe o dia ── */}
-        <Panel className="overflow-hidden mb-3">
+        <Panel className="order-2 min-w-0 overflow-hidden lg:order-1">
           <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b border-line flex-wrap">
             <button
               type="button"
@@ -204,38 +208,23 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
               verde bateu a meta · vermelho não · toque no dia para abrir
             </span>
           </div>
+          <div className="max-w-full overflow-x-auto"><div className="min-w-[332px]">
           <Calendario
             dias={dados.mes}
             foco={h.data}
             aoEscolher={abrirDia}
             aoArrastar={(n) => (n < 0 ? podeVoltar : podeAvancar) && irMes(n)}
           />
+          </div></div>
           <p className="lg:hidden px-3 pb-3 text-[12px] text-ink-3">
             Arraste para o lado para trocar de mês · toque no dia para abrir
           </p>
         </Panel>
 
         {/* ── O dia escolhido ── */}
-        <div ref={detalhe} className="scroll-mt-[calc(var(--topbar)+12px)]">
-          <p className="mb-2 text-[17px] font-semibold text-ink">
-            {nomeDoDia(h.diaSemana)}, {br(h.data)}
-            {h.parcial ? (
-              <span className="ml-2 text-[13px] font-normal text-ink-3">
-                sem movimento registrado
-              </span>
-            ) : h.emAndamento ? (
-              <span className="ml-2 text-[13px] font-normal text-warn">
-                dia em andamento
-              </span>
-            ) : null}
-          </p>
-
+        <div ref={detalhe} className="order-1 min-w-0 scroll-mt-[calc(var(--topbar)+12px)] lg:order-2">
+          <HeroMetric label="Receita líquida do dia" value={money(h.receitaLiquida)} hint={`${nomeDoDia(h.diaSemana)}, ${br(h.data)}${h.parcial ? " · sem movimento registrado" : h.emAndamento ? " · dia em andamento" : ""}`} />
           <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden mb-3">
-            <Cartao
-              k="Receita líquida"
-              v={money(h.receitaLiquida)}
-              sub={h.valorCancelado > 0 ? `${moneyShort(h.valorCancelado)} cancelados` : ""}
-            />
             <Cartao
               k="Meta do dia"
               v={h.meta > 0 ? money(h.meta) : "—"}
@@ -300,6 +289,7 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
           <ProdutosDoDia produtos={dados.produtos} />
         </div>
 
+        </div>
         {/* ── Melhor e pior ── */}
         {dados.melhor && dados.pior && dados.melhor.data !== dados.pior.data && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

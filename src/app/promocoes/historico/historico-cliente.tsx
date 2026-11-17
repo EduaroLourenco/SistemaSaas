@@ -3,6 +3,7 @@
 import * as React from "react";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationSummary } from "@/components/analise/operation-layout";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Segmented } from "@/components/ui/controls";
 import { SemFonte } from "@/components/ui/sem-fonte";
@@ -50,6 +51,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
   const [ate, setAte] = React.useState("");
   const [aberto, setAberto] = React.useState<string | null>(null);
   const [limite, setLimite] = React.useState(30);
+  const [visao, setVisao] = React.useState<"skus" | "processamentos">("skus");
 
   const campanhasDisponiveis = React.useMemo(
     () => [...new Set(dados.historico.map((h) => h.campanha))].sort(),
@@ -103,7 +105,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
     return (
       <>
         <PageHeader title="Histórico de promoções" breadcrumb="Promoções" />
-        <PageBody>
+        <PageBody className="op-workspace op-promocoes-historico">
           <SemFonte
             titulo="Nenhuma planilha processada ainda"
             origem="Cada rodada da Central de Promoções grava aqui a decisão de cada item, com o preço ofertado pelo canal, o de tabela, o piso e o com desconto extra. Processe uma planilha e esta tela se preenche."
@@ -120,7 +122,6 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
       <PageHeader
         title="Histórico de promoções"
         breadcrumb="Promoções"
-        description="Cada decisão tomada, com os preços que a sustentaram"
         filters={
           <>
             <Segmented
@@ -154,7 +155,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
             <select
               value={campanha}
               onChange={(e) => setCampanha(e.target.value)}
-              className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px]
+              className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px]
                          text-ink outline-none focus:border-brand max-w-[200px]"
             >
               <option value="todas">Todas as campanhas</option>
@@ -169,14 +170,14 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
                 type="date"
                 value={de}
                 onChange={(e) => setDe(e.target.value)}
-                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline-none focus:border-brand"
+                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px] text-ink outline-none focus:border-brand"
               />
               <span className="text-[12px] text-ink-3">até</span>
               <input
                 type="date"
                 value={ate}
                 onChange={(e) => setAte(e.target.value)}
-                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px] text-ink outline-none focus:border-brand"
+                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px] text-ink outline-none focus:border-brand"
               />
             </span>
             <span className="relative shrink-0 w-full sm:w-52">
@@ -186,15 +187,21 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="SKU, MLB ou produto"
                 className="w-full h-7 pl-8 pr-3 rounded-r1 bg-panel border border-line
-                           text-[12.5px] text-ink outline-none focus:border-brand"
+                           text-[14px] text-ink outline-none focus:border-brand"
               />
             </span>
           </>
         }
       />
 
-      <PageBody>
-        <Panel className="overflow-hidden">
+      <PageBody className="op-workspace op-promocoes-historico">
+        <OperationSummary label="Histórico do recorte" items={[
+          { label: "Decisões registradas", value: count(filtrados.length), hint: "Preços e motivos preservados em cada rodada" },
+          { label: "Produtos", value: count(grupos.length) },
+          { label: "Processamentos", value: count(dados.processamentos.length), hint: "todas as rodadas disponíveis" },
+        ]} />
+        <Segmented options={[{value: "skus", label: "Por produto"}, {value: "processamentos", label: "Processamentos"}]} value={visao} onChange={setVisao} />
+        {visao === "skus" && <Panel className="op-primary-table overflow-hidden">
           <PanelHeader
             title="SKUs em promoção"
             hint="clique para abrir os anúncios · Clássico e Premium agrupados"
@@ -205,7 +212,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
             }
           />
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[13px]">
+            <table className="w-full border-collapse text-[14px]">
               <thead>
                 <tr className="border-b border-line">
                   <th className="sticky left-0 z-20 bg-panel text-left px-3 py-2 border-r border-line min-w-[230px]">
@@ -337,22 +344,22 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
             <button
               onClick={() => setLimite((l) => l + 50)}
               className={cn(
-                "w-full py-2.5 text-[12.5px] text-ink-2 hover:text-ink",
+                "w-full py-2.5 text-[14px] text-ink-2 hover:text-ink",
                 "hover:bg-panel-2 border-t border-line"
               )}
             >
               Mostrar mais {Math.min(50, grupos.length - limite)}
             </button>
           )}
-        </Panel>
+        </Panel>}
 
-        <Panel className="overflow-hidden">
+        {visao === "processamentos" && <Panel className="overflow-hidden">
           <PanelHeader title="Processamentos" hint="cada rodada da Central de Promoções" />
           <ul className="divide-y divide-line">
             {dados.processamentos.map((p) => (
               <li key={p.id} className="px-4 py-2.5 flex items-baseline justify-between gap-3">
                 <span className="min-w-0">
-                  <p className="text-[12.5px] text-ink truncate">
+                  <p className="text-[14px] text-ink truncate">
                     {p.arquivos.length ? p.arquivos.join(", ") : "—"}
                   </p>
                   <p className="num text-[12px] text-ink-3">
@@ -366,7 +373,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
               </li>
             ))}
           </ul>
-        </Panel>
+        </Panel>}
       </PageBody>
     </>
   );

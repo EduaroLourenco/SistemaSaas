@@ -146,7 +146,7 @@ export default function ContasCliente({
               <Repeat className="w-3 h-3 text-ink-3 shrink-0" aria-label="ocorrência de recorrência" />
             )}
           </span>
-          <span className="text-[12px] text-ink-3 truncate max-w-xs">
+          <span className="text-[12px] text-ink-3 [overflow-wrap:anywhere] max-w-xs">
             {[
               c.fornecedorId ? nomeForn.get(c.fornecedorId) : null,
               c.documento,
@@ -272,12 +272,12 @@ export default function ContasCliente({
           <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden">
             <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
               <span className="label">Em aberto</span>
-              <span className="num text-[19px] font-semibold text-ink">{money(aberto)}</span>
+              <span className="num text-[24px] font-semibold text-ink">{money(aberto)}</span>
             </div>
             <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
               <span className="label">Vencidas</span>
               <span
-                className={`num text-[19px] font-semibold ${
+                className={`num text-[24px] font-semibold ${
                   vencidas.length ? "text-down" : "text-ink"
                 }`}
               >
@@ -291,11 +291,11 @@ export default function ContasCliente({
             </div>
             <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
               <span className="label">Já pago</span>
-              <span className="num text-[19px] font-semibold text-ink">{money(pago)}</span>
+              <span className="num text-[24px] font-semibold text-ink">{money(pago)}</span>
             </div>
             <div className="bg-panel px-3.5 py-2.5 flex flex-col gap-0.5">
               <span className="label">Previsto</span>
-              <span className="num text-[19px] font-semibold text-ink">{money(previsto)}</span>
+              <span className="num text-[24px] font-semibold text-ink">{money(previsto)}</span>
               <span className="text-[12px] text-ink-3">gerado por recorrência</span>
             </div>
           </div>

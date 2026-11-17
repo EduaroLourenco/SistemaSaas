@@ -23,10 +23,8 @@ export default async function Pagina() {
     <>
       <PageHeader
         title="Contas a pagar"
-        breadcrumb="Financeiro"
-        description="O que vence, o que já foi pago e o que ainda vai vir"
       />
-      <PageBody>
+      <PageBody className="finance-page">
         <ContasCliente
           linhas={dados.linhas}
           categorias={dados.categorias}

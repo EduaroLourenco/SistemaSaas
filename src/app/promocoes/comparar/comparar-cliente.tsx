@@ -3,6 +3,7 @@
 import * as React from "react";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { OperationSummary } from "@/components/analise/operation-layout";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Segmented } from "@/components/ui/controls";
 import { SemFonte } from "@/components/ui/sem-fonte";
@@ -132,7 +133,7 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
     return (
       <>
         <PageHeader title="Comparar ofertas" breadcrumb="Promoções" />
-        <PageBody>
+        <PageBody className="op-workspace op-promocoes-comparar">
           <SemFonte
             titulo="Nenhuma oferta processada"
             origem="As ofertas saem das planilhas da Central de Promoções. O canal costuma propor mais de uma faixa de desconto para o mesmo anúncio — processe uma planilha e elas aparecem aqui, lado a lado."
@@ -147,7 +148,6 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
       <PageHeader
         title="Comparar ofertas"
         breadcrumb="Promoções"
-        description="Todas as propostas do canal para cada anúncio, lado a lado"
         filters={
           <>
             <Segmented
@@ -164,7 +164,7 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
             <select
               value={campanha}
               onChange={(e) => setCampanha(e.target.value)}
-              className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[12.5px]
+              className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px]
                          text-ink outline-none focus:border-brand shrink-0 max-w-[220px]"
             >
               <option value="todas">Todas as campanhas</option>
@@ -201,22 +201,28 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="MLB, SKU ou título"
                 className="w-full h-7 pl-8 pr-3 rounded-r1 bg-panel border border-line
-                           text-[12.5px] text-ink outline-none focus:border-brand"
+                           text-[14px] text-ink outline-none focus:border-brand"
               />
             </span>
           </>
         }
       />
 
-      <PageBody>
+      <PageBody className="op-workspace op-promocoes-comparar">
+        <OperationSummary label="Propostas do recorte" items={[
+          { label: "Anúncios para comparar", value: count(linhas.length), hint: "Abra um anúncio para conferir as propostas lado a lado" },
+          { label: "Propostas", value: count(totais.ofertas) },
+          { label: "Passam pelo piso", value: count(totais.participam) },
+          { label: "Sem proposta aprovada", value: count(totais.semNenhuma), tone: totais.semNenhuma > 0 ? "warn" : undefined },
+        ]} />
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
-            <p className="text-[13px] text-ink-2">{erro}</p>
+            <p className="text-[14px] text-ink-2">{erro}</p>
           </Panel>
         )}
 
-        <Panel className="overflow-hidden">
+        <Panel className="op-primary-table overflow-hidden">
           <PanelHeader
             title={`${count(linhas.length)} anúncios`}
             hint="clique para abrir as propostas"
@@ -235,7 +241,7 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
           />
 
           {!linhas.length ? (
-            <p className="px-3 py-10 text-center text-[12.5px] text-ink-3">
+            <p className="px-3 py-10 text-center text-[14px] text-ink-3">
               Nenhum anúncio com esse recorte.
             </p>
           ) : (
@@ -292,7 +298,7 @@ function LinhaAnuncio({
         <FotoAnuncio mlb={a.mlb} alt={a.titulo ?? a.mlb} tamanho={32} />
 
         <span className="min-w-0 flex-1">
-          <span className="block text-[12.5px] font-medium text-ink truncate">
+          <span className="block text-[14px] font-medium text-ink truncate">
             {a.titulo || a.mlb}
           </span>
           <span className="block text-[12px] text-ink-3 truncate">
@@ -309,7 +315,7 @@ function LinhaAnuncio({
         */}
         <span className="hidden sm:block shrink-0 text-right w-36">
           <span className="block label">Tabela</span>
-          <span className="block num text-[12.5px] text-ink-2">
+          <span className="block num text-[14px] text-ink-2">
             {a.tabelaDe == null
               ? "—"
               : a.tabelaDe === a.tabelaAte
@@ -348,7 +354,7 @@ function LinhaAnuncio({
           </p>
 
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="w-full border-collapse text-[14px]">
               <thead>
                 <tr className="border-b border-line">
                   <th className="text-left px-2 py-1.5 min-w-[200px]">

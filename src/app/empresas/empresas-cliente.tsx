@@ -94,7 +94,7 @@ export default function EmpresasCliente({ dados }: { dados: DadosEmpresas }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="management-workspace flex flex-col gap-6">
       {criada && (
         <Panel className="px-4 py-3.5">
           <div className="flex items-start gap-2.5">
@@ -122,7 +122,7 @@ export default function EmpresasCliente({ dados }: { dados: DadosEmpresas }) {
       )}
 
       {dados.souAdmin && (
-        <Panel className="px-4 py-3.5">
+        <details className="management-create"><summary><Plus size={16} aria-hidden="true" />Nova empresa</summary><Panel className="p-5">
           <form onSubmit={criar} className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Plus className="w-3.5 h-3.5 text-ink-3" />
@@ -130,14 +130,14 @@ export default function EmpresasCliente({ dados }: { dados: DadosEmpresas }) {
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <input
-                id="empresa-nome"
+                id="empresa-nome" aria-label="Nome da empresa"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="Nome da empresa"
                 className="flex-1 min-w-0 h-8 px-2.5 rounded-r1 bg-panel-2 border border-line text-[12.5px] text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink-3"
               />
               <input
-                id="empresa-email"
+                id="empresa-email" aria-label="E-mail do proprietário"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -150,7 +150,7 @@ export default function EmpresasCliente({ dados }: { dados: DadosEmpresas }) {
             </div>
             {erro && <p className="text-[12px] text-down">{erro}</p>}
           </form>
-        </Panel>
+        </Panel></details>
       )}
 
       <Panel>
@@ -216,12 +216,13 @@ function LinhaEmpresa({ empresa, souAdmin }: { empresa: Empresa; souAdmin: boole
   const podeApagar = souAdmin && empresa.operacoes >= 0;
 
   return (
-    <div className="px-3 py-2.5">
+    <div className="px-4 py-5 md:px-5">
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => setAberta((v) => !v)}
           aria-expanded={aberta}
+          aria-label={`${aberta ? "Recolher" : "Abrir"} operações de ${empresa.nome}`}
           className="w-5 h-5 flex items-center justify-center text-ink-3 hover:text-ink rounded-r1 hover:bg-panel-3 shrink-0"
         >
           {aberta ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -276,7 +277,7 @@ function LinhaEmpresa({ empresa, souAdmin }: { empresa: Empresa; souAdmin: boole
                */
               <span className="text-[12px] text-ink-3">não conectada</span>
             )}
-            <Button size="sm" variant="ghost" onClick={() => setEditando(true)} title="Renomear">
+            <Button size="sm" variant="ghost" onClick={() => setEditando(true)} title="Renomear" aria-label={`Renomear ${empresa.nome}`}>
               <Pencil className="w-3.5 h-3.5" />
             </Button>
           </>

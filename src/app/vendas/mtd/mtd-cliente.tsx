@@ -1,12 +1,15 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
-import { Select, Segmented } from "@/components/ui/controls";
+import { Select, Segmented, Progress } from "@/components/ui/controls";
 import {
   BarraFiltros,
   Filtro,
@@ -237,7 +240,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
@@ -246,8 +249,8 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
         )}
 
         {/* ── Quais canais entram na conta ── */}
-        <Panel className="p-3">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.07em] text-ink-3 mb-2">
+        <section className="decision-data-tools">
+          <p className="text-[14px] font-medium text-ink-2">
             Canais na conta
           </p>
           {/* Canais como fichas: com dez canais, dez caixas de seleção
@@ -282,10 +285,10 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
               marque todas as contas dele para comparar com a meta.
             </p>
           )}
-        </Panel>
+        </section>
 
         {/* ── O gap ── */}
-        <Panel className="p-4">
+        <section className="min-w-0 space-y-5">
           {semMeta ? (
             <div className="flex items-start gap-2.5">
               <Target className="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
@@ -304,57 +307,10 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-                <div>
-                  <p className="text-[12px] text-ink-3 mb-1">
-                    Deveria ter vendido
-                  </p>
-                  <p className="num text-[20px] font-semibold text-ink leading-none">
-                    {money(d.metaAteAqui)}
-                  </p>
-                  <p className="text-[12px] text-ink-3 mt-1">
-                    até {brData(d.ate)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[12px] text-ink-3 mb-1">Vendi</p>
-                  <p className="num text-[20px] font-semibold text-ink leading-none">
-                    {money(d.receitaPaga)}
-                  </p>
-                  <p className="num text-[12px] text-ink-3 mt-1">
-                    {d.metaAteAqui > 0
-                      ? `${pct((d.receitaPaga * 100) / d.metaAteAqui, 0)} da meta`
-                      : "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[12px] text-ink-3 mb-1">
-                    {devendo ? "Falta recuperar" : "Adiantado"}
-                  </p>
-                  <p
-                    className={`num text-[20px] font-semibold leading-none ${
-                      devendo ? "text-down" : "text-up"
-                    }`}
-                  >
-                    {money(Math.abs(d.gap))}
-                  </p>
-                  <p className="text-[12px] text-ink-3 mt-1">
-                    {d.diasRestantes} dias restantes
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[12px] text-ink-3 mb-1">
-                    Precisa por dia
-                  </p>
-                  <p className="num text-[20px] font-semibold text-ink leading-none">
-                    {d.porDiaRestante != null ? money(d.porDiaRestante) : "—"}
-                  </p>
-                  <p className="text-[12px] text-ink-3 mt-1">
-                    para fechar {moneyShort(d.metaMes)}
-                  </p>
-                </div>
-              </div>
-
+              <HeroMetric label="Realizado no mês" value={money(d.receitaPaga)} hint={`Fechado até ${brData(d.ate)} · ${d.diasRestantes} dias restantes`}>
+                <div className="space-y-4"><div className="flex flex-wrap items-baseline justify-between gap-3"><span className="text-[14px] text-ink-2">Meta do mês</span><span className="text-[24px] font-semibold text-ink tabular-nums">{money(d.metaMes)}</span></div><Progress value={d.metaMes > 0 ? d.receitaPaga / d.metaMes * 100 : 0} tone={devendo ? "warn" : "up"} /><p className="text-[14px] text-ink-2">{d.metaAteAqui > 0 ? pct(d.receitaPaga / d.metaAteAqui * 100,0) : "—"} da meta até aqui</p></div>
+              </HeroMetric>
+              <MetricStrip><div><p className="text-[14px] text-ink-2">Deveria ter vendido</p><p className="mt-2 text-[24px] font-semibold text-ink tabular-nums">{money(d.metaAteAqui)}</p><p className="mt-2 text-[12px] text-ink-3">até {brData(d.ate)}</p></div><div><p className="text-[14px] text-ink-2">{devendo ? "Falta recuperar" : "Adiantado"}</p><p className={`mt-2 text-[24px] font-semibold tabular-nums ${devendo ? "text-down" : "text-up"}`}>{money(Math.abs(d.gap))}</p><p className="mt-2 text-[12px] text-ink-3">{d.diasRestantes} dias restantes</p></div><div><p className="text-[14px] text-ink-2">Precisa por dia</p><p className="mt-2 text-[24px] font-semibold text-ink tabular-nums">{d.porDiaRestante == null ? "—" : money(d.porDiaRestante)}</p><p className="mt-2 text-[12px] text-ink-3">para fechar {money(d.metaMes)}</p></div></MetricStrip>
               {/* ── Quem recupera o atraso ── */}
               <div className="mt-4 pt-3 border-t border-line">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.07em] text-ink-3 mb-2">
@@ -481,7 +437,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
               </div>
             </>
           )}
-        </Panel>
+</section>
 
         {/* ── Onde está sendo perdido ── */}
         {!semMeta && (

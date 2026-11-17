@@ -1,57 +1,59 @@
 @import "tailwindcss";
+@import "./workspace.css";
 
 /* Gerizo — identidade compartilhada; nomes históricos dos tokens preservados. */
 
 :root {
   /* superfícies */
-  --ground: #f4f3ef;
+  --ground: #f5f5f8;
   --panel: #ffffff;
-  --panel-2: #faf9f6;
-  --panel-3: #eeede8;
-  --line: #e3e2dc;
-  --line-2: #cccec8;
+  --panel-2: #f8f8fb;
+  --panel-3: #eeeef3;
+  --line: #e5e5ed;
+  --line-2: #858a9b;
 
   /* tinta */
-  --ink: #202b2a;
-  --ink-2: #53605e;
-  --ink-3: #68716f;
+  --ink: #1c2030;
+  --ink-2: #515769;
+  --ink-3: #666c7e;
 
   /* identidade */
-  --brand: #7a4dd8;
-  --brand-2: #673bc4;
+  --brand: #7045d1;
+  --brand-2: #5c35b8;
   --brand-ink: #ffffff;
-  --brand-wash: #f1eaff;
-  --brand-edge: #dfd2f6;
-  --nav-active: #e8e3f3;
-  --nav-ink: #58329b;
-  --teal: #10bfa0;
+  --brand-wash: #f1edfc;
+  --brand-edge: #d9ccfa;
+  --nav-active: #eee9fa;
+  --nav-ink: #5930b4;
+  --focus: var(--brand);
+  --teal: #168679;
 
   /* semântica */
-  --up: #087d6b;
-  --up-wash: #e4f9f1;
-  --warn: #94600a;
-  --warn-wash: #fff4d9;
-  --down: #c12e4b;
-  --down-wash: #ffe8ed;
-  --info: #2563c4;
-  --info-wash: #eaf2ff;
+  --up: #087652;
+  --up-wash: #e8f7ef;
+  --warn: #8a5700;
+  --warn-wash: #fff4de;
+  --down: #b42343;
+  --down-wash: #fdecf0;
+  --info: #2458b5;
+  --info-wash: #ebf2fe;
 
   /* séries de gráfico */
   --s1: #10bfa0; --s2: #3b82f6; --s3: #e8a21a; --s4: #7a4dd8; --s5: #7e93b5;
   --s6: #c12e4b; --s7: #0f766e; --s8: #8c564b; --s9: #1e3a8a; --s10: #9aae1f;
 
   /* elevação — 3 níveis, nunca colorida */
-  --sh-1: 0 1px 2px rgba(16, 24, 40, 0.025);
+  --sh-1: none;
   --sh-2: 0 1px 3px rgba(16, 24, 40, 0.08), 0 8px 24px -12px rgba(16, 24, 40, 0.18);
   --sh-3: 0 16px 48px -16px rgba(16, 24, 40, 0.28);
   --veil: rgba(16, 24, 40, 0.42);
   --grid: rgba(16, 24, 40, 0.08);
 
   /* métrica */
-  --r1: 7px; --r2: 10px; --r3: 14px;
+  --r1: 8px; --r2: 12px; --r3: 16px;
   --row: 44px;
   --rail: 224px;
-  --topbar: 60px;
+  --topbar: calc(56px + env(safe-area-inset-top));
 
   --f-ui: var(--font-inter), ui-sans-serif, "Segoe UI Variable Text", "Segoe UI", Roboto,
     -apple-system, BlinkMacSystemFont, sans-serif;
@@ -66,30 +68,30 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ground: #0b0d12;
-    --panel: #14171f;
-    --panel-2: #1b1f29;
-    --panel-3: #232834;
-    --line: #262b36;
-    --line-2: #384150;
-    --ink: #e9edf4;
-    --ink-2: #a3adbe;
-    --ink-3: #9aa7bd;
-    --brand: #ae8aef;
-    --brand-2: #bfa1f6;
-    --brand-ink: #170c31;
-    --brand-wash: #2c2341;
-    --brand-edge: #574174;
-    --nav-active: #14373e;
-    --nav-ink: #8cdae0;
-    --teal: #50d1b3;
-    --up: #50d1b3; --up-wash: #11332e;
-    --warn: #f4bd59; --warn-wash: #382c17;
-    --down: #ff8ca1; --down-wash: #3b202a;
-    --info: #8bb6ff; --info-wash: #1c2c49;
-    --s1: #50d1b3; --s2: #8bb6ff; --s3: #f4bd59; --s4: #b287c4; --s5: #5cb2ca;
-    --s6: #ff8ca1; --s7: #99f6e4; --s8: #c08a7d; --s9: #8d9bb4; --s10: #d4e157;
-    --sh-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --ground: #101116;
+    --panel: #17191f;
+    --panel-2: #1d2028;
+    --panel-3: #282b35;
+    --line: #30333e;
+    --line-2: #777e92;
+    --ink: #f0f1f6;
+    --ink-2: #b9bece;
+    --ink-3: #a2a9bc;
+    --brand: #b59afb;
+    --brand-2: #ccb8ff;
+    --brand-ink: #1b1230;
+    --brand-wash: #2e2544;
+    --brand-edge: #68558b;
+    --nav-active: #2d2540;
+    --nav-ink: #d0bdff;
+    --teal: #69d4ad;
+    --up: #69d4ad; --up-wash: #18352b;
+    --warn: #f3c177; --warn-wash: #3a2d1c;
+    --down: #ff91a9; --down-wash: #40232d;
+    --info: #9abeff; --info-wash: #202f4b;
+    --s1: #69d4ad; --s2: #9abeff; --s3: #f3c177; --s4: #b287c4; --s5: #5cb2ca;
+    --s6: #ff91a9; --s7: #99f6e4; --s8: #c08a7d; --s9: #8d9bb4; --s10: #d4e157;
+    --sh-1: none;
     --sh-2: 0 1px 3px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
     --sh-3: 0 16px 48px -16px rgba(0, 0, 0, 0.8);
     --veil: rgba(0, 0, 0, 0.6);
@@ -98,30 +100,30 @@
 }
 
 :root[data-theme="dark"] {
-  --ground: #0b0d12;
-  --panel: #14171f;
-  --panel-2: #1b1f29;
-  --panel-3: #232834;
-  --line: #262b36;
-  --line-2: #384150;
-  --ink: #e9edf4;
-  --ink-2: #a3adbe;
-  --ink-3: #9aa7bd;
-  --brand: #ae8aef;
-  --brand-2: #bfa1f6;
-  --brand-ink: #170c31;
-  --brand-wash: #2c2341;
-  --brand-edge: #574174;
-    --nav-active: #14373e;
-    --nav-ink: #8cdae0;
-    --teal: #50d1b3;
-  --up: #50d1b3; --up-wash: #11332e;
-  --warn: #f4bd59; --warn-wash: #382c17;
-  --down: #ff8ca1; --down-wash: #3b202a;
-  --info: #8bb6ff; --info-wash: #1c2c49;
-  --s1: #50d1b3; --s2: #8bb6ff; --s3: #f4bd59; --s4: #b287c4; --s5: #5cb2ca;
-  --s6: #ff8ca1; --s7: #99f6e4; --s8: #c08a7d; --s9: #8d9bb4; --s10: #d4e157;
-  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ground: #101116;
+  --panel: #17191f;
+  --panel-2: #1d2028;
+  --panel-3: #282b35;
+  --line: #30333e;
+  --line-2: #777e92;
+  --ink: #f0f1f6;
+  --ink-2: #b9bece;
+  --ink-3: #a2a9bc;
+  --brand: #b59afb;
+  --brand-2: #ccb8ff;
+  --brand-ink: #1b1230;
+  --brand-wash: #2e2544;
+  --brand-edge: #68558b;
+    --nav-active: #2d2540;
+    --nav-ink: #d0bdff;
+    --teal: #69d4ad;
+  --up: #69d4ad; --up-wash: #18352b;
+  --warn: #f3c177; --warn-wash: #3a2d1c;
+  --down: #ff91a9; --down-wash: #40232d;
+  --info: #9abeff; --info-wash: #202f4b;
+  --s1: #69d4ad; --s2: #9abeff; --s3: #f3c177; --s4: #b287c4; --s5: #5cb2ca;
+  --s6: #ff91a9; --s7: #99f6e4; --s8: #c08a7d; --s9: #8d9bb4; --s10: #d4e157;
+  --sh-1: none;
   --sh-2: 0 1px 3px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
   --sh-3: 0 16px 48px -16px rgba(0, 0, 0, 0.8);
   --veil: rgba(0, 0, 0, 0.6);
@@ -181,7 +183,7 @@ body {
 .num {
   font-family: var(--f-ui);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1, "zero" 1;
+  font-feature-settings: "tnum" 1;
   letter-spacing: -0.01em;
 }
 
@@ -222,7 +224,7 @@ body {
 }
 
 .label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0;
   color: var(--ink-3);
@@ -241,6 +243,9 @@ body {
   box-shadow: var(--sh-3);
 }
 .gerizo-kpi-help::backdrop { background: var(--veil); }
+.gerizo-search { position: fixed; top: 10dvh; margin: 0 auto; padding: 0; width: min(600px, calc(100vw - 32px)); max-height: 80dvh; border: 0; border-radius: var(--r3); background: var(--panel); color: var(--ink); box-shadow: var(--sh-3); overflow-y: auto; }
+.gerizo-search::backdrop { background: var(--veil); }
+html:has(.gerizo-search[open]) { overflow: hidden; }
 
 .hairline {
   border-bottom: 1px solid var(--line);
@@ -259,7 +264,7 @@ body {
 .gerizo-inline-filters .gerizo-filter-bar { gap: 20px; }
 @media (min-width: 768px) {
   aside nav[aria-label="Navegação principal"] { padding: 10px 12px; gap: 1px; }
-  aside nav[aria-label="Navegação principal"] :is(a, button) { min-height: 35px; }
+  aside nav[aria-label="Navegação principal"] :is(a, button) { min-height: 40px; }
   .gerizo-page-header--inline .gerizo-header-row > :first-child { flex: 1 1 200px; }
 }
 .gerizo-page-header, .gerizo-page-body { width: 100%; max-width: 1520px; margin-inline: auto; }
@@ -272,7 +277,7 @@ body {
 .gerizo-table-scroll tbody tr:hover { background: var(--panel-2); }
 .gerizo-table-scroll:not(.gerizo-data-table) :is(th, td):first-child { position: sticky; left: 0; background: var(--panel); z-index: 1; }
 .gerizo-table-scroll:not(.gerizo-data-table) th:first-child { background: var(--panel-2); z-index: 13; }
-.gerizo-metric-value { max-width: 100%; overflow-wrap: anywhere; }
+.gerizo-metric-value { max-width: 100%; overflow-wrap: normal; }
 .gerizo-sheet {
   position: fixed; inset: 0 0 0 auto; margin: 0; padding: 0;
   width: min(var(--sheet-width, 520px), 100vw); height: 100dvh;
@@ -294,7 +299,7 @@ button:disabled { cursor: not-allowed; }
   button, select, input:not([type="checkbox"]):not([type="radio"]), a[role="button"] { min-height: 42px; }
   input, textarea, select { font-size: max(16px, 1em); }
   .gerizo-filter-sheet .gerizo-segmented { flex-wrap: wrap; }
-  .gerizo-topbar .gerizo-logo { width: 84px; height: 28px; }
+  .gerizo-topbar .gerizo-logo { width: 76px; height: 26px; }
   .gerizo-topbar > :is(button, a), .gerizo-topbar > div > button { flex-shrink: 0; min-width: 42px; }
   .gerizo-table-title { width: 140px; max-width: 140px; white-space: normal; overflow-wrap: anywhere; }
   .gerizo-table-title > * { max-width: 100%; }
@@ -434,16 +439,15 @@ button:disabled { cursor: not-allowed; }
 
 /* Mesa de operação: hierarquia compartilhada entre as famílias de telas. */
 .gerizo-sidebar { background: var(--panel-2); }
-.gerizo-nav-active { box-shadow: inset 3px 0 0 var(--brand); }
+.gerizo-nav-active { box-shadow: none; }
 .gerizo-page-header { padding-top: 28px; padding-bottom: 12px; }
-.gerizo-page-header > p { letter-spacing: .09em; font-size: 10px; text-transform: uppercase; }
-.gerizo-header-row h1 { letter-spacing: -.045em; font-weight: 650; }
-.gerizo-panel-header { background: var(--panel-2); border-radius: var(--r2) var(--r2) 0 0; }
-.gerizo-panel-header h3 { font-size: 15px; }
+.gerizo-page-header > p { letter-spacing: 0; font-size: 12px; text-transform: none; }
+.gerizo-header-row h1 { letter-spacing: -.035em; font-weight: 600; }
+.gerizo-panel-header { background: var(--panel); border-radius: var(--r2) var(--r2) 0 0; }
+.gerizo-panel-header h3 { font-size: 16px; }
 .gerizo-stat-tile { padding-block: 20px; box-shadow: none; }
 .gerizo-stat-tile .label { font-weight: 600; color: var(--ink-2); }
 .gerizo-stat-tile .gerizo-metric-value { font-weight: 600; letter-spacing: -.04em; }
-.gerizo-overview-kpis > :first-child { border-color: var(--brand-edge); background: var(--brand-wash); }
 .gerizo-table-scroll tbody tr { transition: background-color 120ms ease; }
 .gerizo-table-scroll tbody tr:focus-within { background: var(--brand-wash); }
 .gerizo-table-scroll th { padding-block: 13px; }
@@ -518,10 +522,6 @@ button:disabled { cursor: not-allowed; }
 .gerizo-channel-bar i { display: block; height: 100%; border-radius: inherit; transition: width 300ms ease; }
 .gerizo-channel-bar span { position: absolute; top: 14px; left: 0; font-size: 11px; color: var(--ink-3); }
 @media (max-width: 600px) { .gerizo-channel-ranking { grid-template-columns: 1fr; } }
-@media (prefers-reduced-motion: no-preference) {
-  .gerizo-page-body { animation: gerizo-workspace-in 220ms ease-out both; }
-  @keyframes gerizo-workspace-in { from { opacity: .5; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-}
 @media (max-width: 767px) {
   .gerizo-finance-intro { align-items: stretch; flex-direction: column; padding: 22px; gap: 20px; }
   .gerizo-coverage { flex-basis: auto; min-width: 0; }
@@ -565,7 +565,7 @@ button:active:not(:disabled) { translate: 0 1px; }
 .gerizo-operation-art i:nth-of-type(2) { background: #536c52; }
 .gerizo-operation-art i:nth-of-type(3) { background: #2b493a; }
 @media (min-width: 768px) {
-  .gerizo-page-header, .gerizo-page-body { padding-inline: 32px; }
+  .gerizo-page-header, .gerizo-page-body { padding-inline: 24px; }
 }
 @media (max-width: 767px) {
   .gerizo-page-header { padding-top: 22px; }
@@ -624,4 +624,28 @@ button:active:not(:disabled) { translate: 0 1px; }
   .gerizo-product-channel { padding: 14px 0; border-top: 1px solid var(--line); }
   .gerizo-product-channel h3 { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
   .gerizo-product-channel .badge { margin-top: 8px; }
+}
+
+/* Contexto sempre visível; largura útil preservada no conteúdo. */
+.gerizo-topbar { padding-top: env(safe-area-inset-top); }
+.gerizo-shell-brand { border-right: 0; }
+.gerizo-sidebar { border-right: 1px solid var(--line); }
+.gerizo-filter-bar > :is(label, [role="group"]) > span:first-child { font-size: 14px; font-weight: 500; line-height: 20px; color: var(--ink-2); }
+.gerizo-table-scroll th { font-size: 14px; }
+.gerizo-table-title { min-width: 240px; max-width: 340px; white-space: normal; overflow-wrap: anywhere; }
+.gerizo-table-title .truncate { white-space: normal; overflow: visible; text-overflow: clip; }
+.gerizo-table-scroll :is(th,td):first-child { position: sticky; left: 0; background: var(--panel); z-index: 1; }
+.gerizo-table-scroll th:first-child { background: var(--panel-2); z-index: 13; }
+.gerizo-sheet { border-radius: 16px 0 0 16px; }
+@media (min-width: 1440px) { .gerizo-page-header, .gerizo-page-body { padding-inline: 32px; } }
+@media (max-width: 767px) {
+  .gerizo-page-header h1 { font-size: 24px; }
+  .gerizo-sheet { border-radius: 0; }
+  .gerizo-mobile-nav { box-shadow: none; }
+  .gerizo-mobile-nav > :is(a,button) { font-size: 12px; font-weight: 500; min-height: 52px; }
+  .gerizo-sheet nav :is(a,button), .gerizo-filter-bar :is(button,a) { min-height: 44px; }
+  .gerizo-topbar .gerizo-account { display: none; }
+  .gerizo-topbar .gerizo-company { flex: 1 1 auto; }
+  .gerizo-stat-tile--wide { grid-column: 1 / -1; }
+  .gerizo-table-title { min-width: 164px; width: 164px; max-width: 240px; }
 }

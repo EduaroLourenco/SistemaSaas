@@ -65,7 +65,7 @@ function Variacao({ v, menorMelhor }: { v: number | null; menorMelhor?: boolean 
   );
 }
 
-export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
+export function SkusEmQueda({ itens, semDados = false }: { itens: SkuEmQueda[]; semDados?: boolean }) {
   const [aberto, setAberto] = React.useState<string | null>(null);
   const [metrica, setMetrica] = React.useState<Metrica>("receita");
   const [curva, setCurva] = React.useState("todas");
@@ -81,16 +81,13 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
   if (!itens.length) {
     return (
       <Panel className="px-4 py-5">
-        <p className="text-[13px] font-semibold text-ink">Nenhum SKU em queda</p>
+        <p className="text-[14px] font-semibold text-ink">{semDados ? "Sem dados para avaliar os SKUs" : "Nenhum SKU em queda"}</p>
         <p className="text-[12.5px] text-ink-2 mt-1">
-          Nada caiu mais de 10% comparando a segunda metade das semanas contra a
-          primeira.
+          {semDados ? "Confira a cobertura das fontes antes de comparar." : "Nada caiu mais de 10% comparando a segunda metade das semanas contra a primeira."}
         </p>
       </Panel>
     );
   }
-
-  const selecionado = filtrados.find((i) => i.sku === aberto) ?? null;
 
   return (
     <Panel className="overflow-hidden">
@@ -98,7 +95,7 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
         title="SKUs em queda"
         hint="segunda metade das semanas contra a primeira · curva A primeiro"
         action={
-          <span className="flex items-center gap-2">
+          <span className="flex max-w-full flex-wrap items-center gap-2">
             <Segmented
               options={[
                 { value: "todas", label: "Todas" },
@@ -119,11 +116,12 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
         }
       />
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-[13px]">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="SKUs em queda. Deslize para comparar todas as métricas.">
+        <table className="w-full border-collapse text-[14px]">
+          <caption className="sr-only">Variações por SKU. Abra um produto para ver a evolução e os valores exatos.</caption>
           <thead>
             <tr className="border-b border-line">
-              <th className="text-left px-3 py-2 min-w-[240px]">
+              <th scope="col" className="sticky left-0 z-10 min-w-[220px] bg-panel-2 px-4 py-3 text-left">
                 <span className="label">SKU · produto</span>
               </th>
               <th className="text-right px-3 py-2"><span className="label">Receita</span></th>
@@ -142,9 +140,17 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
                 <React.Fragment key={s.sku}>
                   <tr
                     onClick={() => setAberto(expandido ? null : s.sku)}
+                    tabIndex={0}
+                    aria-expanded={expandido}
+                    onKeyDown={(event) => {
+                      if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+                        event.preventDefault();
+                        setAberto(expandido ? null : s.sku);
+                      }
+                    }}
                     className="border-b border-line cursor-pointer hover:bg-panel-2"
                   >
-                    <td className="px-3 py-2">
+                    <td className="sticky left-0 z-10 bg-panel px-4 py-3">
                       <span className="flex items-start gap-1.5">
                         {expandido ? (
                           <ChevronDown className="w-3.5 h-3.5 text-ink-3 mt-0.5 shrink-0" />
@@ -158,7 +164,7 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
                             </span>
                             <Badge tone={CORES_CURVA[s.curva]}>{s.curva}</Badge>
                           </span>
-                          <span className="text-[12px] text-ink-2 block break-words max-w-[280px]">
+                          <span className="block max-w-[320px] text-[14px] leading-relaxed text-ink-2 [overflow-wrap:anywhere]">
                             {s.titulo}
                           </span>
                         </span>
@@ -184,7 +190,7 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
                   {expandido && (
                     <tr className="border-b border-line bg-panel-2">
                       <td colSpan={6} className="px-3 py-3">
-                        <span className="flex items-center justify-between gap-3 mb-2">
+                        <span className="mb-2 flex max-w-full flex-wrap items-center justify-between gap-3">
                           <Segmented
                             options={METRICAS}
                             value={metrica}
@@ -234,11 +240,11 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
                                 }}
                               />
                               <Line
-                                type="monotone"
+                                type="linear"
                                 dataKey={metrica}
                                 stroke="var(--brand)"
                                 strokeWidth={2}
-                                dot={{ r: 3, strokeWidth: 0, fill: "var(--brand)" }}
+                                dot={false}
                                 /*
                                  * Semana sem venda não vira zero na linha:
                                  * o gráfico mostra o buraco em vez de
@@ -250,6 +256,14 @@ export function SkusEmQueda({ itens }: { itens: SkuEmQueda[] }) {
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
+                        <details className="mt-3 text-[12px] text-ink-2">
+                          <summary className="flex min-h-11 cursor-pointer items-center">Ver dados da evolução</summary>
+                          <table className="w-full border-collapse text-[12px] tabular-nums">
+                            <caption className="sr-only">Valores de {METRICAS.find((m) => m.value === metrica)?.label} por semana para {s.sku}</caption>
+                            <thead><tr><th scope="col" className="px-3 py-2 text-left">Semana</th><th scope="col" className="px-3 py-2 text-right">{METRICAS.find((m) => m.value === metrica)?.label}</th></tr></thead>
+                            <tbody>{s.semanas.map((semana) => <tr key={semana.semana} className="border-t border-line"><th scope="row" className="px-3 py-2 text-left font-normal">{semana.semana}</th><td className="px-3 py-2 text-right">{semana[metrica] == null ? "Sem dado" : FORMATO[metrica](semana[metrica]!)}</td></tr>)}</tbody>
+                          </table>
+                        </details>
                       </td>
                     </tr>
                   )}

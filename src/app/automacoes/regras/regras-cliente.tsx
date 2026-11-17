@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import "@/components/analise/operation-pages.css";
 import { Badge, Button, EmptyState, Panel } from "@/components/ui/primitives";
 import { Select, Sheet } from "@/components/ui/controls";
 import { count } from "@/lib/format";
@@ -112,9 +113,10 @@ export default function RegrasCliente({ regras, faltaMigracao, cobertura, contas
           </Button>
         }
       />
-      <PageBody>
+      <PageBody className="op-workspace op-automacoes-regras">
+        <div className="op-section-title"><h2>Ordem de decisão</h2><p>A primeira regra que corresponder ao item decide.</p></div>
         {faltaMigracao && (
-          <Panel className="mb-4 border-warn/40 bg-warn-wash/40 p-3 text-[13px]">{faltaMigracao}</Panel>
+          <Panel className="mb-4 border-warn/40 bg-warn-wash/40 p-3 text-[14px]">{faltaMigracao}</Panel>
         )}
 
         {/* O que falta no cadastro desta empresa, com o caminho. Fica em
@@ -123,13 +125,13 @@ export default function RegrasCliente({ regras, faltaMigracao, cobertura, contas
           <Panel className="mb-4">
             <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
               <TriangleAlert size={15} className="text-warn" />
-              <h2 className="text-[13px] font-semibold text-ink">
+              <h2 className="text-[14px] font-semibold text-ink">
                 Dados faltando — estas condições funcionam só em parte
               </h2>
             </div>
             <ul className="divide-y divide-line">
               {faltando.map((c) => (
-                <li key={c.campo} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-[13px]">
+                <li key={c.campo} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-[14px]">
                   <span className="font-medium text-ink">{c.rotulo}</span>
                   <span className="font-mono text-[12px] text-ink-2">
                     {count(c.com)} de {count(c.total)}
@@ -138,7 +140,7 @@ export default function RegrasCliente({ regras, faltaMigracao, cobertura, contas
                   {c.onde && (
                     <Link
                       href={c.onde.href}
-                      className="ml-auto text-[12.5px] font-semibold text-brand-2 underline-offset-2 hover:underline"
+                      className="ml-auto text-[14px] font-semibold text-brand-2 underline-offset-2 hover:underline"
                     >
                       {c.onde.rotulo} →
                     </Link>
@@ -159,11 +161,11 @@ export default function RegrasCliente({ regras, faltaMigracao, cobertura, contas
             action={<Button onClick={() => setEditando(vazia(0))}><Plus size={15} />Criar a primeira</Button>}
           />
         ) : (
-          <Panel>
-            <ul className="divide-y divide-line">
+          <Panel className="overflow-hidden">
+            <ol className="op-rule-list divide-y divide-line" aria-label="Regras em ordem de prioridade">
               {regras.map((r, i) => (
                 <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                  <span className="font-mono text-[13px] font-bold text-ink-3">{i + 1}</span>
+                  <span className="font-mono text-[14px] font-bold text-ink-3">{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-2 text-[14px] font-semibold text-ink">
                       {r.nome || "Sem nome"}
@@ -172,9 +174,9 @@ export default function RegrasCliente({ regras, faltaMigracao, cobertura, contas
                         <Badge tone="info">{contas.find((c) => c.id === r.contaCanalId)?.nome ?? "uma conta"}</Badge>
                       )}
                     </p>
-                    <p className="mt-0.5 text-[12.5px] text-ink-2">{descrever(r)}</p>
+                    <p className="mt-0.5 text-[14px] text-ink-2">{descrever(r)}</p>
                     {r.condicoes.some((c) => porCampo.get(c.campo)?.aviso) && (
-                      <p className="mt-1 text-[11.5px] text-warn">
+                      <p className="mt-1 text-[14px] text-warn">
                         usa {r.condicoes.filter((c) => porCampo.get(c.campo)?.aviso).map((c) => rotuloDoCampo(c.campo)).join(", ")},
                         que esta empresa tem só em parte — sem o dado, {" "}
                         {{ pular: "pula para a próxima regra", nao_entrar: "não entra", conferir: "vai para conferência" }[r.quandoNaoSei]}
@@ -189,7 +191,7 @@ export default function RegrasCliente({ regras, faltaMigracao, cobertura, contas
                   </div>
                 </li>
               ))}
-            </ul>
+            </ol>
           </Panel>
         )}
       </PageBody>
@@ -246,13 +248,13 @@ function Editor({ regra, contas, cobertura, salvando, aoFechar, aoSalvar, aoApag
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="op-rule-editor space-y-6 p-4 md:p-6">
         <label className="block">
           <span className="mb-1 block text-[12px] font-semibold text-ink-3">Nome</span>
           <input
             value={r.nome} onChange={(e) => mexer({ nome: e.target.value })}
             placeholder="Relâmpago só no que gira"
-            className="h-10 w-full rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink focus:border-brand"
+            className="h-10 w-full rounded-r1 border border-line bg-panel px-3 text-[14px] text-ink focus:border-brand"
           />
         </label>
 
@@ -282,7 +284,7 @@ function Editor({ regra, contas, cobertura, salvando, aoFechar, aoSalvar, aoApag
             </Button>
           </div>
           {!r.condicoes.length && (
-            <p className="rounded-r1 border border-dashed border-line-2 p-3 text-[12.5px] text-ink-3">
+            <p className="rounded-r1 border border-dashed border-line-2 p-3 text-[14px] text-ink-3">
               Sem condição, a regra vale para todo item convidado. Serve como a última da lista.
             </p>
           )}
@@ -321,14 +323,14 @@ function Editor({ regra, contas, cobertura, salvando, aoFechar, aoSalvar, aoApag
                       value={String(c.valor ?? "")}
                       onChange={(e) => mexerCond(i, { valor: e.target.value })}
                       placeholder={tipoDoCampo(c.campo) === "numero" ? "10" : "DEAL, SMART"}
-                      className="h-10 min-w-[110px] flex-1 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink focus:border-brand"
+                      className="h-10 min-w-[110px] flex-1 rounded-r1 border border-line bg-panel px-3 text-[14px] text-ink focus:border-brand"
                     />
                     <Button onClick={() => mexer({ condicoes: r.condicoes.filter((_, k) => k !== i) })} aria-label="Tirar">
                       <Trash2 size={14} />
                     </Button>
                   </div>
                   {cob?.aviso && (
-                    <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[11.5px] text-warn">
+                    <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[14px] text-warn">
                       <TriangleAlert size={13} />
                       {count(cob.com)} de {count(cob.total)} — {cob.aviso}
                       {cob.onde && (
@@ -361,19 +363,19 @@ function Editor({ regra, contas, cobertura, salvando, aoFechar, aoSalvar, aoApag
               <option value="conferir">mandar para conferência</option>
             </Select>
             {r.acao.tipo === "reescrever" && (
-              <label className="flex items-center gap-2 text-[13px] text-ink-2">
+              <label className="flex items-center gap-2 text-[14px] text-ink-2">
                 <input
                   type="number" step="0.5" min={0} max={30}
                   value={r.acao.folgaPct ?? 5}
                   onChange={(e) => mexer({ acao: { tipo: "reescrever", folgaPct: Number(e.target.value) || 0 } })}
-                  className="h-10 w-[84px] rounded-r1 border border-line bg-panel px-2 text-right font-mono text-[13px] text-ink focus:border-brand"
+                  className="h-10 w-[84px] rounded-r1 border border-line bg-panel px-2 text-right font-mono text-[14px] text-ink focus:border-brand"
                 />
                 % abaixo do piso
               </label>
             )}
           </div>
           {r.acao.tipo === "reescrever" && (
-            <p className="mt-1.5 text-[11.5px] text-ink-3">
+            <p className="mt-1.5 text-[14px] text-ink-3">
               Só vale onde o canal aceita preço: tradicional, campanha nossa e desconto avulso.
               Em automática, pré-acordo e cofinanciada não existe campo de preço na API.
             </p>
@@ -382,9 +384,9 @@ function Editor({ regra, contas, cobertura, salvando, aoFechar, aoSalvar, aoApag
 
         <div className="rounded-r1 bg-panel-2 p-3">
           <p className="text-[12px] font-semibold text-ink-3">Como vai ficar</p>
-          <p className="mt-1 text-[13px] text-ink">{descrever({ ...r, nome: r.nome || "—" })}</p>
+          <p className="mt-1 text-[14px] text-ink">{descrever({ ...r, nome: r.nome || "—" })}</p>
           {usaCampoIncompleto && (
-            <p className="mt-1 text-[11.5px] text-warn">
+            <p className="mt-1 text-[14px] text-warn">
               Algum campo não está completo nesta empresa. Sem o dado, o item{" "}
               {{ pular: "segue para a próxima regra", nao_entrar: "não entra", conferir: "vai para conferência" }[r.quandoNaoSei]}.
             </p>

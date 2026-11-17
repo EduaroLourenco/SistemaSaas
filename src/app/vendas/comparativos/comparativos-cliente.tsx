@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import {
@@ -441,7 +444,8 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
         }
       />
 
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
+        {melhor && <HeroMetric label={`Melhor dia · ${melhor.nome}`} value={M.fmt(melhor.media)} hint={`${M.rotuloMedia} · ${nomeEscopo(escopo)}`} />}
         {/* ── Dia da semana × mês, somado ────────────────────── */}
         <Panel className="overflow-hidden">
           <PanelHeader
@@ -465,7 +469,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
           hint={`${M.rotuloMedia.toLowerCase()} no ano · ranking de 1º a 7º`}
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+        <div className="decision-ranked-days">
           {cartoes.map((c) => (
             <div
               key={c.dw}
@@ -486,7 +490,7 @@ export default function VendasComparativos({ dados }: { dados: DadosComparativos
               </div>
 
               <p
-                className="num text-[18px] font-semibold text-ink leading-none mt-2 truncate"
+                className="num text-[24px] font-semibold text-ink leading-8 mt-2 [overflow-wrap:anywhere]"
                 title={M.fmt(c.media)}
               >
                 {M.fmtCurto(c.media)}

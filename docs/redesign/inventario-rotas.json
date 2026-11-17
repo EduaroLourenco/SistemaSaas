@@ -1,0 +1,1654 @@
+{
+  "head": "56f69bd35e894fc7d53059cb1d36a058d5731433",
+  "snapshot": "5e711fa",
+  "routes": [
+    {
+      "route": "/alertas",
+      "name": "Alertas [C]",
+      "page": "src/app/alertas/page.tsx",
+      "clients": [
+        "src/app/alertas/alertas-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/alertas"
+      ],
+      "endpoints": [],
+      "parity": "todos os achados, estados, ordem e links; não confundir nenhum crítico com ausência de coleta.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Piloto",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/checkpoint-fase-1.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/anuncios/analise",
+      "name": "Desempenho [D/E]",
+      "page": "src/app/anuncios/analise/page.tsx",
+      "clients": [],
+      "data": [
+        "@/lib/dados/analise"
+      ],
+      "endpoints": [],
+      "parity": "painel-lentes, comparar, linha do tempo, elasticidade, promoção-ao-vivo, fotos e todas as ações/dados; estado sem seleção e coleta.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/anuncios/catalogo",
+      "name": "Disputa de catálogo [C/D]",
+      "page": "src/app/anuncios/catalogo/page.tsx",
+      "clients": [
+        "src/app/anuncios/catalogo/catalogo-cliente.tsx",
+        "src/app/anuncios/catalogo/disputa-painel.tsx"
+      ],
+      "data": [
+        "@/lib/dados/catalogo",
+        "@/lib/dados/disputa-catalogo"
+      ],
+      "endpoints": [
+        "/api/meli/sincronizar"
+      ],
+      "parity": "cargas, comissão, MLB/SKU, histórico 12 semanas, vencedor/estoque, gavetas, “De onde vem” por coluna; evitar divulgar preço sugerido como garantia de vitória.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/anuncios/preco-alvo",
+      "name": "Preço-alvo [F/D; em desenvolvimento]",
+      "page": "src/app/anuncios/preco-alvo/page.tsx",
+      "clients": [
+        "src/app/anuncios/preco-alvo/preco-alvo-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/preco-alvo",
+        "@/lib/dados/formula-preco"
+      ],
+      "endpoints": [
+        "/api/comissoes-canal"
+      ],
+      "parity": "metodologia e status, cálculos existentes, sem completar funcionalidade nem publicar sem aprovação.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/anuncios/preco-ideal",
+      "name": "Lógica de promoção [B/D]",
+      "page": "src/app/anuncios/preco-ideal/page.tsx",
+      "clients": [
+        "src/app/anuncios/preco-ideal/preco-ideal-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/preco-ideal"
+      ],
+      "endpoints": [],
+      "parity": "relatórios, preço praticado/ideal, comissão negociada, datas, exportações e todas as ações; explicação acessível.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/anuncios/preco-performance",
+      "name": "Performance de preço [B/D; fora do menu]",
+      "page": "src/app/anuncios/preco-performance/page.tsx",
+      "clients": [
+        "src/app/anuncios/preco-performance/performance-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/performance-preco"
+      ],
+      "endpoints": [
+        "/api/exportar/preco?${q}"
+      ],
+      "parity": "recortes, 10 colunas, limitações de inferência, sem afirmar causalidade. Não publicar no menu automaticamente.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/anuncios/tipo",
+      "name": "Clássico vs Premium [B]",
+      "page": "src/app/anuncios/tipo/page.tsx",
+      "clients": [
+        "src/app/anuncios/tipo/tipo-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/tipo-anuncio"
+      ],
+      "endpoints": [],
+      "parity": "todas as 6 métricas por tipo, tarifas tabela/praticadas/extra, receita, razão de visitas, definição e limitações de médias.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/anuncios/trafego-pago",
+      "name": "Tráfego pago [B/D]",
+      "page": "src/app/anuncios/trafego-pago/page.tsx",
+      "clients": [
+        "src/app/anuncios/trafego-pago/trafego-pago-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/trafego-pago",
+        "@/lib/dados/trafego-oportunidades",
+        "@/lib/dados/disputa-catalogo"
+      ],
+      "endpoints": [],
+      "parity": "todas as colunas, export, distinção receita atribuída x conta, comissão/margem, avisos de conferência e fontes; não misturar recortes nem confundir receita indireta com lucro.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/automacoes",
+      "name": "Automações [C] | Alta prioridade e risco",
+      "page": "src/app/automacoes/page.tsx",
+      "clients": [
+        "src/app/automacoes/automacoes-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/automacoes",
+        "@/lib/dados/trafego-pago",
+        "@/lib/dados/regras-promocao",
+        "@/lib/dados/folga-campanha",
+        "@/lib/dados/fila-aprovacao"
+      ],
+      "endpoints": [
+        "/api/automacoes/contagem?${q}",
+        "/api/automacoes/folga",
+        "/api/automacoes/itens?${q}",
+        "/api/automacoes/enviar",
+        "/api/automacoes/revisar"
+      ],
+      "parity": "toda regra, janela, prazo, preço, estoque, situação, mídia e seleção, confirmação explícita existente; nunca autoenviar, alterar piso ou simular sucesso.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/automacoes/regras",
+      "name": "Regras de promoção [F/C]",
+      "page": "src/app/automacoes/regras/page.tsx",
+      "clients": [
+        "src/app/automacoes/regras/regras-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/regras-promocao",
+        "@/lib/dados/cobertura-regras",
+        "@/lib/dados/canais"
+      ],
+      "endpoints": [
+        "/api/automacoes/regras"
+      ],
+      "parity": "aviso quando dado faltar, tipos de condição, ordem, regra desligada, percentual abaixo do piso, confirmação, todas as ações.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/cadastro",
+      "name": "Criar conta [I/F]",
+      "page": "src/app/cadastro/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [],
+      "parity": "modos empresa/conta, validação e login; não alterar cadastro/permissão.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/comecar",
+      "name": "Criar empresa [I/F]",
+      "page": "src/app/comecar/page.tsx",
+      "clients": [
+        "src/app/comecar/criar-empresa.tsx"
+      ],
+      "data": [],
+      "endpoints": [],
+      "parity": "comportamento, erros/redirect e contexto, não criar empresa em teste de UI real.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/configuracoes",
+      "name": "Configurações [H]",
+      "page": "src/app/configuracoes/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [],
+      "parity": "persistência no navegador, tamanhos confortável/compacto, sem sobrescrever preferência.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/conversa",
+      "name": "Conversar [C]",
+      "page": "src/app/conversa/page.tsx",
+      "clients": [
+        "src/app/conversa/conversa-cliente.tsx"
+      ],
+      "data": [],
+      "endpoints": [
+        "/api/conversa"
+      ],
+      "parity": "histórico/ações existentes, fontes consultadas, respostas e estados; método em ajuda; texto gerado não é substituído por resumo fictício.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/convite/[token]",
+      "name": "Aceitar convite [I]",
+      "page": "src/app/convite/[token]/page.tsx",
+      "clients": [
+        "src/app/convite/[token]/aceitar.tsx"
+      ],
+      "data": [],
+      "endpoints": [],
+      "parity": "token, direitos, validação e encaminhamento; não expor token em logs/UI.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/empresas",
+      "name": "Empresas [H/F]",
+      "page": "src/app/empresas/page.tsx",
+      "clients": [
+        "src/app/empresas/empresas-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/empresas"
+      ],
+      "endpoints": [
+        "/api/empresas",
+        "/api/empresas/${empresa.id}"
+      ],
+      "parity": "criação e convite, conexão, rename/ops, contagens, permissões, condição de apagar e isolamento multiempresa; não realizar exclusão real em teste.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/entrar",
+      "name": "Login [I]",
+      "page": "src/app/entrar/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [],
+      "parity": "autenticação, erros, campos, aviso de criação por administrador, redirecionamento, dark se aplicável; não criar recuperação de senha sem suporte.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/equipe",
+      "name": "Equipe [H/F]",
+      "page": "src/app/equipe/page.tsx",
+      "clients": [
+        "src/app/equipe/equipe-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/equipe",
+        "@/lib/dados/papeis"
+      ],
+      "endpoints": [
+        "/api/equipe"
+      ],
+      "parity": "ações de convite/gestão/roles, restrições e feedback, não ampliar permissões.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/financeiro/categorias",
+      "name": "Categorias [H/F]",
+      "page": "src/app/financeiro/categorias/page.tsx",
+      "clients": [
+        "src/app/financeiro/categorias/categorias-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/financeiro"
+      ],
+      "endpoints": [],
+      "parity": "descrição, ordem DRE, ativa e demais campos/ações; não mudar categoria usada em cálculo automaticamente.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Estúdio e financeiro",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-estudio-financeiro.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/financeiro/contas",
+      "name": "Contas a pagar [C/F]",
+      "page": "src/app/financeiro/contas/page.tsx",
+      "clients": [
+        "src/app/financeiro/contas/contas-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/financeiro"
+      ],
+      "endpoints": [],
+      "parity": "Previsto/Em aberto/Pago/Atrasado/Cancelado, recorrência, competência, boleto/NF/forma e demais campos; sem pagamento ou alteração de status automática.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Estúdio e financeiro",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-estudio-financeiro.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/financeiro/custos",
+      "name": "Custos [F/D]",
+      "page": "src/app/financeiro/custos/page.tsx",
+      "clients": [
+        "src/app/financeiro/custos/cadastro-produtos.tsx",
+        "src/app/financeiro/custos/custos-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/custos",
+        "@/lib/dados/contas-recorte"
+      ],
+      "endpoints": [
+        "/api/custos/produto",
+        "/api/custos/planilha",
+        "/api/custos",
+        "/api/custos/faixas",
+        "/api/custos/canal"
+      ],
+      "parity": "custo fixo/variável recorrente/avulso, preço/peso e origens conforme código, 3 tabelas editáveis e ações, novo SKU, validação e regras.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Estúdio e financeiro",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-estudio-financeiro.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/financeiro/folha",
+      "name": "Folha de pagamento [H/F]",
+      "page": "src/app/financeiro/folha/page.tsx",
+      "clients": [
+        "src/app/financeiro/folha/folha-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/financeiro"
+      ],
+      "endpoints": [],
+      "parity": "salários bruto/líquido, encargos/benefícios, dia/periodicidade, categoria, admissão/demissão e observação; manter permissões existentes.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Estúdio e financeiro",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-estudio-financeiro.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/financeiro/fornecedores",
+      "name": "Fornecedores [H/F]",
+      "page": "src/app/financeiro/fornecedores/page.tsx",
+      "clients": [
+        "src/app/financeiro/fornecedores/fornecedores-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/financeiro"
+      ],
+      "endpoints": [],
+      "parity": "razão social, nome fantasia, CNPJ, categoria, condições, vencimento, contato, campos existentes e validação.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Estúdio e financeiro",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-estudio-financeiro.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/financeiro",
+      "name": "Painel [A/B]",
+      "page": "src/app/financeiro/page.tsx",
+      "clients": [
+        "src/app/financeiro/financeiro-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/margem",
+        "@/lib/dados/contas-recorte"
+      ],
+      "endpoints": [],
+      "parity": "todos os componentes da DRE, sinais/valores, metodologia e recortes, categoria e totais; não alterar tratamento de custos, não assumir fechamento.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Estúdio e financeiro",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-estudio-financeiro.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/glossario",
+      "name": "Glossário [H]",
+      "page": "src/app/glossario/page.tsx",
+      "clients": [
+        "src/app/glossario/glossario-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/glossario"
+      ],
+      "endpoints": [],
+      "parity": "todas as definições e destinos existentes.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/guia",
+      "name": "Guia das telas [I]",
+      "page": "src/app/guia/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [],
+      "parity": "texto instrucional e links; acesso conforme permissão e visibilidade atuais.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/importar",
+      "name": "Importar dados [F]",
+      "page": "src/app/importar/page.tsx",
+      "clients": [
+        "src/app/importar/importar-cliente.tsx"
+      ],
+      "data": [],
+      "endpoints": [
+        "/api/operacao",
+        "/api/importar/previa",
+        "/api/importar/gravar"
+      ],
+      "parity": "validação, bloqueios, duplicidade, prévia, contagens, últimos resultados, seleção/confirmar; não executar automaticamente.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/integracoes/canais",
+      "name": "Canais e contas [H/F]",
+      "page": "src/app/integracoes/canais/page.tsx",
+      "clients": [
+        "src/app/integracoes/canais/canais-cliente.tsx",
+        "src/app/integracoes/canais/erp-painel.tsx",
+        "src/app/integracoes/canais/google-painel.tsx"
+      ],
+      "data": [
+        "@/lib/dados/canais"
+      ],
+      "endpoints": [
+        "/api/bling/historico",
+        "/api/bling/lojas"
+      ],
+      "parity": "campos de canais/contas, seller ID, reputação, Full, padrão, lojas Bling, puxar histórico, conexões, ajuda/avisos e estados; sincronizar apenas por ação real autorizada.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/integracoes/estoques",
+      "name": "Estoques e origens [H]",
+      "page": "src/app/integracoes/estoques/page.tsx",
+      "clients": [],
+      "data": [
+        "@/lib/dados/estoques"
+      ],
+      "endpoints": [],
+      "parity": "todas as origens, integrações, estoques e estados extraídos do componente; não acrescentar quantidade/estado fictício.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/integracoes",
+      "name": "Fontes de dados [H]",
+      "page": "src/app/integracoes/page.tsx",
+      "clients": [],
+      "data": [
+        "@/lib/dados/fontes",
+        "@/lib/dados/operacao",
+        "@/lib/dados/saude"
+      ],
+      "endpoints": [],
+      "parity": "mapa/saúde de dados, limites de fonte, todas as ações existentes, sem alegar cobertura não medida.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/manual/bling",
+      "name": "Integração com o Bling [I]",
+      "page": "src/app/manual/bling/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [],
+      "parity": "todas as instruções, permissões, erros 403, instalação/desinstalação/suporte; manter texto necessário e versão.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/mercado-livre/envios",
+      "name": "Envios [C]",
+      "page": "src/app/mercado-livre/envios/page.tsx",
+      "clients": [
+        "src/app/mercado-livre/envios/envios-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/envios-meli"
+      ],
+      "endpoints": [],
+      "parity": "ordem de prazo real, status, nenhuma ação de envio inventada; “Nenhum envio pendente” só se consulta válida.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Piloto",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/checkpoint-fase-1.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/mercado-livre",
+      "name": "Termômetro [A] | Prioridade máxima",
+      "page": "src/app/mercado-livre/page.tsx",
+      "clients": [
+        "src/app/mercado-livre/termometro-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/termometro",
+        "@/lib/dados/catalogo-semana"
+      ],
+      "endpoints": [],
+      "parity": "comparação mesma semana anterior, status parcial, eventos de campanha/preço/estoque, reputação e contas, todas as tabelas. Não atribuir venda baixa a foto/preço/prazo como certeza.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/monitoramento/fretes",
+      "name": "Fretes [H; fora do menu]",
+      "page": "src/app/monitoramento/fretes/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [],
+      "parity": "rota e condição de acesso, não desenvolver recurso novo.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/monitoramento/precos",
+      "name": "Preços praticados [B; fora do menu]",
+      "page": "src/app/monitoramento/precos/page.tsx",
+      "clients": [
+        "src/app/monitoramento/precos/precos-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/precos-praticados"
+      ],
+      "endpoints": [],
+      "parity": "valores, datas e fontes; zero duplo eixo; manter visibilidade atual.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/",
+      "name": "Visão geral [A] | Prioridade máxima",
+      "page": "src/app/page.tsx",
+      "clients": [
+        "src/app/painel-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/painel"
+      ],
+      "endpoints": [],
+      "parity": "links Investigar queda, Comparar produtos e Planejamento integrados aos blocos correspondentes ou menu de ações; filtros, recorte dinâmico, todas as métricas, exclusões e saúde de dados. Pulso não perde definição (help).",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Piloto",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/checkpoint-fase-1.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/planejamento",
+      "name": "Calendário e campanhas [E]",
+      "page": "src/app/planejamento/page.tsx",
+      "clients": [
+        "src/app/planejamento/calendario.tsx",
+        "src/app/planejamento/componentes.tsx",
+        "src/app/planejamento/editor.tsx",
+        "src/app/planejamento/estrategia-editor.tsx",
+        "src/app/planejamento/estudio-shell.tsx",
+        "src/app/planejamento/ficha.tsx",
+        "src/app/planejamento/foco.tsx",
+        "src/app/planejamento/hoje.tsx",
+        "src/app/planejamento/mapa.tsx",
+        "src/app/planejamento/planejamento-cliente.tsx",
+        "src/app/planejamento/quadro.tsx"
+      ],
+      "data": [
+        "@/lib/dados/planejamento"
+      ],
+      "endpoints": [
+        "/api/planejamento/resultados?${new URLSearchParams({ id: item.id, operacao, revisao: String(item.revisao) })}",
+        "/api/planejamento"
+      ],
+      "parity": "campanhas, ações soltas, grupos, tipos, eventos e fonte Sebrae, todas as visões, edições, datas, regras, comparativos, extrações e vínculos; nunca migrar regras só por CSS.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Estúdio e financeiro",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-estudio-financeiro.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/planejamento/resultados",
+      "name": "Resultados das campanhas [B]",
+      "page": "src/app/planejamento/resultados/page.tsx",
+      "clients": [
+        "src/app/planejamento/resultados/resultados-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/planejamento-resultados"
+      ],
+      "endpoints": [],
+      "parity": "universo, controles, dados de promoções e ações, ausência de dados de cada origem distinta; não alegar causalidade não comprovada.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Estúdio e financeiro",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-estudio-financeiro.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/privacidade",
+      "name": "Privacidade [I]",
+      "page": "src/app/privacidade/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [],
+      "parity": "texto, links, datas e conteúdo legal sem reescrita.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/produtos",
+      "name": "Produtos e preços [D]",
+      "page": "src/app/produtos/page.tsx",
+      "clients": [
+        "src/app/produtos/produtos-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/produtos-precos"
+      ],
+      "endpoints": [],
+      "parity": "Vitrine/Vendido médio/Unidades/Receita/Curva, período, canal, sem venda, Excel/CSV, ordenação.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/produtos/precificacao",
+      "name": "Precificação [B/F]",
+      "page": "src/app/produtos/precificacao/page.tsx",
+      "clients": [
+        "src/app/produtos/precificacao/precificacao-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/precificacao",
+        "@/lib/dados/formula-preco"
+      ],
+      "endpoints": [
+        "/api/precificacao/frete?${q}",
+        "/api/custos"
+      ],
+      "parity": "fórmulas, taxas, custo, origem, simulador não confundir com valor real; sem custo aponta para Financeiro/Custos.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/promocoes/campanhas",
+      "name": "Campanhas [D]",
+      "page": "src/app/promocoes/campanhas/page.tsx",
+      "clients": [
+        "src/app/promocoes/campanhas/campanhas-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/promocoes"
+      ],
+      "endpoints": [
+        "/api/promocoes/limpar"
+      ],
+      "parity": "última rodada, campos, filtros e ações existentes; não confundir histórico com campanha ativa.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/promocoes/comparar",
+      "name": "Comparar ofertas [B/D]",
+      "page": "src/app/promocoes/comparar/page.tsx",
+      "clients": [
+        "src/app/promocoes/comparar/comparar-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/comparar-ofertas"
+      ],
+      "endpoints": [
+        "/api/exportar/recusadas${q}"
+      ],
+      "parity": "todas as propostas, colunas e ações existentes.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/promocoes/historico",
+      "name": "Histórico de promoções [D]",
+      "page": "src/app/promocoes/historico/page.tsx",
+      "clients": [
+        "src/app/promocoes/historico/historico-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/promocoes"
+      ],
+      "endpoints": [],
+      "parity": "rodadas, preços, decisões, tipos, exportação/filtros se presentes, datas e estados.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/promocoes/processar",
+      "name": "Processar planilha [F] | Alta prioridade e risco",
+      "page": "src/app/promocoes/processar/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [
+        "/api/promocoes/piso",
+        "/api/promocoes/ajustar",
+        "/api/promocoes/baixar/${id}",
+        "/api/promocoes/processar"
+      ],
+      "parity": "todos os campos, cálculos, descontos, redução de tarifa, decisão/motivo, items para revisar, planilha, bloqueios e estados; sem alterar fórmula ou automatizar aprovação.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Operação",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-operacao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/relatorio/[chave]",
+      "name": "Relatório público [G]",
+      "page": "src/app/relatorio/[chave]/page.tsx",
+      "clients": [
+        "src/app/relatorio/[chave]/relatorio-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/relatorio",
+        "@/lib/dados/operacao"
+      ],
+      "endpoints": [
+        "/api/relatorio/anotacao"
+      ],
+      "parity": "chave pública, permissões e ausência de sessão, todas as 7 tabelas/dados e 12 ações do código conforme estado, impressão/exportação se existente, confidencialidade. Não adicionar dados internos, links de administração ou login obrigatório; não mudar contrato do link. Estilo de impressão dedicado quando permitido.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/relatorios/apresentacao",
+      "name": "Apresentação [G]",
+      "page": "src/app/relatorios/apresentacao/page.tsx",
+      "clients": [
+        "src/app/relatorios/apresentacao/apresentacao-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/apresentacao"
+      ],
+      "endpoints": [],
+      "parity": "gráficos, seleção, todos os slides/ações/navegação, rota permanece conforme acesso atual.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/relatorios/exportacoes",
+      "name": "Exportações [H]",
+      "page": "src/app/relatorios/exportacoes/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [],
+      "parity": "todos os formatos, filtros e colunas, sem mudar contratos CSV.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/termos",
+      "name": "Termos [I]",
+      "page": "src/app/termos/page.tsx",
+      "clients": [],
+      "data": [],
+      "endpoints": [],
+      "parity": "conteúdo, termos, datas e consentimento existente, sem alterar obrigação.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Gestão, relatórios e acesso",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/entrega-completa.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/anual",
+      "name": "Acompanhamento anual [A/B]",
+      "page": "src/app/vendas/anual/page.tsx",
+      "clients": [
+        "src/app/vendas/anual/anual-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/vendas"
+      ],
+      "endpoints": [],
+      "parity": "meta, acumulado, ano anterior e todos os indicadores/colunas, mês e detalhe; ano em curso identificado. Zero múltiplos eixos Y.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/canais",
+      "name": "Vendas por canal [B]",
+      "page": "src/app/vendas/canais/page.tsx",
+      "clients": [
+        "src/app/vendas/canais/canais-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/vendas"
+      ],
+      "endpoints": [],
+      "parity": "12 semanas e comparar período, pedidos, ticket, conversão, margem, tendência, cor do canal.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/cancelamentos",
+      "name": "Cancelamentos [B]",
+      "page": "src/app/vendas/cancelamentos/page.tsx",
+      "clients": [
+        "src/app/vendas/cancelamentos/cancelamentos-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/cancelamentos"
+      ],
+      "endpoints": [
+        "/api/cancelamentos/pedidos?${qs}"
+      ],
+      "parity": "valores, taxas, causas apenas se existentes, todos os pedidos e métodos; aumento semântica adequada, nulo distinto de zero.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/comparativos",
+      "name": "Padrões por dia da semana [B]",
+      "page": "src/app/vendas/comparativos/page.tsx",
+      "clients": [
+        "src/app/vendas/comparativos/comparativos-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/vendas"
+      ],
+      "endpoints": [],
+      "parity": "comparação mês anterior, valores, datas e legenda de melhor/pior, não usar cor única.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/dia",
+      "name": "Dia [A]",
+      "page": "src/app/vendas/dia/page.tsx",
+      "clients": [
+        "src/app/vendas/dia/dia-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/dia"
+      ],
+      "endpoints": [],
+      "parity": "data, contagem de dias na meta, sincronização falha/incompleta, métricas, detalhe e filtros, cor com texto/símbolo.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/diario",
+      "name": "Comparar período [B]",
+      "page": "src/app/vendas/diario/page.tsx",
+      "clients": [
+        "src/app/vendas/diario/diario-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/diario"
+      ],
+      "endpoints": [],
+      "parity": "ordem/base da comparação e variação, todos os indicadores, sem comparar períodos desiguais inadvertidamente.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/lancamentos",
+      "name": "Lançamentos [F/D]",
+      "page": "src/app/vendas/lancamentos/page.tsx",
+      "clients": [
+        "src/app/vendas/lancamentos/lancamentos-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/vendas",
+        "@/lib/dados/automacao"
+      ],
+      "endpoints": [
+        "/api/lancamentos"
+      ],
+      "parity": "edição, validação, dados da origem, receita bruta/líquida/pedidos/TACOS, cálculo sem alterações; não substituir por tabela somente leitura.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/metas",
+      "name": "Metas [F]",
+      "page": "src/app/vendas/metas/page.tsx",
+      "clients": [
+        "src/app/vendas/metas/metas-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/metas-planejamento",
+        "@/lib/dados/ratear-meta"
+      ],
+      "endpoints": [
+        "/api/metas",
+        "/api/metas/dia"
+      ],
+      "parity": "dias travados manualmente, rateio, revisões, regras e validações.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/mtd",
+      "name": "Mês até aqui [A/B]",
+      "page": "src/app/vendas/mtd/page.tsx",
+      "clients": [
+        "src/app/vendas/mtd/mtd-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/mtd"
+      ],
+      "endpoints": [
+        "/api/metas/redistribuir"
+      ],
+      "parity": "fechamento real, contas, dias, modo de recuperação e explicação de hipótese, não representar simulação como previsão.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/queda",
+      "name": "Por que caiu [B] | Prioridade máxima",
+      "page": "src/app/vendas/queda/page.tsx",
+      "clients": [
+        "src/app/vendas/queda/queda-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/queda"
+      ],
+      "endpoints": [
+        "/api/exportar/queda",
+        "/api/queda?${q}"
+      ],
+      "parity": "fórmula, leitura dos dados e limites da análise acessíveis, todos os campos; não inferir causalidade, não forçar contribuição sem cálculo; zero múltiplos eixos Y.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/semanal",
+      "name": "Semanal [B]",
+      "page": "src/app/vendas/semanal/page.tsx",
+      "clients": [
+        "src/app/vendas/semanal/semanal-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/vendas"
+      ],
+      "endpoints": [],
+      "parity": "todos os indicadores, WoW/participação, detalhe, dados em curso, as duas formas de leitura.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    },
+    {
+      "route": "/vendas/skus",
+      "name": "Análise de SKU [D]",
+      "page": "src/app/vendas/skus/page.tsx",
+      "clients": [
+        "src/app/vendas/skus/analise-sku-cliente.tsx"
+      ],
+      "data": [
+        "@/lib/dados/analise-sku"
+      ],
+      "endpoints": [
+        "/api/exportar/skus?${q}"
+      ],
+      "parity": "todos os períodos, canais, abas, métricas/ações dos blocos-sku, tabelas e filtros.",
+      "status": "implementada",
+      "snapshot": true,
+      "validation": "parcial",
+      "area": "Decisão",
+      "evidence": {
+        "general": {
+          "passed": 6,
+          "total": 6,
+          "log": "output/redesign/qa-todas-rotas.json"
+        },
+        "areaReport": "docs/redesign/fase-decisao.md",
+        "acceptance": "Interfaces implementadas; critérios completos de sessão real/acessibilidade/estados ainda não comprovados."
+      }
+    }
+  ],
+  "coverage": {
+    "implementation": "61 de 61 rotas implementadas",
+    "fullAcceptance": "parcial; ver lacunas e evidências",
+    "general": {
+      "passed": 366,
+      "total": 366,
+      "failed": 0
+    },
+    "areaCounts": {
+      "piloto": 3,
+      "operacao": 16,
+      "decisao": 16,
+      "gestao": 18,
+      "estudio": 8
+    },
+    "updated": "2026-11-17"
+  }
+}

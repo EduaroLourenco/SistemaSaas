@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
@@ -65,7 +68,7 @@ export default function Cancelamentos({ dados }: { dados: DadosCancelamento }) {
     return (
       <>
         <PageHeader title="Cancelamentos" breadcrumb="Vendas" />
-        <PageBody>
+        <PageBody className={decisaoCss.workspace}>
           <Panel>
             <EmptyState
               icon={XCircle}
@@ -91,7 +94,6 @@ export default function Cancelamentos({ dados }: { dados: DadosCancelamento }) {
       <PageHeader
         title="Cancelamentos"
         breadcrumb="Vendas"
-        description="O faturamento que voltou — por canal, por SKU e ao longo do tempo"
         filters={
           <BarraFiltros>
             <Filtro rotulo="Ver">
@@ -101,32 +103,11 @@ export default function Cancelamentos({ dados }: { dados: DadosCancelamento }) {
         }
       />
 
-      <PageBody>
+      <PageBody className={decisaoCss.workspace}>
         <div className="flex flex-col gap-3">
-          <Panel className="p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <Metrica
-                rotulo="Valor cancelado"
-                valor={money(dados.totalCancelado)}
-                detalhe={`de ${moneyShort(dados.totalBruto)} vendidos`}
-              />
-              <Metrica
-                rotulo="Taxa geral"
-                valor={pct(dados.taxaGeral)}
-                detalhe="sobre o valor, não a quantidade"
-              />
-              <Metrica
-                rotulo="Canais acompanhados"
-                valor={count(dados.porCanal.length)}
-                detalhe={`${graves.length} acima de ${LIMIAR_GRAVE}%`}
-              />
-              <Metrica
-                rotulo="Período"
-                valor={dataBr(dados.periodo.inicio)}
-                detalhe={`até ${dataBr(dados.periodo.fim)}`}
-              />
-            </div>
-          </Panel>
+          <HeroMetric label="Valor cancelado" value={money(dados.totalCancelado)} hint={`${dataBr(dados.periodo.inicio)} a ${dataBr(dados.periodo.fim)} · de ${money(dados.totalBruto)} vendidos`}>
+            <MetricStrip><Metrica rotulo="Taxa geral" valor={pct(dados.taxaGeral)} detalhe="sobre o valor, não a quantidade" /><Metrica rotulo="Canais acompanhados" valor={count(dados.porCanal.length)} detalhe={`${graves.length} acima de ${LIMIAR_GRAVE}%`} /></MetricStrip>
+          </HeroMetric>
 
           {graves.length > 0 ? (
             <Leitura tom="atencao" titulo="Onde olhar">

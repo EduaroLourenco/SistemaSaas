@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceNav } from "@/components/layout/workspace-nav";
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -35,10 +36,8 @@ export default function Configuracoes() {
   return (
     <>
       <PageHeader title="Configurações" description="Preferências deste navegador" />
-      <PageBody>
-        <Panel className="overflow-hidden">
-          <Aparencia />
-        </Panel>
+      <PageBody className="management-workspace"><WorkspaceNav />
+        <Aparencia />
       </PageBody>
     </>
   );
@@ -51,28 +50,28 @@ const AMOSTRAS: { id: Tema; rotulo: string; descricao: string; fundo: string; pa
     id: "claro",
     rotulo: "Claro",
     descricao: "Padrão. Melhor para tabela densa sob luz forte.",
-    fundo: "#f5f6f8",
+    fundo: "#f5f5f8",
     painel: "#ffffff",
     tinta: "#101828",
-    marca: "#0f5c57",
+    marca: "#7045d1",
   },
   {
     id: "escuro",
     rotulo: "Escuro",
     descricao: "Menos brilho em sala fechada e à noite.",
-    fundo: "#0b0d12",
-    painel: "#14171f",
+    fundo: "#101116",
+    painel: "#17191f",
     tinta: "#e9edf4",
-    marca: "#3aa396",
+    marca: "#b59afb",
   },
   {
     id: "sistema",
     rotulo: "Sistema",
     descricao: "Acompanha a preferência do aparelho.",
-    fundo: "linear-gradient(90deg, #f5f6f8 50%, #0b0d12 50%)",
+    fundo: "linear-gradient(90deg, #f5f5f8 50%, #101116 50%)",
     painel: "#ffffff",
     tinta: "#101828",
-    marca: "#0f5c57",
+    marca: "#7045d1",
   },
 ];
 
@@ -126,18 +125,19 @@ function Aparencia() {
   }
 
   return (
-    <div className="p-4 sm:p-5 space-y-6">
-      <div>
+    <div className="space-y-8">
+      <div className="management-section">
         <SectionTitle
           title="Tema"
           hint="A mudança vale para este navegador, não para os outros usuários."
         />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {AMOSTRAS.map((a) => {
             const ativo = tema === a.id;
             return (
               <button
                 key={a.id}
+                aria-pressed={ativo}
                 onClick={() => aplicarTema(a.id)}
                 className={
                   "text-left rounded-r2 border overflow-hidden transition-colors " +
@@ -199,22 +199,23 @@ function Aparencia() {
         </div>
       </div>
 
-      <div className="pt-4 border-t border-line">
+      <div className="management-section">
         <SectionTitle
           title="Densidade das tabelas"
           hint="Compacta mostra mais linhas por tela; confortável facilita o toque no celular."
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 max-w-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
           {(
             [
-              { id: "compacta" as const, rotulo: "Compacta", altura: "32 px por linha" },
-              { id: "confortavel" as const, rotulo: "Confortável", altura: "42 px por linha" },
+              { id: "compacta" as const, rotulo: "Compacta", altura: "44 px por linha" },
+              { id: "confortavel" as const, rotulo: "Confortável", altura: "54 px por linha" },
             ]
           ).map((d) => {
             const ativo = densidade === d.id;
             return (
               <button
                 key={d.id}
+                aria-pressed={ativo}
                 onClick={() => aplicarDensidade(d.id)}
                 className={
                   "flex items-center justify-between gap-3 px-3 h-14 rounded-r2 border transition-colors " +

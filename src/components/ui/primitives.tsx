@@ -23,7 +23,7 @@ export function Button({
       className={cn(
         "inline-flex items-center justify-center gap-1.5 rounded-r1 border font-medium whitespace-nowrap",
         "transition-colors duration-100 disabled:opacity-45 disabled:pointer-events-none",
-        size === "sm" ? "h-9 px-3 text-[12px]" : "h-10 px-4 text-[13px]",
+        size === "sm" ? "h-9 px-3 text-[14px]" : "h-10 px-4 text-[14px]",
         variant === "primary" &&
           "bg-brand text-brand-ink border-brand hover:bg-brand-2 hover:border-brand-2",
         variant === "default" &&
@@ -129,7 +129,7 @@ export function Delta({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 text-[12px] font-semibold num",
+        "inline-flex items-center gap-1 text-[14px] font-medium num",
         t === "up" && "text-up",
         t === "down" && "text-down",
         t === "flat" && "text-ink-3",

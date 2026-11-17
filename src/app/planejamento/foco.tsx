@@ -56,10 +56,7 @@ export default function Foco({
     <section className="pl-focus">
       <div className="pl-focus-heading">
         <div>
-          <span className="pl-eyebrow">
-            <Compass size={15} /> ONDE FOCAR AGORA
-          </span>
-          <h2>O próximo passo, com um motivo.</h2>
+          <h2>Prioridades</h2>
           <p>
             Preparação, execução e aprendizados a partir dos registros da
             operação. Referência: {formatarData(hoje)}. Os filtros acima se

@@ -3,12 +3,13 @@
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import "@/components/analise/operation-pages.css";
 import { Panel, Badge, EmptyState, Delta } from "@/components/ui/primitives";
 import { Segmented, Checkbox } from "@/components/ui/controls";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import { Leitura } from "@/components/ui/leitura";
-import { Metrica, Celula } from "@/components/ui/metrica";
+import { Celula } from "@/components/ui/metrica";
 import { Tabela, type Coluna } from "@/components/ui/tabela";
 import { money, moneyShort, count, pct } from "@/lib/format";
 import type { DadosTipo, ParSku, Periodo, ResumoTipo } from "@/lib/dados/tipo-anuncio";
@@ -114,7 +115,7 @@ export default function TipoAnuncio({ dados }: { dados: DadosTipo }) {
           filters={filtros}
         />
         <BarraCarregando ativo={atualizando} />
-      <PageBody>
+      <PageBody className="op-workspace op-anuncios-tipo">
           <div className="flex flex-col gap-3">
             <Panel>
               <EmptyState
@@ -148,7 +149,7 @@ export default function TipoAnuncio({ dados }: { dados: DadosTipo }) {
         filters={filtros}
       />
 
-      <PageBody>
+      <PageBody className="op-workspace op-anuncios-tipo">
         <div className="flex flex-col gap-3">
           {dados.anterior && (
             <p className="text-[12px] text-ink-3">
@@ -158,13 +159,7 @@ export default function TipoAnuncio({ dados }: { dados: DadosTipo }) {
             </p>
           )}
 
-          <div className="grid gap-3 md:grid-cols-2">
-            {dados.resumo
-              .filter((r) => r.tipo !== "outro")
-              .map((r) => (
-                <Cartao key={r.tipo} r={r} antes={anteriorPorTipo.get(r.tipo)} />
-              ))}
-          </div>
+          <ComparacaoTipos itens={dados.resumo.filter((r) => r.tipo !== "outro")} anteriores={anteriorPorTipo} />
 
           {cl && pr && <LeituraMedias cl={cl} pr={pr} />}
 
@@ -181,66 +176,21 @@ function variacao(agora: number, antes?: number) {
   return ((agora - antes) / Math.abs(antes)) * 100;
 }
 
-function Cartao({ r, antes }: { r: ResumoTipo; antes?: ResumoTipo }) {
-  return (
-    <Panel className="p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Badge tone={r.tipo === "premium" ? "brand" : "neutral"}>{NOME[r.tipo]}</Badge>
-        <span className="num text-[12px] text-ink-3">{count(r.anuncios)} anúncios</span>
-        {antes && (
-          <span className="ml-auto flex items-center gap-1.5 text-[12px] text-ink-3">
-            receita
-            <Delta value={variacao(r.receita, antes.receita) ?? 0} />
-          </span>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Metrica
-          rotulo="Conversão"
-          valor={pct(r.conversao, 2)}
-          detalhe={`${count(r.vendas)} vendas em ${count(r.visitas)} visitas`}
-        />
-        <Metrica
-          rotulo="Visitas por anúncio"
-          valor={count(Math.round(r.visitasPorAnuncio))}
-          detalhe="no período"
-        />
-        <Metrica
-          rotulo="Tarifa de tabela"
-          valor={pct(r.tarifaMedia)}
-          detalhe="alíquota do canal"
-        />
-        <Metrica
-          rotulo="Tarifa praticada"
-          valor={r.tarifaPraticada == null ? "—" : pct(r.tarifaPraticada)}
-          detalhe={
-            r.tarifaPraticada == null
-              ? "nenhum pedido com comissão informada"
-              : `o que foi cobrado · ${pct(r.coberturaTarifa, 0)} da receita`
-          }
-        />
-        <Metrica
-          rotulo="Custo de tarifa"
-          valor={
-            r.custoTarifaPraticada == null
-              ? moneyShort(r.custoTarifa)
-              : moneyShort(r.custoTarifaPraticada)
-          }
-          detalhe={
-            r.custoTarifaPraticada == null
-              ? `pela tabela, sobre ${moneyShort(r.receita)}`
-              : `pela praticada · ${moneyShort(r.custoTarifa)} se fosse tabela`
-          }
-        />
-        <Metrica
-          rotulo="Receita"
-          valor={moneyShort(r.receita)}
-          detalhe={antes ? `antes: ${moneyShort(antes.receita)}` : "no período"}
-        />
-      </div>
-    </Panel>
-  );
+function ComparacaoTipos({ itens, anteriores }: { itens: ResumoTipo[]; anteriores: Map<string, ResumoTipo> }) {
+  const linhas: { nome: string; valor: (r: ResumoTipo) => string; detalhe: (r: ResumoTipo) => string }[] = [
+    { nome: "Receita", valor: (r) => money(r.receita), detalhe: (r) => anteriores.has(r.tipo) ? "Antes: " + money(anteriores.get(r.tipo)!.receita) : "No período" },
+    { nome: "Conversão", valor: (r) => pct(r.conversao, 2), detalhe: (r) => count(r.vendas) + " vendas em " + count(r.visitas) + " visitas" },
+    { nome: "Visitas por anúncio", valor: (r) => count(Math.round(r.visitasPorAnuncio)), detalhe: () => "No período" },
+    { nome: "Tarifa de tabela", valor: (r) => pct(r.tarifaMedia), detalhe: () => "Alíquota do canal" },
+    { nome: "Tarifa praticada", valor: (r) => r.tarifaPraticada == null ? "—" : pct(r.tarifaPraticada), detalhe: (r) => r.tarifaPraticada == null ? "Nenhum pedido com comissão informada" : "O que foi cobrado · " + pct(r.coberturaTarifa, 0) + " da receita" },
+    { nome: "Custo de tarifa", valor: (r) => money(r.custoTarifaPraticada ?? r.custoTarifa), detalhe: (r) => r.custoTarifaPraticada == null ? "Pela tabela, sobre " + money(r.receita) : "Pela praticada · " + money(r.custoTarifa) + " se fosse tabela" },
+  ];
+  return <div className="op-type-comparison" role="region" aria-label="Comparação de Clássico e Premium por indicador" tabIndex={0}>
+    <table className="op-table"><caption className="sr-only">Mesmas métricas nos dois tipos de anúncio</caption>
+      <thead><tr><th scope="col">Indicador</th>{itens.map((r) => <th key={r.tipo} scope="col"><strong>{NOME[r.tipo]}</strong><small>{count(r.anuncios)} anúncios</small>{anteriores.has(r.tipo) && <small className="inline-flex items-center gap-2">Receita <Delta value={variacao(r.receita, anteriores.get(r.tipo)?.receita) ?? 0} /></small>}</th>)}</tr></thead>
+      <tbody>{linhas.map((linha) => <tr key={linha.nome}><td className="text-ink-2">{linha.nome}</td>{itens.map((r) => <td key={r.tipo}><span className={linha.nome === "Receita" ? "text-[28px] font-semibold tracking-tight" : undefined}>{linha.valor(r)}</span><small>{linha.detalhe(r)}</small></td>)}</tr>)}</tbody>
+    </table>
+  </div>;
 }
 
 function LeituraMedias({ cl, pr }: { cl: ResumoTipo; pr: ResumoTipo }) {

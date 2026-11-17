@@ -25,10 +25,8 @@ export default async function Pagina() {
     <>
       <PageHeader
         title="Folha de pagamento"
-        breadcrumb="Financeiro"
-        description="Quem está na equipe e quanto custa por mês"
       />
-      <PageBody>
+      <PageBody className="finance-page">
         <FolhaCliente
           linhas={dados.linhas}
           categorias={dados.categorias}

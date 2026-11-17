@@ -1,5 +1,8 @@
 "use client";
 
+import decisaoCss from "@/components/analise/decision-workspace.module.css";
+import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
+
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Panel, PanelHeader, Badge, Delta } from "@/components/ui/primitives";
@@ -152,6 +155,7 @@ type Linha = SemanaVendas & {
 /* ══ Tela ════════════════════════════════════════════════════ */
 
 export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
+  const [visaoSemanas,setVisaoSemanas] = React.useState<"matriz"|"lista">("matriz");
   const [canal, setCanal] = React.useState("");
   /** Índice da semana aberta na comparação — vem do clique na matriz. */
   const [comparando, setComparando] = React.useState<number | null>(null);
@@ -551,8 +555,9 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
         }
       />
 
-      <PageBody>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <PageBody className={decisaoCss.workspace}>
+        <HeroMetric label={`Semana atual · ${metrica.label}`} value={metrica.fmt(resumo.atual[metrica.id])} delta={resumo.atual.wow ?? undefined} hint={`${resumo.atual.rotulo} · em curso`} />
+        <MetricStrip>
           <StatTile
             label={`Melhor semana · ${metrica.label}`}
             value={metrica.fmt(resumo.melhor[metrica.id])}
@@ -569,13 +574,7 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
             hint={`${resumo.fechadas.length} semanas fechadas`}
             spark={resumo.spark}
           />
-          <StatTile
-            label="Semana atual"
-            value={metrica.fmt(resumo.atual[metrica.id])}
-            delta={resumo.atual.wow ?? undefined}
-            hint={`${resumo.atual.rotulo} · em curso`}
-          />
-        </div>
+        </MetricStrip>
 
         <Panel className="overflow-hidden">
           <PanelHeader
@@ -619,11 +618,11 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
                     ))}
                   </Bar>
                   <Line
-                    type="monotone"
+                    type="linear"
                     dataKey="media"
                     name="Média 4 semanas"
                     stroke="var(--s3)"
-                    strokeWidth={1.75}
+                    strokeWidth={2}
                     dot={false}
                     connectNulls={false}
                     isAnimationActive={false}
@@ -642,7 +641,8 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
           </div>
         </Panel>
 
-        <Panel className="overflow-hidden">
+        <div className="decision-operation-strip"><h2 className="decision-surface-title">Investigar as semanas</h2><Segmented options={[{value:"matriz",label:"Matriz"},{value:"lista",label:"Lista ordenável"}]} value={visaoSemanas} onChange={setVisaoSemanas} /></div>
+        {visaoSemanas === "matriz" && <Panel className="overflow-hidden">
           <PanelHeader
             title="Semana a semana"
             hint="Semanas nas colunas · indicadores nas linhas · a seta compara com a semana à esquerda"
@@ -660,8 +660,9 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
           />
         </Panel>
 
+        }
         {/* a lista continua disponível para quem quiser ordenar por métrica */}
-        <Panel className="overflow-hidden">
+        {visaoSemanas === "lista" && <Panel className="overflow-hidden">
           <PanelHeader
             title="Lista ordenável"
             hint="Mesmo dado, uma linha por semana — para ordenar por qualquer indicador"
@@ -672,7 +673,7 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
             rowKey={(l) => l.rotulo}
             defaultSort={{ key: "semana", dir: "asc" }}
           />
-        </Panel>
+        </Panel>}
       </PageBody>
 
       {comparando != null && exibidas[comparando] && (

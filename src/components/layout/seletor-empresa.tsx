@@ -85,9 +85,13 @@ export function SeletorEmpresa() {
     };
   }, [aberto]);
 
-  if (lista.length < 2) return null;
+  if (lista.length === 0) return <span className="min-w-0 text-[12px] text-ink-3" role="status">Carregando empresa…</span>;
 
   const escolhida = lista.find((o) => o.id === atual) ?? null;
+  if (lista.length === 1) return <div className="gerizo-company min-w-0 px-2" aria-label="Empresa ativa">
+    <span className="block text-[12px] leading-4 text-ink-3">Empresa</span>
+    <span title={escolhida?.empresa || escolhida?.nome || lista[0].empresa || lista[0].nome} className="line-clamp-2 text-[14px] font-medium leading-5 text-ink [overflow-wrap:anywhere]">{escolhida?.empresa || escolhida?.nome || lista[0].empresa || lista[0].nome}</span>
+  </div>;
 
   /* Agrupa por empresa: o nome da operação sozinho não diz de quem é. */
   const porEmpresa = new Map<string, Operacao[]>();
@@ -133,7 +137,7 @@ export function SeletorEmpresa() {
   }
 
   return (
-    <div ref={caixa} className="relative">
+    <div ref={caixa} className="gerizo-company relative min-w-0">
       <button
         type="button"
         onClick={() => setAberto((v) => !v)}
@@ -141,13 +145,13 @@ export function SeletorEmpresa() {
         aria-expanded={aberto}
         aria-label={escolhida ? `Trocar empresa: ${escolhida.empresa} · ${escolhida.nome}` : "Trocar empresa"}
         title={escolhida ? `${escolhida.empresa} · ${escolhida.nome}` : "Trocar de empresa"}
-        className="h-10 w-[42px] md:w-auto md:max-w-[220px] px-2 rounded-r1 flex items-center justify-center gap-1.5 text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="min-h-10 max-w-full md:max-w-[220px] px-2 rounded-r1 flex items-center gap-2 text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
       >
-        <Building2 className="w-3.5 h-3.5 shrink-0" />
-        <span className="hidden md:block text-[12px] font-medium truncate">
+        <Building2 className="hidden md:block w-4 h-4 shrink-0" />
+        <span className="block min-w-0 text-left text-[14px] font-medium leading-5 line-clamp-2 [overflow-wrap:anywhere]">
           {escolhida ? escolhida.empresa || escolhida.nome : "Empresa"}
         </span>
-        <ChevronDown className="hidden md:block w-3.5 h-3.5 shrink-0" />
+        <ChevronDown className="w-3.5 h-3.5 shrink-0" />
       </button>
 
       {aberto && (

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import "@/components/analise/operation-pages.css";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Button, Panel, PanelHeader, Badge, EmptyState } from "@/components/ui/primitives";
 import { FileDrop, SectionTitle, Segmented, Field, Input, Toggle } from "@/components/ui/controls";
@@ -607,7 +608,6 @@ export default function ProcessarPromocoes() {
       <PageHeader
         title="Processar planilha"
         breadcrumb="Promoções"
-        description="Decide participação e recalcula o preço final preservando a margem"
         actions={
           etapa > 1 ? (
             <Button size="sm" onClick={() => setEtapa((e) => (e === 3 ? 2 : 1))}>
@@ -618,9 +618,9 @@ export default function ProcessarPromocoes() {
         }
       />
 
-      <PageBody>
-        <Panel className="overflow-hidden">
-          <ol className="flex items-stretch divide-x divide-line">
+      <PageBody className="op-workspace op-promocoes-processar">
+        <nav className="op-processing-steps" aria-label="Etapas do processamento">
+          <ol className="flex items-stretch">
             {ETAPAS.map((e) => {
               const feita = etapa > e.n;
               const atual = etapa === e.n;
@@ -630,6 +630,7 @@ export default function ProcessarPromocoes() {
                   <button
                     onClick={() => !bloqueada && setEtapa(e.n as 1 | 2 | 3)}
                     disabled={bloqueada}
+                    aria-current={atual ? "step" : undefined}
                     className={
                       "w-full h-full text-left px-4 py-3 flex items-center gap-3 transition-colors disabled:opacity-45 " +
                       (atual ? "bg-brand-wash" : "hover:bg-panel-2")
@@ -650,7 +651,7 @@ export default function ProcessarPromocoes() {
                     <span className="min-w-0">
                       <span
                         className={
-                          "block text-[13px] font-semibold truncate " +
+                          "block text-[14px] font-semibold truncate " +
                           (atual ? "text-brand" : "text-ink")
                         }
                       >
@@ -665,7 +666,8 @@ export default function ProcessarPromocoes() {
               );
             })}
           </ol>
-        </Panel>
+        </nav>
+        <div className="op-section-title"><h2>{ETAPAS.find((e) => e.n === etapa)?.titulo}</h2><p>{ETAPAS.find((e) => e.n === etapa)?.hint}</p></div>
 
         {erro && (
           <Panel className="bg-down-wash border-transparent px-4 py-3 flex gap-2.5">
@@ -868,7 +870,7 @@ export default function ProcessarPromocoes() {
         {/* ── Etapa 2 ─────────────────────────────────────────── */}
         {etapa === 2 && resultado && (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="op-stat-strip">
               <StatTile label="Itens lidos" value={count(resultado.resumo.lidos)} />
               <StatTile
                 label="Participam"
@@ -1038,7 +1040,7 @@ export default function ProcessarPromocoes() {
                       strokeWidth={1.75}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="num text-[13px] text-ink truncate block">
+                      <span className="num text-[14px] text-ink truncate block">
                         processado_{a.nome}
                       </span>
                       <span className="text-[12px] text-ink-3 truncate block">
@@ -1083,7 +1085,7 @@ export default function ProcessarPromocoes() {
                 </Button>
                 <Link
                   href="/promocoes/historico"
-                  className="h-8 max-sm:h-11 px-3 inline-flex items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[13px] text-ink hover:bg-panel-3 transition-colors"
+                  className="h-8 max-sm:h-11 px-3 inline-flex items-center justify-center gap-1.5 rounded-r1 border border-line-2 bg-panel text-[14px] text-ink hover:bg-panel-3 transition-colors"
                 >
                   <History className="w-3.5 h-3.5" />
                   Ver no histórico
