@@ -119,6 +119,36 @@ function listaDeSeparacao(doc: PDFDocument, envios: EnvioParaEtiqueta[], negrito
   }
 }
 
+/**
+ * Põe no documento as páginas 10×15 de um envio.
+ *
+ * O Meli manda 10×15 direto ou, em algumas contas, a etiqueta dentro de uma A4
+ * deitada. A A4 em pé é só o resumo: sai, a lista nossa substitui.
+ */
+export async function paginasDaEtiqueta(doc: PDFDocument, origem: PDFDocument): Promise<PDFPage[]> {
+  const todas = origem.getPages();
+  const idx = todas.map((p, i) => (p.getWidth() < 400 ? i : -1)).filter((i) => i >= 0);
+  if (idx.length) {
+    const copiadas = await doc.copyPages(origem, idx);
+    copiadas.forEach((p) => doc.addPage(p));
+    return copiadas;
+  }
+  const folha = todas.find((p) => p.getWidth() > p.getHeight());
+  if (!folha) return [];
+  /* ponytail: caixa medida no PDF de 18/11/2026, com um envio por folha.
+     Medir de novo se o Meli mudar o desenho da A4. */
+  const recorte = await doc.embedPage(folha, { left: 30, bottom: 144, right: 288, top: 568 });
+  const escala = Math.min(L / recorte.width, A / recorte.height);
+  const pag = doc.addPage([L, A]);
+  pag.drawPage(recorte, {
+    x: (L - recorte.width * escala) / 2,
+    y: (A - recorte.height * escala) / 2,
+    width: recorte.width * escala,
+    height: recorte.height * escala,
+  });
+  return [pag];
+}
+
 export async function montarEtiquetas(contaId: string, envios: EnvioParaEtiqueta[]): Promise<ResultadoEtiquetas> {
   const doc = await PDFDocument.create();
   const negrito = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -135,11 +165,11 @@ export async function montarEtiquetas(contaId: string, envios: EnvioParaEtiqueta
       falhas.push({ envio: e.envio, pedido: e.pedido, motivo: /NOT_PRINTABLE_STATUS/.test(msg) ? motivoLegivel(msg) : msg });
       continue;
     }
-    const origem = await PDFDocument.load(bruto);
-    // A4 = resumo do Meli: sai, a lista nossa substitui.
-    const idx = origem.getPages().map((p, i) => (p.getWidth() < 400 ? i : -1)).filter((i) => i >= 0);
-    const paginas = await doc.copyPages(origem, idx);
-    paginas.forEach((p) => doc.addPage(p));
+    const paginas = await paginasDaEtiqueta(doc, await PDFDocument.load(bruto));
+    if (!paginas.length) {
+      falhas.push({ envio: e.envio, pedido: e.pedido, motivo: "O Meli devolveu a etiqueta em um formato desconhecido." });
+      continue;
+    }
     if (paginas.length >= 2) carimbar(paginas[paginas.length - 1], e, negrito, normal);
     else {
       // Sem DANFE (nota não registrada no Meli): uma folha só com os itens, logo após a etiqueta.
