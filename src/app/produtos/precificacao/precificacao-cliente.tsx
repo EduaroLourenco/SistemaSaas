@@ -703,22 +703,25 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
                   <Input type="number" inputMode="decimal" value={r.a.frete} placeholder={r.frete != null ? r.frete.toFixed(2) : "cotar"} onChange={(e) => mudar(c.codigo, { frete: e.target.value })} />
                 </Field>
                 {c.codigo === "mercado_livre" && (
-                  <Field label="Frete ao comprador" className="col-span-2">
+                  <fieldset className="col-span-2 min-w-0">
+                    <legend className="mb-1.5 text-[14px] font-medium text-ink-2">Quem paga o frete</legend>
                     <Segmented
-                      options={[{ value: "gratis", label: "Grátis (eu pago)" }, { value: "pago", label: "Comprador paga" }]}
+                      options={[{ value: "gratis", label: "Frete grátis" }, { value: "pago", label: "Comprador paga" }]}
                       value={r.a.comprador ? "pago" : "gratis"}
                       onChange={(x) => mudar(c.codigo, { comprador: x === "pago", frete: "" })}
                     />
-                  </Field>
+                    <p className="text-[13px] leading-5 text-ink-3">{r.a.comprador ? "Modalidade para preços abaixo de R$ 79. Cote o frete para apurar o custo que fica com você." : "Você assume o custo do envio. Escolha a logística e confira o frete na cotação."}</p>
+                  </fieldset>
                 )}
                 {c.codigo === "mercado_livre" && !r.a.comprador && (
-                  <Field label="Envio" className="col-span-2">
+                  <fieldset className="col-span-2 min-w-0">
+                    <legend className="mb-1.5 text-[14px] font-medium text-ink-2">Envio</legend>
                     <Segmented
                       options={[{ value: "coleta", label: "Coleta / Full" }, { value: "flex", label: "Flex / próprio" }]}
                       value={r.a.logistica}
                       onChange={(lg) => mudar(c.codigo, { logistica: lg as Logistica })}
                     />
-                  </Field>
+                  </fieldset>
                 )}
               </div>
 

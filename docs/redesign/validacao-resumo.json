@@ -54,5 +54,22 @@
   "limites": [
     "Auth/RLS/integrações e gravações reais não exercitados",
     "Aceite completo de todos os estados e acessibilidade não comprovado"
-  ]
+  ],
+  "integracaoFreteDanfe": {
+    "commitsIntegrados": [
+      "ace7e8b",
+      "4ee97d6"
+    ],
+    "contratos": {
+      "passaram": 23,
+      "total": 23
+    },
+    "interface": {
+      "passaram": 36,
+      "total": 36
+    },
+    "build": true,
+    "documento": "integracao-frete-danfe.md",
+    "dados": "fixtures sintéticas; efeitos externos bloqueados"
+  }
 }

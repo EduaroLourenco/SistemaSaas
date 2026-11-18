@@ -1,5 +1,7 @@
 # Gerizo — redesign das 61 rotas
 
+**Continuação:** os commits de frete e DANFE foram incorporados na mesma sequência e a experiência foi aprimorada em uma etapa posterior. Veja [integração de frete e documentos de expedição](integracao-frete-danfe.md) para o fluxo de revisão, permissões e QA complementar.
+
 17/11/2026 · branch `codex/redesign-gerizo-completo` · base `56f69bd`.
 
 O pedido posterior do usuário ampliou o escopo do piloto para **todas as rotas**, autorizou melhorias de composição e solicitou commit. O blueprint permaneceu como referência de design e paridade; seu comando de partida limitado ao piloto deixou de delimitar a entrega. Não foram produzidas novas capturas para apresentação nesta expansão, conforme a preferência do usuário.

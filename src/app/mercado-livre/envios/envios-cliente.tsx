@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { Panel, Badge } from "@/components/ui/primitives";
+import { Panel, Badge, Button } from "@/components/ui/primitives";
+import { Sheet } from "@/components/ui/controls";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, AlertCircle, CheckCircle2, List, Printer, Table2 } from "lucide-react";
+import { ArrowDown, ArrowUp, AlertCircle, CheckCircle2, FileText, List, Printer, Table2 } from "lucide-react";
 import { count } from "@/lib/format";
 import type { DadosEnvios, EnvioMeli } from "@/lib/dados/envios-meli";
+import "./envios.css";
 
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
@@ -38,13 +40,13 @@ function Dias({ dias }: { dias: number | null }) {
 
 /** O Meli só libera etiqueta de envio com nota e ainda não coletado, e só na conta que usa Mercado Envios. */
 const SEM_ETIQUETA = new Set(["", "invoice_pending", "buffered", "shipment_paid"]);
-const temEtiqueta = (e: EnvioMeli) => Boolean(e.envio && e.substatus !== undefined && !SEM_ETIQUETA.has(e.substatus) && e.origem === "canal");
+const temEtiqueta = (e: EnvioMeli) => Boolean(e.contaId && e.envio && e.substatus !== undefined && !SEM_ETIQUETA.has(e.substatus) && e.origem === "canal");
 
-function Marcar({ envio, marcados, alternar }: { envio: EnvioMeli; marcados: Set<number>; alternar: (n: number) => void }) {
+function Marcar({ envio, marcados, alternar, impedimento }: { envio: EnvioMeli; marcados: Set<number>; alternar: (n: number) => void; impedimento?: string }) {
   if (!temEtiqueta(envio)) return null;
   return (
-    <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center" title="Incluir na impressão de etiquetas">
-      <input type="checkbox" className="h-5 w-5 accent-[var(--brand)]" checked={marcados.has(envio.envio!)} onChange={() => alternar(envio.envio!)} aria-label={`Incluir pedido ${envio.pedido} na impressão de etiquetas`} />
+    <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center" title={impedimento || "Incluir nos documentos de expedição"}>
+      <input type="checkbox" className="h-5 w-5 accent-[var(--brand)] disabled:opacity-35" disabled={Boolean(impedimento)} checked={marcados.has(envio.envio!)} onChange={() => alternar(envio.envio!)} aria-label={`Incluir pedido ${envio.pedido} na impressão de etiquetas`} />
     </label>
   );
 }
@@ -81,15 +83,42 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
   const [tabelaMobile, setTabelaMobile] = React.useState(false);
   const [marcados, setMarcados] = React.useState<Set<number>>(new Set());
   const [imprimindo, setImprimindo] = React.useState(false);
-  const [aviso, setAviso] = React.useState<{ tom: "down" | "warn"; texto: string } | null>(null);
-  const alternar = (n: number) => setMarcados((m) => { const x = new Set(m); if (x.has(n)) x.delete(n); else x.add(n); return x; });
+  const [revisando, setRevisando] = React.useState(false);
+  const [arquivo, setArquivo] = React.useState<string | null>(null);
+  const [aviso, setAviso] = React.useState<{ tom: "down" | "warn" | "up"; texto: string } | null>(null);
+  const arquivoAtual = React.useRef<string | null>(null);
+  const leituraAtual = React.useRef(dados);
+  React.useEffect(() => () => { if (arquivoAtual.current) URL.revokeObjectURL(arquivoAtual.current); }, []);
+  React.useEffect(() => {
+    leituraAtual.current = dados;
+    const disponiveis = new Set(dados.envios.filter(temEtiqueta).map(e => e.envio!));
+    setMarcados(atuais => [...atuais].every(id => disponiveis.has(id)) ? atuais : new Set([...atuais].filter(id => disponiveis.has(id))));
+    setConta(atual => dados.contas.includes(atual) ? atual : "");
+    setRevisando(false);
+    setAviso(null);
+    setArquivo(null);
+    if (arquivoAtual.current) URL.revokeObjectURL(arquivoAtual.current);
+    arquivoAtual.current = null;
+  }, [dados]);
+
+  function mudarConta(nome: string) {
+    setConta(nome);
+    setMarcados(new Set());
+    setAviso(null);
+    setArquivo(null);
+    if (arquivoAtual.current) URL.revokeObjectURL(arquivoAtual.current);
+    arquivoAtual.current = null;
+  }
 
   async function imprimir() {
+    if (imprimindo || !selecionados.length || selecionadosIds.size > 100 || new Set(selecionados.map(e => e.contaId)).size !== 1) return;
     setImprimindo(true);
     setAviso(null);
+    const leitura = dados;
     const janela = window.open("", "_blank");
     try {
-      const r = await fetch("/api/envios/etiquetas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ envios: [...marcados], confirmar: true }) });
+      const r = await fetch("/api/envios/etiquetas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ envios: [...selecionadosIds], confirmar: true }) });
+      if (leituraAtual.current !== leitura) { janela?.close(); return; }
       if (!r.ok) {
         janela?.close();
         const j = await r.json().catch(() => ({}));
@@ -97,14 +126,20 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
         setAviso({ tom: "down", texto: `${j.erro ?? "Não consegui gerar as etiquetas."}${det ? " " + det : ""}` });
         return;
       }
-      const falhas: { pedido: number; motivo: string }[] = JSON.parse(decodeURIComponent(r.headers.get("x-falhas") ?? "%5B%5D"));
-      const url = URL.createObjectURL(await r.blob());
-      if (janela) janela.location.href = url; else window.location.href = url;
-      if (falhas.length) setAviso({ tom: "warn", texto: `${falhas.length} ficaram de fora: ${falhas.map((f) => `${f.pedido} (${f.motivo})`).join(" · ")}` });
-      setMarcados(new Set());
+      const falhas: { envio?: number; pedido: number; motivo: string }[] = JSON.parse(decodeURIComponent(r.headers.get("x-falhas") ?? "%5B%5D"));
+      const pdf = await r.blob();
+      if (leituraAtual.current !== leitura) { janela?.close(); return; }
+      const url = URL.createObjectURL(pdf);
+      if (arquivoAtual.current) URL.revokeObjectURL(arquivoAtual.current);
+      arquivoAtual.current = url;
+      setArquivo(url);
+      if (janela && !janela.closed) janela.location.href = url;
+      setAviso(falhas.length ? { tom: "warn", texto: `PDF gerado. ${falhas.length} ficaram de fora e continuam selecionados: ${falhas.map((f) => `${f.pedido} (${f.motivo})`).join(" · ")}` } : { tom: "up", texto: `PDF pronto com os documentos de ${selecionadosIds.size} ${selecionadosIds.size === 1 ? "envio" : "envios"}.` });
+      setMarcados(new Set(falhas.flatMap(f => selecionados.filter(e => e.envio === f.envio || e.pedido === f.pedido).map(e => e.envio!))));
+      setRevisando(false);
     } catch {
       janela?.close();
-      setAviso({ tom: "down", texto: "Falha de conexão ao gerar as etiquetas." });
+      if (leituraAtual.current === leitura) setAviso({ tom: "down", texto: "Falha de conexão ao gerar as etiquetas." });
     } finally {
       setImprimindo(false);
     }
@@ -122,6 +157,22 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
     });
   }, [dados.envios, conta, ordem]);
 
+  const disponiveis = lista.filter(temEtiqueta);
+  const selecionados = disponiveis.filter(e => marcados.has(e.envio!));
+  const selecionadosIds = new Set(selecionados.map(e => e.envio!));
+  const contaSelecionada = selecionados[0];
+  const contaDoLote = contaSelecionada?.contaId ?? (new Set(disponiveis.map(e => e.contaId)).size === 1 ? disponiveis[0]?.contaId : undefined);
+  const paraSelecionar = disponiveis.filter(e => e.contaId === contaDoLote);
+  const loteIds = [...new Set(paraSelecionar.map(e => e.envio!))];
+  const leituraAntiga = lista.some(e => e.origem === "canal" && (!e.contaId || !e.envio || e.substatus === undefined));
+  const unidadesSelecionadas = selecionados.reduce((total, e) => total + e.itens.reduce((s, i) => s + i.quantidade, 0), 0);
+  const impedimento = (e: EnvioMeli) => imprimindo ? "Aguarde a geração dos documentos." : contaSelecionada && e.contaId !== contaSelecionada.contaId ? "Gere um lote por conta. Limpe a seleção para mudar de conta." : selecionadosIds.size >= 100 && !marcados.has(e.envio!) ? "O limite é de 100 envios por lote." : undefined;
+  const alternar = (id: number) => {
+    const envio = disponiveis.find(e => e.envio === id);
+    if (!envio || impedimento(envio)) return;
+    setMarcados(atuais => { const novos = new Set(atuais); if (novos.has(id)) novos.delete(id); else novos.add(id); return novos; });
+  };
+
   const n = (f: (d: number) => boolean) => lista.filter((e) => e.dias != null && f(e.dias)).length;
   const resumo = [
     { r: "Atrasados", v: n((d) => d < 0), tom: "text-down" },
@@ -135,7 +186,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
 
   const ordenar = (chave: Chave) => setOrdem((o) => ({ chave, asc: o.chave === chave ? !o.asc : true }));
   const colunas: { chave: Chave; rotulo: string; largura: string }[] = [
-    { chave: "dias", rotulo: "Restam", largura: "w-[110px]" },
+    { chave: "dias", rotulo: "Restam", largura: "w-[140px]" },
     { chave: "limite", rotulo: "Enviar até", largura: "w-[140px]" },
     { chave: "produto", rotulo: "Produto", largura: "min-w-[260px]" },
     { chave: "pedido", rotulo: "Pedido", largura: "w-[160px]" },
@@ -159,7 +210,8 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
               key={c || "todas"}
               type="button"
               aria-pressed={conta === c}
-              onClick={() => setConta(c)}
+              onClick={() => mudarConta(c)}
+              disabled={imprimindo}
               className={cn(
                 "min-h-11 min-w-0 rounded-r1 border px-4 py-2 text-left text-[14px] font-medium [overflow-wrap:anywhere]",
                 conta === c ? "border-brand bg-brand-wash text-brand" : "border-line-2 bg-panel text-ink-2 hover:text-ink"
@@ -190,6 +242,29 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
           </dl>
         </section>
 
+        {lista.length > 0 && <section className="shipping-documents" aria-labelledby="documentos-envios">
+          <div className="shipping-documents-heading">
+            <div><h2 id="documentos-envios"><FileText size={18} aria-hidden="true" />Documentos de expedição</h2><p>Etiqueta, DANFE com SKU e lista de separação em um PDF.</p></div>
+            <span className="shipping-paper">Térmica · 10 × 15 cm</span>
+          </div>
+          <div className="shipping-documents-body">
+            <div className="shipping-selection" aria-live="polite">
+              <p><strong className="num">{selecionadosIds.size}</strong> {selecionadosIds.size === 1 ? "envio selecionado" : "envios selecionados"}</p>
+              <span>{contaSelecionada ? contaSelecionada.conta : disponiveis.length ? `${disponiveis.length} disponíveis neste recorte. Selecione uma conta ou um envio para começar.` : "Nenhum envio liberado para gerar documentos nesta leitura."}</span>
+              {selecionadosIds.size > 0 && <span>Um lote desta conta · até 100 envios</span>}
+            </div>
+            <div className="shipping-document-actions">
+              <Button disabled={!loteIds.length || imprimindo} onClick={() => setMarcados(new Set(loteIds.slice(0,100)))}>{loteIds.length > 100 ? "Selecionar até 100" : "Selecionar disponíveis"}</Button>
+              {selecionadosIds.size > 0 && <Button variant="ghost" disabled={imprimindo} onClick={() => setMarcados(new Set())}>Limpar seleção</Button>}
+              <Button variant="primary" disabled={!selecionadosIds.size || imprimindo} onClick={() => { setAviso(null); setRevisando(true); }}><Printer size={16} aria-hidden="true" />Revisar documentos</Button>
+            </div>
+          </div>
+          <p className="shipping-document-note">Gerar o PDF marca os envios como impressos no Mercado Livre. Você confirma na próxima etapa.</p>
+          {leituraAntiga && <p className="shipping-document-note"><AlertCircle size={16} aria-hidden="true" />Há envios sem os dados necessários para os documentos. Atualize a leitura de Envios para habilitar a seleção.</p>}
+          {aviso && <p role={aviso.tom === "down" ? "alert" : "status"} className={cn("shipping-document-feedback", aviso.tom === "down" ? "text-down" : aviso.tom === "warn" ? "text-warn" : "text-up")}>{aviso.texto}</p>}
+          {arquivo && <div className="shipping-file"><FileText size={20} aria-hidden="true" /><div><strong>Documentos prontos</strong><span>PDF com os envios liberados pelo Mercado Livre.</span></div><a href={arquivo} target="_blank" rel="noopener noreferrer">Abrir PDF</a><a href={arquivo} download="documentos-expedicao.pdf">Baixar PDF</a></div>}
+        </section>}
+
         {lista.length === 0 ? (
           <Panel className="flex items-start gap-3 p-5">
             {consultaIncompleta || semContas ? <AlertCircle aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-ink-3" /> : <CheckCircle2 aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-up" />}
@@ -219,17 +294,6 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
               </div>
             </div>
 
-            {(lista.some(temEtiqueta) || aviso) && (
-              <div className="flex flex-wrap items-center gap-3 border-b border-line bg-panel-2 px-4 py-3 md:px-5">
-                <button type="button" disabled={!marcados.size || imprimindo} onClick={imprimir} className="inline-flex min-h-11 items-center gap-2 rounded-r1 bg-brand px-4 text-[14px] font-semibold text-white disabled:opacity-40">
-                  <Printer aria-hidden="true" size={18} />{imprimindo ? "Gerando…" : `Etiquetas com SKU${marcados.size ? ` (${marcados.size})` : ""}`}
-                </button>
-                <button type="button" onClick={() => setMarcados(new Set(lista.filter(temEtiqueta).map((e) => e.envio!)))} className="min-h-11 rounded-r1 border border-line-2 px-3 text-[14px] font-medium text-ink-2 hover:text-ink">Marcar todos</button>
-                <p className="min-w-0 flex-1 text-[12px] leading-[18px] text-ink-3">Baixar a etiqueta marca o envio como impresso no Mercado Livre. Uma conta por vez.</p>
-                {aviso && <p role="status" className={cn("w-full text-[14px] leading-5 [overflow-wrap:anywhere]", aviso.tom === "down" ? "text-down" : "text-warn")}>{aviso.texto}</p>}
-              </div>
-            )}
-
             <div className={cn("min-w-0 overflow-x-auto", !tabelaMobile && "hidden md:block")} role="region" aria-label="Tabela de envios, com rolagem horizontal" tabIndex={0}>
               <table className="w-full min-w-[1000px] table-fixed text-left text-[14px]">
                 <caption className="sr-only">Envios pendentes no recorte selecionado. Ordenação pelo cabeçalho das colunas.</caption>
@@ -244,7 +308,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
                   ))}</tr>
                 </thead>
                 <tbody>{lista.map((e) => <tr key={`${e.conta}-${e.pedido}`} className="group border-b border-line last:border-0">
-                  <td className="sticky left-0 z-1 bg-panel px-4 py-4 align-top"><div className="flex items-start gap-1"><Marcar envio={e} marcados={marcados} alternar={alternar} /><Dias dias={e.dias} /></div></td>
+                  <td className="sticky left-0 z-1 bg-panel px-4 py-4 align-top"><div className="shipping-deadline"><Marcar envio={e} marcados={marcados} alternar={alternar} impedimento={impedimento(e)} /><Dias dias={e.dias} /></div></td>
                   <td className="px-4 py-4 align-top font-medium text-ink">{limiteBr(e) ?? <span className="font-normal text-ink-3">Sem prazo</span>}</td>
                   <td className="px-4 py-4 align-top"><Produtos envio={e} /></td>
                   <td className="px-4 py-4 align-top"><span className="num text-ink-2 [overflow-wrap:anywhere]">{e.pedido}</span><p className="mt-1 text-[12px] text-ink-3">Compra {compraBr(e.compra)}</p></td>
@@ -257,7 +321,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
             <div className={cn("divide-y divide-line md:hidden", tabelaMobile && "hidden")}>
               {lista.map((e) => <article key={`${e.conta}-${e.pedido}`} aria-label={`Pedido ${e.pedido}`} className="min-w-0 p-4">
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex items-start gap-1"><Marcar envio={e} marcados={marcados} alternar={alternar} /><Dias dias={e.dias} /></div>
+                  <div className="flex items-start gap-1"><Marcar envio={e} marcados={marcados} alternar={alternar} impedimento={impedimento(e)} /><Dias dias={e.dias} /></div>
                   <div className="text-right"><p className="text-[12px] leading-[18px] text-ink-3">Enviar até</p><p className="text-[14px] font-semibold leading-5 text-ink">{limiteBr(e) ?? "Sem prazo"}</p></div>
                 </div>
                 <Produtos envio={e} />
@@ -272,6 +336,20 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
           </Panel>
         )}
       </PageBody>
+      {revisando && selecionados.length > 0 && <Sheet title="Revisar documentos" subtitle="Confira a conta e os pedidos antes de gerar o arquivo." onClose={() => { if (!imprimindo) setRevisando(false); }} width="600px" footer={<div className="shipping-review-actions">
+        <Button disabled={imprimindo} onClick={() => setRevisando(false)}>Voltar à seleção</Button>
+        <Button variant="primary" disabled={imprimindo} onClick={imprimir}><Printer size={16} aria-hidden="true" />{imprimindo ? "Gerando documentos…" : "Gerar PDF e marcar como impresso"}</Button>
+      </div>}>
+        <div className="shipping-review">
+          <section className="shipping-review-summary" aria-label="Resumo dos documentos">
+            <p>Conta do Mercado Livre</p><h3>{contaSelecionada?.conta}</h3>
+            <dl><div><dt>Envios</dt><dd>{count(selecionadosIds.size)}</dd></div><div><dt>Pedidos</dt><dd>{count(selecionados.length)}</dd></div><div><dt>Unidades</dt><dd>{count(unidadesSelecionadas)}</dd></div></dl>
+          </section>
+          <div className="shipping-review-notice"><AlertCircle size={18} aria-hidden="true" /><div><strong>O status muda no Mercado Livre</strong><p>Ao confirmar, os envios liberados serão marcados como impressos. O arquivo reúne a etiqueta, o DANFE com SKU quando disponível e a lista de separação em 10 × 15 cm.</p><p>Se o canal não fornecer DANFE, o PDF inclui uma folha com os itens. Isso não emite uma nota fiscal.</p></div></div>
+          {aviso?.tom === "down" && <p role="alert" className="text-down">{aviso.texto}</p>}
+          <section aria-label="Pedidos selecionados"><h3 className="shipping-review-title">Pedidos no lote</h3><ol className="shipping-review-orders">{selecionados.map(e => <li key={`${e.conta}-${e.pedido}`}><div className="shipping-review-order-heading"><strong>Pedido <span className="num">{e.pedido}</span></strong><span>{e.situacao}</span></div><Produtos envio={e} /></li>)}</ol></section>
+        </div>
+      </Sheet>}
     </>
   );
 }
