@@ -25,8 +25,7 @@ export default function Privacidade() {
           <span className="label">gerizo</span>
           <h1 className="text-[26px] font-semibold">Política de privacidade</h1>
           <p className="text-ink-2">
-            Como a plataforma trata os dados das contas que você conecta a ela. Atualizada em 11 de
-            outubro de 2026.
+            Como a plataforma trata os dados das contas conectadas e dos contatos comerciais. Atualizada em 18 de novembro de 2026.
           </p>
         </header>
 
@@ -65,7 +64,12 @@ export default function Privacidade() {
           </p>
         </Secao>
 
-        <Secao titulo="Para que servem">
+        <Secao titulo="Contato comercial e demonstração">
+          <p>Ao registrar interesse no Gerizo, você informa voluntariamente seu nome e telefone para receber contato sobre o produto. Esses contatos ficam em armazenamento privado, separado dos dados das empresas, e podem ser consultados apenas pela administração da plataforma.</p>
+          <p className="mt-2">Você pode solicitar a correção ou exclusão pelo e-mail de contato acima. A demonstração pública usa dados fictícios e não dá acesso às contas ou informações das empresas clientes.</p>
+        </Secao>
+
+        <Secao titulo="Para que servem os dados das contas conectadas">
           <p>
             Exclusivamente para gerar as análises que você vê quando entra na plataforma: vendas por
             canal, margem, cancelamentos, preço, promoções e desempenho de anúncios.

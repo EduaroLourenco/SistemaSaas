@@ -96,24 +96,21 @@ export function BlocoOperacao({ termometro: t, envios }: { termometro: DadosTerm
       </section>
 
       {t && t.contas.length > 0 && (
-        <section aria-label="Próximos dias" className="min-w-0">
-          <h2 className="mb-2 text-[15px] font-semibold text-ink">Próximos dias</h2>
-          <ul className="grid auto-rows-fr grid-cols-2 gap-2 pb-1 max-sm:[&>*:last-child]:hidden sm:grid-cols-4 lg:grid-cols-7">
+        <details className="min-w-0 rounded-r2 border border-line bg-panel px-4 py-3 shadow-[var(--sh-1)]">
+          <summary className="cursor-pointer text-[14px] font-medium text-ink">Próximos 7 dias <span className="ml-2 text-[12px] font-normal text-ink-3">{proximos.filter(p => p.relampago || p.eventos.length).length ? `${proximos.filter(p => p.relampago || p.eventos.length).length} dias com ações` : "Sem ações agendadas"}</span></summary>
+          <ul className="mt-3 divide-y divide-line">
             {proximos.map(({ d, relampago, eventos }) => (
               <li key={d} className="min-w-0">
-                <Link href="/planejamento" className="flex h-full min-h-[104px] flex-col gap-1 rounded-r2 border border-line bg-panel p-3 hover:bg-panel-2">
+                <Link href="/planejamento" className="grid min-h-12 grid-cols-[76px_minmax(0,1fr)] items-start gap-3 rounded-r1 py-3 hover:bg-panel-2">
                   <span className="text-[12px] text-ink-3">
                     {DIAS[new Date(`${d}T12:00:00Z`).getUTCDay()]} · <span className="num">{br(d)}</span>
                   </span>
-                  <span className="text-[13px] font-medium text-ink">{relampago ? `${count(relampago)} em relâmpago` : "sem relâmpago"}</span>
-                  {eventos.slice(0, 2).map((e) => (
-                    <span key={e} className="text-[12px] leading-4 text-ink-2">{e}</span>
-                  ))}
+                  <span className="flex min-w-0 flex-col gap-1 [overflow-wrap:anywhere]">{relampago > 0 && <span className="text-[13px] font-medium text-ink">{count(relampago)} em relâmpago</span>}{eventos.map((e, i) => <span key={`${i}-${e}`} className="text-[12px] leading-4 text-ink-2">{e}</span>)}{!relampago && !eventos.length && <span className="text-[12px] text-ink-3">Sem ações</span>}</span>
                 </Link>
               </li>
             ))}
           </ul>
-        </section>
+        </details>
       )}
 
       {t && <PontosDeAtencao atencao={t.atencao} />}

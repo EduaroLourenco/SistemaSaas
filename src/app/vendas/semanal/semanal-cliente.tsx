@@ -190,7 +190,7 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
   );
 
   const [metricaId, setMetricaId] = React.useState<MetricaId>("receita");
-  const [escopo, setEscopo] = React.useState<Escopo>("todas");
+  const [escopo, setEscopo] = React.useState<Escopo>("dados");
   const [filtrosAbertos, setFiltrosAbertos] = React.useState(false);
 
   const metrica = METRICAS.find((m) => m.id === metricaId) ?? METRICAS[0];
@@ -357,8 +357,8 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
     const valor = (s: SemanaVendas) => s[metrica.id];
     const fechadas = SEMANAS_FECHADAS;
 
-    const melhor = fechadas.reduce((a, b) => (valor(b) > valor(a) ? b : a));
-    const pior = fechadas.reduce((a, b) => (valor(b) < valor(a) ? b : a));
+    const melhor = fechadas.reduce<SemanaVendas | null>((a, b) => (!a || valor(b) > valor(a) ? b : a), null);
+    const pior = fechadas.reduce<SemanaVendas | null>((a, b) => (!a || valor(b) < valor(a) ? b : a), null);
 
     const somaReceita = fechadas.reduce((t, s) => t + s.receita, 0);
     const somaPedidos = fechadas.reduce((t, s) => t + s.pedidos, 0);
@@ -372,11 +372,11 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
       media =
         fechadas.reduce((t, s) => t + valor(s), 0) / Math.max(1, fechadas.length);
 
-    const atual = linhas.find((l) => l.n === SEMANA_ATUAL)!;
+    const atual = linhas.find((l) => l.n === SEMANA_ATUAL);
     const spark = fechadas.slice(-12).map(valor);
 
     return { melhor, pior, media, atual, spark, fechadas };
-  }, [metrica, linhas]);
+  }, [metrica, linhas, SEMANAS_FECHADAS, SEMANA_ATUAL]);
 
   /* ── colunas ───────────────────────────────────────────── */
 
@@ -508,7 +508,8 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
         mobileFilters={false}
         title="Semanal"
         breadcrumb="Vendas"
-        description={`${TOTAL_SEMANAS} semanas de ${ANO} · segunda a domingo · dados até S${SEMANA_ATUAL}`}
+        description={`${ANO} · dados até a semana ${SEMANA_ATUAL}`}
+        help="Cada semana vai de segunda a domingo. A semana em curso é parcial; a média considera apenas semanas fechadas com dados."
         actions={
           <Button
             size="sm"
@@ -557,21 +558,21 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
       />
 
       <PageBody className={decisaoCss.workspace}>
-        <HeroMetric label={`Semana atual · ${metrica.label}`} value={metrica.fmt(resumo.atual[metrica.id])} delta={resumo.atual.wow ?? undefined} hint={`${resumo.atual.rotulo} · em curso`} />
+        <HeroMetric label={`Semana atual · ${metrica.label}`} value={resumo.atual?.comDados ? metrica.fmt(resumo.atual[metrica.id]) : "—"} delta={resumo.atual?.wow ?? undefined} hint={resumo.atual?.comDados ? `${resumo.atual.rotulo} · em curso` : "Sem movimento registrado"} />
         <MetricStrip>
           <StatTile
             label={`Melhor semana · ${metrica.label}`}
-            value={metrica.fmt(resumo.melhor[metrica.id])}
-            hint={`${resumo.melhor.rotulo} · ${resumo.melhor.intervalo}`}
+            value={resumo.melhor ? metrica.fmt(resumo.melhor[metrica.id]) : "—"}
+            hint={resumo.melhor ? `${resumo.melhor.rotulo} · ${resumo.melhor.intervalo}` : "Sem semana fechada"}
           />
           <StatTile
             label={`Pior semana · ${metrica.label}`}
-            value={metrica.fmt(resumo.pior[metrica.id])}
-            hint={`${resumo.pior.rotulo} · ${resumo.pior.intervalo}`}
+            value={resumo.pior ? metrica.fmt(resumo.pior[metrica.id]) : "—"}
+            hint={resumo.pior ? `${resumo.pior.rotulo} · ${resumo.pior.intervalo}` : "Sem semana fechada"}
           />
           <StatTile
             label="Média semanal"
-            value={metrica.fmt(resumo.media)}
+            value={resumo.fechadas.length ? metrica.fmt(resumo.media) : "—"}
             hint={`${resumo.fechadas.length} semanas fechadas`}
             spark={resumo.spark}
           />
@@ -580,7 +581,6 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
         <Panel className="overflow-hidden">
           <PanelHeader
             title={metrica.titulo}
-            hint="barras da semana · linha da média móvel de 4 semanas"
           />
           <div className="px-2 pt-4 pb-3">
             <div className="h-[240px] md:h-[288px]">
@@ -709,7 +709,7 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
       {filtrosAbertos && (
         <FilterSheet
           onClose={() => setFiltrosAbertos(false)}
-          onClear={() => setEscopo("todas")}
+          onClear={() => setEscopo("dados")}
           applyLabel={`Ver ${exibidas.length} semanas`}
         >
           <div>

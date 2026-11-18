@@ -3,9 +3,8 @@
 import * as React from "react";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { OperationSummary } from "@/components/analise/operation-layout";
+import { FerramentasPromocoes } from "@/components/promocoes/ferramentas";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
-import { Segmented } from "@/components/ui/controls";
 import { SemFonte } from "@/components/ui/sem-fonte";
 import { money, count } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -37,9 +36,9 @@ import { Button } from "@/components/ui/primitives";
 
 type Filtro = "todos" | "varias" | "nenhuma" | "alguma";
 
-export default function Comparar({ dados }: { dados: DadosComparacao }) {
-  const [busca, setBusca] = React.useState("");
-  const [filtro, setFiltro] = React.useState<Filtro>("varias");
+export default function Comparar({ dados, buscaInicial = "" }: { dados: DadosComparacao; buscaInicial?: string }) {
+  const [busca, setBusca] = React.useState(buscaInicial);
+  const [filtro, setFiltro] = React.useState<Filtro>("todos");
   const [campanha, setCampanha] = React.useState("todas");
   const [abertos, setAbertos] = React.useState<Set<string>>(new Set());
   const [baixando, setBaixando] = React.useState(false);
@@ -93,8 +92,8 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
   const alternar = (id: string) =>
     setAbertos((atual) => {
       const proximo = new Set(atual);
-      if (proximo.has(id)) proximo.delete(id);
-      else proximo.add(id);
+      if (proximo.has(id)) proximo.clear();
+      else { proximo.clear(); proximo.add(id); }
       return proximo;
     });
 
@@ -132,11 +131,11 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
   if (dados.vazio) {
     return (
       <>
-        <PageHeader title="Comparar ofertas" breadcrumb="Promoções" />
+        <PageHeader title="Comparar propostas" actions={<FerramentasPromocoes atual="/promocoes/comparar" />} />
         <PageBody className="op-workspace op-promocoes-comparar">
           <SemFonte
             titulo="Nenhuma oferta processada"
-            origem="As ofertas saem das planilhas da Central de Promoções. O canal costuma propor mais de uma faixa de desconto para o mesmo anúncio — processe uma planilha e elas aparecem aqui, lado a lado."
+            origem="As propostas registradas aparecem aqui após o processamento de uma campanha."
           />
         </PageBody>
       </>
@@ -145,76 +144,19 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
 
   return (
     <>
-      <PageHeader
-        title="Comparar ofertas"
-        breadcrumb="Promoções"
-        filters={
-          <>
-            <Segmented
-              options={[
-                { value: "varias", label: "Mais de uma" },
-                { value: "nenhuma", label: "Nenhuma passa" },
-                { value: "alguma", label: "Alguma passa" },
-                { value: "todos", label: "Todos" },
-              ]}
-              value={filtro}
-              onChange={(v) => setFiltro(v as Filtro)}
-            />
-
-            <select
-              value={campanha}
-              onChange={(e) => setCampanha(e.target.value)}
-              className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px]
-                         text-ink outline-none focus:border-brand shrink-0 max-w-[220px]"
-            >
-              <option value="todas">Todas as campanhas</option>
-              {dados.campanhasDisponiveis.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                  {c.temReducao ? " · com redução" : ""}
-                </option>
-              ))}
-            </select>
-
-            <Button
-              disabled={baixando}
-              onClick={exportarRecusadas}
-              className="shrink-0"
-            >
-              {baixando ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Montando
-                </>
-              ) : (
-                <>
-                  <Download className="w-3.5 h-3.5" strokeWidth={2.25} />
-                  Exportar recusadas
-                </>
-              )}
-            </Button>
-
-            <span className="relative shrink-0 w-full sm:w-56">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3" />
-              <input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="MLB, SKU ou título"
-                className="w-full h-7 pl-8 pr-3 rounded-r1 bg-panel border border-line
-                           text-[14px] text-ink outline-none focus:border-brand"
-              />
-            </span>
-          </>
-        }
-      />
-
-      <PageBody className="op-workspace op-promocoes-comparar">
-        <OperationSummary label="Propostas do recorte" items={[
-          { label: "Anúncios para comparar", value: count(linhas.length), hint: "Abra um anúncio para conferir as propostas lado a lado" },
-          { label: "Propostas", value: count(totais.ofertas) },
-          { label: "Passam pelo piso", value: count(totais.participam) },
-          { label: "Sem proposta aprovada", value: count(totais.semNenhuma), tone: totais.semNenhuma > 0 ? "warn" : undefined },
-        ]} />
+      <PageHeader title="Comparar propostas" actions={<FerramentasPromocoes atual="/promocoes/comparar" />} />
+      <PageBody className="op-workspace promo-workspace op-promocoes-comparar">
+        <section className="promo-overview" aria-label="Resumo das propostas">
+          <div><strong>{count(linhas.length)}</strong><span>anúncios</span></div><div><strong>{count(totais.ofertas)}</strong><span>propostas</span></div><div><strong>{count(totais.participam)}</strong><span>propostas aprovadas</span></div><div><strong>{count(totais.semNenhuma)}</strong><span>sem proposta aprovada</span></div>
+        </section>
+        <div className="promo-toolbar">
+          <label className="promo-search"><Search size={17} aria-hidden="true" /><span className="sr-only">Buscar propostas</span><input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Produto, SKU ou anúncio" /></label>
+          <details className="promo-filter"><summary>Filtros{(filtro!=="todos"||campanha!=="todas")?` · ${Number(filtro!=="todos")+Number(campanha!=="todas")}`:""}<ChevronDown size={15} /></summary><div className="promo-filter-fields">
+          <label>Situação<select aria-label="Situação das propostas" value={filtro} onChange={e=>setFiltro(e.target.value as Filtro)} className="h-11 max-w-full rounded-r1 border border-line-2 bg-panel px-3 text-[14px]"><option value="todos">Todos os anúncios</option><option value="varias">Com várias propostas</option><option value="nenhuma">Nenhuma passa</option><option value="alguma">Alguma passa</option></select></label>
+          <label>Campanha<select aria-label="Campanha das propostas" value={campanha} onChange={e=>setCampanha(e.target.value)} className="h-11 max-w-full rounded-r1 border border-line-2 bg-panel px-3 text-[14px]"><option value="todas">Todas as campanhas</option>{dados.campanhasDisponiveis.map(c=><option key={c.id} value={c.id}>{c.nome}{c.temReducao?" · com redução":""}</option>)}</select></label>
+          </div></details>
+          <Button disabled={baixando} onClick={exportarRecusadas}>{baixando?<Loader2 size={16} className="animate-spin" />:<Download size={16} />}{baixando?"Preparando…":"Exportar recusadas"}</Button>
+        </div>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
@@ -223,22 +165,7 @@ export default function Comparar({ dados }: { dados: DadosComparacao }) {
         )}
 
         <Panel className="op-primary-table overflow-hidden">
-          <PanelHeader
-            title={`${count(linhas.length)} anúncios`}
-            hint="clique para abrir as propostas"
-            action={
-              <span className="num text-[12px] text-ink-2">
-                {count(totais.ofertas)} propostas ·{" "}
-                <span className="text-up">{count(totais.participam)} passam</span>
-                {totais.semNenhuma > 0 && (
-                  <span className="text-down">
-                    {" "}
-                    · {count(totais.semNenhuma)} sem nenhuma
-                  </span>
-                )}
-              </span>
-            }
-          />
+          <PanelHeader title="Escolha um anúncio para comparar" />
 
           {!linhas.length ? (
             <p className="px-3 py-10 text-center text-[14px] text-ink-3">
@@ -287,7 +214,8 @@ function LinhaAnuncio({
     <div className="border-b border-line">
       <button
         onClick={onAlternar}
-        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-panel-2"
+        className="promo-offer-row w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-panel-2"
+        aria-expanded={aberto}
       >
         {aberto ? (
           <ChevronDown className="w-3.5 h-3.5 shrink-0 text-ink-3" />
@@ -336,22 +264,9 @@ function LinhaAnuncio({
             Sem ela "vs piso" negativo com decisão "participa" parece
             contradição — e é a primeira coisa que se pergunta ao abrir.
           */}
-          <p className="mb-2 text-[12px] text-ink-3 leading-relaxed">
-            <strong className="text-ink-2">Tabela</strong> é o preço que
-            preserva a margem naquela comissão — muda de faixa para faixa.{" "}
-            <strong className="text-ink-2">Piso</strong> é tabela − 5%, o menor
-            preço ofertável; com desconto extra ele desce de propósito.{" "}
-            <strong className="text-ink-2">Redução</strong> é a fatia da tarifa
-            que o canal abate nesta faixa — é ela que muda a comissão e, com
-            isso, o preço de tabela da linha.{" "}
-            {a.ofertas.some((o) => !o.temReducao) && (
-              <>
-                Nas campanhas <em>sem redução de tarifa</em> o preço do canal é
-                só um pedido: o sistema reescreve com o da Fórmula base, e é por
-                isso que as duas primeiras colunas divergem.{" "}
-              </>
-            )}
-          </p>
+          <div className="promo-proposal-cards">{visiveis.map(o=><article key={o.id} className="promo-proposal-card" data-best={o.id===a.melhorAceitavel?.id||undefined}><h4>{o.campanha}</h4><div className="flex flex-wrap items-center gap-2"><Badge tone={o.participa?"up":"neutral"}>{o.participa?"Passa pelos critérios":"Fora dos critérios"}</Badge>{o.id===a.melhorAceitavel?.id&&<span className="text-[12px] font-medium text-brand">Melhor aceitável</span>}{a.participam===0&&o.id===a.recusadaMaisProxima?.id&&<span className="text-[12px] text-warn">Mais próxima do piso</span>}</div><dl className="promo-prices"><div><dt>Canal pediu</dt><dd>{o.precoCanal==null?"—":money(o.precoCanal)}</dd></div><div><dt>Nosso preço</dt><dd>{o.precoOferta==null?"—":money(o.precoOferta)}</dd></div><div><dt>Piso efetivo</dt><dd>{o.pisoEfetivo==null?"—":money(o.pisoEfetivo)}</dd></div><div><dt>Comissão resultante</dt><dd>{o.comissaoResultante==null?"—":o.comissaoResultante.toLocaleString("pt-BR",{maximumFractionDigits:2})+"%"}</dd></div></dl><p>{o.motivo|| (o.folgaAtePiso==null?"Sem distância ao piso calculada.":`${o.folgaAtePiso>=0?"Folga de":"Faltam"} ${money(Math.abs(o.folgaAtePiso))} ${o.folgaAtePiso>=0?"acima do piso.":"para alcançar o piso."}`)}</p></article>)}</div>
+          <details className="promo-secondary mt-4"><summary>Todos os dados das propostas<ChevronDown size={15} /></summary>
+
 
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-[14px]">
@@ -407,6 +322,23 @@ function LinhaAnuncio({
             </table>
           </div>
 
+          </details>
+          <details className="promo-secondary"><summary>Como comparar os preços<ChevronDown size={15} /></summary><div>          <p className="mb-2 text-[12px] text-ink-3 leading-relaxed">
+            <strong className="text-ink-2">Tabela</strong> é o preço que
+            preserva a margem naquela comissão — muda de faixa para faixa.{" "}
+            <strong className="text-ink-2">Piso</strong> é tabela − 5%, o menor
+            preço ofertável; com desconto extra ele desce de propósito.{" "}
+            <strong className="text-ink-2">Redução</strong> é a fatia da tarifa
+            que o canal abate nesta faixa — é ela que muda a comissão e, com
+            isso, o preço de tabela da linha.{" "}
+            {a.ofertas.some((o) => !o.temReducao) && (
+              <>
+                Nas campanhas <em>sem redução de tarifa</em> o preço do canal é
+                só um pedido: o sistema reescreve com o da Fórmula base, e é por
+                isso que as duas primeiras colunas divergem.{" "}
+              </>
+            )}
+          </p></div></details>
           {a.participam === 0 && a.recusadaMaisProxima?.folgaAtePiso != null && (
             <p className="mt-2 text-[12px] text-ink-3">
               Nenhuma proposta passa. A mais próxima está{" "}

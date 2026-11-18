@@ -1,5 +1,7 @@
 "use client";
 
+import "@/components/analise/analytic-refinement.css";
+
 import decisaoCss from "@/components/analise/decision-workspace.module.css";
 import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
 
@@ -18,7 +20,7 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { cn } from "@/lib/utils";
 import { money, moneyShort, pct, count } from "@/lib/format";
-import { AlertCircle, TrendingDown } from "lucide-react";
+import { TrendingDown } from "lucide-react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import type { DadosTrafegoPago, LinhaAnuncioAds, LinhaCampanha } from "@/lib/dados/trafego-pago";
 import { ROTULO_ACAO, type AcaoAds, type LinhaOportunidade } from "@/lib/dados/trafego-oportunidades";
@@ -168,11 +170,24 @@ const SITUACAO: Record<
 
 const dataBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
+/** Escolhe um único relatório com a maior cobertura da data escolhida. */
+function janelaDoPeriodo(periodos: DadosTrafegoPago["periodos"], de: string, ate: string) {
+  const inicio = Date.parse(de), fim = Date.parse(ate);
+  if (!periodos.length || !Number.isFinite(inicio) || !Number.isFinite(fim)) return "";
+  const sobreposicao = (p: DadosTrafegoPago["periodos"][number]) => Math.max(0, Math.min(Date.parse(p.fim), fim) - Math.max(Date.parse(p.inicio), inicio) + 86400000);
+  const distancia = (p: DadosTrafegoPago["periodos"][number]) => Math.abs(Date.parse(p.inicio) - inicio) + Math.abs(Date.parse(p.fim) - fim);
+  const escolhido = [...periodos].sort((a, b) => sobreposicao(b) - sobreposicao(a) || distancia(a) - distancia(b) || b.fim.localeCompare(a.fim))[0];
+  return `${escolhido.inicio}|${escolhido.fim}`;
+}
+
 export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago }) {
   const [aba, setAba] = React.useState<Aba>("anuncios");
   const [busca, setBusca] = React.useState("");
   const [situacao, setSituacao] = React.useState("");
   const [acao, setAcao] = React.useState<string>("");
+  const fonteManual = React.useRef<boolean | null>(null);
+  const ultimaSelecaoAutomatica = React.useRef("");
+  const [relatorioManual, setRelatorioManual] = React.useState(false);
   const { totais, periodos, campanhas, linhas, conferencia, oportunidades, referencias } = dados;
   /* A navegação entra numa transição: a tela antiga fica visível e
      interativa enquanto a nova carrega, em vez de congelar inteira. */
@@ -211,6 +226,29 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       navegarSuave(urlTrafego(proximo, {}));
     });
   };
+
+  const mudarPeriodo = (mudar: { de?: string; ate?: string; canais?: string }) => {
+    fonteManual.current = false;
+    setRelatorioManual(false);
+    const proximo = { ...desejados.current, ...mudar };
+    const janela = mudar.canais === undefined ? janelaDoPeriodo(periodos, proximo.de, proximo.ate) : "";
+    navegar({ ...mudar, janela });
+  };
+  React.useEffect(() => {
+    if (fonteManual.current === null) {
+      fonteManual.current = new URLSearchParams(window.location.search).has("janela");
+      setRelatorioManual(fonteManual.current);
+    }
+    if (fonteManual.current || pendente || dados.vazio) return;
+    const janela = janelaDoPeriodo(periodos, dados.periodo.de, dados.periodo.ate);
+    const selecao = `${dados.recorte}|${dados.periodo.de}|${dados.periodo.ate}|${janela}`;
+    if (janela && janela !== dados.janela && ultimaSelecaoAutomatica.current !== selecao) {
+      ultimaSelecaoAutomatica.current = selecao;
+      navegar({ janela });
+    }
+  }, [periodos, dados.periodo.de, dados.periodo.ate, dados.janela, dados.recorte, dados.vazio, pendente]);
+  const relatorioAtual = periodos.find(p => `${p.inicio}|${p.fim}` === dados.janela);
+  const precisaConferir = Boolean(conferencia && (conferencia.diario == null || Math.abs(conferencia.relatorio - conferencia.diario) > 1 || conferencia.registrosRegistrados < conferencia.registrosEsperados));
 
   const visiveis = React.useMemo(() => {
     const t = busca.trim().toLowerCase();
@@ -502,11 +540,10 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
     <>
       <PageHeader
         title="Tráfego pago"
-        breadcrumb="Anúncios"
         filters={
           <BarraFiltros>
             <Filtro rotulo="Canais" composto>
-              <select aria-label="Canal ou conta" value={filtros.canais} onChange={(e) => navegar({ canais: e.target.value })} className="h-10 w-[260px] max-w-full rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink">
+              <select aria-label="Canal ou conta" value={filtros.canais} onChange={(e) => mudarPeriodo({ canais: e.target.value })} className="h-10 w-[260px] max-w-full rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink">
                 {dados.opcoes.map((g, i) => g.rotulo
                   ? <optgroup key={g.rotulo} label={g.rotulo}>{g.opcoes.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}</optgroup>
                   : g.opcoes.map((o) => <option key={`${i}-${o.valor}`} value={o.valor}>{o.rotulo}</option>))}
@@ -518,8 +555,8 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                 aria-label="Data inicial do gráfico"
                 max={filtros.ate}
                 value={filtros.de}
-                onChange={(e) => e.target.value && navegar({ de: e.target.value })}
-                onBlur={(e) => e.target.value && navegar({ de: e.target.value })}
+                onChange={(e) => e.target.value && mudarPeriodo({ de: e.target.value })}
+                onBlur={(e) => e.target.value && mudarPeriodo({ de: e.target.value })}
                 className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink"
               />
             </Filtro>
@@ -529,8 +566,8 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                 aria-label="Data final do gráfico"
                 min={filtros.de}
                 value={filtros.ate}
-                onChange={(e) => e.target.value && navegar({ ate: e.target.value })}
-                onBlur={(e) => e.target.value && navegar({ ate: e.target.value })}
+                onChange={(e) => e.target.value && mudarPeriodo({ ate: e.target.value })}
+                onBlur={(e) => e.target.value && mudarPeriodo({ ate: e.target.value })}
                 className="h-10 rounded-r1 border border-line bg-panel px-3 text-[13px] text-ink"
               />
             </Filtro>
@@ -539,7 +576,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody className={decisaoCss.workspace}>
+      <PageBody className={[decisaoCss.workspace, "analysis-refined paid-traffic-workspace"].join(" ")}>
         {pendente && <p role="status" className="text-[12px] text-ink-3">Atualizando seleção…</p>}
 
         {dados.vazio ? <SemFonte titulo="Sem relatório de publicidade neste canal" origem="Escolha outro canal acima. No Mercado Livre, use Atualizar agora para buscar a publicidade ou importe um relatório. O gráfico diário continua disponível quando houver dados." /> : <>
@@ -548,15 +585,8 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
             Um por vez, e não a soma: os relatórios do canal se sobrepõem
             (agosto aparece em sete janelas), e somá-los contava o mesmo
             gasto várias vezes. */}
-        <section className="decision-data-tools">
-          <p className="text-[14px] font-medium text-ink-2">Relatório por anúncio</p>
-          <select aria-label="Relatório por anúncio" value={filtros.janela} onChange={(e) => navegar({ janela: e.target.value })} className="min-h-11 w-full max-w-xl rounded-r1 border border-line bg-panel px-3 text-sm text-ink">{periodos.map((p) => <option key={`${p.inicio}|${p.fim}`} value={`${p.inicio}|${p.fim}`}>{p.rotulo} · {money(p.investimento)}</option>)}</select>
-          <p className="mt-2.5 text-[12px] leading-relaxed text-ink-3">{dados.contasDoRelatorio?.join(" · ") || "Conta selecionada"}</p>
-          {dados.contaNaoIdentificada && <p className="mt-2 text-xs text-warn">Anúncio sem conta · TACoS indisponível</p>}
-        </section>
-
-        <HeroMetric label={totais.sobraAposMidia == null ? "Investido em mídia" : "Margem depois da mídia"} value={money(totais.sobraAposMidia ?? totais.investimento)} hint={totais.sobraAposMidia == null ? `margem indisponível · custos em ${pct(totais.coberturaMargem,0)}` : `${totais.margem == null ? "—" : money(totais.margem)} de margem − ${money(totais.investimento)} de mídia · custos em ${pct(totais.coberturaMargem,0)}`}>
-          <div className="grid gap-5 sm:grid-cols-2"><div><p className="text-[14px] text-ink-2">Quanto o canal credita à mídia</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.atribuicao == null ? "—" : pct(totais.atribuicao,1)}</p><p className="mt-2 text-[14px] leading-6 text-ink-3">{money(totais.receitaAtribuida)} de {money(totais.receitaReal)}</p></div><div><p className="text-[14px] text-ink-2">Receita indireta</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.receitaAtribuida > 0 ? pct(totais.receitaIndireta / totais.receitaAtribuida * 100,1) : "—"}</p></div></div>
+        <HeroMetric label={totais.sobraAposMidia == null ? "Investido em mídia" : "Margem depois da mídia"} value={money(totais.sobraAposMidia ?? totais.investimento)} hint={`Custos apurados em ${pct(totais.coberturaMargem,0)} da receita${totais.sobraAposMidia == null ? " · margem indisponível" : ""}`}>
+          <div className="grid grid-cols-2 gap-4"><div><p className="text-[13px] text-ink-2">Atribuição do canal</p><p className="mt-1 text-[24px] font-semibold tabular-nums text-ink">{totais.atribuicao == null ? "—" : pct(totais.atribuicao,1)}</p></div><div><p className="text-[13px] text-ink-2">Receita indireta</p><p className="mt-1 text-[24px] font-semibold tabular-nums text-ink">{totais.receitaAtribuida > 0 ? pct(totais.receitaIndireta / totais.receitaAtribuida * 100,1) : "—"}</p></div></div>
         </HeroMetric>
 
         {/* ── Os cinco números da janela escolhida ── */}
@@ -595,19 +625,18 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
 
 
 
-        {conferencia && (conferencia.diario == null || Math.abs(conferencia.relatorio - conferencia.diario) > 1 || conferencia.registrosRegistrados < conferencia.registrosEsperados) && (
-          <Panel className="flex items-start gap-2.5 border-warn/30 px-4 py-3">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
-            <div className="min-w-0 text-[12px] text-ink-2">
-              <p className="mb-1 text-[13px] font-medium text-ink">Conferência do investimento · {dataBr(conferencia.inicio)} a {dataBr(conferencia.fim)}</p>
-              <p>Relatório: {money(conferencia.relatorio)} · Série diária: {conferencia.diario == null ? "sem registro" : money(conferencia.diario)}</p>
-              <p className="mt-1 text-ink-3">Mesma seleção de canal e conta. A série pode conter valores importados ou recebidos pela API.
-                {conferencia.diasRegistrados < conferencia.diasEsperados && <> Há registros de mídia em {conferencia.diasRegistrados} de {conferencia.diasEsperados} dias; a comparação pode estar incompleta.</>}
-                {conferencia.registrosRegistrados < conferencia.registrosEsperados && <> Cobertura: {conferencia.registrosRegistrados}/{conferencia.registrosEsperados} combinações de conta e dia.</>}
-              </p>
-            </div>
-          </Panel>
-        )}
+        <details className="analysis-source">
+          <summary><span>Dados dos anúncios{precisaConferir && <span className="ml-2 text-warn">· conferir</span>}</span><span>{relatorioAtual ? `${dataBr(relatorioAtual.inicio)} a ${dataBr(relatorioAtual.fim)}` : "Fonte e relatório"}</span></summary>
+          <div>
+            <div className="analysis-source-actions"><span>{relatorioManual ? "Relatório escolhido manualmente" : "Relatório escolhido pelas datas"}</span><button type="button" onClick={() => { fonteManual.current = false; setRelatorioManual(false); const janela = janelaDoPeriodo(periodos, filtros.de, filtros.ate); if (janela) navegar({ janela }); }}>Usar seleção automática</button></div>
+            <label>Relatório por anúncio<select aria-label="Relatório por anúncio" value={filtros.janela} onChange={(e) => { fonteManual.current = true; setRelatorioManual(true); navegar({ janela: e.target.value }); }}>{periodos.map(p => <option key={`${p.inicio}|${p.fim}`} value={`${p.inicio}|${p.fim}`}>{p.rotulo} · {money(p.investimento)}</option>)}</select></label>
+            <p>{dados.contasDoRelatorio?.join(" · ") || "Conta selecionada"}</p>
+            <p>Os dados por anúncio usam um relatório completo. O gráfico diário segue exatamente as datas do filtro.</p>
+            {dados.contaNaoIdentificada && <p className="text-warn">Anúncio sem conta · TACoS indisponível</p>}
+            <p>Receita atribuída: {money(totais.receitaAtribuida)} · receita real dos anúncios: {money(totais.receitaReal)}. Margem antes da mídia: {totais.margem == null ? "indisponível" : money(totais.margem)}.</p>
+            {precisaConferir && conferencia && <div className="analysis-reconciliation"><p className="mb-2 font-medium">Conferência do investimento · {dataBr(conferencia.inicio)} a {dataBr(conferencia.fim)}</p><dl><div><dt>Relatório</dt><dd>{money(conferencia.relatorio)}</dd></div><div><dt>Série diária</dt><dd>{conferencia.diario == null ? "Sem registro" : money(conferencia.diario)}</dd></div></dl><p className="mt-2">Mesma seleção de canal e conta. A série reúne importações e API.{conferencia.diasRegistrados < conferencia.diasEsperados && ` Mídia registrada em ${conferencia.diasRegistrados} de ${conferencia.diasEsperados} dias.`}{conferencia.registrosRegistrados < conferencia.registrosEsperados && ` Cobertura: ${conferencia.registrosRegistrados}/${conferencia.registrosEsperados} combinações de conta e dia.`}</p></div>}
+          </div>
+        </details>
 
         <Panel className="overflow-hidden">
           <Tabs
@@ -881,8 +910,9 @@ function Numero({
 }) {
   return (
     <Panel className="p-3">
-      <p className="text-[12px] text-ink-3">{rotulo}</p>
+      <p className="text-[12px] text-ink-3" title={ajuda}>{rotulo}</p>
       <p
+        style={valor.startsWith("R$") ? { fontSize: "clamp(14px, calc(160cqw / var(--metric-chars)), 24px)", "--metric-chars": valor.length, whiteSpace: "nowrap" } as React.CSSProperties : undefined}
         className={cn(
           "num mt-2 text-[24px] font-semibold leading-8",
           tom === "down" ? "text-down" : tom === "up" ? "text-up" : "text-ink"
@@ -890,7 +920,6 @@ function Numero({
       >
         {valor}
       </p>
-      <p className="mt-1.5 text-[11px] leading-snug text-ink-3">{ajuda}</p>
     </Panel>
   );
 }

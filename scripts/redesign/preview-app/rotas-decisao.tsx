@@ -6,6 +6,7 @@ import Lancamentos from "@/app/vendas/lancamentos/lancamentos-cliente";
 import Canais from "@/app/vendas/canais/canais-cliente";
 import Diario from "@/app/vendas/diario/diario-cliente";
 import Dia from "@/app/vendas/dia/dia-cliente";
+import { BlocoOperacao } from "@/app/vendas/dia/operacao-hoje";
 import Mtd from "@/app/vendas/mtd/mtd-cliente";
 import Metas from "@/app/vendas/metas/metas-cliente";
 import Skus from "@/app/vendas/skus/analise-sku-cliente";
@@ -16,13 +17,14 @@ import Trafego from "@/app/anuncios/trafego-pago/trafego-pago-cliente";
 import Produtos from "@/app/produtos/produtos-cliente";
 import Precificacao from "@/app/produtos/precificacao/precificacao-cliente";
 import * as dados from "./fixtures-decisao";
+import { skusRefino, quedaRefino, termometroRefino, trafegoRefino } from "./fixtures-refino-analitico";
 export const ROTAS_DECISAO: Record<string, ReactNode> = {
  "/vendas/anual":<Anual dados={dados.anual}/>, "/vendas/semanal":<Semanal dados={dados.semanal}/>,
  "/vendas/comparativos":<Comparativos dados={dados.comparativos}/>, "/vendas/lancamentos":<Lancamentos dados={dados.lancamentos}/>,
  "/vendas/canais":<Canais dados={dados.porCanais}/>, "/vendas/diario":<Diario dados={dados.diario} canalAtual=""/>,
- "/vendas/dia":<Dia dados={dados.dia}/>, "/vendas/mtd":<Mtd dados={dados.mtd}/>, "/vendas/metas":<Metas dados={dados.metas}/>,
- "/vendas/skus":<Skus dados={dados.skus}/>, "/vendas/queda":<Queda dados={dados.queda}/>,
- "/vendas/cancelamentos":<Cancelamentos dados={dados.cancelamentos}/>, "/mercado-livre":<Termometro dados={dados.termometro}/>,
- "/anuncios/trafego-pago":<Trafego dados={dados.trafego}/>, "/produtos":<Produtos dados={dados.produtos}/>,
+ "/vendas/dia":<Dia dados={{...dados.dia,recentes:dados.dia.mes.slice(9,16)}} operacao={<BlocoOperacao termometro={termometroRefino} envios={null}/>}/>, "/vendas/mtd":<Mtd dados={dados.mtd}/>, "/vendas/metas":<Metas dados={dados.metas}/>,
+ "/vendas/skus":<Skus dados={skusRefino}/>, "/vendas/queda":<Queda dados={quedaRefino}/>,
+ "/vendas/cancelamentos":<Cancelamentos dados={dados.cancelamentos}/>, "/mercado-livre":<Termometro dados={termometroRefino}/>,
+ "/anuncios/trafego-pago":<Trafego dados={trafegoRefino}/>, "/produtos":<Produtos dados={dados.produtos}/>,
  "/produtos/precificacao":<Precificacao dados={dados.precificacao}/>,
 };

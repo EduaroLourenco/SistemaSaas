@@ -3,6 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
+import { FerramentasPromocoes } from "@/components/promocoes/ferramentas";
 import "@/components/analise/operation-pages.css";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Button, Panel, PanelHeader, Badge, EmptyState } from "@/components/ui/primitives";
@@ -607,18 +608,18 @@ export default function ProcessarPromocoes() {
     <>
       <PageHeader
         title="Processar planilha"
-        breadcrumb="Promoções"
-        actions={
-          etapa > 1 ? (
+        actions={<>
+          <FerramentasPromocoes atual="/promocoes/processar" />
+          {etapa > 1 ? (
             <Button size="sm" onClick={() => setEtapa((e) => (e === 3 ? 2 : 1))}>
               <ArrowLeft className="w-3.5 h-3.5" />
               Voltar
             </Button>
-          ) : undefined
-        }
+          ) : null}
+        </>}
       />
 
-      <PageBody className="op-workspace op-promocoes-processar">
+      <PageBody className="op-workspace op-promocoes-processar promo-workspace">
         <nav className="op-processing-steps" aria-label="Etapas do processamento">
           <ol className="flex items-stretch">
             {ETAPAS.map((e) => {
@@ -667,7 +668,6 @@ export default function ProcessarPromocoes() {
             })}
           </ol>
         </nav>
-        <div className="op-section-title"><h2>{ETAPAS.find((e) => e.n === etapa)?.titulo}</h2><p>{ETAPAS.find((e) => e.n === etapa)?.hint}</p></div>
 
         {erro && (
           <Panel className="bg-down-wash border-transparent px-4 py-3 flex gap-2.5">
@@ -688,10 +688,6 @@ export default function ProcessarPromocoes() {
                 hint="uma por campanha"
               />
               <div className="p-4">
-                <SectionTitle
-                  title="Exportação do canal"
-                  hint="uma ou várias"
-                />
                 <div className="mt-3">
                   <FileDrop
                     accept=".xlsx"
@@ -756,11 +752,11 @@ export default function ProcessarPromocoes() {
                     label="Ofertar no nosso mínimo"
                     hint="quando o canal pede menos desconto do que o mínimo permite"
                   />
-                  <p className="mt-2 text-[12px] leading-relaxed text-ink-2">
+                  <Disclosure title="Efeito sobre o preço e a margem">
                     Desligado, a linha entra no preço do canal — a maior margem da campanha. Ligado, o sistema
                     reescreve com o mínimo: preço mais baixo, margem menor, aposta no volume. Nunca sobe o preço,
                     que é o que o canal recusa.
-                  </p>
+                  </Disclosure>
                 </div>
                 {regra !== "tabela" && (
                   <Field
@@ -775,15 +771,15 @@ export default function ProcessarPromocoes() {
                     />
                   </Field>
                 )}
-                <p className="text-[12px] leading-relaxed text-ink-2">
+                <Disclosure title="Entender a regra escolhida">
                   {regra === "tabela" &&
 "O preço mínimo vem da Fórmula base, como sempre foi."}
 
                   {regra === "margem" &&
                     "O preço mínimo é calculado dos custos de cada SKU (Financeiro › Custos): o menor preço que ainda deixa a margem pedida, já com a comissão da campanha. Não precisa de Fórmula base. SKU sem custo completo fica de fora, como pendência."}
                   {regra === "maior" &&
-                    "O item só entra se passar nas duas réguas: a Fórmula base E a margem mínima pelos custos. É o modo em que nenhuma promoção aceita dá prejuízo. SKU sem custo cadastrado segue só a tabela."}
-                </p>
+                    "O item precisa passar pela Fórmula base e pela margem mínima calculada pelos custos. SKU sem custo cadastrado segue só a tabela."}
+                </Disclosure>
               </div>
             </Panel>
 

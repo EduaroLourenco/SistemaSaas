@@ -30,7 +30,7 @@ export const PLANEJAMENTO_FIXTURE: Dados = {
   produtos: [{ sku: "DEMO-138", titulo: tituloProduto, origem: "produto", curva: "A", receita90: 78200, unidades90: 86, preco: 1249, precoOrigem: "anuncio", estoque: 42, temCusto: true }, { sku: "DEMO-158", titulo: "Colchão queen de demonstração com espuma de conforto 158 × 198 cm", origem: "produto", curva: "B", receita90: 38600, unidades90: 24, preco: 1799, estoque: 18, temCusto: false }],
   anuncios: [{ id: "anuncio-demo", codigo: "MLBDEMO138", titulo: tituloProduto, sku: "DEMO-138", canal: "Mercado Livre", conta: "Conta demonstração", tipo: "Clássico" }],
   canais: [{ id: "fixture-meli", nome: "Mercado Livre" }, { id: "fixture-shopee", nome: "Shopee" }],
-  contas: [{ id: "fixture-conta", nome: "Conta demonstração", canal_id: "fixture-meli" }], promocoes: [],
+  contas: [{ id: "fixture-conta", nome: "Conta demonstração", canal_id: "fixture-meli" }], promocoes: [], noCanal: [], noCanalFalhou: false,
 };
 
 export const RESULTADO_FINANCEIRO: Resultado = {

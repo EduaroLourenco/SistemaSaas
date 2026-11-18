@@ -3,7 +3,8 @@
 import * as React from "react";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { OperationSummary, OperationMethod } from "@/components/analise/operation-layout";
+import { OperationMethod } from "@/components/analise/operation-layout";
+import { FerramentasPromocoes } from "@/components/promocoes/ferramentas";
 import {
   BarraFiltros,
   Filtro,
@@ -46,6 +47,7 @@ import {
   YAxis,
 } from "recharts";
 import {
+  ChevronDown,
   Download,
   FileSpreadsheet,
   Search,
@@ -350,10 +352,10 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
     <>
       <PageHeader
         mobileFilters={false}
-        title="Lógica de promoção"
-        breadcrumb="Anúncios"
+        title="Referências de preço"
         actions={
           <>
+            <FerramentasPromocoes atual="/anuncios/preco-ideal" />
             <Button
               size="sm"
               className="md:hidden"
@@ -429,18 +431,19 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
             <FiltroDivisor />
 
             <Filtro rotulo="Buscar" className="w-full sm:w-72">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3 pointer-events-none" />
+              <div className="promo-search">
+                <Search className="w-4 h-4" />
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="MLB, SKU ou título"
-                  className="w-full h-8 pl-8 pr-7 rounded-r1 border border-line bg-panel text-[12px] text-ink placeholder:text-ink-3 focus:border-brand transition-colors"
+                  aria-label="Buscar referências de preço"
                 />
                 {busca && (
                   <button
                     onClick={() => setBusca("")}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-ink-3 hover:text-ink"
+                    aria-label="Limpar busca"
+                    className="min-w-8 min-h-10 flex items-center justify-center text-ink-3 hover:text-ink"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -457,24 +460,17 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
         }
       />
 
-      <PageBody className="op-workspace op-anuncios-preco-ideal">
-        <OperationSummary label="Preço de referência do relatório selecionado" items={[
-          {label: "Desvio médio", value: pct(resumo.medio), hint: `Base ${dataBR(relatorio.dataBase)} · comissão negociada ${pct(resumo.comissao)}`},
-          {label: "No alvo", value: count(resumo.alvo), hint: `${pct((resumo.alvo / (resumo.total || 1)) * 100, 0)} do relatório`},
-          {label: "Acima do ideal", value: count(resumo.acima), hint: "Preço praticado maior que o alvo"},
-          {label: "Abaixo do ideal", value: count(resumo.abaixo), hint: `${money(Math.abs(resumo.economia))} de diferença para o preço de referência`},
-        ]} />
+      <PageBody className="op-workspace op-anuncios-preco-ideal promo-workspace">
+        <div className="promo-overview" aria-label="Resumo do arquivo de referência">
+          <div><strong>{pct(resumo.medio)}</strong><span>desvio médio</span></div>
+          <div><strong>{count(resumo.alvo)}</strong><span>no alvo</span></div>
+          <div><strong>{count(resumo.acima)}</strong><span>acima</span></div>
+          <div><strong>{count(resumo.abaixo)}</strong><span>abaixo</span></div>
+        </div>
         {/* ── Relatórios importados ──────────────────────────── */}
-        <Panel className="overflow-hidden">
-          <PanelHeader
-            title="Relatórios importados"
-            hint="selecione um recorte para ver a tabela abaixo"
-            action={
-              <span className="num text-[12px] text-ink-3">
-                {ordenados.length}
-              </span>
-            }
-          />
+        <details className="promo-reference-source">
+          <summary><span>Arquivo de referência <span className="text-ink-3">· {dataBR(relatorio.dataBase)}</span></span><ChevronDown size={16} /></summary>
+          <div>
           <div className="p-3 grid sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
             {ordenados.map((r) => (
               <CartaoRelatorio
@@ -485,14 +481,49 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
               />
             ))}
           </div>
-        </Panel>
+          </div>
+        </details>
 
-        {/* ── Distribuição do desvio ─────────────────────────── */}
+        {/* ── Tabela do relatório ────────────────────────────── */}
         <Panel className="overflow-hidden">
           <PanelHeader
-            title="Distribuição do desvio"
-            hint={`base ${dataBR(relatorio.dataBase)} · ${relatorio.linhas.length} itens`}
+            title="Praticado e referência"
+            action={
+              <span className="num text-[12px] text-ink-3">
+                {filtrados.length}
+              </span>
+            }
           />
+          <DataTable
+            columns={colunas}
+            rows={filtrados}
+            rowKey={(l) => l.mlb}
+            defaultSort={{ key: "desvio", dir: "desc" }}
+            onRowClick={setSelecionado}
+            empty={
+              <EmptyState
+                icon={SearchX}
+                title="Nenhum item nesta faixa"
+                description="Ajuste a busca ou volte para todas as faixas de desvio."
+                action={
+                  <Button size="sm" onClick={limparFiltros}>
+                    Limpar filtros
+                  </Button>
+                }
+              />
+            }
+          />
+        </Panel>
+        {/* ── Distribuição do desvio ─────────────────────────── */}
+        <details className="promo-reference-source">
+          <summary><span>Distribuição e critérios de comparação</span><ChevronDown size={16} /></summary>
+          <div>
+          <dl className="promo-prices px-4 pb-3">
+            <div><dt>Comissão negociada média</dt><dd>{pct(resumo.comissao)}</dd></div>
+            <div><dt>Diferença nos preços abaixo da referência</dt><dd>{money(Math.abs(resumo.economia))}</dd></div>
+            <div><dt>Itens no alvo</dt><dd>{pct((resumo.alvo / (resumo.total || 1)) * 100, 0)} do arquivo</dd></div>
+            <div><dt>Itens analisados</dt><dd>{count(relatorio.linhas.length)}</dd></div>
+          </dl>
           <div className="h-[210px] px-2 pt-4 pb-1">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -523,44 +554,13 @@ export default function PrecoIdeal({ dados }: { dados: DadosPrecoIdeal }) {
           <div className="px-4 py-3 border-t border-line">
             <p className="text-[12px] text-ink-2">
               <span className="font-semibold text-ink">Leitura: </span>
-              até 2% de distância o preço está no alvo; entre 2% e 6% vale revisar
-              na próxima rodada; acima de 6% o anúncio está fora da tabela e pede
-              correção imediata.
+              menos de 2% de distância indica preço no alvo. De 2% até menos de 6%,
+              revise na próxima rodada; a partir de 6%, priorize a revisão.
             </p>
           </div>
-        </Panel>
+          </div>
+        </details>
 
-        {/* ── Tabela do relatório ────────────────────────────── */}
-        <Panel className="overflow-hidden">
-          <PanelHeader
-            title={`Itens do relatório · ${dataBR(relatorio.dataBase)}`}
-            hint="clique numa linha para comparar praticado e ideal"
-            action={
-              <span className="num text-[12px] text-ink-3">
-                {filtrados.length}
-              </span>
-            }
-          />
-          <DataTable
-            columns={colunas}
-            rows={filtrados}
-            rowKey={(l) => l.mlb}
-            defaultSort={{ key: "desvio", dir: "desc" }}
-            onRowClick={setSelecionado}
-            empty={
-              <EmptyState
-                icon={SearchX}
-                title="Nenhum item nesta faixa"
-                description="Ajuste a busca ou volte para todas as faixas de desvio."
-                action={
-                  <Button size="sm" onClick={limparFiltros}>
-                    Limpar filtros
-                  </Button>
-                }
-              />
-            }
-          />
-        </Panel>
       </PageBody>
 
       {selecionado && (

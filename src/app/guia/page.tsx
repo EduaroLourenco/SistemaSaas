@@ -61,7 +61,7 @@ const grupos = [
 
 export default function Guia() {
   return <>
-    <PageHeader title="Guia das telas" description="O que olhar, onde investigar e como decidir." />
+    <PageHeader title="Guia das telas" help="O que olhar, onde investigar e como decidir." />
     <PageBody className="guide-workspace"><nav className="guide-index" aria-label="Índice do guia">{grupos.map((g,i)=><a key={g.nome} href={`#guia-${i}`}>{g.nome}</a>)}</nav>
       <Panel className="p-5">
         <h2 className="text-sm font-semibold text-ink">Uma rotina de cinco minutos</h2>

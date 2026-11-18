@@ -273,7 +273,7 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
         mobileFilters={false}
         title="Vendas por canal"
         breadcrumb="Vendas"
-        description="Comparativo de desempenho entre canais"
+        help="Comparativo de desempenho entre canais"
         actions={
           <>
             <span className="num hidden sm:inline-flex items-center gap-1.5 text-[12px] text-ink-3">

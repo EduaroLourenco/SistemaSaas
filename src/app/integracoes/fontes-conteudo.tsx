@@ -19,7 +19,7 @@ export function FontesConteudo({fontes,contas,todas,lojas,saude,bling,escritaDis
     <>
       <PageHeader
         title="Fontes de dados"
-        description="Origem, cobertura e estado das conexões."
+        help="Origem, cobertura e estado das conexões."
         actions={<BotaoAtualizar />}
       />
 

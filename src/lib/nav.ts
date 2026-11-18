@@ -59,15 +59,15 @@ export const AREAS: { label: string; items: NavItem[] }[] = [
     { label: "Clássico vs Premium", href: "/anuncios/tipo" },
     { label: "Disputa de catálogo", href: "/anuncios/catalogo" },
   ] },
-  { label: "Lógica e histórico", items: [
-    { label: "Lógica de promoção", href: "/anuncios/preco-ideal" },
-    { label: "Histórico", href: "/promocoes/historico" },
-    { label: "Comparar ofertas", href: "/promocoes/comparar" },
+  { label: "Promoções", items: [
+    { label: "Ofertas", href: "/automacoes" },
+    { label: "Histórico", href: "/promocoes/historico", rotas: ["/promocoes/comparar", "/promocoes/campanhas", "/promocoes/processar", "/anuncios/preco-ideal"] },
+    { label: "Regras", href: "/automacoes/regras" },
   ] },
 ];
 /* `sem`: rota que já tem lugar próprio no menu, para não acender dois itens. */
 const area = (i: number, sem?: string): NavItem => {
-  const rotas = AREAS[i].items.map((t) => t.href).filter((h) => h !== sem);
+  const rotas = AREAS[i].items.flatMap((t) => [t.href, ...(t.rotas ?? [])]).filter((h) => h !== sem);
   return { label: AREAS[i].label, href: rotas[0], rotas };
 };
 
@@ -87,10 +87,8 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Calendário e campanhas", href: "/planejamento" },
       { label: "Promoções abertas", href: "/automacoes" },
-      { label: "Processar planilha", href: "/promocoes/processar" },
-      { label: "Planilhas processadas", href: "/promocoes/campanhas" },
+      { label: "Histórico e análises", href: "/promocoes/historico", rotas: ["/promocoes/historico", "/promocoes/comparar", "/promocoes/campanhas", "/promocoes/processar", "/anuncios/preco-ideal"] },
       { label: "Regras de promoção", href: "/automacoes/regras" },
-      area(4),
       { label: "Resultados", href: "/planejamento/resultados" },
     ],
   },

@@ -34,7 +34,7 @@ export default async function Pagina({
       <PageHeader
         title="Canais e contas"
         breadcrumb="Integrações"
-        description="Onde a empresa vende, com quais contas, e de qual ERP vêm os pedidos"
+        help="Onde a empresa vende, com quais contas, e de qual ERP vêm os pedidos"
       />
       <PageBody className="management-workspace"><WorkspaceNav />
         <CanaisCliente

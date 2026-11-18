@@ -1,5 +1,7 @@
 "use client";
 
+import "@/components/analise/analytic-refinement.css";
+
 import decisaoCss from "@/components/analise/decision-workspace.module.css";
 import { HeroMetric } from "@/components/ui/workspace";
 
@@ -108,6 +110,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
   const [causa, setCausa] = React.useState<string>("");
   const [colunas, setColunas] = React.useState({ coluna: "delta" as ColunaQueda, crescente: true, minimo: "", maximo: "", texto: "", presenca: "todos" });
   const [aberta, setAberta] = React.useState<string | null>(dados.skuFiltro ? dados.linhas[0]?.chave ?? null : null);
+  const [todasCausas, setTodasCausas] = React.useState(false);
 
   const navegar = (mudar: Partial<{ de: string; ate: string; deAnt: string; ateAnt: string; nivel: Nivel; canais: string[] }>) => {
     const q = new URLSearchParams();
@@ -222,8 +225,6 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
     <>
       <PageHeader
         title="Por que caiu"
-        breadcrumb="Vendas"
-        description={`${dataBr(dados.de)} a ${dataBr(dados.ate)} (${dados.dias} dias) contra ${dataBr(dados.deAnterior)} a ${dataBr(dados.ateAnterior)} (${dados.diasAnterior} dias)${dados.dias === dados.diasAnterior ? "" : " · tamanhos diferentes: compare por dia, não pelo total"}`}
         filters={
           <BarraFiltros>
             <Filtro rotulo="Período">
@@ -334,7 +335,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
         }
       />
       <BarraCarregando ativo={atualizando} />
-      <PageBody className={decisaoCss.workspace}>
+      <PageBody className={[decisaoCss.workspace, "analysis-refined queda-workspace"].join(" ")}>
         {dados.vazio ? (
           <Panel>
             <EmptyState
@@ -347,26 +348,28 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
           <>
             {/* ── O resumo: quanto mudou, e para onde foi a queda ── */}
             <div className="decision-comparison">
-              <HeroMetric label="Variação de receita" value={`${variacao > 0 ? "+" : variacao < 0 ? "−" : ""}${money(Math.abs(variacao))}`} delta={dados.totalAntes > 0 ? (variacao / dados.totalAntes) * 100 : undefined} hint={`${dataBr(dados.de)} a ${dataBr(dados.ate)} contra ${dataBr(dados.deAnterior)} a ${dataBr(dados.ateAnterior)}`}>
+              <HeroMetric label="Variação de receita" value={`R$ ${variacao > 0 ? "+" : variacao < 0 ? "−" : ""}${money(Math.abs(variacao)).replace(/^R\$\s*/, "")}`} delta={dados.totalAntes > 0 ? (variacao / dados.totalAntes) * 100 : undefined} hint={`${dataBr(dados.de)} a ${dataBr(dados.ate)} contra ${dataBr(dados.deAnterior)} a ${dataBr(dados.ateAnterior)}`}>
                 <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4 text-[14px]"><div><dt className="text-ink-3">Antes</dt><dd className="mt-1 font-semibold text-ink tabular-nums">{money(dados.totalAntes)}</dd></div><div><dt className="text-ink-3">Agora</dt><dd className="mt-1 font-semibold text-ink tabular-nums">{money(dados.totalAgora)}</dd></div></dl>
+                {dados.dias !== dados.diasAnterior && <p className="mt-3 text-[12px] text-warn">{dados.dias} dias contra {dados.diasAnterior}: compare por dia.</p>}
               </HeroMetric>
               <Panel className="p-5">
-                <p className="label">Para onde foi a queda</p>
+                <p className="text-[14px] font-semibold text-ink">Principais sinais</p>
                 <p className="num mt-1 text-[13px] text-ink-2">
-                  {money(Math.abs(quedaTotal))} perdidos em {count(porCausa.reduce((s, [, x]) => s + x.itens, 0))}{" "}
-                  {dados.nivel === "produto" ? "produtos" : "anúncios"} · agrupados pelo principal sinal observado
+                  {money(Math.abs(quedaTotal))} de queda · {count(porCausa.reduce((s, [, x]) => s + x.itens, 0))}{" "}
+                  {dados.nivel === "produto" ? "produtos" : "anúncios"}
                 </p>
                 <ul className="mt-3 flex flex-col gap-1.5">
-                  {porCausa.map(([c, x]) => (
+                  {(todasCausas ? porCausa : porCausa.slice(0, 3)).map(([c, x]) => (
                     <li key={c}>
                       <button
                         type="button"
+                        aria-pressed={causa === c}
                         onClick={() => {
                           setCausa(causa === c ? "" : c);
                           setMostrar("quedas");
                         }}
                         className={cn(
-                          "grid w-full grid-cols-[1fr_auto] sm:grid-cols-[9rem_1fr_auto] items-center gap-3 rounded-r1 px-1.5 py-1 text-left hover:bg-panel-3",
+                          "grid min-h-11 w-full grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[9rem_1fr_auto] items-center gap-3 rounded-r1 px-1.5 py-1 text-left hover:bg-panel-3",
                           causa === c && "bg-panel-3"
                         )}
                       >
@@ -384,12 +387,13 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                     </li>
                   ))}
                 </ul>
+                {porCausa.length > 3 && <button type="button" className="mt-2 min-h-11 text-[12px] font-medium text-brand" aria-expanded={todasCausas} onClick={() => setTodasCausas((v) => !v)}>{todasCausas ? "Ver principais" : `Ver todos os ${porCausa.length} sinais`}</button>}
               </Panel>
             </div>
 
             <Disclosure title="Como ler esta análise">
-              <p>A etiqueta aponta um sinal, não prova a causa.</p>
-              <p className="mt-2">Abra um SKU para ver canal e anúncio.</p>
+              <p>As quedas são agrupadas pelo principal sinal observado. A etiqueta não prova a causa.</p>
+              <p className="mt-2">Abra um produto para ver o detalhe por canal e anúncio. A comparação usa {dados.dias} dias no período atual e {dados.diasAnterior} no anterior.</p>
             </Disclosure>
 
             {/* ── A lista ── */}

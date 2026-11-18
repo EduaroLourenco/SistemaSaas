@@ -53,7 +53,7 @@ const ESTRUTURA: Grupo[] = [
     ],
   },
   {
-    rotulo: "Custos variáveis — só existem porque houve venda",
+    rotulo: "Custos variáveis",
     linhas: [
       { rotulo: "(−) Comissão do canal", campo: "comissao", custo: true },
       { rotulo: "(−) Frete", campo: "frete", custo: true },
@@ -64,7 +64,7 @@ const ESTRUTURA: Grupo[] = [
     ],
   },
   {
-    rotulo: "Despesas — saem exista venda ou não",
+    rotulo: "Despesas da operação",
     linhas: [
       { rotulo: "(−) Mídia (Ads)", campo: "ads", custo: true },
       { rotulo: "(−) Fixas recorrentes", campo: "fixaRecorrente", custo: true },
@@ -104,7 +104,7 @@ export function DreMensal({
       <div className="flex items-center gap-2 px-4 py-3 border-b border-line flex-wrap">
         <p className="text-[13px] font-semibold text-ink">Demonstrativo mês a mês</p>
         <span className="text-[12px] text-ink-3">
-          cada linha em reais e como % da receita líquida
+          R$ e % da receita líquida
         </span>
       </div>
 
@@ -377,17 +377,6 @@ export function ResumoDre({ r }: { r: Resultado }) {
         ? `${money(r.margemContribuicao)} · só da parte apurada`
         : money(r.margemContribuicao),
     },
-    {
-      k: "Resultado",
-      icone: TrendingUp,
-      tom: r.resultado == null ? "bg-panel-3 text-ink-3" : r.resultado < 0 ? "bg-down-wash text-down" : "bg-up-wash text-up",
-      v: r.resultadoPct != null ? pct(r.resultadoPct, 1) : "—",
-      // Sem cobertura não há resultado. Dizer o que falta vale mais que
-      // um número vermelho que só reflete a mídia do período.
-      sub: r.resultado != null ? money(r.resultado) : "falta custo por SKU",
-      ruim: r.resultado != null && r.resultado < 0,
-    },
-    { k: "Cobertura da margem", v: pct(r.cobertura, 1), sub: `${moneyShort(r.receitaSemCusto)} sem custo`, icone: ShieldCheck, tom: parcial ? "bg-warn-wash text-warn" : "bg-up-wash text-up" },
   ];
 
   return (
@@ -398,7 +387,7 @@ export function ResumoDre({ r }: { r: Resultado }) {
         <p className="finance-focal-note">{r.resultado == null ? "Complete os custos por SKU para apurar o resultado da operação." : r.resultadoPct != null ? pct(r.resultadoPct, 1) + " da receita apurada" : "Resultado do período selecionado"}</p>
         <div className="finance-coverage"><span>Custos completos em <strong className="num text-ink">{pct(r.cobertura, 1)}</strong> da receita</span><div role="progressbar" aria-label="Cobertura dos custos" aria-valuenow={Math.max(0, Math.min(100, r.cobertura))} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(0, Math.min(100, r.cobertura))}%` }} /></div></div>
       </div>
-      <dl className="finance-overview-secondary">{cartoes.map((c) => <div key={c.k}><dt>{c.k === "Resultado" ? "Margem do resultado" : c.k}</dt><dd className={c.ruim ? "text-down" : "text-ink"}>{c.v.replace(/\u00a0/g, " ")}</dd><p>{c.sub}</p></div>)}</dl>
+      <dl className="finance-overview-secondary">{cartoes.map((c) => <div key={c.k}><dt>{c.k}</dt><dd className="text-ink">{c.v.replace(/\u00a0/g, " ")}</dd><p>{c.sub}</p></div>)}</dl>
     </section>
   );
 }

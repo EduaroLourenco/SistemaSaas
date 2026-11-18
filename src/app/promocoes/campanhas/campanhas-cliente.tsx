@@ -3,7 +3,7 @@
 import * as React from "react";
 import { PromocoesPorSku } from "@/components/promocoes/por-sku";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { OperationSummary } from "@/components/analise/operation-layout";
+import { FerramentasPromocoes } from "@/components/promocoes/ferramentas";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { Segmented, Sheet } from "@/components/ui/controls";
 import { SemFonte } from "@/components/ui/sem-fonte";
@@ -108,11 +108,11 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
   if (dados.vazio) {
     return (
       <>
-        <PageHeader title="Planilhas processadas" breadcrumb="Promoções" />
+        <PageHeader title="Campanhas processadas" actions={<FerramentasPromocoes atual="/promocoes/campanhas" />} />
         <PageBody className="op-workspace op-promocoes-campanhas">
           <SemFonte
             titulo="Nenhuma campanha processada"
-            origem="As campanhas saem das planilhas da Central de Promoções: o nome de cada uma vem na própria planilha. Processe uma e ela aparece aqui, com quantos itens participaram e quantos ficaram de fora."
+            origem="Importe uma planilha de campanha para acompanhar itens e decisões por rodada."
           />
         </PageBody>
       </>
@@ -121,174 +121,41 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
 
   return (
     <>
-      <PageHeader
-        title="Planilhas processadas"
-        breadcrumb="Promoções"
-        filters={
-          <>
-            <Segmented
-              options={[
-                { value: "todas", label: "Todas" },
-                { value: "com", label: "Com redução" },
-                { value: "sem", label: "Sem redução" },
-              ]}
-              value={reducao}
-              onChange={setReducao}
-            />
-            <span className="flex items-center gap-1.5 shrink-0">
-              <input
-                type="date"
-                aria-label="Data inicial das campanhas"
-                value={de}
-                onChange={(e) => setDe(e.target.value)}
-                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px] text-ink outline-none focus:border-brand"
-              />
-              <span className="text-[12px] text-ink-3">até</span>
-              <input
-                type="date"
-                aria-label="Data final das campanhas"
-                value={ate}
-                onChange={(e) => setAte(e.target.value)}
-                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px] text-ink outline-none focus:border-brand"
-              />
-            </span>
-            <span className="relative shrink-0 w-full sm:w-56">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3" />
-              <input
-                value={busca}
-                aria-label="Buscar campanha"
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome da campanha"
-                className="w-full h-7 pl-8 pr-3 rounded-r1 bg-panel border border-line
-                           text-[14px] text-ink outline-none focus:border-brand"
-              />
-            </span>
-          </>
-        }
-      />
-
-      <PageBody className="op-workspace op-promocoes-campanhas">
-        <OperationSummary label="Última rodada das campanhas filtradas" items={[
-          { label: "Participam", value: count(totais.participam), hint: `${count(totais.itens)} itens analisados · confirme a participação no canal` },
-          { label: "Campanhas", value: count(linhas.length), hint: "no recorte selecionado" },
-          { label: "Itens analisados", value: count(totais.itens) },
-        ]} />
-        <Panel className="op-primary-table overflow-hidden">
-          <PanelHeader
-            title="Adesão por campanha"
-            hint="aprovadas pelo sistema · confirme a participação no canal"
-            action={
-              <span className="num text-[12px] text-ink-2">
-                {count(totais.participam)} de {count(totais.itens)}
-                {totais.itens > 0 && (
-                  <span className="text-ink-3">
-                    {" "}
-                    · {pct((totais.participam / totais.itens) * 100)}
-                  </span>
-                )}
-              </span>
-            }
-          />
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[14px]">
-              <thead>
-                <tr className="border-b border-line">
-                  <th className="text-left px-3 py-2 min-w-[260px]">
-                    <span className="label">Campanha</span>
-                  </th>
-                  <th className="text-right px-3 py-2"><span className="label">Itens</span></th>
-                  <th className="text-right px-3 py-2"><span className="label">Participam</span></th>
-                  <th className="text-right px-3 py-2"><span className="label">Fora</span></th>
-                  <th className="text-right px-3 py-2 min-w-[150px]">
-                    <span className="label">Adesão</span>
-                  </th>
-                  <th className="text-right px-3 py-2"><span className="label">Processada em</span></th>
-                  <th className="px-3 py-2 w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {linhas.map((c) => {
-                  const adesao = c.itens ? (c.participam / c.itens) * 100 : 0;
-                  return (
-                    <React.Fragment key={c.id}>
-                    <tr className="border-b border-line hover:bg-panel-2">
-                      <td className="px-3 py-2">
-                        <button aria-expanded={expandida === c.id} onClick={() => setExpandida(expandida === c.id ? null : c.id)} className="flex min-h-10 items-center gap-2 min-w-0 text-left">
-                          <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", expandida === c.id && "rotate-180")} />
-                          <span className="text-[14px] font-medium text-ink">
-                            {c.nome}
-                          </span>
-                          <Badge tone={c.temReducao ? "brand" : "neutral"}>
-                            {c.temReducao ? "com redução" : "sem redução"}
-                          </Badge>
-                        </button>
-                      </td>
-                      <td className="px-3 py-2 text-right num text-ink-2">{count(c.itens)}</td>
-                      <td className="px-3 py-2 text-right num text-up font-medium">
-                        {count(c.participam)}
-                      </td>
-                      <td className="px-3 py-2 text-right num text-ink-2">{count(c.fora)}</td>
-                      <td className="px-3 py-2">
-                        <span className="flex items-center justify-end gap-2">
-                          <span className="hidden lg:block w-20 h-1.5 rounded-full bg-panel-3 overflow-hidden">
-                            <span
-                              className="block h-full rounded-full"
-                              style={{
-                                width: `${adesao}%`,
-                                background:
-                                  adesao >= 70
-                                    ? "var(--up)"
-                                    : adesao >= 40
-                                      ? "var(--warn)"
-                                      : "var(--down)",
-                              }}
-                            />
-                          </span>
-                          <span
-                            className={cn(
-                              "num text-[12px]",
-                              adesao >= 70 ? "text-up" : adesao >= 40 ? "text-warn" : "text-down"
-                            )}
-                          >
-                            {pct(adesao)}
-                          </span>
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-right num text-[12px] text-ink-3">
-                        {c.ultimoProcessamento
-                          ? c.ultimoProcessamento.split("-").reverse().join("/")
-                          : "—"}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <button
-                          onClick={() => { setAApagar(c); setErro(null); }}
-                          title="Apagar esta campanha e seu histórico"
-                          aria-label={`Apagar ${c.nome} e seu histórico`}
-                          className="p-1 rounded-r1 text-ink-3 hover:text-down hover:bg-panel-3"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-                        </button>
-                      </td>
-                    </tr>
-                    {expandida === c.id && <tr><td colSpan={7} className="bg-panel-2 p-3">
-                      <div className="max-h-96 overflow-auto rounded-r1 border border-line">
-                        <table className="w-full text-[12px]">
-                          <thead className="sticky top-0 bg-panel"><tr>{["SKU / anúncio", "Oferta do canal", "Referência", "Piso", "Decisão"].map((t) => <th key={t} className="px-3 py-2 text-left font-medium whitespace-nowrap">{t}</th>)}</tr></thead>
-                          <tbody>{ultimas.filter((h) => h.campanha === c.nome).map((h) => <tr key={h.id} className="border-t border-line">
-                            <td className="p-3"><span className="block font-medium">{h.sku}</span><span className="text-ink-3">{h.mlb}</span></td>
-                            {[h.precoOfertadoML, h.precoTabela, h.precoPiso].map((v, i) => <td key={i} className="p-3 num whitespace-nowrap">{v == null ? "—" : money(v)}</td>)}
-                            <td className="p-3"><Badge tone={h.aprovado ? "up" : "neutral"}>{h.aprovado ? "Aprovada" : "Fora"}</Badge>{h.motivo && <span className="mt-1 block max-w-80 text-ink-3">{h.motivo}</span>}</td>
-                          </tr>)}</tbody>
-                        </table>
-                      </div>
-                    </td></tr>}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
+      <PageHeader title="Campanhas processadas" actions={<FerramentasPromocoes atual="/promocoes/campanhas" />} />
+      <PageBody className="op-workspace op-promocoes-campanhas promo-workspace">
+        <section className="promo-overview" aria-label="Última rodada das campanhas filtradas">
+          <div><strong>{count(totais.participam)}</strong><span>aprovados</span></div>
+          <div><strong>{count(linhas.length)}</strong><span>campanhas</span></div>
+          <div><strong>{count(totais.itens)}</strong><span>itens analisados</span></div>
+        </section>
+        <div className="promo-toolbar">
+          <label className="promo-search"><Search size={17} aria-hidden="true" /><span className="sr-only">Buscar campanha</span><input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Nome da campanha" /></label>
+          <Segmented options={[{value:"todas",label:"Todas"},{value:"com",label:"Com redução"},{value:"sem",label:"Sem redução"}]} value={reducao} onChange={setReducao} />
+          <details className="promo-filter"><summary>Período<ChevronDown size={15} /></summary><div className="promo-filter-fields">
+            <label>De<input type="date" value={de} onChange={e=>setDe(e.target.value)} /></label>
+            <label>Até<input type="date" value={ate} onChange={e=>setAte(e.target.value)} /></label>
+          </div></details>
+        </div>
+        <div className="promo-campaign-list">
+          {!linhas.length && <Panel className="p-5 text-[14px] text-ink-2">Nenhuma campanha neste recorte.</Panel>}
+          {linhas.map(c=>{
+            const adesao=c.itens?(c.participam/c.itens)*100:0;
+            const aberta=expandida===c.id;
+            return <article className="promo-campaign" key={c.id}>
+              <div className="promo-campaign-head">
+                <div className="min-w-0"><h2>{c.nome}</h2><p>{c.temReducao?"Com redução de tarifa":"Sem redução de tarifa"}{c.ultimoProcessamento?" · "+c.ultimoProcessamento.split("-").reverse().join("/"):""}</p></div>
+                <button type="button" onClick={()=>{setAApagar(c);setErro(null);}} title="Apagar esta campanha e seu histórico" aria-label={"Apagar "+c.nome+" e seu histórico"} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-r1 text-ink-3 hover:bg-panel-2 hover:text-down"><Trash2 size={16} /></button>
+              </div>
+              <div className="promo-campaign-summary"><dl><div><dt>Itens</dt><dd>{count(c.itens)}</dd></div><div><dt>Aprovados</dt><dd className="text-up">{count(c.participam)}</dd></div><div><dt>Fora</dt><dd>{count(c.fora)}</dd></div><div><dt>Adesão</dt><dd>{pct(adesao)}</dd></div></dl><button type="button" aria-expanded={aberta} onClick={()=>setExpandida(aberta?null:c.id)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-r1 border border-line px-3 text-[14px] hover:bg-panel-2">{aberta?"Fechar itens":"Ver itens"}<ChevronDown size={15} className={cn("transition-transform",aberta&&"rotate-180")} /></button></div>
+              {aberta&&<div className="promo-campaign-items">{ultimas.filter(h=>h.campanha===c.nome).map(h=><article key={h.id}>
+                <div className="promo-record-heading"><div><strong>{h.titulo||h.sku}</strong><p>{h.sku} · {h.mlb}</p></div><Badge tone={h.aprovado?"up":"neutral"}>{h.aprovado?"Aprovada":"Fora"}</Badge></div>
+                <dl className="promo-prices"><div><dt>Oferta do canal</dt><dd>{h.precoOfertadoML==null?"—":money(h.precoOfertadoML)}</dd></div><div><dt>Referência</dt><dd>{h.precoTabela==null?"—":money(h.precoTabela)}</dd></div><div><dt>Piso</dt><dd>{h.precoPiso==null?"—":money(h.precoPiso)}</dd></div></dl>
+                {h.motivo&&<p className="promo-record-reason">{h.motivo}</p>}
+              </article>)}</div>}
+            </article>;
+          })}
+        </div>
+        <details className="promo-secondary"><summary>Sobre a aprovação registrada<ChevronDown size={15} /></summary><div>O resumo reúne a última rodada processada de cada campanha. A decisão do sistema precisa ser conferida no canal.</div></details>
 
         {aApagar && (
           <ConfirmarApagar
@@ -306,7 +173,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
           e um desconto extra na próxima rodada resolveria.
         */}
         {/* O inverso da adesão: por produto, não por campanha. */}
-        <PromocoesPorSku historico={dados.historico} totalCampanhas={dados.campanhas.length} />
+        <details className="promo-reference-source"><summary><span>Participação por produto</span><ChevronDown size={16} /></summary><div><PromocoesPorSku historico={dados.historico} totalCampanhas={dados.campanhas.length} /></div></details>
 
         <Panel className="overflow-hidden">
           <PanelHeader

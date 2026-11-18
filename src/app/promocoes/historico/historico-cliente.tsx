@@ -1,14 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { FotoAnuncio } from "@/components/ui/foto-anuncio";
+import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { OperationSummary } from "@/components/analise/operation-layout";
-import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
-import { Segmented } from "@/components/ui/controls";
+import { FerramentasPromocoes } from "@/components/promocoes/ferramentas";
+import { Panel, Button, Badge } from "@/components/ui/primitives";
+import { Segmented, Sheet } from "@/components/ui/controls";
 import { SemFonte } from "@/components/ui/sem-fonte";
 import { money, count, pct } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import type { DadosPromocoes, ItemHistorico } from "@/lib/dados/promocoes";
 import { Search, ChevronRight, ChevronDown } from "lucide-react";
 
@@ -19,16 +18,9 @@ import { Search, ChevronRight, ChevronDown } from "lucide-react";
  * produto costuma viver nos dois, e separá-los divide a decisão do mesmo
  * item em duas linhas que ninguém consegue comparar.
  *
- * As quatro colunas de preço ficam lado a lado de propósito: ofertado pelo
- * canal, tabela, piso e com desconto extra. É essa comparação que responde
- * "dava para descontar mais?" sem abrir calculadora.
+ * A última decisão fica na lista. O painel do produto mantém as rodadas,
+ * os quatro preços e os motivos juntos para comparar sem perder o contexto.
  */
-
-const CORES_CURVA: Record<string, "up" | "brand" | "neutral"> = {
-  A: "up",
-  B: "brand",
-  C: "neutral",
-};
 
 type Grupo = {
   sku: string;
@@ -51,6 +43,7 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
   const [ate, setAte] = React.useState("");
   const [aberto, setAberto] = React.useState<string | null>(null);
   const [limite, setLimite] = React.useState(30);
+  const [buscaRodada, setBuscaRodada] = React.useState("");
   const [visao, setVisao] = React.useState<"skus" | "processamentos">("skus");
 
   const campanhasDisponiveis = React.useMemo(
@@ -98,283 +91,64 @@ export default function HistoricoPromocoes({ dados }: { dados: DadosPromocoes })
       if (h.data > g.ultima.data) g.ultima = h;
       m.set(h.sku, g);
     }
-    return [...m.values()].sort((a, b) => b.itens.length - a.itens.length);
+    return [...m.values()].sort((a, b) => b.ultima.data.localeCompare(a.ultima.data) || b.itens.length - a.itens.length);
   }, [filtrados]);
 
-  if (dados.vazio) {
-    return (
-      <>
-        <PageHeader title="Histórico de promoções" breadcrumb="Promoções" />
-        <PageBody className="op-workspace op-promocoes-historico">
-          <SemFonte
-            titulo="Nenhuma planilha processada ainda"
-            origem="Cada rodada da Central de Promoções grava aqui a decisão de cada item, com o preço ofertado pelo canal, o de tabela, o piso e o com desconto extra. Processe uma planilha e esta tela se preenche."
-          />
-        </PageBody>
-      </>
-    );
-  }
-
+  const rodadas = dados.processamentos.filter(p => !buscaRodada.trim() || p.arquivos.join(" ").toLowerCase().includes(buscaRodada.trim().toLowerCase()));
+  const selecionado = grupos.find(g => g.sku === aberto);
   const visiveis = grupos.slice(0, limite);
+  const filtrosAtivos = [decisao !== "todas", curva !== "todas", tipo !== "todos", campanha !== "todas", Boolean(de), Boolean(ate)].filter(Boolean).length;
+  const limpar = () => { setBusca(""); setDecisao("todas"); setCurva("todas"); setTipo("todos"); setCampanha("todas"); setDe(""); setAte(""); };
 
-  return (
-    <>
-      <PageHeader
-        title="Histórico de promoções"
-        breadcrumb="Promoções"
-        filters={
-          <>
-            <Segmented
-              options={[
-                { value: "todas", label: "Todas" },
-                { value: "sim", label: "Participaram" },
-                { value: "nao", label: "Fora" },
-              ]}
-              value={decisao}
-              onChange={setDecisao}
-            />
-            <Segmented
-              options={[
-                { value: "todas", label: "ABC" },
-                { value: "A", label: "A" },
-                { value: "B", label: "B" },
-                { value: "C", label: "C" },
-              ]}
-              value={curva}
-              onChange={setCurva}
-            />
-            <Segmented
-              options={[
-                { value: "todos", label: "Tipo" },
-                { value: "Clássico", label: "Clássico" },
-                { value: "Premium", label: "Premium" },
-              ]}
-              value={tipo}
-              onChange={setTipo}
-            />
-            <select
-              value={campanha}
-              onChange={(e) => setCampanha(e.target.value)}
-              className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px]
-                         text-ink outline-none focus:border-brand max-w-[200px]"
-            >
-              <option value="todas">Todas as campanhas</option>
-              {campanhasDisponiveis.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <span className="flex items-center gap-1.5 shrink-0">
-              <input
-                type="date"
-                value={de}
-                onChange={(e) => setDe(e.target.value)}
-                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px] text-ink outline-none focus:border-brand"
-              />
-              <span className="text-[12px] text-ink-3">até</span>
-              <input
-                type="date"
-                value={ate}
-                onChange={(e) => setAte(e.target.value)}
-                className="h-7 px-2 rounded-r1 bg-panel border border-line-2 text-[14px] text-ink outline-none focus:border-brand"
-              />
-            </span>
-            <span className="relative shrink-0 w-full sm:w-52">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3" />
-              <input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="SKU, MLB ou produto"
-                className="w-full h-7 pl-8 pr-3 rounded-r1 bg-panel border border-line
-                           text-[14px] text-ink outline-none focus:border-brand"
-              />
-            </span>
-          </>
-        }
-      />
-
-      <PageBody className="op-workspace op-promocoes-historico">
-        <OperationSummary label="Histórico do recorte" items={[
-          { label: "Decisões registradas", value: count(filtrados.length), hint: "Preços e motivos preservados em cada rodada" },
-          { label: "Produtos", value: count(grupos.length) },
-          { label: "Processamentos", value: count(dados.processamentos.length), hint: "todas as rodadas disponíveis" },
-        ]} />
-        <Segmented options={[{value: "skus", label: "Por produto"}, {value: "processamentos", label: "Processamentos"}]} value={visao} onChange={setVisao} />
-        {visao === "skus" && <Panel className="op-primary-table overflow-hidden">
-          <PanelHeader
-            title="SKUs em promoção"
-            hint="clique para abrir os anúncios · Clássico e Premium agrupados"
-            action={
-              <span className="num text-[12px] text-ink-3">
-                {grupos.length} SKUs · {filtrados.length} decisões
-              </span>
-            }
-          />
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[14px]">
-              <thead>
-                <tr className="border-b border-line">
-                  <th className="sticky left-0 z-20 bg-panel text-left px-3 py-2 border-r border-line min-w-[230px]">
-                    <span className="label">SKU · produto</span>
-                  </th>
-                  <th className="text-right px-3 py-2"><span className="label">Ofertado ML</span></th>
-                  <th className="text-right px-3 py-2"><span className="label">Tabela</span></th>
-                  <th className="text-right px-3 py-2"><span className="label">Piso (−5%)</span></th>
-                  <th className="text-right px-3 py-2"><span className="label">Com extra</span></th>
-                  <th className="text-right px-3 py-2"><span className="label">Praticado</span></th>
-                  <th className="text-right px-3 py-2"><span className="label">Decisões</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {visiveis.map((g) => {
-                  const expandido = aberto === g.sku;
-                  const u = g.ultima;
-                  return (
-                    <React.Fragment key={g.sku}>
-                      <tr
-                        onClick={() => setAberto(expandido ? null : g.sku)}
-                        className="border-b border-line cursor-pointer hover:bg-panel-2"
-                      >
-                        <th
-                          scope="row"
-                          className="sticky left-0 z-10 bg-panel text-left px-3 py-2
-                                     border-r border-line font-normal"
-                        >
-                          <span className="flex items-start gap-1.5">
-                            {expandido ? (
-                              <ChevronDown className="w-3.5 h-3.5 text-ink-3 mt-0.5 shrink-0" />
-                            ) : (
-                              <ChevronRight className="w-3.5 h-3.5 text-ink-3 mt-0.5 shrink-0" />
-                            )}
-                            <span className="min-w-0">
-                              <span className="flex items-center gap-1.5">
-                                <span className="num text-[12px] font-semibold text-ink">
-                                  {g.sku}
-                                </span>
-                                {g.curva !== "—" && (
-                                  <Badge tone={CORES_CURVA[g.curva]}>{g.curva}</Badge>
-                                )}
-                              </span>
-                              <span className="text-[12px] text-ink-2 block break-words max-w-[280px]">
-                                {g.titulo}
-                              </span>
-                            </span>
-                          </span>
-                        </th>
-                        <td className="px-3 py-2 text-right num text-ink-2">
-                          {u.precoOfertadoML != null ? money(u.precoOfertadoML) : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-right num text-ink-2">
-                          {u.precoTabela != null ? money(u.precoTabela) : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-right num text-ink-2">
-                          {u.precoPiso != null ? money(u.precoPiso) : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-right num text-brand font-medium">
-                          {u.precoComExtra != null ? money(u.precoComExtra) : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-right num font-semibold text-ink">
-                          {g.precoPraticado != null ? money(g.precoPraticado) : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <span className="num text-[12px] text-ink-2">
-                            {g.aprovados}/{g.itens.length}
-                          </span>
-                        </td>
-                      </tr>
-
-                      {expandido &&
-                        g.itens.map((h) => (
-                          <tr key={h.id} className="border-b border-line bg-panel-2">
-                            <th
-                              scope="row"
-                              className="sticky left-0 z-10 bg-panel-2 text-left px-3 py-1.5
-                                         border-r border-line font-normal"
-                            >
-                              <span className="flex items-center gap-1.5 pl-5">
-                                <FotoAnuncio mlb={h.mlb} alt={h.mlb} tamanho={24} />
-                                <span className="num text-[12px] text-ink-2">{h.mlb}</span>
-                                <Badge tone={h.tipoAnuncio === "Premium" ? "brand" : "neutral"}>
-                                  {h.tipoAnuncio}
-                                </Badge>
-                                <Badge tone={h.aprovado ? "up" : "down"}>
-                                  {h.aprovado ? "participa" : "fora"}
-                                </Badge>
-                              </span>
-                              <span className="block pl-5 text-[12px] text-ink-3">
-                                {h.campanha} · {h.data.split("-").reverse().join("/")} ·{" "}
-                                {h.tipoCampanha}
-                                {h.motivo ? ` · ${h.motivo}` : ""}
-                              </span>
-                            </th>
-                            <td className="px-3 py-1.5 text-right num text-[12px] text-ink-2">
-                              {h.precoOfertadoML != null ? money(h.precoOfertadoML) : "—"}
-                            </td>
-                            <td className="px-3 py-1.5 text-right num text-[12px] text-ink-2">
-                              {h.precoTabela != null ? money(h.precoTabela) : "—"}
-                            </td>
-                            <td className="px-3 py-1.5 text-right num text-[12px] text-ink-2">
-                              {h.precoPiso != null ? money(h.precoPiso) : "—"}
-                            </td>
-                            <td className="px-3 py-1.5 text-right num text-[12px] text-brand">
-                              {h.precoComExtra != null ? money(h.precoComExtra) : "—"}
-                            </td>
-                            <td colSpan={2} className="px-3 py-1.5 text-right">
-                              {h.tags.length > 0 && (
-                                <span className="flex items-center justify-end gap-1">
-                                  {h.tags.map((t) => (
-                                    <Badge key={t} tone="warn">
-                                      {t.replace(/_/g, " ")}
-                                    </Badge>
-                                  ))}
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {grupos.length > limite && (
-            <button
-              onClick={() => setLimite((l) => l + 50)}
-              className={cn(
-                "w-full py-2.5 text-[14px] text-ink-2 hover:text-ink",
-                "hover:bg-panel-2 border-t border-line"
-              )}
-            >
-              Mostrar mais {Math.min(50, grupos.length - limite)}
-            </button>
-          )}
-        </Panel>}
-
-        {visao === "processamentos" && <Panel className="overflow-hidden">
-          <PanelHeader title="Processamentos" hint="cada rodada da Central de Promoções" />
-          <ul className="divide-y divide-line">
-            {dados.processamentos.map((p) => (
-              <li key={p.id} className="px-4 py-2.5 flex items-baseline justify-between gap-3">
-                <span className="min-w-0">
-                  <p className="text-[14px] text-ink truncate">
-                    {p.arquivos.length ? p.arquivos.join(", ") : "—"}
-                  </p>
-                  <p className="num text-[12px] text-ink-3">
-                    {p.quando.split("-").reverse().join("/")}
-                    {p.descontoExtra > 0 && ` · desconto extra ${pct(p.descontoExtra * 100)}`}
-                  </p>
-                </span>
-                <span className="num text-[12px] text-ink-2 shrink-0">
-                  {p.status === "falhou" || p.status === "sem_registro" ? <Badge tone="down">Não gravado · reprocessar</Badge> : p.status === "executando" ? <Badge>Em processamento</Badge> : `${count(p.aprovados)} de ${count(p.lidos)}`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Panel>}
-      </PageBody>
-    </>
-  );
+  return <>
+    <PageHeader title="Histórico de promoções" actions={<FerramentasPromocoes atual="/promocoes/historico" />} />
+    <PageBody className="op-workspace promo-workspace op-promocoes-historico">
+      {dados.vazio ? <SemFonte titulo="Nenhuma decisão registrada" origem="As rodadas processadas aparecem aqui." /> : <>
+        <section className="promo-overview" aria-label="Resumo do histórico">
+          {visao === "skus" ? <>
+          <div><strong>{count(grupos.length)}</strong><span>produtos</span></div>
+          <div><strong>{count(filtrados.length)}</strong><span>decisões no recorte</span></div>
+          <div><strong>{count(filtrados.filter(h => h.aprovado).length)}</strong><span>decisões aprovadas</span></div>
+          </> : <><div><strong>{count(rodadas.length)}</strong><span>rodadas</span></div><div><strong>{count(rodadas.reduce((n,p)=>n+p.lidos,0))}</strong><span>itens lidos</span></div><div><strong>{count(rodadas.reduce((n,p)=>n+p.aprovados,0))}</strong><span>decisões aprovadas</span></div></>}
+        </section>
+        <div className="promo-toolbar">
+          <Segmented options={[{value:"skus",label:"Produtos"},{value:"processamentos",label:"Rodadas"}]} value={visao} onChange={setVisao} />
+          {visao === "skus" ? <>
+          <label className="promo-search"><Search size={17} aria-hidden="true" /><span className="sr-only">Buscar no histórico de promoções</span><input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Produto, SKU ou anúncio" /></label>
+          <details className="promo-filter"><summary>Filtros{filtrosAtivos ? ` · ${filtrosAtivos}` : ""}<ChevronDown size={15} aria-hidden="true" /></summary><div className="promo-filter-fields">
+            <label>Decisão<select value={decisao} onChange={e=>setDecisao(e.target.value)}><option value="todas">Todas</option><option value="sim">Participaram</option><option value="nao">Ficaram de fora</option></select></label>
+            <label>Curva<select value={curva} onChange={e=>setCurva(e.target.value)}><option value="todas">Todas</option>{["A","B","C"].map(c=><option key={c}>{c}</option>)}</select></label>
+            <label>Tipo de anúncio<select value={tipo} onChange={e=>setTipo(e.target.value)}><option value="todos">Todos</option><option>Clássico</option><option>Premium</option></select></label>
+            <label>Campanha<select value={campanha} onChange={e=>setCampanha(e.target.value)}><option value="todas">Todas</option>{campanhasDisponiveis.map(c=><option key={c}>{c}</option>)}</select></label>
+            <label>De<input type="date" value={de} onChange={e=>setDe(e.target.value)} /></label>
+            <label>Até<input type="date" value={ate} onChange={e=>setAte(e.target.value)} /></label>
+            <Button onClick={limpar}>Limpar filtros</Button>
+          </div></details>
+          </> : <label className="promo-search"><Search size={17} aria-hidden="true" /><span className="sr-only">Buscar arquivo processado</span><input value={buscaRodada} onChange={e=>setBuscaRodada(e.target.value)} placeholder="Nome do arquivo" /></label>}
+        </div>
+        {visao === "skus" ? <div className="promo-products">
+          {!visiveis.length && <div className="p-5"><p className="text-[14px] text-ink-2">Nenhum produto neste recorte.</p><Button variant="ghost" onClick={limpar}>Limpar filtros</Button></div>}
+          {visiveis.map(g => <button key={g.sku} type="button" className="promo-product" onClick={()=>setAberto(g.sku)} aria-label={`Abrir histórico de ${g.sku}`}>
+            <div><p className="promo-product-title">{g.titulo}</p><p className="promo-product-meta"><span className="font-mono">{g.sku}</span>{g.curva!=="—"&&<span>Curva {g.curva}</span>}<span>{g.itens.length} {g.itens.length===1?"decisão":"decisões"} · {g.aprovados} {g.aprovados===1?"aprovada":"aprovadas"}</span></p><div className="promo-product-last"><Badge tone={g.ultima.aprovado?"up":"neutral"}>{g.ultima.aprovado?"Aprovada":"Fora"}</Badge><span>{g.ultima.campanha} · {dataBr(g.ultima.data)}</span></div></div>
+            <div className="promo-product-price"><strong>{valor(g.ultima.precoComExtra ?? g.ultima.precoOfertadoML)}</strong><span>última proposta</span><ChevronRight size={17} aria-hidden="true" /></div>
+          </button>)}
+          {grupos.length>limite&&<Button variant="ghost" className="w-full" onClick={()=>setLimite(l=>l+50)}>Mostrar mais {Math.min(50,grupos.length-limite)}</Button>}
+        </div> : <Panel className="overflow-hidden"><ul className="promo-processing-list">{!rodadas.length&&<li><p>Nenhuma rodada encontrada.</p></li>}{rodadas.map(p=><li key={p.id}><div className="min-w-0 flex-1"><strong>{p.arquivos.length?p.arquivos.join(", "):"Rodada sem nome de arquivo"}</strong><p>{dataBr(p.quando)}{p.descontoExtra>0?` · desconto extra ${pct(p.descontoExtra*100)}`:""}</p><p>{count(p.lidos)} itens · {count(p.aprovados)} aprovados · {count(p.reprovados)} fora</p>{(p.status==="falhou"||p.status==="sem_registro")&&<Link href="/promocoes/processar" className="inline-flex min-h-11 items-center text-[13px] text-brand">Reprocessar arquivo</Link>}</div><Badge tone={p.status==="falhou"||p.status==="sem_registro"?"down":"neutral"}>{p.status==="falhou"||p.status==="sem_registro"?"Não gravado":p.status==="executando"?"Em processamento":"Processado"}</Badge></li>)}</ul><div className="px-5 py-3 border-t border-line"><Link href="/promocoes/campanhas" className="inline-flex min-h-11 items-center gap-2 text-[14px] text-brand">Ver campanhas por rodada <ChevronRight size={15} /></Link></div></Panel>}
+        <details className="promo-secondary"><summary>O que este histórico mostra<ChevronDown size={15} /></summary><div>Decisões das rodadas processadas, com os preços usados em cada uma. A aprovação registrada deve ser conferida no canal. Para ver as oportunidades abertas agora, acesse <Link href="/automacoes" className="text-brand">Promoções abertas</Link>.</div></details>
+      </>}
+    </PageBody>
+    {selecionado&&<Sheet title="Histórico do produto" subtitle={selecionado.sku} onClose={()=>setAberto(null)} width="650px"><div className="promo-detail">
+      <h3>{selecionado.titulo}</h3>
+      <div className="promo-detail-actions"><Link href={`/promocoes/comparar?sku=${encodeURIComponent(selecionado.sku)}`}>Comparar propostas</Link><Link href="/anuncios/analise">Ir para anúncios</Link></div>
+      <dl className="promo-prices"><div><dt>Preço médio praticado</dt><dd>{valor(selecionado.precoPraticado)}</dd></div><div><dt>Decisões aprovadas</dt><dd>{selecionado.aprovados} de {selecionado.itens.length}</dd></div></dl>
+      {selecionado.itens.map(h=><article className="promo-record" key={h.id}><div className="promo-record-heading"><div><strong>{h.campanha}</strong><p>{dataBr(h.data)} · {h.tipoAnuncio} · {h.tipoCampanha}</p><p className="font-mono">{h.mlb}</p></div><Badge tone={h.aprovado?"up":"neutral"}>{h.aprovado?"Aprovada":"Fora"}</Badge></div>
+        <dl className="promo-prices"><div><dt>Canal ofereceu</dt><dd>{valor(h.precoOfertadoML)}</dd></div><div><dt>Preço de tabela</dt><dd>{valor(h.precoTabela)}</dd></div><div><dt>Piso da rodada</dt><dd>{valor(h.precoPiso)}</dd></div><div><dt>Com desconto extra</dt><dd>{valor(h.precoComExtra)}</dd></div><div><dt>Redução de tarifa</dt><dd>{h.reducaoTarifa || "—"}</dd></div></dl>
+        {h.motivo&&<p className="promo-record-reason">{h.motivo}</p>}{h.tags.length>0&&<div className="mt-3 flex flex-wrap gap-2">{h.tags.map(t=><Badge key={t} tone="warn">{t.replace(/_/g," ")}</Badge>)}</div>}
+      </article>)}
+      <details className="promo-secondary"><summary>Entender os preços<ChevronDown size={15} /></summary><div>Tabela é a referência da rodada; piso é o limite usado na decisão. O desconto extra, quando aplicado, altera o preço ofertável. Os valores de cada rodada permanecem registrados separadamente.</div></details>
+    </div></Sheet>}
+  </>;
 }
+
+const dataBr = (data: string) => data.slice(0,10).split("-").reverse().join("/");
+const valor = (n: number | null) => n == null ? "—" : money(n);

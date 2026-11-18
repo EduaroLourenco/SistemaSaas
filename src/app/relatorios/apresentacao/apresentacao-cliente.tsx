@@ -116,7 +116,7 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
       <PageHeader
         title="Apresentação"
         breadcrumb="Relatórios"
-        description="Roteiro de reunião em tela cheia, recalculado a cada abertura"
+        help="Roteiro de reunião em tela cheia, recalculado a cada abertura"
         actions={
           <Button
             size="sm"

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { WorkspaceNav } from "@/components/layout/workspace-nav";
 import { carregarEmpresas } from "@/lib/dados/empresas";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -23,6 +24,7 @@ export default async function Pagina() {
     <>
       <PageHeader
         title="Empresas"
+        actions={dados.souAdmin ? <Link href="/interessados" className="inline-flex min-h-10 items-center rounded-r1 border border-line-2 bg-panel px-4 text-[14px] font-medium text-ink hover:bg-panel-2">Interessados no Gerizo</Link> : undefined}
         description={
           dados.souAdmin
             ? "Crie a empresa do cliente e mande o link de acesso"

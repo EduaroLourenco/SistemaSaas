@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Check, Info, AlertTriangle, RefreshCw } from "lucide-react";
+import { Check, Info, AlertTriangle, RefreshCw, ChevronDown } from "lucide-react";
 
 /**
  * A frase que o sistema deve à pessoa que olha.
@@ -22,25 +22,30 @@ export function Leitura({
   tom = "neutro",
   titulo = "Leitura",
   className,
+  recolhida = false,
 }: {
   children: React.ReactNode;
   tom?: "neutro" | "bom" | "atencao";
   titulo?: string;
   className?: string;
+  recolhida?: boolean;
 }) {
   const Icone = tom === "bom" ? Check : tom === "atencao" ? AlertTriangle : Info;
+  const Conteiner = recolhida ? "details" : "div";
 
   return (
-    <div
+    <Conteiner
       className={cn(
-        "gerizo-reading flex items-start gap-2.5 px-3 py-2.5 rounded-r1 border",
+        "gerizo-reading px-3 py-2.5 rounded-r1 border",
+        !recolhida && "flex items-start gap-2.5",
         tom === "bom" && "bg-up-wash border-up/20",
         tom === "atencao" && "bg-warn-wash border-warn/25",
         tom === "neutro" && "bg-panel-2 border-line",
         className
       )}
     >
-      <Icone
+      {recolhida && <summary className="flex min-h-6 cursor-pointer list-none items-center gap-2 text-[14px] font-medium text-ink-2"><Info size={15} aria-hidden /><span className="flex-1">{titulo}</span><ChevronDown size={14} aria-hidden /></summary>}
+      {!recolhida && <Icone
         className={cn(
           "w-3.5 h-3.5 mt-[1px] shrink-0",
           tom === "bom" && "text-up",
@@ -48,12 +53,12 @@ export function Leitura({
           tom === "neutro" && "text-ink-3"
         )}
         strokeWidth={2.25}
-      />
-      <p className="text-[12.5px] text-ink-2 leading-relaxed min-w-0">
-        <span className="font-semibold text-ink">{titulo}: </span>
+      />}
+      <p className={cn("text-[13px] text-ink-2 leading-relaxed min-w-0",recolhida && "pt-3")}>
+        {!recolhida && <span className="font-semibold text-ink">{titulo}: </span>}
         {children}
       </p>
-    </div>
+    </Conteiner>
   );
 }
 

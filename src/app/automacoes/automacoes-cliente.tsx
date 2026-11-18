@@ -3,6 +3,7 @@
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { OperationMethod } from "@/components/analise/operation-layout";
+import { FerramentasPromocoes } from "@/components/promocoes/ferramentas";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { Badge, Button, EmptyState, Panel, Skeleton } from "@/components/ui/primitives";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -213,7 +214,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
   if (dados.semConexao) {
     return (
       <>
-        <PageHeader title="Promoções abertas" />
+        <PageHeader title="Promoções abertas" actions={<FerramentasPromocoes />} />
         <PageBody className="op-workspace op-automacoes">
           <EmptyState
             title="Nenhuma conta do Mercado Livre conectada"
@@ -231,7 +232,8 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
         badge={<Badge tone="warn">envio com confirmação</Badge>}
         inlineFilters
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+          <FerramentasPromocoes />
           <Button onClick={atualizar} disabled={atualizando} title="Puxar as promoções do canal de novo">
             <RefreshCw size={15} className={atualizando ? "animate-spin" : undefined} />
             {atualizando ? "Puxando…" : "Atualizar"}

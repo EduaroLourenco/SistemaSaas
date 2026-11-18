@@ -1,0 +1,91 @@
+.analysis-refined { --decision-section-gap: 16px; }
+.analysis-refined > * { min-width: 0; }
+.analysis-refined .panel { min-width: 0; box-shadow: 0 1px 2px color-mix(in srgb,var(--ink) 4%,transparent),0 4px 16px color-mix(in srgb,var(--ink) 2%,transparent); }
+.analysis-refined .workspace-hero { padding-block: 20px; gap: 20px; }
+.analysis-refined .workspace-hero-evidence { min-width: 0; }
+.analysis-refined .workspace-metric-strip { grid-template-columns: repeat(auto-fit,minmax(min(100%,150px),1fr)); }
+.analysis-refined .workspace-metric-strip > * { padding: 16px; container-type: inline-size; }
+.analysis-refined .workspace-metric-strip .num { overflow-wrap: anywhere; }
+.analysis-refined .analysis-source { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.analysis-source > summary,.analysis-details > summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; min-height: 44px; padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--ink-2); cursor: pointer; }
+.analysis-source > summary > span:last-child { color: var(--ink-3); font-weight: 400; }
+.analysis-source > summary::after,.analysis-details > summary::after { content: "+"; flex: 0 0 auto; margin-left: auto; color: var(--ink-3); }
+.analysis-source[open] > summary::after,.analysis-details[open] > summary::after { content: "−"; }
+.analysis-source > div { display: grid; gap: 12px; padding: 0 16px 16px; font-size: 13px; line-height: 20px; color: var(--ink-2); }
+.analysis-source select { min-width: 0; max-width: 100%; width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.analysis-source .analysis-source-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.analysis-source button { min-height: 44px; color: var(--brand); font-size: 13px; }
+.analysis-source .analysis-reconciliation { padding-top: 12px; border-top: 1px solid var(--line); }
+.analysis-reconciliation dl { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+.analysis-reconciliation dt { font-size: 12px; color: var(--ink-3); }
+.analysis-reconciliation dd { margin-top: 4px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.analysis-details { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.analysis-details > :not(summary) { padding: 0 16px 16px; font-size: 13px; line-height: 21px; color: var(--ink-2); }
+.analysis-table-toolbar > .analysis-mobile-view { display: none; }
+.analysis-table-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.analysis-table-toolbar > label { display: flex; flex: 1 1 170px; min-width: 0; flex-direction: column; gap: 6px; font-size: 12px; color: var(--ink-3); }
+.analysis-table-toolbar > label select { min-width: 0; width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 8px; color: var(--ink); background: var(--panel); font-size: 14px; }
+.analysis-table-toolbar > input { min-width: 0; flex: 2 1 220px; }
+.sku-workspace .sku-table { max-width: 100%; overflow-x: auto; max-height: 640px; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--line-2) var(--panel-2); }
+.sku-table th:first-child,.sku-table td:first-child { min-width: 210px; width: 210px; max-width: 210px; }
+.sku-table td:first-child > p { width: 190px; max-width: 100%; margin-top: 6px; font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+.sku-table td:first-child > div { flex-wrap: wrap; }
+.sku-table td:first-child { box-shadow: 1px 0 0 var(--line); }
+.sku-table td:not(:first-child),.sku-table th:not(:first-child) { white-space: nowrap; min-width: 96px; }
+.sku-table :is(th,td) { font-size: 13px; padding: 12px; }
+.thermometer-workspace .thermometer-primary { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.15fr); }
+.thermometer-primary > * { min-width: 0; }
+.thermometer-primary .workspace-hero { display: block; padding-inline: 20px; }
+.thermometer-primary .workspace-hero-reading { min-width: 0; }
+.thermometer-primary .workspace-hero-evidence { margin-top: 16px; }
+.thermometer-workspace .thermometer-reputation-metrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,130px),1fr)); gap: 16px; }
+.thermometer-workspace .thermometer-reputation-metrics > * { min-width: 0; }
+.thermometer-workspace .thermometer-reputation-list { grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); }
+.analysis-refined.thermometer-workspace .thermometer-catalog-overview { grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); }
+.thermometer-workspace .label { white-space: normal; overflow-wrap: anywhere; text-transform: none; letter-spacing: 0; }
+.thermometer-workspace :is(.num,.truncate) { overflow-wrap: anywhere; }
+.thermometer-workspace .truncate { white-space: normal; overflow: visible; text-overflow: clip; }
+.thermometer-workspace .thermometer-catalog-table { overflow-x: auto; max-width: 100%; }
+.thermometer-workspace .workspace-metric-strip .gerizo-metric-value { font-size: clamp(16px,12cqw,28px); white-space: nowrap; }
+.thermometer-catalog-table table { min-width: 560px; }
+.thermometer-workspace .thermometer-days > button { min-width: 0; min-height: 66px; }
+.thermometer-workspace .thermometer-days .num { font-size: clamp(9px,2.7vw,11.5px); white-space: nowrap; overflow-wrap: normal; }
+.thermometer-workspace .thermometer-ranking-sort { display: none; }
+.queda-workspace .decision-comparison { align-items: start; }
+.queda-workspace .decision-comparison .workspace-hero-evidence { min-width: 0; }
+.queda-workspace .decision-comparison dd { overflow-wrap: anywhere; }
+.queda-workspace .decision-comparison button > .inline-flex { justify-self: start; }
+.queda-workspace [aria-label="Buscar"] { width: 100%; }
+@media(max-width:1199px) {
+  .thermometer-ranking li { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .thermometer-ranking li > div:first-child { grid-column: 1 / -1; }
+  .thermometer-ranking li > div { text-align: left; }
+  .thermometer-ranking li > div > p:first-child { display: block; }
+  .thermometer-workspace .thermometer-ranking-columns { display: none; }
+  .thermometer-workspace .thermometer-ranking-sort { display: flex; align-items: end; gap: 12px; border-block: 1px solid var(--line); padding: 12px 16px; }
+  .thermometer-ranking-sort > label { display: grid; flex: 1; gap: 6px; min-width: 0; color: var(--ink-3); font-size: 12px; }
+  .thermometer-ranking-sort select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel); padding: 8px 12px; color: var(--ink); font-size: 16px; }
+  .thermometer-ranking-sort > button { display: grid; place-items: center; min-height: 44px; width: 44px; border: 1px solid var(--line-2); border-radius: 8px; color: var(--ink-2); }
+}
+@media(max-width:1000px) { .thermometer-workspace .thermometer-primary { grid-template-columns: 1fr; } }
+@media(max-width:767px) {
+  .analysis-refined .workspace-hero { padding-block: 16px; }
+  .analysis-refined .workspace-metric-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .analysis-refined .workspace-metric-strip > * { padding: 14px; }
+  .paid-traffic-workspace .workspace-metric-strip > :last-child { grid-column: 1 / -1; }
+  .thermometer-workspace .workspace-metric-strip > :last-child { grid-column: 1 / -1; }
+  .analysis-refined .workspace-metric-strip > .panel > p.num:nth-child(2),.analysis-refined .workspace-metric-strip .gerizo-metric-value { font-size: 21px; line-height: 28px; }
+  .thermometer-workspace .workspace-metric-strip .gerizo-metric-value { font-size: clamp(16px,12cqw,21px); white-space: nowrap; }
+  .analysis-refined .analysis-desktop-views { display: none; }
+  .analysis-refined .analysis-mobile-view { display: flex; }
+  .analysis-table-toolbar { padding: 12px; gap: 12px; }
+  .analysis-table-toolbar > label { flex-basis: 100%; }
+  .analysis-table-toolbar > label select { min-height: 44px; font-size: 16px; }
+  .sku-workspace .sku-table { max-height: none; }
+  .sku-table th:first-child,.sku-table td:first-child { min-width: 156px; width: 156px; max-width: 156px; }
+  .sku-table td:first-child > p { width: 132px; }
+  .thermometer-primary .workspace-hero-value { font-size: clamp(34px,10vw,48px); }
+  .thermometer-workspace .thermometer-reputation-metrics { grid-template-columns: 1fr; gap: 12px; }
+  .thermometer-reputation-metrics > div { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 12px; align-items: baseline; }
+  .thermometer-reputation-metrics > div > p:last-child { grid-column: 2; }
+}

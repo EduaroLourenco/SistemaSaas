@@ -313,7 +313,18 @@ export function MaisVistos({ lista, dia }: { lista: ProdutoDoDia[]; dia: string 
         <p className="px-4 py-6 text-[13px] text-ink-3">sem visita medida neste dia</p>
       ) : (
         <>
-          <div className={cn("flex gap-4 overflow-x-auto border-y border-line bg-panel-2 px-4 md:grid md:gap-3", GRADE)}>
+          <div className="thermometer-ranking-sort">
+            <label>Ordenar por
+              <select aria-label="Ordenar produtos mais vistos" value={chave} onChange={(e) => ordenar(e.target.value as Chave)}>
+                <option value="titulo">Produto</option>
+                {COLUNAS.map((c) => <option key={c.chave} value={c.chave}>{c.rotulo}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={() => setDesc((v) => !v)} aria-label={desc ? "Ordenar em ordem crescente" : "Ordenar em ordem decrescente"} title={desc ? "Decrescente" : "Crescente"}>
+              {desc ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+            </button>
+          </div>
+          <div className={cn("thermometer-ranking-columns flex gap-4 overflow-x-auto border-y border-line bg-panel-2 px-4 md:grid md:gap-3", GRADE)}>
             <span className="md:text-left">{cabecalho("titulo", "Produto", false)}</span>
             {COLUNAS.map((c) => cabecalho(c.chave, c.rotulo))}
           </div>

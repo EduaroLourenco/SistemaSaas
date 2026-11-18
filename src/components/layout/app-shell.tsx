@@ -8,6 +8,7 @@ import { NAV, NAV_FOOTER, type NavGroup } from "@/lib/nav";
 import { BarraCelular } from "./barra-celular";
 import { LinkRapido } from "./link-rapido";
 import { SeletorEmpresa } from "./seletor-empresa";
+import { paginaComercial } from "@/lib/rotas-publicas";
 import { COOKIE_EXPEDICAO } from "@/lib/acesso-expedicao";
 import {
   ChevronDown,
@@ -399,7 +400,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setMoreOpen(false);
   }, [pathname]);
 
-  if (SEM_MOLDURA.some((p) => pathname.startsWith(p))) {
+  if (paginaComercial(pathname) || SEM_MOLDURA.some((p) => pathname.startsWith(p))) {
     return <>{children}</>;
   }
 
@@ -641,15 +642,17 @@ function subscribeMobile(callback: () => void) {
 const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
 const serverMobile = () => false;
 
-export function PageHeader({ title, breadcrumb, description, badge, actions, filters, mobileFilters = true, inlineFilters = false, compact = false, areaNavigation = true }: {
-  title: string; breadcrumb?: string; description?: string; badge?: React.ReactNode;
+export function PageHeader({ title, breadcrumb, description, help, badge, actions, filters, mobileFilters = true, inlineFilters = false, compact = false, areaNavigation = true }: {
+  title: string; breadcrumb?: string; description?: string; help?: string; badge?: React.ReactNode;
   actions?: React.ReactNode; filters?: React.ReactNode; mobileFilters?: boolean; inlineFilters?: boolean; compact?: boolean; areaNavigation?: boolean;
 }) {
   const mobile = React.useSyncExternalStore(subscribeMobile, isMobile, serverMobile);
   const [openFilters, setOpenFilters] = React.useState(false);
+  const [openHelp, setOpenHelp] = React.useState(false);
+  const helpId = React.useId();
   return (
     <header className={cn("gerizo-page-header px-4 pt-5 pb-1 md:px-6 md:pt-5", mobileFilters && "gerizo-page-header--sheet-filters", inlineFilters && "gerizo-page-header--inline", compact && "gerizo-page-header--compact")}>
-      {breadcrumb && <p className="mb-1.5 text-[12px] font-medium text-ink-3">{breadcrumb}</p>}
+      {breadcrumb && !["Vendas", "Anúncios", "Promoções", "Monitoramento", "Automações", "Dados", "Relatórios"].includes(breadcrumb) && <p className="mb-1.5 text-[12px] font-medium text-ink-3">{breadcrumb}</p>}
       <div className="gerizo-header-row flex flex-wrap items-center justify-between gap-4">
         {/* Base de 14rem: com `flex-1` puro o título encolhia até zero e os
             botões tomavam a linha — no Catálogo, a descrição caía uma
@@ -657,11 +660,13 @@ export function PageHeader({ title, breadcrumb, description, badge, actions, fil
         <div className="min-w-0 flex-[1_1_14rem]">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-[24px] font-semibold leading-8 tracking-[-0.035em] text-ink md:text-[28px] md:leading-9">{title}</h1>
+            {help && <button type="button" aria-label={`Sobre ${title}`} aria-expanded={openHelp} aria-controls={helpId} onClick={() => setOpenHelp(v => !v)} className="flex h-9 w-9 items-center justify-center rounded-full text-ink-3 hover:bg-panel-3 hover:text-ink"><CircleHelp size={17} aria-hidden /></button>}
             {badge}
           </div>
           {description && (description.length > 115
             ? <Disclosure title="Sobre esta análise" className="mt-3 max-w-3xl">{description}</Disclosure>
             : <p className="mt-1 text-[14px] leading-relaxed text-ink-2">{description}</p>)}
+          {help && openHelp && <p id={helpId} className="mt-2 max-w-2xl rounded-r1 border border-line bg-panel px-3 py-2 text-[14px] leading-relaxed text-ink-2">{help}</p>}
         </div>
         {inlineFilters && filters && !mobile && <div className="gerizo-inline-filters min-w-0">{filters}</div>}
         {(actions || (filters && mobileFilters && mobile)) && <div className="flex max-w-full flex-wrap items-center gap-2">

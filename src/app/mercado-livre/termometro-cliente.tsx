@@ -1,5 +1,7 @@
 "use client";
 
+import "@/components/analise/analytic-refinement.css";
+
 import decisaoCss from "@/components/analise/decision-workspace.module.css";
 import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
 
@@ -132,9 +134,9 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
   if (dados.vazio && !dados.contas.length) {
     return (
       <>
-        <PageHeader title="Termômetro" breadcrumb="Mercado Livre" description="A leitura operacional do dia." />
+        <PageHeader title="Termômetro" />
         <BarraCarregando ativo={atualizando} />
-      <PageBody className={decisaoCss.workspace}>
+      <PageBody className={[decisaoCss.workspace, "analysis-refined thermometer-workspace"].join(" ")}>
           <Panel>
             <PanelHeader
               title="Nenhuma conta do Mercado Livre nesta empresa"
@@ -150,7 +152,6 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
     <>
       <PageHeader
         title="Termômetro"
-        breadcrumb="Mercado Livre"
         filters={
           <BarraFiltros>
             <Filtro rotulo="Conta">
@@ -196,14 +197,14 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           </BarraFiltros>
         }
       />
-      <PageBody className={decisaoCss.workspace}>
+      <PageBody className={[decisaoCss.workspace, "analysis-refined thermometer-workspace"].join(" ")}>
         <PontosDeAtencao atencao={dados.atencao} />
 
         {/* ── O termômetro ───────────────────────────────────────── */}
         <Panel className="overflow-hidden">
-          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+          <div className="thermometer-primary">
             <HeroMetric className="!border-0 !rounded-none" label={dados.parcial ? `Hoje · ${dataBr(dados.hoje)} · em andamento` : `Último dia · ${dataBr(dados.hoje)}`} value={dados.dia ? money(dados.dia.receita) : "—"} delta={dados.dia ? varPct(dados.dia.receita, dados.dia.anterior?.receita ?? null) : undefined} hint={dados.dia ? `${count(dados.dia.pedidos)} pedidos · ${count(dados.dia.unidades)} unidades` : "Sem dado diário"}>
-              <div className="mt-4 border-t border-line pt-4 text-[14px] leading-6 text-ink-2"><p><Badge tone={l.tom}>{l.rotulo}</Badge> <span className="ml-2 font-semibold">{varReceita == null ? "—" : `${varReceita > 0 ? "+" : ""}${Math.round(varReceita)}%`} na semana</span></p><p className="mt-2">{money(r.receita)} contra {money(r.receitaAnterior)} nos mesmos {dados.diasCorridos} dias da semana anterior.</p>{dados.parcial && <p className="mt-2 text-[12px] text-ink-3">Hoje fica fora do ritmo da semana: o dia não terminou.</p>}</div>
+              <div className="border-t border-line pt-4 text-[14px] leading-6 text-ink-2"><p className="flex flex-wrap items-center gap-2"><Badge tone={l.tom}>{l.rotulo}</Badge><span className="font-semibold">{varReceita == null ? "—" : `${varReceita > 0 ? "+" : ""}${Math.round(varReceita)}%`} na semana</span></p><p className="mt-2 num text-[13px]">{money(r.receita)} <span className="text-ink-3">· antes {money(r.receitaAnterior)}</span></p>{dados.parcial && <p className="mt-1 text-[12px] text-ink-3">Ritmo calculado até ontem.</p>}</div>
             </HeroMetric>
 
             {/* A barra do termômetro: escala de -50% a +50%, com o zero no meio. */}
@@ -246,10 +247,10 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
         {/* ── Dia a dia ──────────────────────────────────────────── */}
         <Panel className="overflow-hidden">
           <PanelHeader
-            title="Dia a dia, contra a mesma semana anterior"
-            hint="Barra: esta semana · linha: a anterior"
+            title="Ritmo da semana"
+            hint="Barras: atual · linha: anterior"
             action={
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 {([
                   ["receita", "Receita"],
                   ["unidades", "Unidades"],
@@ -261,7 +262,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
                     onClick={() => setMetrica(v)}
                     aria-pressed={metrica === v}
                     className={cn(
-                      "min-h-9 rounded-r1 border px-2.5 text-[12px] font-medium transition-colors",
+                      "min-h-11 rounded-r1 border px-2.5 text-[12px] font-medium transition-colors",
                       metrica === v ? "border-brand bg-brand text-brand-ink" : "border-line-2 bg-panel text-ink-2 hover:bg-panel-3"
                     )}
                   >
@@ -271,8 +272,8 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
               </div>
             }
           />
-          <div className="h-[260px] px-2 pt-3">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[260px] min-w-0 px-2 pt-3">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <ComposedChart data={serie} onClick={(e) => {
                   /* O tipo do recharts não expõe activePayload no clique, mas ele
                      vem no evento — é como se descobre em qual barra clicou. */
@@ -295,7 +296,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <div className="grid grid-cols-7 gap-1 border-t border-line p-2">
+          <div className="thermometer-days grid grid-cols-7 gap-1 border-t border-line p-2">
             {dados.dias.map((d) => (
               <button
                 key={d.data}
@@ -308,7 +309,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
                 )}
               >
                 <span className="block text-[11px] text-ink-3">{DIAS[d.diaSemana]}</span>
-                <span className="num block text-[11.5px] text-ink">{d.data > dados.hoje ? "—" : moneyShort(d.receita)}</span>
+                <span className="num block text-[11.5px] text-ink">{d.data > dados.hoje ? "—" : moneyShort(d.receita).replace(/^R\$\s*/, "").replace(/\s+(mil|mi|bi)$/, "$1")}</span>
                 {d.anterior && d.data <= dados.hoje && (
                   <span className={cn("num block text-[10.5px]", d.receita >= d.anterior.receita ? "text-up" : "text-down")}>
                     {d.anterior.receita > 0 ? `${d.receita >= d.anterior.receita ? "+" : ""}${Math.round(((d.receita - d.anterior.receita) / d.anterior.receita) * 100)}%` : "novo"}
@@ -319,6 +320,11 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           </div>
           {detalhe && <DetalheDoDia dia={detalhe} />}
         </Panel>
+
+        <details className="analysis-details">
+          <summary>Como a semana é comparada</summary>
+          <p>O ritmo compara os mesmos {dados.diasCorridos} dias da semana anterior.{dados.parcial && " Hoje fica fora do ritmo porque o dia ainda está em andamento."} O gráfico mantém os dias da semana lado a lado; toque em um dia para abrir seus números.</p>
+        </details>
 
         {/* ── Hoje, mídia e ticket ───────────────────────────────── */}
         <MetricStrip>
@@ -354,9 +360,9 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
         <Panel>
           <PanelHeader
             title="Reputação das contas"
-            hint={`As mesmas taxas que o canal usa para classificar a conta. Leitura de ${dados.frescor.reputacao ? dataBr(dados.frescor.reputacao) : "—"}.`}
+            hint={`Leitura de ${dados.frescor.reputacao ? dataBr(dados.frescor.reputacao) : "—"}`}
           />
-          <div className="grid gap-3 p-4 sm:grid-cols-2">
+          <div className="thermometer-reputation-list grid gap-3 p-4 sm:grid-cols-2">
             {dados.reputacao.length === 0 && (
               <p className="text-[13px] text-ink-3">Sem leitura de reputação ainda.</p>
             )}
@@ -371,7 +377,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
                       {rep.categoria && <Badge tone="neutral">{rep.categoria}</Badge>}
                     </div>
                   </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="thermometer-reputation-metrics mt-3">
                     {[
                       { rot: "Reclamações", v: rep.reclamacoes, antes: rep.anterior?.reclamacoes ?? null, limite: 2 },
                       { rot: "Cancelamentos", v: rep.cancelamentos, antes: rep.anterior?.cancelamentos ?? null, limite: 2 },
@@ -410,12 +416,16 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
 
         <NoAr canal={dados.noCanal} campanhas={dados.campanhas} hoje={dados.hoje} />
 
-        <MaisVistos lista={dados.maisVistos} dia={dados.diaDoRanking} />
+        <div className="thermometer-ranking"><MaisVistos lista={dados.maisVistos} dia={dados.diaDoRanking} /></div>
 
-        <p className="num text-[12px] text-ink-3">
+        <details className="analysis-details">
+          <summary>Fontes e atualização</summary>
+          <p className="num">
           vendas {dados.frescor.vendas ? new Date(dados.frescor.vendas).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) : "—"}
           {dados.frescor.ads && ` · mídia ${new Date(dados.frescor.ads).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}`}
-        </p>
+          . A reputação usa as taxas informadas pelo Mercado Livre.
+          </p>
+        </details>
       </PageBody>
     </>
   );
@@ -453,7 +463,7 @@ function CatalogoDaSemana({ dados }: { dados: CatalogoSemana }) {
     <Panel>
       <PanelHeader
         title="Catálogo na semana"
-        hint={`Retrato de ${dados.contas[0]?.dia ? dataBr(dados.contas[0].dia) : "—"} contra ${dados.contas[0]?.diaAnterior ? dataBr(dados.contas[0].diaAnterior) : "—"}. Ganhar catálogo é estar na vitrine do produto.`}
+        hint={`${dados.contas[0]?.dia ? dataBr(dados.contas[0].dia) : "—"} contra ${dados.contas[0]?.diaAnterior ? dataBr(dados.contas[0].diaAnterior) : "—"}`}
         action={
           lista.length > 0 ? (
             <Button variant="ghost" size="sm" onClick={() => setAbrir((v) => !v)}>
@@ -462,7 +472,7 @@ function CatalogoDaSemana({ dados }: { dados: CatalogoSemana }) {
           ) : undefined
         }
       />
-      <div className="grid gap-3 p-4 sm:grid-cols-2">
+      <div className="thermometer-catalog-overview grid gap-3 p-4 sm:grid-cols-2">
         <StatTile
           label="Ganhando a vitrine"
           value={`${count(t.ganhando)} de ${count(t.disputando)}`}
@@ -489,7 +499,7 @@ function CatalogoDaSemana({ dados }: { dados: CatalogoSemana }) {
         </div>
       </div>
       {abrir && lista.length > 0 && (
-        <div className="border-t border-line">
+        <div className="thermometer-catalog-table border-t border-line" tabIndex={0} role="region" aria-label="Mudanças no catálogo, com rolagem horizontal">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-line text-left">

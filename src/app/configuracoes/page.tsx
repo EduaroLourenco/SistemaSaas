@@ -35,7 +35,7 @@ export default function Configuracoes() {
    */
   return (
     <>
-      <PageHeader title="Configurações" description="Preferências deste navegador" />
+      <PageHeader title="Configurações" help="Preferências deste navegador" />
       <PageBody className="management-workspace"><WorkspaceNav />
         <Aparencia />
       </PageBody>

@@ -1,5 +1,7 @@
 "use client";
 
+import "@/components/analise/analytic-refinement.css";
+
 import decisaoCss from "@/components/analise/decision-workspace.module.css";
 import { MetricStrip } from "@/components/ui/workspace";
 
@@ -363,8 +365,6 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
     <>
       <PageHeader
         title="Análise de SKU"
-        breadcrumb="Vendas"
-        description="Desempenho por produto, período e canal"
         filters={
           <BarraFiltros>
             <Filtro rotulo="De">
@@ -430,26 +430,6 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
               </div>
             </Filtro>
 
-            <FiltroDivisor />
-
-            {/*
-              Trocar a métrica não recarrega nada — é recorte de leitura,
-              não de consulta. Fica depois do divisor para não parecer que
-              precisa de "Aplicar".
-            */}
-            <Filtro rotulo="Medir por">
-              <Segmented
-                options={[
-                  { value: "receita" as const, label: "Receita" },
-                  { value: "unidades" as const, label: "Unidades" },
-                  { value: "preco" as const, label: "Preço vendido" },
-                  { value: "comissao" as const, label: "Comissão paga" },
-                ]}
-                value={metrica}
-                onChange={setMetrica}
-              />
-            </Filtro>
-
             <FiltroAcoes>
               <Button disabled={baixando} onClick={exportar}>
                 {baixando ? (
@@ -470,7 +450,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
       />
 
       <BarraCarregando ativo={atualizando} />
-      <PageBody className={decisaoCss.workspace}>
+      <PageBody className={[decisaoCss.workspace, "analysis-refined sku-workspace"].join(" ")}>
         {erro && (
           <Panel className="px-4 py-3 mb-3 flex items-start gap-2.5 border-down/30">
             <AlertCircle className="w-4 h-4 text-down shrink-0 mt-0.5" />
@@ -478,7 +458,6 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
           </Panel>
         )}
 
-        <div className="decision-operation-strip"><h2 className="decision-surface-title">Investigar produtos</h2><p className="text-[14px] text-ink-2">{count(totais.skus)} SKUs com venda · períodos e canais comparáveis</p></div>
         {/* ── Resumo ── */}
         <MetricStrip>
           {[
@@ -504,6 +483,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
         </MetricStrip>
 
         <Panel className="overflow-hidden">
+          <div className="analysis-desktop-views">
           <Tabs
             tabs={[
               { value: "mes" as const, label: "Por mês", count: meses.length },
@@ -518,13 +498,30 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
             value={aba}
             onChange={setAba}
           />
+          </div>
 
-          <div className="flex items-center gap-2 p-3 border-b border-line flex-wrap">
+          <div className="analysis-table-toolbar">
+            <label className="analysis-mobile-view">Visão dos produtos
+              <select aria-label="Visão dos produtos" value={aba} onChange={(e) => setAba(e.target.value as Aba)}>
+                <option value="mes">Por mês · {meses.length}</option>
+                <option value="canal">Por canal · {canais.length}</option>
+                <option value="periodo">Comparar períodos · {dados.periodos.length}</option>
+                <option value="curva">Curva ABC</option>
+              </select>
+            </label>
+            <label>Medir por
+              <select aria-label="Medir por" value={metrica} onChange={(e) => setMetrica(e.target.value as Metrica)}>
+                <option value="receita">Receita</option>
+                <option value="unidades">Unidades</option>
+                <option value="preco">Preço vendido</option>
+                <option value="comissao">Comissão paga</option>
+              </select>
+            </label>
             <Input
               placeholder="Buscar SKU ou título"
+              aria-label="Buscar SKU ou título"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="max-w-xs"
             />
             <Segmented
               options={[
@@ -541,7 +538,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
             </span>
           </div>
 
-          <div className="overflow-x-auto max-h-[640px]">
+          <div className="sku-table" tabIndex={0} role="region" aria-label="Tabela de produtos, com rolagem horizontal">
             <table className="w-full border-collapse min-w-[760px]">
               <thead className="bg-panel-2 sticky top-0 z-10">
                 <tr>
@@ -752,11 +749,9 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
           )}
         </Panel>
 
-        <Panel className="p-4 mt-3">
-          <p className="text-[12px] font-semibold text-ink mb-1.5">
-            Como ler a curva
-          </p>
-          <p className="text-[12px] text-ink-3 leading-relaxed max-w-2xl">
+        <details className="analysis-details">
+          <summary>Como ler a curva ABC</summary>
+          <p>
             <span className="text-ink-2 font-medium">A</span> são os SKUs que
             somam até 80% da receita do recorte,{" "}
             <span className="text-ink-2 font-medium">B</span> vão até 95%, e{" "}
@@ -765,7 +760,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
             e C na loja própria, e é essa diferença que diz o papel dele em cada
             canal.
           </p>
-        </Panel>
+        </details>
       </PageBody>
     </>
   );

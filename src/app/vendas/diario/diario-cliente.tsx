@@ -386,7 +386,7 @@ export default function ComparativoDiario({
       <PageHeader
         title="Comparar período"
         breadcrumb="Vendas"
-        description="Até 4 períodos lado a lado, métrica por métrica"
+        help="Até 4 períodos lado a lado, métrica por métrica"
         actions={
           <Segmented
             options={BASES}

@@ -111,7 +111,7 @@ function Linha({
  * É essa divisão que decide se ratear um custo dentro do preço de um SKU
  * faz sentido. Ela merece uma faixa, não um rodapé.
  */
-function GrupoDre({ titulo, explicacao }: { titulo: string; explicacao: string }) {
+function GrupoDre({ titulo, explicacao }: { titulo: string; explicacao?: string }) {
   return (
     <div className="mt-3.5 mb-1 pt-2 border-t border-line-2 flex items-baseline gap-2 flex-wrap">
       <span className="text-[14px] font-semibold text-ink-2">
@@ -237,23 +237,15 @@ export default function FinanceiroCliente({
           número.
         */}
         {semCusto && (
-          <Panel className="px-4 py-3 flex items-start gap-3 border-warn/40 bg-warn-wash">
+          <Panel className="px-4 py-2.5 flex items-center gap-3 border-warn/30 bg-warn-wash">
             <AlertCircle className="w-4 h-4 text-warn shrink-0 mt-0.5" strokeWidth={2} />
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] text-ink">
-                <span className="font-semibold">
-                  Custos completos em {pct(r.cobertura, 1)} da receita
-                </span>{" "}
-                · {r.cobertura > 0 ? "margem parcial." : "margem ainda indisponível."}
-              </p>
-              <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
-                Receita, comissão e frete disponíveis continuam visíveis. Faltam custos em <span className="num font-medium">{money(r.receitaSemCusto)}</span> de vendas.
-              </p>
+              <p className="text-[13px] text-ink">{r.cobertura > 0 ? "Margem parcial" : "Margem indisponível"} · <span className="num font-medium">{pct(r.cobertura, 1)}</span> de cobertura</p>
               <Link
                 href="/financeiro/custos"
                 className="inline-flex items-center gap-1 text-[12px] font-medium text-brand hover:underline mt-1.5"
               >
-                Preencher custos por SKU
+                Completar custos
                 <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
@@ -277,7 +269,6 @@ export default function FinanceiroCliente({
 
             <GrupoDre
               titulo="Custos da venda"
-              explicacao="valores disponíveis · cobertura por componente"
             />
             <Linha rotulo="Comissão do canal" valor={custo("comissao")} nota={coberturaCusto("comissao")} indent />
             <Linha rotulo="Frete" valor={custo("frete")} nota={coberturaCusto("frete")} indent />
@@ -298,7 +289,6 @@ export default function FinanceiroCliente({
 
             <GrupoDre
               titulo="Custos da operação"
-              explicacao="saem exista venda ou não"
             />
             <Linha rotulo="Mídia (Ads)" valor={r.ads} indent />
             <Linha rotulo="Fixas recorrentes" valor={r.fixaRecorrente} indent />
@@ -336,12 +326,13 @@ export default function FinanceiroCliente({
             )}
 
             {/* Quanto do custo foi medido, e quanto foi estimado por tabela. */}
-            <div className="mt-4 pt-3 border-t border-line">
-              <p className="num text-[12px] text-ink-3 leading-relaxed">
+            <details className="mt-4 pt-3 border-t border-line">
+              <summary className="cursor-pointer text-[13px] text-ink-2">Origem e cobertura dos custos</summary>
+              <p className="num mt-2 text-[12px] text-ink-3 leading-relaxed">
                 Comissão real em {count(r.cadaCoberturaDe.comissaoPraticada)} de {count(r.cadaCoberturaDe.pedidos)} pedidos,
                 frete real em {count(r.cadaCoberturaDe.fretePraticado)}. Sem valor real, usa a tabela do canal quando disponível.
               </p>
-            </div>
+            </details>
           </Panel>
 
           {/* ── Margem por dimensão ── */}
@@ -455,9 +446,9 @@ export default function FinanceiroCliente({
           longa: quem abre a tela quer primeiro saber como está o período,
           e só então como chegou até aqui.
         */}
-        <div className="mt-3">
+        <BarraLista titulo="Demonstrativo mês a mês" detalhe={`${mensal.length} meses · receita, custos e resultado`} largura="1200px" vazio={!mensal.length ? "Sem meses no período" : undefined}>
           <DreMensal mensal={mensal} total={r} />
-        </div>
+        </BarraLista>
       </PageBody>
     </>
   );

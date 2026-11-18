@@ -7,6 +7,7 @@
  */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { paginaComercial } from "@/lib/rotas-publicas";
 import { barrarForaDaExpedicao } from "@/lib/acesso-expedicao-proxy";
 
 /*
@@ -80,6 +81,12 @@ async function chaveResolve(recebida: string) {
 }
 
 export async function proxy(req: NextRequest) {
+  const caminho = req.nextUrl.pathname;
+  // A demonstração é local e fictícia. Não renova sessão nem consulta dados
+  // da operação, inclusive quando quem visita já está logado no produto.
+  if (paginaComercial(caminho) || (caminho === "/api/interesse" && req.method === "POST")) {
+    return NextResponse.next({ request: req });
+  }
   let resposta = NextResponse.next({ request: req });
 
   const sb = createServerClient(
@@ -103,7 +110,6 @@ export async function proxy(req: NextRequest) {
   // sessão do cookie pode estar forjada; o usuário verificado, não.
   const { data } = await sb.auth.getUser();
 
-  const caminho = req.nextUrl.pathname;
   const publica = PUBLICAS.some((p) => caminho.startsWith(p));
 
   /*

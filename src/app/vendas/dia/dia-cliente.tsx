@@ -103,7 +103,7 @@ function UltimosDias({ dias, foco, aoEscolher }: { dias: DadosDia["recentes"]; f
           aria-pressed={d.data === foco}
           onClick={() => aoEscolher(d.data)}
           className={cn(
-            "flex min-h-[84px] min-w-0 flex-col gap-0.5 rounded-r2 border p-2.5 text-left max-lg:[order:var(--ordem)]",
+            "flex min-h-[72px] min-w-0 flex-col gap-0.5 rounded-r2 border p-2 text-left max-lg:[order:var(--ordem)]",
             d.data === foco ? "border-brand bg-brand-wash" : "border-line bg-panel hover:bg-panel-2",
             d.parcial && "opacity-50",
           )}
@@ -244,7 +244,7 @@ export default function DiaCliente({ dados, operacao }: { dados: DadosDia; opera
 
         <div className="decision-calendar">
         {/* ── O mês em calendário: escolhe o dia ── */}
-        <Panel className="order-2 min-w-0 overflow-hidden lg:order-1">
+        <Panel className="order-1 min-w-0 overflow-hidden">
           <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b border-line flex-wrap">
             <button
               type="button"
@@ -256,7 +256,7 @@ export default function DiaCliente({ dados, operacao }: { dados: DadosDia; opera
               <ChevronLeft className="h-4 w-4" />
             </button>
             {/* Só a primeira letra: "capitalize" fazia "Outubro De 2026". */}
-            <p className="min-w-[150px] text-center text-[15px] font-semibold text-ink">
+            <p className="min-w-0 flex-1 text-center text-[15px] font-semibold text-ink">
               {dados.mesRotulo.charAt(0).toUpperCase() + dados.mesRotulo.slice(1)}
             </p>
             <button
@@ -273,25 +273,20 @@ export default function DiaCliente({ dados, operacao }: { dados: DadosDia; opera
                 {dados.bateram} de {dados.comMeta} dias na meta
               </Badge>
             )}
-            <span className="hidden lg:inline text-[12px] text-ink-3 ml-auto">
-              verde bateu a meta · vermelho não · toque no dia para abrir
-            </span>
           </div>
-          <div className="max-w-full overflow-x-auto"><div className="min-w-[332px]">
+          <div className="min-w-0">
           <Calendario
             dias={dados.mes}
             foco={h.data}
             aoEscolher={abrirDia}
             aoArrastar={(n) => (n < 0 ? podeVoltar : podeAvancar) && irMes(n)}
           />
-          </div></div>
-          <p className="lg:hidden px-3 pb-3 text-[12px] text-ink-3">
-            Arraste para o lado para trocar de mês · toque no dia para abrir
-          </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 pb-3 text-[12px] text-ink-3"><span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-up" aria-hidden />Na meta</span><span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-down" aria-hidden />Abaixo</span></div>
         </Panel>
 
         {/* ── O dia escolhido ── */}
-        <div className="order-1 min-w-0 lg:order-2">
+        <div className="order-2 min-w-0">
           {/* ── Contra o quê ── */}
           <Panel className="px-4 py-3 mb-3">
             <p className="label mb-2">Comparado com</p>
@@ -350,7 +345,7 @@ function Cartao({
       <span className="label">{k}</span>
       <span
         className={cn(
-          "num text-[17px] sm:text-[19px] font-semibold whitespace-nowrap",
+          "num text-[17px] sm:text-[19px] font-semibold [overflow-wrap:anywhere]",
           tom === "up" && "text-up",
           tom === "down" && "text-down",
           !tom && "text-ink"
@@ -443,7 +438,7 @@ function Calendario({
               </div>
 
               {/* receita: curta no celular ("37,5k"), completa a partir do sm */}
-              <span className="num text-[12px] font-semibold text-ink leading-tight truncate">
+              <span className="num text-[10px] min-[360px]:text-[11px] sm:text-[12px] font-semibold text-ink leading-tight">
                 {d.receitaLiquida > 0 ? (
                   <>
                     <span className="sm:hidden">{compacto(d.receitaLiquida)}</span>

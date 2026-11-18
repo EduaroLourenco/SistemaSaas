@@ -3,7 +3,8 @@ import Comparar from "./comparar-cliente";
 
 export const dynamic = "force-dynamic";
 
-export default async function Pagina() {
+export default async function Pagina({ searchParams }: { searchParams: Promise<{ sku?: string | string[] }> }) {
+  const { sku } = await searchParams;
   const dados = await carregarComparacao();
-  return <Comparar dados={dados} />;
+  return <Comparar dados={dados} buscaInicial={(Array.isArray(sku) ? sku[0] : sku) ?? ""} />;
 }

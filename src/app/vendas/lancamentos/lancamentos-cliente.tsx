@@ -541,7 +541,7 @@ export default function VendasLancamentos({ dados, automacao = {} }: { dados: Da
       <PageHeader
         title="Lançamentos"
         breadcrumb="Vendas"
-        description="Um dia por linha. Digite o que veio da origem — o resto se recalcula sozinho."
+        help="Um dia por linha. Digite o que veio da origem — o resto se recalcula sozinho."
         actions={
           <Button
             onClick={() => setConfirmando(true)}

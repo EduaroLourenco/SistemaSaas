@@ -204,9 +204,9 @@ function LeituraMedias({ cl, pr }: { cl: ResumoTipo; pr: ResumoTipo }) {
     : pr.tarifaMedia - cl.tarifaMedia;
 
   return (
-    <Leitura
+    <Leitura recolhida
       tom={premiumPiorConversao && premiumMenosVisitas ? "atencao" : "neutro"}
-      titulo="O que as médias sugerem"
+      titulo="Como interpretar as médias"
     >
       O Premium paga <span className="num font-semibold">{pct(pontosAMais)}</span> a mais
       de tarifa que o Clássico{" "}
@@ -385,7 +385,7 @@ function Pares({ pares }: { pares: ParSku[] }) {
         />
       </Panel>
 
-      <Leitura tom={premiumGanhou < pares.length / 2 ? "atencao" : "bom"} titulo="Leitura">
+      <Leitura recolhida tom={premiumGanhou < pares.length / 2 ? "atencao" : "bom"} titulo="Leitura dos produtos comparáveis">
         Em <span className="num font-semibold">{count(premiumGanhou)}</span> dos{" "}
         <span className="num font-semibold">{count(pares.length)}</span> produtos
         comparáveis o Premium converteu melhor que o Clássico. A tarifa extra somou{" "}
