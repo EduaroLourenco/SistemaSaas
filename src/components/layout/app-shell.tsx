@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { NAV, NAV_FOOTER, MOBILE_TABS, type NavGroup } from "@/lib/nav";
+import { NAV, NAV_FOOTER, type NavGroup } from "@/lib/nav";
+import { BarraCelular } from "./barra-celular";
 import { SeletorEmpresa } from "./seletor-empresa";
 import {
   ChevronDown,
@@ -295,21 +296,6 @@ function NavTree({
   );
 }
 
-/* ══ Barra inferior do mobile ════════════════════════════════ */
-
-/** Navegação estável, com rótulos e áreas de toque fixas. */
-function MobileTabBar({ pathname, onMore }: { pathname: string; onMore: () => void }) {
-  return <nav aria-label="Navegação" className="gerizo-mobile-nav md:hidden">
-    {MOBILE_TABS.map((t) => {
-      const Icon = t.icon;
-      const active = pathname === t.href || Boolean(t.rotas?.some((r) => pathname === r || pathname.startsWith(r + "/")));
-      return <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined}>
-        <Icon size={21} aria-hidden="true" /><span>{t.label}</span>
-      </Link>;
-    })}
-    <button type="button" onClick={onMore} aria-label="Mais telas"><Menu size={21} aria-hidden="true" /><span>Mais</span></button>
-  </nav>;
-}
 /* ══ Casca ═══════════════════════════════════════════════════ */
 
 /**
@@ -472,7 +458,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <MobileTabBar pathname={pathname} onMore={() => setMoreOpen(true)} />
+      <BarraCelular pathname={pathname} onMore={() => setMoreOpen(true)} />
 
       {moreOpen && <Sheet title="Todas as áreas" onClose={() => setMoreOpen(false)}>
         <RodapeEmpresa />
