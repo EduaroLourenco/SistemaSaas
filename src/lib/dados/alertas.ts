@@ -83,6 +83,9 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
   const inicioJanela = diasAntes(hoje, JANELA_CANCELAMENTO);
   const inicioJanelaAnterior = diasAntes(hoje, JANELA_CANCELAMENTO * 2);
 
+  const precoAlvo = import("./preco-alvo").then((m) => m.carregarPrecoAlvo());
+  precoAlvo.catch(() => {});
+
   const [pedidos, { data: contasRaw }, desempenho, exclusoes] = await Promise.all([
     paginar(() =>
       sb
@@ -108,6 +111,7 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
   const brutas = pedidos as unknown as Ped[];
   const contas = ((contasRaw ?? []) as unknown as Conta[]);
   const porConta = new Map(contas.map((c) => [c.id, c]));
+  const promocoesCanal = carregarPromocoesNoCanal(sb, contas.map((c) => c.id), new Map());
 
   // O pedido guarda a conta; a exclusão fala em canal. Anotar antes de
   // testar evita que "excluir 27/08 na Loja própria" derrube o dia inteiro.
@@ -336,8 +340,7 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
    * peso. Faltando os dois, o piso daquele canal não existe.
    */
   try {
-    const { carregarPrecoAlvo } = await import("./preco-alvo");
-    const { linhas: alvo } = await carregarPrecoAlvo();
+    const { linhas: alvo } = await precoAlvo;
     /*
      * Receita > 0 é a prova de que vendeu: SKU parado sem custo não
      * atrapalha ninguém, e listá-lo afogaria o que importa.
@@ -391,7 +394,7 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
   }
 
   /* ── Promoção do canal perto do fim: a venda muda quando o preço volta ── */
-  const noCanal = await carregarPromocoesNoCanal(sb, contas.map((c) => c.id), new Map());
+  const noCanal = await promocoesCanal;
   const limite = new Date(Date.parse(hoje + "T12:00:00Z") + DIAS_PARA_FIM_DA_PROMOCAO * 86_400_000).toISOString().slice(0, 10);
   const acabando = noCanal.filter(
     (p) => p.situacao === "no-ar" && ["consultor", "meli", "nossa"].includes(p.grupo) && p.diaFim <= limite,

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV, NAV_FOOTER, type NavGroup } from "@/lib/nav";
 import { BarraCelular } from "./barra-celular";
+import { LinkRapido } from "./link-rapido";
 import { SeletorEmpresa } from "./seletor-empresa";
 import {
   ChevronDown,
@@ -147,6 +148,7 @@ function SinoAlertas() {
   return (
     <Link
       href="/alertas"
+      prefetch={total > 0 ? true : null}
       aria-label={total ? `Alertas: ${total}` : "Alertas"}
       title="Alertas"
       className="relative w-9 h-9 rounded-r1 flex items-center justify-center text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
@@ -177,7 +179,7 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   return (
-    <Link
+    <LinkRapido
       href={href}
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
@@ -194,7 +196,7 @@ function NavLink({
           em breve
         </span>
       )}
-    </Link>
+    </LinkRapido>
   );
 }
 
@@ -219,7 +221,7 @@ function NavSection({
   if (group.href) {
     const active = pathname === group.href;
     return (
-      <Link
+      <LinkRapido
         href={group.href}
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}
@@ -232,7 +234,7 @@ function NavSection({
       >
         <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
         <span className="truncate">{group.label}</span>
-      </Link>
+      </LinkRapido>
     );
   }
 
@@ -440,7 +442,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {NAV.map((group) => {
               const Icon = group.icon;
               const active = group.href ? group.href === pathname : group.items?.some((item) => item.href === pathname || item.rotas?.includes(pathname));
-              return <Link key={group.label} href={group.href ?? group.items![0].href} title={group.label} aria-label={group.label} aria-current={active ? "page" : undefined} className={cn("grid h-11 w-11 place-items-center rounded-r1 text-ink-2 hover:bg-panel-3", active && "gerizo-nav-active")}><Icon size={19} strokeWidth={1.75} /></Link>;
+              return <LinkRapido key={group.label} href={group.href ?? group.items![0].href} title={group.label} aria-label={group.label} aria-current={active ? "page" : undefined} className={cn("grid h-11 w-11 place-items-center rounded-r1 text-ink-2 hover:bg-panel-3", active && "gerizo-nav-active")}><Icon size={19} strokeWidth={1.75} /></LinkRapido>;
             })}
             <button type="button" onClick={menu.alternar} aria-label="Abrir navegação completa" className="mt-3 grid h-11 w-11 place-items-center rounded-r1 text-ink-2 hover:bg-panel-3"><Menu size={19} /></button>
           </nav>}

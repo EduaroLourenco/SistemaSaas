@@ -93,13 +93,6 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
         .eq("operacao_id", op.id)
         .order("id"),
     ),
-    paginar(() =>
-      sb
-        .from("campanha_itens")
-        .select("campanha_id,anuncio_id,preco_oferta,decisao")
-        .eq("operacao_id", op.id)
-        .order("id"),
-    ),
   ]);
   const nomes = [
     "planejamento",
@@ -110,7 +103,6 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
     "canais",
     "contas",
     "promoções",
-    "itens de promoção",
   ];
   resultados.forEach((r, i) => {
     if (r.status === "rejected") {
@@ -167,13 +159,31 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
   });
   await enriquecer(catalogo, produtos, anuncios, skuAnuncio, sb, op.id);
   const anuncioPorId = new Map(anuncios.map((a) => [a.id, a]));
-  const ofertas = dados<{
+  const campanhas = dados<Omit<Promocao, "ofertas">>(7);
+  /* A oferta só aparece em campanha com período: sem data, não há o que ler. */
+  const comPeriodo = campanhas.filter((c) => c.inicio && c.fim).map((c) => c.id);
+  let ofertas: {
     campanha_id: string;
     anuncio_id: string;
     preco_oferta: number | null;
     decisao: string;
-  }>(8);
-  const promocoes = dados<Omit<Promocao, "ofertas">>(7).map((c) => ({
+  }[] = [];
+  if (comPeriodo.length) {
+    try {
+      ofertas = (await paginar(() =>
+        sb
+          .from("campanha_itens")
+          .select("campanha_id,anuncio_id,preco_oferta,decisao")
+          .eq("operacao_id", op.id)
+          .in("campanha_id", comPeriodo)
+          .order("id"),
+      )) as typeof ofertas;
+    } catch (e) {
+      console.error("[planejamento/itens de promoção]", e);
+      vazio.avisos.push("Não foi possível carregar itens de promoção. Tente atualizar a página.");
+    }
+  }
+  const promocoes = campanhas.map((c) => ({
     ...c,
     ofertas: ofertas
       .filter((o) => o.campanha_id === c.id)
