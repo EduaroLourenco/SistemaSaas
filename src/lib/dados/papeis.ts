@@ -10,7 +10,7 @@
  * erro depois do clique.
  */
 
-export type Papel = "proprietario" | "administrador" | "editor" | "leitor";
+export type Papel = "proprietario" | "administrador" | "editor" | "leitor" | "expedicao";
 
 export const PAPEIS: { valor: Papel; rotulo: string; descricao: string }[] = [
   {
@@ -25,9 +25,10 @@ export const PAPEIS: { valor: Papel; rotulo: string; descricao: string }[] = [
   },
   { valor: "editor", rotulo: "Editor", descricao: "Lança, importa e edita dados." },
   { valor: "leitor", rotulo: "Leitor", descricao: "Só vê. Não grava nada." },
+  { valor: "expedicao", rotulo: "Expedição", descricao: "Só Envios: vê os pedidos, atualiza a lista e imprime etiquetas." },
 ];
 
 /** A ordem em que a equipe é listada: quem manda primeiro. */
-export const ORDEM_PAPEL: Papel[] = ["proprietario", "administrador", "editor", "leitor"];
+export const ORDEM_PAPEL: Papel[] = ["proprietario", "administrador", "editor", "leitor", "expedicao"];
 
 export const rotuloPapel = (p: Papel) => PAPEIS.find((x) => x.valor === p)?.rotulo ?? p;

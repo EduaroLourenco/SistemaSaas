@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
+import { operacaoPadrao } from "@/lib/dados/operacao";
 import { MeliNaoConfigurado, appConfigurado, type Conta } from "./cliente";
 
 /**
@@ -73,6 +75,35 @@ export type ContaCanal = {
   nome: string;
   identificador: string | null;
 };
+
+/**
+ * A conta da empresa aberta, para quem pode expedir.
+ *
+ * Expedição não lê `contas_canal` pelo RLS. O banco confirma a permissão e só
+ * então esta consulta privilegiada busca a conta, presa à mesma empresa.
+ */
+export async function contaDeExpedicao(id: string): Promise<ContaCanal | null> {
+  const op = await operacaoPadrao();
+  if (!op) return null;
+  const sb = await clienteServidor();
+  const { data: pode, error } = await sb.rpc("pode_expedir_operacao", { op: op.id });
+  if (error || pode !== true) return null;
+  const { data } = await clientePrivilegiado()
+    .from("contas_canal")
+    .select("id,operacao_id,canal_id,nome,identificador")
+    .eq("id", id)
+    .eq("operacao_id", op.id)
+    .maybeSingle();
+  return data
+    ? {
+        id: data.id as string,
+        operacaoId: data.operacao_id as string,
+        canalId: data.canal_id as string,
+        nome: data.nome as string,
+        identificador: (data.identificador as string | null) ?? null,
+      }
+    : null;
+}
 
 /**
  * A conta de canal, se quem está logado pode ESCREVER nela.

@@ -7,6 +7,9 @@ export function erroEquipe(e: { message: string; code?: string }) {
   if (e.code === "42883" && /gen_random_bytes/i.test(e.message)) {
     return { erro: "A geração do link de convite precisa de um ajuste no banco. Rode db/31_convites_pgcrypto.sql no Supabase.", status: 400 };
   }
+  if (e.code === "22P02" && /expedicao/i.test(e.message)) {
+    return { erro: "O perfil Expedição precisa de um ajuste no banco. Rode db/48_perfil_expedicao.sql no Supabase.", status: 503 };
+  }
   if (e.code === "23505") return { erro: "Já existe convite para esse e-mail.", status: 409 };
   return { erro: e.message, status: 400 };
 }

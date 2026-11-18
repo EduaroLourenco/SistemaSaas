@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { carregarEnvios } from "@/lib/dados/envios-meli";
 import { montarEtiquetas } from "@/lib/meli/etiquetas";
-import { contaEditavel } from "@/lib/meli/rota";
+import { contaDeExpedicao, contaEditavel } from "@/lib/meli/rota";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
 
   // Baixar a etiqueta altera o envio no canal. Reaproveita o mesmo RLS e
   // pode_editar_operacao das demais escritas do Meli antes desse efeito.
-  const { conta, motivo } = await contaEditavel(contas[0]);
+  const editavel = await contaEditavel(contas[0]);
+  const conta = editavel.conta ?? (await contaDeExpedicao(contas[0]));
+  const motivo = editavel.motivo;
   if (!conta) {
     return NextResponse.json(
       { erro: motivo === "sem_permissao" ? "Seu acesso é de leitura." : "Conta não encontrada." },

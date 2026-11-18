@@ -16,8 +16,22 @@ async function autorizar() {
   // Atualizar relê as fontes conectadas, sem editar os anúncios ou regras
   // comerciais. Qualquer membro que possa consultar a empresa pode fazê-lo.
   const { data: podeVer, error } = await sb.rpc("pode_ver_operacao", { op: op.id });
-  if (error || !podeVer) return { erro: "Você não tem acesso a esta empresa.", status: 403 } as const;
-  return { op } as const;
+  if (!error && podeVer) return { op, soEnvios: false } as const;
+  /* Expedição não lê os dados da empresa, mas atualiza a própria tela. */
+  const { data: expede } = await sb.rpc("pode_expedir_operacao", { op: op.id });
+  if (expede === true) return { op, soEnvios: true } as const;
+  return { erro: "Você não tem acesso a esta empresa.", status: 403 } as const;
+}
+
+/** Na resposta de Expedição fica só o andamento de Envios. */
+function somenteEnvios(e: Awaited<ReturnType<typeof estadoDaEmpresa>>) {
+  const etapas = e.pedido?.etapas.filter((x) => x.bloco === "envios") ?? [];
+  return {
+    ultima: e.ultima.envios ? { envios: e.ultima.envios } : {},
+    pedido: e.pedido && etapas.length
+      ? { ...e.pedido, blocos: ["envios"], etapas, ativo: etapas.some((x) => x.estado === "aguardando" || x.estado === "atualizando") }
+      : null,
+  };
 }
 
 /** O estado: último pedido manual e quando cada bloco foi atualizado. */
@@ -31,10 +45,10 @@ export async function GET(req: NextRequest) {
     const origem = req.nextUrl.origin;
     after(() => acordarFila(origem));
   }
+  const visivel = a.soEnvios ? somenteEnvios(e) : { ultima: e.ultima, pedido: e.pedido };
   return NextResponse.json({
     operacao: { id: a.op.id, nome: a.op.empresa || a.op.nome },
-    ultima: e.ultima,
-    pedido: e.pedido,
+    ...visivel,
   }, { headers: { "Cache-Control": "no-store" } });
 }
 
@@ -46,6 +60,9 @@ export async function POST(req: NextRequest) {
   const pedidos: unknown[] = Array.isArray(corpo?.blocos) ? corpo.blocos : [];
   const blocos = BLOCOS.map((b) => b.id).filter((id) => pedidos.includes(id) && ehBloco(id));
   if (!blocos.length) return NextResponse.json({ erro: "Escolha ao menos um bloco." }, { status: 400 });
+  if (a.soEnvios && blocos.some((b) => b !== "envios")) {
+    return NextResponse.json({ erro: "Seu acesso atualiza somente Envios." }, { status: 403 });
+  }
   try {
     const r = await pedirAtualizacao(a.op.id, blocos, "manual");
     if ("erro" in r) return NextResponse.json({ erro: r.erro }, { status: 422 });

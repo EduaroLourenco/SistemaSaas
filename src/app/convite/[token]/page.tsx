@@ -31,6 +31,7 @@ const PAPEL: Record<string, string> = {
   administrador: "Administrador",
   editor: "Editor",
   leitor: "Leitor",
+  expedicao: "Expedição",
 };
 
 function Aviso({

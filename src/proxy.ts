@@ -7,6 +7,7 @@
  */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { barrarForaDaExpedicao } from "@/lib/acesso-expedicao-proxy";
 
 /*
  * `/api/cron/` não tem sessão: quem chama é o agendador da Vercel. Não é
@@ -146,6 +147,11 @@ export async function proxy(req: NextRequest) {
     url.pathname = "/";
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  if (data.user && !publica) {
+    const bloqueio = await barrarForaDaExpedicao(req, sb, data.user.id, resposta);
+    if (bloqueio) return bloqueio;
   }
 
   return resposta;

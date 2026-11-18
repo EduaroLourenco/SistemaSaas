@@ -8,6 +8,7 @@ import { NAV, NAV_FOOTER, type NavGroup } from "@/lib/nav";
 import { BarraCelular } from "./barra-celular";
 import { LinkRapido } from "./link-rapido";
 import { SeletorEmpresa } from "./seletor-empresa";
+import { COOKIE_EXPEDICAO } from "@/lib/acesso-expedicao";
 import {
   ChevronDown,
   Bell,
@@ -364,8 +365,33 @@ function useMenuLateral(pathname: string) {
   return { aberto, alternar };
 }
 
+const semAssinatura = () => () => {};
+const lerExpedicao = () => document.cookie.split("; ").includes(`${COOKIE_EXPEDICAO}=1`);
+const expedicaoServidor = () => false;
+
+/** Quem é da expedição vê só a empresa, a conta e a tela de Envios. */
+export function MolduraExpedicao({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-full">
+      <header className="fixed top-0 inset-x-0 z-40 bg-panel border-b border-line">
+        <div className="gerizo-topbar flex items-center gap-2 px-3 md:px-5" style={{ height: "var(--topbar)" }}>
+          <Wordmark />
+          <SeletorEmpresa />
+          <div className="flex-1" />
+          <div className="hidden md:flex"><ThemeToggle /></div>
+          <MenuConta semConfiguracoes />
+        </div>
+      </header>
+      <main id="conteudo" tabIndex={-1} className="relative min-w-0" style={{ paddingTop: "var(--topbar)" }}>
+        {children}
+      </main>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const soExpedicao = React.useSyncExternalStore(semAssinatura, lerExpedicao, expedicaoServidor);
   const [moreOpen, setMoreOpen] = React.useState(false);
   const menu = useMenuLateral(pathname);
 
@@ -376,6 +402,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (SEM_MOLDURA.some((p) => pathname.startsWith(p))) {
     return <>{children}</>;
   }
+
+  if (soExpedicao) return <MolduraExpedicao>{children}</MolduraExpedicao>;
 
   return (
     <div className="min-h-full">
@@ -476,7 +504,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
  * Menu da conta no avatar: Configurações e Sair. Até aqui o avatar só
  * levava a Configurações, e não existia jeito nenhum de sair da conta.
  */
-function MenuConta({ paraCima = false }: { paraCima?: boolean }) {
+function MenuConta({ paraCima = false, semConfiguracoes = false }: { paraCima?: boolean; semConfiguracoes?: boolean }) {
   const [aberto, setAberto] = React.useState(false);
   const [saindo, setSaindo] = React.useState(false);
   const caixa = React.useRef<HTMLDivElement>(null);
@@ -510,7 +538,7 @@ function MenuConta({ paraCima = false }: { paraCima?: boolean }) {
   }
 
   return (
-    <div ref={caixa} className="gerizo-account relative" onKeyDown={(event) => {
+    <div ref={caixa} className={cn("gerizo-account relative", semConfiguracoes && "!block")} onKeyDown={(event) => {
       if (!aberto || !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
       event.preventDefault();
       const itens = [...(caixa.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
@@ -533,7 +561,7 @@ function MenuConta({ paraCima = false }: { paraCima?: boolean }) {
       </button>
       {aberto && (
         <div id={menuId} role="menu" className={cn("absolute right-0 z-50 w-52 rounded-r2 border border-line bg-panel p-1 shadow-[var(--sh-3)]", paraCima ? "bottom-11" : "top-11")}>
-          <Link
+          {!semConfiguracoes && <Link
             href="/configuracoes"
             role="menuitem"
             onClick={() => setAberto(false)}
@@ -541,7 +569,7 @@ function MenuConta({ paraCima = false }: { paraCima?: boolean }) {
           >
             <Settings className="h-4 w-4 text-ink-3" />
             Configurações
-          </Link>
+          </Link>}
           <button
             type="button"
             role="menuitem"
