@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { atualizador, estadoInicial } from "@/lib/atualizacao-cliente";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, Button } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/controls";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, AlertCircle, CheckCircle2, FileText, List, Printer, Table2 } from "lucide-react";
+import { ArrowDown, ArrowUp, AlertCircle, CheckCircle2, FileText, List, Printer, RefreshCw, Table2 } from "lucide-react";
 import { count } from "@/lib/format";
 import type { DadosEnvios, EnvioMeli } from "@/lib/dados/envios-meli";
 import "./envios.css";
@@ -24,7 +26,10 @@ function limiteBr(e: EnvioMeli) {
 
 const compraBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
-function Dias({ dias }: { dias: number | null }) {
+const tomSituacao = (e: EnvioMeli) => e.saiu ? "up" : e.dias != null && e.dias < 0 ? "down" : e.substatus === "invoice_pending" ? "warn" : "neutral";
+
+function Dias({ dias, saiu }: { dias: number | null; saiu?: boolean }) {
+  if (saiu) return <span className="text-[14px] font-medium text-up">Enviado</span>;
   if (dias == null) return <span className="text-[14px] text-ink-3">Sem prazo</span>;
   const tom = dias < 0 ? "text-down" : dias <= 1 ? "text-warn" : "text-ink";
   const rotulo = dias < 0 ? "atrasado" : dias === 0 ? "hoje" : dias === 1 ? "dia" : "dias";
@@ -40,7 +45,7 @@ function Dias({ dias }: { dias: number | null }) {
 
 /** O Meli só libera etiqueta de envio com nota e ainda não coletado, e só na conta que usa Mercado Envios. */
 const SEM_ETIQUETA = new Set(["", "invoice_pending", "buffered", "shipment_paid"]);
-const temEtiqueta = (e: EnvioMeli) => Boolean(e.contaId && e.envio && e.substatus !== undefined && !SEM_ETIQUETA.has(e.substatus) && e.origem === "canal");
+const temEtiqueta = (e: EnvioMeli) => Boolean(!e.saiu && e.contaId && e.envio && e.substatus !== undefined && !SEM_ETIQUETA.has(e.substatus) && e.origem === "canal");
 
 function Marcar({ envio, marcados, alternar, impedimento }: { envio: EnvioMeli; marcados: Set<number>; alternar: (n: number) => void; impedimento?: string }) {
   if (!temEtiqueta(envio)) return null;
@@ -69,6 +74,23 @@ const ORDENACAO: { valor: Chave; rotulo: string }[] = [
   { valor: "situacao", rotulo: "Situação" },
 ];
 
+/** O número do painel do Meli na frente; o do pedido só quando for outro. */
+function NumeroVenda({ envio }: { envio: EnvioMeli }) {
+  const venda = envio.venda ?? envio.pedido;
+  return (
+    <>
+      <span className="num text-ink-2 [overflow-wrap:anywhere]">{venda}</span>
+      {venda !== envio.pedido && <span className="num mt-0.5 block text-[12px] text-ink-3 [overflow-wrap:anywhere]">pedido {envio.pedido}</span>}
+    </>
+  );
+}
+
+const achaBusca = (e: EnvioMeli, termo: string) => {
+  const t = termo.trim().toLowerCase();
+  if (!t) return true;
+  return [e.venda, e.pedido, e.envio, ...e.itens.flatMap((i) => [i.sku, i.titulo])].some((v) => v != null && String(v).toLowerCase().includes(t));
+};
+
 function Produtos({ envio }: { envio: EnvioMeli }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
@@ -84,9 +106,39 @@ function Produtos({ envio }: { envio: EnvioMeli }) {
   );
 }
 
+function ordenarEnvios(base: EnvioMeli[], ordem: { chave: Chave; asc: boolean }) {
+  const val = (e: EnvioMeli) =>
+    ordem.chave === "dias" || ordem.chave === "limite"
+      ? (e.limite ?? "9999")
+      : ordem.chave === "pedido" ? e.pedido : ordem.chave === "conta" ? e.conta : ordem.chave === "produto" ? e.itens.map((i) => i.titulo).join(" ") : e.situacao;
+  return [...base].sort((a, b) => {
+    const x = val(a), y = val(b);
+    return (x < y ? -1 : x > y ? 1 : 0) * (ordem.asc ? 1 : -1);
+  });
+}
+
+const lerServidor = () => estadoInicial;
+
 export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
+  const router = useRouter();
+  const atualizacao = React.useSyncExternalStore(atualizador.assinar, atualizador.ler, lerServidor);
+  const atualizando = atualizacao.enviando || Boolean(atualizacao.pedido?.ativo && atualizacao.pedido.blocos.includes("envios"));
+  const ultimaLeitura = atualizacao.ultima.envios?.em;
+  const leituraPedida = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    atualizador.carregar();
+    return atualizador.aoTerminar(() => router.refresh());
+  }, [router]);
+  /* Voltar à aba pode mostrar a cópia guardada no navegador: há leitura mais nova, busca. */
+  React.useEffect(() => {
+    if (!ultimaLeitura || leituraPedida.current === ultimaLeitura) return;
+    if (Date.parse(ultimaLeitura) - Date.parse(dados.geradoEm) < 60_000) return;
+    leituraPedida.current = ultimaLeitura;
+    router.refresh();
+  }, [ultimaLeitura, dados.geradoEm, router]);
   const [conta, setConta] = React.useState("");
-  const [prazo, setPrazo] = React.useState<keyof typeof PRAZOS | "">("");
+  const [prazo, setPrazo] = React.useState<keyof typeof PRAZOS | "Enviados" | "">("");
+  const [busca, setBusca] = React.useState("");
   const [ordem, setOrdem] = React.useState<{ chave: Chave; asc: boolean }>({ chave: "dias", asc: true });
   const [tabelaMobile, setTabelaMobile] = React.useState(false);
   const [marcados, setMarcados] = React.useState<Set<number>>(new Set());
@@ -153,18 +205,20 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
     }
   }
 
-  const todos = React.useMemo(() => {
-    const base = dados.envios.filter((e) => !conta || e.conta === conta);
-    const val = (e: EnvioMeli) =>
-      ordem.chave === "dias" || ordem.chave === "limite"
-        ? (e.limite ?? "9999")
-        : ordem.chave === "pedido" ? e.pedido : ordem.chave === "conta" ? e.conta : ordem.chave === "produto" ? e.itens.map((i) => i.titulo).join(" ") : e.situacao;
-    return [...base].sort((a, b) => {
-      const x = val(a), y = val(b);
-      return (x < y ? -1 : x > y ? 1 : 0) * (ordem.asc ? 1 : -1);
-    });
-  }, [dados.envios, conta, ordem]);
-  const lista = React.useMemo(() => (prazo ? todos.filter((e) => e.dias != null && PRAZOS[prazo](e.dias)) : todos), [todos, prazo]);
+  const todos = React.useMemo(
+    () => ordenarEnvios(dados.envios.filter((e) => (!conta || e.conta === conta) && achaBusca(e, busca)), ordem),
+    [dados.envios, conta, ordem, busca],
+  );
+  const enviados = React.useMemo(
+    () => ordenarEnvios((dados.enviados ?? []).filter((e) => (!conta || e.conta === conta) && achaBusca(e, busca)), ordem),
+    [dados.enviados, conta, ordem, busca],
+  );
+  const lista = React.useMemo(() => {
+    if (prazo === "Enviados") return enviados;
+    if (prazo) return todos.filter((e) => e.dias != null && PRAZOS[prazo](e.dias));
+    /* Quem busca um número precisa achar o pedido mesmo que ele já tenha saído. */
+    return busca.trim() ? [...todos, ...enviados] : todos;
+  }, [todos, enviados, prazo, busca]);
 
   const disponiveis = lista.filter(temEtiqueta);
   const selecionados = disponiveis.filter(e => marcados.has(e.envio!));
@@ -188,6 +242,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
     { r: "Hoje" as const, v: n(PRAZOS.Hoje), tom: "text-warn" },
     { r: "Amanhã" as const, v: n(PRAZOS.Amanhã), tom: "text-warn" },
     { r: "Depois" as const, v: n(PRAZOS.Depois), tom: "text-ink" },
+    { r: "Enviados" as const, v: enviados.length, tom: "text-up" },
   ];
   const falhasVisiveis = dados.falhas.filter((f) => !conta || f.conta === conta);
   const consultaIncompleta = falhasVisiveis.length > 0;
@@ -210,8 +265,12 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
         badge={<span className="text-[12px] text-ink-3">
           Leitura de {new Date(dados.geradoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
         </span>}
+        actions={<Button size="sm" disabled={atualizando} onClick={() => void atualizador.pedir(["envios"])}>
+          <RefreshCw size={15} aria-hidden="true" className={cn(atualizando && "animate-spin")} />{atualizando ? "Atualizando…" : "Atualizar envios"}
+        </Button>}
       />
       <PageBody>
+        {atualizacao.erro && <p role="alert" className="text-[14px] text-down">{atualizacao.erro}</p>}
         {/* Uma faixa de filtro acima de tudo que ela recorta */}
         <div className="flex min-w-0 flex-wrap gap-2" role="group" aria-label="Filtrar envios por conta">
           {["", ...dados.contas].map((c) => (
@@ -229,6 +288,14 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
               {c ? curto(c) : "Todas"}
             </button>
           ))}
+          <input
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Venda, pedido, SKU ou produto"
+            aria-label="Buscar envio por venda, pedido, SKU ou produto"
+            className="h-11 min-w-0 flex-1 basis-[240px] rounded-r1 border border-line-2 bg-panel px-3 text-[16px] text-ink md:max-w-[340px] md:text-[14px]"
+          />
         </div>
 
         {falhasVisiveis.map((f) => (
@@ -243,7 +310,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
             <p className="mb-2 text-[14px] font-medium text-ink-2">{consultaIncompleta ? "Pendentes nas contas consultadas" : "Envios pendentes"}</p>
             <p className="num text-[48px] font-semibold leading-[56px] tracking-[-0.045em] text-ink md:text-[56px] md:leading-[64px]">{semContas ? "—" : count(todos.length)}</p>
           </div>
-          <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Filtrar por prazo">
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-5 max-sm:[&>*:last-child]:col-span-2" role="group" aria-label="Filtrar por prazo">
             {resumo.map((s) => <button key={s.r} type="button" aria-pressed={prazo === s.r} disabled={semContas} onClick={() => setPrazo((p) => p === s.r ? "" : s.r)} className={cn("min-h-[72px] rounded-r2 border px-3 py-2 text-left", prazo === s.r ? "border-brand bg-brand-wash" : "border-line bg-panel hover:bg-panel-2")}>
               <span className="block text-[14px] text-ink-2">{s.r}</span>
               <span className={cn("num block text-[24px] font-semibold leading-8 tracking-tight", s.v ? s.tom : "text-ink-3")}>{semContas ? "—" : count(s.v)}</span>
@@ -277,8 +344,8 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
           <Panel className="flex items-start gap-3 p-5">
             {consultaIncompleta || semContas ? <AlertCircle aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-ink-3" /> : <CheckCircle2 aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-up" />}
             <div>
-              <h2 className="text-[16px] font-semibold text-ink">{consultaIncompleta ? "Consulta incompleta" : semContas ? "Nenhuma conta disponível" : "Nenhum envio pendente"}</h2>
-              <p className="mt-1 text-[14px] leading-6 text-ink-2">{consultaIncompleta ? "Não foi possível consultar todas as contas deste recorte. Confira as falhas acima." : semContas ? "Não há contas de Mercado Livre disponíveis nesta leitura." : conta ? `Nenhum envio pendente em ${conta}.` : "Nenhum envio pendente nas contas consultadas."}</p>
+              <h2 className="text-[16px] font-semibold text-ink">{consultaIncompleta ? "Consulta incompleta" : semContas ? "Nenhuma conta disponível" : busca.trim() || prazo ? "Nenhum envio encontrado" : "Nenhum envio pendente"}</h2>
+              <p className="mt-1 text-[14px] leading-6 text-ink-2">{consultaIncompleta ? "Não foi possível consultar todas as contas deste recorte. Confira as falhas acima." : semContas ? "Não há contas de Mercado Livre disponíveis nesta leitura." : busca.trim() ? "Atualize os envios ou confira a conta." : prazo ? "Nada neste filtro." : conta ? `Nenhum envio pendente em ${conta}.` : "Nenhum envio pendente nas contas consultadas."}</p>
             </div>
           </Panel>
         ) : (
@@ -316,12 +383,12 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
                   ))}</tr>
                 </thead>
                 <tbody>{lista.map((e) => <tr key={`${e.conta}-${e.pedido}`} className="group border-b border-line last:border-0">
-                  <td className="sticky left-0 z-1 bg-panel px-4 py-4 align-top"><div className="shipping-deadline"><Marcar envio={e} marcados={marcados} alternar={alternar} impedimento={impedimento(e)} /><Dias dias={e.dias} /></div></td>
+                  <td className="sticky left-0 z-1 bg-panel px-4 py-4 align-top"><div className="shipping-deadline"><Marcar envio={e} marcados={marcados} alternar={alternar} impedimento={impedimento(e)} /><Dias dias={e.dias} saiu={e.saiu} /></div></td>
                   <td className="px-4 py-4 align-top font-medium text-ink">{limiteBr(e) ?? <span className="font-normal text-ink-3">Sem prazo</span>}</td>
                   <td className="px-4 py-4 align-top"><Produtos envio={e} /></td>
-                  <td className="px-4 py-4 align-top"><span className="num text-ink-2 [overflow-wrap:anywhere]">{e.pedido}</span><p className="mt-1 text-[12px] text-ink-3">Compra {compraBr(e.compra)}</p></td>
+                  <td className="px-4 py-4 align-top"><NumeroVenda envio={e} /><p className="mt-1 text-[12px] text-ink-3">Compra {compraBr(e.compra)}</p></td>
                   <td className="px-4 py-4 align-top leading-5 text-ink-2 [overflow-wrap:anywhere]">{e.conta}</td>
-                  <td className="px-4 py-4 align-top"><Badge className="whitespace-normal" tone={e.dias != null && e.dias < 0 ? "down" : "neutral"}>{e.situacao}</Badge></td>
+                  <td className="px-4 py-4 align-top"><Badge className="whitespace-normal" tone={tomSituacao(e)}>{e.situacao}</Badge></td>
                 </tr>)}</tbody>
               </table>
             </div>
@@ -329,15 +396,15 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
             <div className={cn("divide-y divide-line md:hidden", tabelaMobile && "hidden")}>
               {lista.map((e) => <article key={`${e.conta}-${e.pedido}`} aria-label={`Pedido ${e.pedido}`} className="min-w-0 p-4">
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex items-start gap-1"><Marcar envio={e} marcados={marcados} alternar={alternar} impedimento={impedimento(e)} /><Dias dias={e.dias} /></div>
+                  <div className="flex items-start gap-1"><Marcar envio={e} marcados={marcados} alternar={alternar} impedimento={impedimento(e)} /><Dias dias={e.dias} saiu={e.saiu} /></div>
                   <div className="text-right"><p className="text-[12px] leading-[18px] text-ink-3">Enviar até</p><p className="text-[14px] font-semibold leading-5 text-ink">{limiteBr(e) ?? "Sem prazo"}</p></div>
                 </div>
                 <Produtos envio={e} />
                 <dl className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-4 gap-y-3 text-[14px]">
-                  <div><dt className="text-[12px] text-ink-3">Pedido</dt><dd className="num mt-1 text-ink-2 [overflow-wrap:anywhere]">{e.pedido}</dd></div>
+                  <div><dt className="text-[12px] text-ink-3">Venda</dt><dd className="mt-1"><NumeroVenda envio={e} /></dd></div>
                   <div><dt className="text-[12px] text-ink-3">Compra</dt><dd className="num mt-1 text-ink-2">{compraBr(e.compra)}</dd></div>
                   <div className="col-span-2"><dt className="text-[12px] text-ink-3">Conta</dt><dd className="mt-1 text-ink-2 [overflow-wrap:anywhere]">{e.conta}</dd></div>
-                  <div className="col-span-2"><dt className="sr-only">Situação</dt><dd><Badge className="whitespace-normal" tone={e.dias != null && e.dias < 0 ? "down" : "neutral"}>{e.situacao}</Badge></dd></div>
+                  <div className="col-span-2"><dt className="sr-only">Situação</dt><dd><Badge className="whitespace-normal" tone={tomSituacao(e)}>{e.situacao}</Badge></dd></div>
                 </dl>
               </article>)}
             </div>

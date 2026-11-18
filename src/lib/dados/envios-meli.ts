@@ -27,6 +27,10 @@ export type EnvioMeli = {
   /** Substatus cru do envio: diz se a etiqueta já pode ser baixada. */
   substatus?: string;
   pedido: number;
+  /** O número que o painel do Meli mostra: o do pacote, ou o do pedido se não houver. */
+  venda?: number;
+  /** Já saiu da mão do vendedor: fica fora dos pendentes e dos atrasados. */
+  saiu?: boolean;
   /** Data da compra, ISO com fuso. */
   compra: string;
   /** Limite para despachar, ISO com -03:00. Nulo = o canal não informou. */
@@ -45,6 +49,8 @@ export type DadosEnvios = {
   hoje: string;
   contas: string[];
   envios: EnvioMeli[];
+  /** Ainda sem baixa no Meli, mas já postados, coletados ou no centro de distribuição. */
+  enviados?: EnvioMeli[];
   /** Contas que não responderam, com o motivo. */
   falhas: { conta: string; motivo: string }[];
   geradoEm: string;
@@ -52,6 +58,7 @@ export type DadosEnvios = {
 
 type Ordem = {
   id: number;
+  pack_id?: number | null;
   date_created: string;
   total_amount?: number;
   buyer?: { nickname?: string };
@@ -67,7 +74,20 @@ const SITUACAO: Record<string, string> = {
   printed: "Etiqueta impressa",
   buffered: "Aguardando liberação",
   shipment_paid: "Em produção",
+  waiting_for_payment: "Aguardando pagamento",
+  in_warehouse: "No centro do Meli",
 };
+
+/* O pacote já saiu da mão do vendedor, mas o status segue `ready_to_ship`. */
+const JA_SAIU: Record<string, string> = {
+  in_hub: "Entregue ao Meli",
+  dropped_off: "Postado",
+  picked_up: "Coletado",
+};
+
+function separar(lista: EnvioMeli[]) {
+  return { envios: lista.filter((e) => !e.saiu), enviados: lista.filter((e) => e.saiu) };
+}
 
 const brt = (ms: number) => new Date(ms - 3 * 3600_000).toISOString();
 const dias = (a: string, b: string) =>
@@ -95,6 +115,8 @@ async function doConta(contaId: string, nome: string, hoje: string): Promise<Env
         let limite: string | null = null;
         let origem: EnvioMeli["origem"] = null;
         let sub = "";
+        let saiu = false;
+        let lido = !envio;
 
         if (envio) {
           const sla = await meliGet<{ expected_date?: string; last_updated?: string }>(`/shipments/${envio}/sla`, contaId).catch(() => null);
@@ -103,18 +125,18 @@ async function doConta(contaId: string, nome: string, hoje: string): Promise<Env
             date_created?: string;
             lead_time?: { estimated_delivery_time?: { schedule?: number | null } };
           }>(`/shipments/${envio}`, contaId, { "x-format-new": "true" }).catch(() => null);
+          lido = Boolean(sh);
           sub = sh?.substatus ?? "";
           /* Coletado e a API ainda não soube. Na coleta (cross_docking) o
              envio fica em `ready_to_ship/in_packing_list` por dias, enquanto
              o painel já mostra "A caminho"; o que muda é o sla, que o Meli
              fecha logo depois da coleta. Sla mexido depois do limite com o
              envio na lista de coleta = já saiu. */
-          if (
-            sub === "in_packing_list" &&
-            sla?.expected_date &&
-            sla.last_updated &&
-            Date.parse(sla.last_updated) > Date.parse(sla.expected_date)
-          ) continue;
+          saiu =
+            sub in JA_SAIU ||
+            (sub === "in_packing_list" &&
+              Boolean(sla?.expected_date && sla.last_updated) &&
+              Date.parse(sla!.last_updated!) > Date.parse(sla!.expected_date!));
           if (sla?.expected_date) {
             limite = sla.expected_date;
             origem = "canal";
@@ -133,11 +155,17 @@ async function doConta(contaId: string, nome: string, hoje: string): Promise<Env
           envio: envio ?? null,
           substatus: sub,
           pedido: o.id,
+          venda: o.pack_id ?? o.id,
+          saiu,
           compra: o.date_created,
           limite,
           origem,
-          dias: limite ? dias(limite.slice(0, 10), hoje) : null,
-          situacao: SITUACAO[sub] ?? (status === "ready_to_ship" ? "Pronto para enviar" : "Aguardando envio"),
+          dias: limite && !saiu ? dias(limite.slice(0, 10), hoje) : null,
+          situacao: saiu
+            ? (JA_SAIU[sub] ?? "Coletado")
+            : !lido
+              ? "Situação não lida"
+              : (SITUACAO[sub] ?? (status === "ready_to_ship" ? "Pronto para enviar" : "Aguardando envio")),
           comprador: o.buyer?.nickname ?? null,
           itens: (o.order_items ?? []).map((i) => ({
             titulo: i.item?.title ?? "",
@@ -181,7 +209,7 @@ export async function atualizarEnvios(operacaoId: string): Promise<DadosEnvios> 
   const v: DadosEnvios = {
     hoje,
     contas: integs.map((i) => i.nome),
-    envios: porConta.flat(),
+    ...separar(porConta.flat()),
     falhas,
     geradoEm: new Date().toISOString(),
   };
@@ -203,5 +231,15 @@ export async function carregarEnvios(): Promise<DadosEnvios> {
   if (!salvo?.geradoEm) return atualizarEnvios(op.id);
   // O "hoje" e os dias até o limite mudam à meia-noite, mesmo sem retrato novo.
   const hoje = brt(Date.now()).slice(0, 10);
-  return { ...salvo, hoje, envios: salvo.envios.map((e) => ({ ...e, dias: e.limite ? dias(e.limite.slice(0, 10), hoje) : null })) };
+  /* Retrato antigo não traz `saiu`: o substatus guardado responde. */
+  const lista = [...salvo.envios, ...(salvo.enviados ?? [])].map((e) => {
+    const saiu = Boolean(e.saiu) || (e.substatus ?? "") in JA_SAIU;
+    return {
+      ...e,
+      saiu,
+      situacao: saiu ? (JA_SAIU[e.substatus ?? ""] ?? "Coletado") : e.situacao,
+      dias: e.limite && !saiu ? dias(e.limite.slice(0, 10), hoje) : null,
+    };
+  });
+  return { ...salvo, hoje, ...separar(lista) };
 }

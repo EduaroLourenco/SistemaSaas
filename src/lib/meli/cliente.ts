@@ -275,6 +275,8 @@ async function accessToken(conta: Conta): Promise<string> {
   return json.access_token;
 }
 
+const ESPERAS_409 = [2_000, 5_000];
+
 /**
  * GET autenticado na API. `caminho` começa com barra.
  *
@@ -294,14 +296,15 @@ export async function meliGet<T>(
 ): Promise<T> {
   autorizarLeitura(caminho);
   const token = await accessToken(conta);
-  await aguardarVez();
 
-  const r = await fetch(`${API}${caminho}`, {
-    method: "GET",
-    headers: { authorization: `Bearer ${token}`, accept: "application/json", ...cabecalhos },
-  });
+  for (let tentativa = 0; ; tentativa++) {
+    await aguardarVez();
+    const r = await fetch(`${API}${caminho}`, {
+      method: "GET",
+      headers: { authorization: `Bearer ${token}`, accept: "application/json", ...cabecalhos },
+    });
+    if (r.ok) return (await r.json()) as T;
 
-  if (!r.ok) {
     // 429 é o sintoma de cota estourada. Vale dizer o nome, porque aqui a
     // cota é dividida e a causa provável está fora desta plataforma.
     if (r.status === 429) {
@@ -312,9 +315,13 @@ export async function meliGet<T>(
     }
     // O corpo diz o motivo (ex.: "PolicyAgent" = app bloqueada pela cota/política).
     const detalhe = (await r.text().catch(() => "")).slice(0, 200);
+    /* Falta de capacidade momentânea do Meli: o próprio erro pede nova tentativa. */
+    if (r.status === 409 && detalhe.includes("internal_capacity_conflict") && tentativa < ESPERAS_409.length) {
+      await new Promise((ok) => setTimeout(ok, ESPERAS_409[tentativa]));
+      continue;
+    }
     throw new Error(`Mercado Livre respondeu HTTP ${r.status} em ${caminho}${detalhe ? `. ${detalhe}` : ""}`);
   }
-  return (await r.json()) as T;
 }
 
 /** O mesmo GET, para resposta binária (etiqueta em PDF). Erro do Meli vem em JSON e volta no texto. */
