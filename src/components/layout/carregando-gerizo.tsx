@@ -1,15 +1,17 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
+import { Carregando } from "@/components/ui/carregando";
 import { NOME_GDF3, useGdf3 } from "@/lib/marca-gdf3";
 
 /**
  * Tela de carregamento com a marca: fundo branco e as letras de "gerizo."
  * voando até formar o nome.
  *
- * Aparece só ao entrar no sistema e ao trocar de empresa. Entre telas quem
- * responde é o esqueleto (loading.tsx), que mantém menu e lugar na tela.
+ * Cobre a tela só ao entrar no sistema. Ao trocar de empresa, a espera fica
+ * na área de conteúdo, com o menu visível, como entre telas (loading.tsx).
  *
  * Quem liga chama `iniciarCarregando(modo)`:
  *  - "navegacao": some sozinha quando o endereço muda (o login vai para a
@@ -51,6 +53,7 @@ const MAXIMO = 30000;
 export function CarregandoGerizo() {
   const pathname = usePathname();
   const [visivel, setVisivel] = React.useState(false);
+  const [naArea, setNaArea] = React.useState(false);
   const estado = React.useRef<{ modo: Modo; desde: number; caminho: string } | null>(null);
   const timers = React.useRef<number[]>([]);
 
@@ -73,6 +76,7 @@ export function CarregandoGerizo() {
         timers.current.forEach(clearTimeout);
         timers.current = [];
         estado.current = { modo: d.modo ?? "manual", desde: Date.now(), caminho: window.location.pathname };
+        setNaArea(d.modo !== "navegacao");
         setVisivel(true);
         timers.current.push(window.setTimeout(() => esconder(), MAXIMO));
       } else {
@@ -105,7 +109,8 @@ export function CarregandoGerizo() {
 
   if (!visivel) return null;
 
-  return <TelaGerizo />;
+  const area = naArea ? document.getElementById("conteudo") : null;
+  return area ? createPortal(<Carregando sobre />, area) : <TelaGerizo />;
 }
 
 /**

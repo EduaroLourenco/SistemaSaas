@@ -354,6 +354,25 @@ button:disabled { cursor: not-allowed; }
    ponto final pulsa em roxo enquanto a espera continua. Com "reduzir
    movimento" a regra global acima zera a duração: as letras já aparecem
    no lugar. */
+.gerizo-espera {
+  display: grid;
+  place-items: center;
+  min-height: calc(100dvh - var(--topbar) - 96px);
+  overflow: hidden;
+}
+.gerizo-espera.compacta { min-height: 120px; }
+.gerizo-espera.sobre { position: absolute; inset: 0; z-index: 20; align-items: start; padding-top: 32vh; background: var(--ground); }
+.gerizo-espera > span[aria-hidden] {
+  color: var(--ink);
+  font-size: clamp(44px, 9vw, 104px);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+  opacity: 0.07;
+  animation: gerizo-espera 1.5s ease-in-out infinite;
+}
+.gerizo-espera.compacta > span[aria-hidden] { font-size: 36px; }
+@keyframes gerizo-espera { 50% { opacity: 0.16; } }
 .gerizo-carregando {
   position: fixed;
   inset: 0;
@@ -581,11 +600,11 @@ button:active:not(:disabled) { translate: 0 1px; }
 
 /* Leitura mobile: resumo primeiro, comparação disponível sob demanda. */
 @media (max-width: 767px) {
-  .gerizo-mobile-nav { position: fixed; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 40; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 2px; padding: 5px; border: 1px solid color-mix(in srgb, var(--line-2) 70%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--panel) 80%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); box-shadow: var(--sh-3); transition: left .2s ease, right .2s ease, bottom .2s ease, padding .2s ease, background-color .2s ease; }
-  .gerizo-mobile-nav > :is(a,button) { display: flex; flex-direction: column; gap: 3px; align-items: center; justify-content: center; min-height: 54px; min-width: 0; color: var(--ink-2); font-size: 11px; font-weight: 600; border-radius: 21px; transition: min-height .2s ease, gap .2s ease; }
+  .gerizo-mobile-nav { position: fixed; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 40; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 2px; padding: 5px; border: 1px solid color-mix(in srgb, var(--line-2) 70%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--panel) 48%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5); box-shadow: var(--sh-3); transition: left .2s ease, right .2s ease, bottom .2s ease, padding .2s ease, background-color .2s ease; }
+  .gerizo-mobile-nav > :is(a,button) { display: flex; flex-direction: column; gap: 3px; align-items: center; justify-content: center; min-height: 54px; min-width: 0; color: var(--ink); font-size: 11px; font-weight: 600; border-radius: 21px; transition: min-height .2s ease, gap .2s ease; }
   .gerizo-mobile-nav > :is(a,button) > span { max-height: 16px; overflow: hidden; line-height: 16px; transition: max-height .2s ease, opacity .15s ease; }
   .gerizo-mobile-nav > [aria-current="page"] { color: var(--brand); background: var(--brand-wash); }
-  .gerizo-mobile-nav[data-rolando] { left: 44px; right: 44px; bottom: calc(6px + env(safe-area-inset-bottom)); padding: 3px; background: color-mix(in srgb, var(--panel) 58%, transparent); }
+  .gerizo-mobile-nav[data-rolando] { left: 44px; right: 44px; bottom: calc(6px + env(safe-area-inset-bottom)); padding: 3px; background: color-mix(in srgb, var(--panel) 30%, transparent); }
   .gerizo-mobile-nav[data-rolando] > :is(a,button) { min-height: 44px; gap: 0; }
   .gerizo-mobile-nav[data-rolando] > :is(a,button) > span { max-height: 0; opacity: 0; }
   button, select, input:not([type="checkbox"]):not([type="radio"]), a[role="button"], .gerizo-sheet nav a { min-height: 44px; }

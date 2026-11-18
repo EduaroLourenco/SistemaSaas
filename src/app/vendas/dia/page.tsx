@@ -1,5 +1,6 @@
 import { carregarDia } from "@/lib/dados/dia";
 import { Suspense } from "react";
+import { Carregando } from "@/components/ui/carregando";
 import DiaCliente from "./dia-cliente";
 import { OperacaoHoje } from "./operacao-hoje";
 
@@ -23,6 +24,6 @@ export default async function Pagina({
   // canal aceita lista ("a,conta:b"); mes ("AAAA-MM") é a navegação do calendário.
   const dados = await carregarDia(data, canal || undefined, mes || undefined);
   /* Olhando outro dia, a operação de agora só atrapalharia. */
-  const operacao = !data && !mes ? <Suspense fallback={<div className="min-h-[120px]" />}><OperacaoHoje /></Suspense> : null;
+  const operacao = !data && !mes ? <Suspense fallback={<Carregando compacto />}><OperacaoHoje /></Suspense> : null;
   return <DiaCliente dados={dados} operacao={operacao} />;
 }

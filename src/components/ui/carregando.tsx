@@ -1,27 +1,25 @@
-import { Panel } from "@/components/ui/primitives";
+"use client";
+
+import { cn } from "@/lib/utils";
+import { NOME_GDF3, useGdf3 } from "@/lib/marca-gdf3";
 
 /**
- * Esqueleto de tela enquanto o servidor busca os dados.
+ * Espera dentro da área que está carregando: a marca, clara, ao fundo.
  *
- * Existe por necessidade técnica, não estética: sem um limite de Suspense
- * na rota, o React aborta a navegação com o erro #441 — "componente
- * suspendeu respondendo a uma entrada síncrona". Foi o que aparecia no
- * console ao entrar em Preço ideal, que é a tela mais pesada.
+ * Menu e topo continuam visíveis e usáveis. O limite de Suspense também é
+ * necessário: sem ele o React aborta a navegação com o erro #441.
  *
- * Desenha a moldura da tela, não um giro no meio da tela: a pessoa vê
- * onde as coisas vão aparecer, e a troca não pisca quando chegam.
+ * `compacto` serve a um bloco da página, e não prende a abertura do sistema.
  */
-export function Carregando({ blocos = 3 }: { blocos?: number }) {
+export function Carregando({ compacto = false, sobre = false }: { compacto?: boolean; sobre?: boolean }) {
+  const gdf3 = useGdf3();
   return (
-    <div className="px-4 md:px-6 py-4 flex flex-col gap-3" aria-busy="true">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }, (_, i) => (
-          <Panel key={i} className="h-[92px] animate-pulse bg-panel-2" />
-        ))}
-      </div>
-      {Array.from({ length: blocos }, (_, i) => (
-        <Panel key={i} className="h-[220px] animate-pulse bg-panel-2" />
-      ))}
+    <div
+      className={cn("gerizo-espera", compacto && "compacta", sobre && "sobre")}
+      role="status"
+      aria-busy={compacto ? undefined : "true"}
+    >
+      <span aria-hidden="true">{gdf3 ? NOME_GDF3 : "gerizo."}</span>
       <span className="sr-only">Carregando dados</span>
     </div>
   );

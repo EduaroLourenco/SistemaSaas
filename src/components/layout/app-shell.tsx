@@ -454,7 +454,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         id="conteudo"
         tabIndex={-1}
-        className={cn("min-w-0 pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0", menu.aberto ? "md:pl-[var(--rail)]" : "md:pl-16")}
+        className={cn("relative min-w-0 pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0", menu.aberto ? "md:pl-[var(--rail)]" : "md:pl-16")}
         style={{ paddingTop: "var(--topbar)" }}
       >
         {children}
