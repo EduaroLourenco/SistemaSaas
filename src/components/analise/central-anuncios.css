@@ -131,3 +131,12 @@
   .ads-comparison { padding:12px; }
   .ads-comparison thead th:first-child { min-width:100px; }
 }
+
+@media(max-width:767px) {
+  .ads-period { gap:4px; }
+  .ads-period > div { flex-wrap:nowrap; }
+  .ads-period > div > span { width:auto; white-space:nowrap; }
+  .ads-period .ads-chips { flex-wrap:nowrap; overflow-x:auto; }
+  .ads-period .ads-chips > * { flex:none; }
+  .ads-summary { grid-template-columns:1fr 1fr; gap:12px 16px; padding:14px 0; }
+}

@@ -4,6 +4,8 @@ import { operacaoPadrao } from "./operacao";
 import { paginar } from "./paginar";
 import { ultimosPrecosDeVenda } from "./preco-atual";
 import { semControleDeEstoque } from "@/lib/estoque-sem-controle";
+import { carregarPromocoesNoCanal } from "./promocoes-no-canal";
+import { diaSP, situacaoDoItem } from "@/lib/planejamento/canal";
 import {
   detalhesVazios,
   type Dados,
@@ -26,6 +28,7 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
     canais: [],
     contas: [],
     promocoes: [],
+    noCanal: [],
     avisos: [],
     pronto: false,
   };
@@ -189,12 +192,25 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
           : [];
       }),
   }));
+  const noCanal = await carregarPromocoesNoCanal(
+    sb,
+    dados<{ id: string }>(6).map((c) => c.id),
+    new Map(
+      anuncios.flatMap((a) => {
+        const s = skuAnuncio(a);
+        return s ? [[a.codigo_externo.toUpperCase(), s] as const] : [];
+      }),
+    ),
+  );
+  const hoje = diaSP(Date.now());
   return {
     ...vazio,
     pronto: resultados.slice(0, 3).every((r) => r.status === "fulfilled"),
     avisos: [...new Set(vazio.avisos)],
+    noCanal,
     itens: dados<Item>(0).map((i) => ({
       ...i,
+      status: situacaoDoItem(i, hoje, noCanal),
       detalhes: { ...detalhesVazios(), ...i.detalhes },
     })),
     grupos: dados<Grupo>(1),

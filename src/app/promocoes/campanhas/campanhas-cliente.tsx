@@ -108,7 +108,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
   if (dados.vazio) {
     return (
       <>
-        <PageHeader title="Campanhas" breadcrumb="Promoções" />
+        <PageHeader title="Planilhas processadas" breadcrumb="Promoções" />
         <PageBody className="op-workspace op-promocoes-campanhas">
           <SemFonte
             titulo="Nenhuma campanha processada"
@@ -122,7 +122,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
   return (
     <>
       <PageHeader
-        title="Campanhas"
+        title="Planilhas processadas"
         breadcrumb="Promoções"
         filters={
           <>

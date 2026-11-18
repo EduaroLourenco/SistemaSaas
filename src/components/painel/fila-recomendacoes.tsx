@@ -48,9 +48,11 @@ function lerResolvidas(): Set<string> {
   }
 }
 
-export function FilaRecomendacoes({ itens, semDados = false }: { itens: Recomendacao[]; semDados?: boolean }) {
+export function FilaRecomendacoes({ itens, semDados = false, limiteInicial }: { itens: Recomendacao[]; semDados?: boolean; limiteInicial?: number }) {
   const [resolvidas, setResolvidas] = React.useState<Set<string>>(new Set());
   const [pronto, setPronto] = React.useState(false);
+  const [mostrarTodas, setMostrarTodas] = React.useState(false);
+  const listaId = React.useId();
 
   // Só lê o armazenamento depois de montar: no servidor ele não existe, e
   // ler durante a renderização faria o HTML divergir do que o navegador
@@ -90,6 +92,7 @@ export function FilaRecomendacoes({ itens, semDados = false }: { itens: Recomend
 
   const visiveis = pronto ? itens.filter((i) => !resolvidas.has(i.id)) : itens;
   const resolvidasHoje = itens.length - visiveis.length;
+  const exibidas = limiteInicial && !mostrarTodas ? visiveis.slice(0, limiteInicial) : visiveis;
 
   if (!itens.length) {
     return (
@@ -112,7 +115,7 @@ export function FilaRecomendacoes({ itens, semDados = false }: { itens: Recomend
     <Panel className="home-priorities min-w-0 overflow-hidden">
       <PanelHeader
         title="Prioridades"
-        hint="7 dias contra os 7 anteriores · todos os canais"
+        hint="7 dias com dados contra os 7 anteriores · todos os canais"
         action={
           <div className="flex flex-wrap items-center gap-3">
           <Link href="/planejamento" className="inline-flex min-h-10 items-center gap-1.5 text-[14px] text-ink-2 hover:text-brand"><CalendarDays size={16} aria-hidden="true" />Planejamento</Link>
@@ -133,8 +136,8 @@ export function FilaRecomendacoes({ itens, semDados = false }: { itens: Recomend
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-line">
-          {visiveis.map((r) => (
+        <div id={listaId} className="divide-y divide-line">
+          {exibidas.map((r) => (
             <article
               key={r.id}
               className="grid min-w-0 gap-3 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_minmax(140px,auto)_auto] lg:items-center lg:gap-5"
@@ -178,6 +181,7 @@ export function FilaRecomendacoes({ itens, semDados = false }: { itens: Recomend
           ))}
         </div>
       )}
+      {limiteInicial && visiveis.length > limiteInicial && <div className="border-t border-line px-4 py-2 sm:px-5"><button type="button" aria-expanded={mostrarTodas} aria-controls={listaId} onClick={() => setMostrarTodas(atual => !atual)} className="inline-flex min-h-11 items-center gap-2 text-[14px] font-medium text-brand hover:underline">{mostrarTodas ? "Mostrar menos" : `Ver as ${visiveis.length} prioridades`}<ArrowRight size={16} aria-hidden="true" /></button></div>}
     </Panel>
   );
 }

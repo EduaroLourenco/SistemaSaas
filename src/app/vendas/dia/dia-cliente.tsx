@@ -88,7 +88,36 @@ function somarMes(mes: string, n: number) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-export default function DiaCliente({ dados }: { dados: DadosDia }) {
+/** A semana até hoje: cada dia abre com um toque. */
+function UltimosDias({ dias, foco, aoEscolher }: { dias: DadosDia["recentes"]; foco: string; aoEscolher: (data: string) => void }) {
+  const NOMES = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  /* No celular a faixa rola, então começa em hoje e anda para trás. */
+  return (
+    <section aria-label="Últimos dias" className="grid auto-cols-[92px] grid-flow-col gap-2 overflow-x-auto pb-1 lg:auto-cols-fr">
+      {dias.map((d, i) => (
+        <button
+          key={d.data}
+          type="button"
+          style={{ "--ordem": -i } as React.CSSProperties}
+          disabled={d.parcial}
+          aria-pressed={d.data === foco}
+          onClick={() => aoEscolher(d.data)}
+          className={cn(
+            "flex min-h-[84px] flex-col gap-0.5 rounded-r2 border p-2.5 text-left max-lg:[order:var(--ordem)]",
+            d.data === foco ? "border-brand bg-brand-wash" : "border-line bg-panel hover:bg-panel-2",
+            d.parcial && "opacity-50",
+          )}
+        >
+          <span className="text-[12px] text-ink-3">{d.emAndamento ? "hoje" : NOMES[d.diaSemana]} · <span className="num">{br(d.data)}</span></span>
+          <span className="num text-[15px] font-semibold text-ink">{d.parcial ? "sem dado" : compacto(d.receitaLiquida)}</span>
+          {d.contraSemana != null ? <Delta value={d.contraSemana} /> : d.emAndamento && !d.parcial ? <span className="text-[12px] text-ink-3">em andamento</span> : null}
+        </button>
+      ))}
+    </section>
+  );
+}
+
+export default function DiaCliente({ dados, operacao }: { dados: DadosDia; operacao?: React.ReactNode }) {
   /* A navegação entra numa transição: a tela antiga fica visível e
      interativa enquanto a nova carrega, em vez de congelar inteira. */
   const { navegar: navegarSuave, carregando: atualizando } = useNavegacaoSuave();
@@ -134,7 +163,7 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
   if (dados.vazio || !dados.hoje) {
     return (
       <>
-        <PageHeader title="Dia" breadcrumb="Vendas" filters={filtros || undefined} />
+        <PageHeader title="Hoje" filters={filtros || undefined} />
         <BarraCarregando ativo={atualizando} />
       <PageBody className={decisaoCss.workspace}>
           <Panel className="p-6">
@@ -162,8 +191,7 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
   return (
     <>
       <PageHeader
-        title="Dia"
-        breadcrumb="Vendas"
+        title="Hoje"
         description={[`${nomeDoDia(h.diaSemana)}, ${br(h.data)}`, textoAtualizacao(dados.atualizacao)]
           .filter(Boolean)
           .join(" · ")}
@@ -172,6 +200,47 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
 
       <PageBody className={decisaoCss.workspace}>
         <AvisoFalha a={dados.atualizacao} />
+
+        <UltimosDias dias={dados.recentes} foco={h.data} aoEscolher={abrirDia} />
+        <div ref={detalhe} className="min-w-0 scroll-mt-[calc(var(--topbar)+12px)]">
+          <HeroMetric label="Receita líquida do dia" value={money(h.receitaLiquida)} hint={`${nomeDoDia(h.diaSemana)}, ${br(h.data)}${h.parcial ? " · sem movimento registrado" : h.emAndamento ? " · dia em andamento" : ""}`} />
+          <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden mb-3 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
+            <Cartao
+              k="Meta do dia"
+              v={h.meta > 0 ? money(h.meta) : "—"}
+              sub={
+                h.meta <= 0
+                  ? dados.metaPorConta
+                    ? "meta do canal"
+                    : "sem meta"
+                  : h.emAndamento
+                    ? /* O dia não acabou: falta é previsão, não resultado. */
+                      `${moneyShort(Math.max(0, -h.sobraMeta))} até fechar`
+                    : h.sobraMeta >= 0
+                      ? `sobrou ${moneyShort(h.sobraMeta)}`
+                      : `faltou ${moneyShort(-h.sobraMeta)}`
+              }
+              tom={h.bateu === null ? undefined : h.bateu ? "up" : "down"}
+            />
+            <Cartao k="Pedidos" v={count(h.pedidosValidos)} sub={`${count(h.pedidos)} no total`} />
+            <Cartao k="Ticket médio" v={h.ticket != null ? money(h.ticket) : "—"} />
+            <Cartao
+              k="Conversão"
+              v={h.conversao != null ? pct(h.conversao, 2) : "—"}
+              sub={h.visitas > 0 ? `${count(h.visitas)} visitas` : "sem visita"}
+            />
+            <Cartao
+              k="Ads"
+              v={h.ads > 0 ? money(h.ads) : "—"}
+              sub={
+                h.ads > 0 && h.receitaLiquida > 0
+                  ? `TACoS ${pct((h.ads / h.receitaLiquida) * 100, 1)}`
+                  : ""
+              }
+            />
+          </div>
+        </div>
+        {operacao}
 
         <div className="decision-calendar">
         {/* ── O mês em calendário: escolhe o dia ── */}
@@ -222,44 +291,7 @@ export default function DiaCliente({ dados }: { dados: DadosDia }) {
         </Panel>
 
         {/* ── O dia escolhido ── */}
-        <div ref={detalhe} className="order-1 min-w-0 scroll-mt-[calc(var(--topbar)+12px)] lg:order-2">
-          <HeroMetric label="Receita líquida do dia" value={money(h.receitaLiquida)} hint={`${nomeDoDia(h.diaSemana)}, ${br(h.data)}${h.parcial ? " · sem movimento registrado" : h.emAndamento ? " · dia em andamento" : ""}`} />
-          <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden mb-3">
-            <Cartao
-              k="Meta do dia"
-              v={h.meta > 0 ? money(h.meta) : "—"}
-              sub={
-                h.meta <= 0
-                  ? dados.metaPorConta
-                    ? "meta do canal"
-                    : "sem meta"
-                  : h.emAndamento
-                    ? /* O dia não acabou: falta é previsão, não resultado. */
-                      `${moneyShort(Math.max(0, -h.sobraMeta))} até fechar`
-                    : h.sobraMeta >= 0
-                      ? `sobrou ${moneyShort(h.sobraMeta)}`
-                      : `faltou ${moneyShort(-h.sobraMeta)}`
-              }
-              tom={h.bateu === null ? undefined : h.bateu ? "up" : "down"}
-            />
-            <Cartao k="Pedidos" v={count(h.pedidosValidos)} sub={`${count(h.pedidos)} no total`} />
-            <Cartao k="Ticket médio" v={h.ticket != null ? money(h.ticket) : "—"} />
-            <Cartao
-              k="Conversão"
-              v={h.conversao != null ? pct(h.conversao, 2) : "—"}
-              sub={h.visitas > 0 ? `${count(h.visitas)} visitas` : "sem visita"}
-            />
-            <Cartao
-              k="Ads"
-              v={h.ads > 0 ? money(h.ads) : "—"}
-              sub={
-                h.ads > 0 && h.receitaLiquida > 0
-                  ? `TACoS ${pct((h.ads / h.receitaLiquida) * 100, 1)}`
-                  : ""
-              }
-            />
-          </div>
-
+        <div className="order-1 min-w-0 lg:order-2">
           {/* ── Contra o quê ── */}
           <Panel className="px-4 py-3 mb-3">
             <p className="label mb-2">Comparado com</p>

@@ -6,7 +6,6 @@ import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   Bar,
   CartesianGrid,
@@ -25,9 +24,10 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { linkDoAnuncio } from "@/lib/links";
 import { money, moneyShort, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, TriangleAlert, Flame, Snowflake, Minus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame, Snowflake, Minus } from "lucide-react";
 import type { DadosTermometro, DiaTermometro } from "@/lib/dados/termometro";
 import type { CatalogoSemana } from "@/lib/dados/catalogo-semana";
+import { MaisVistos, NoAr, OQueAconteceu, PontosDeAtencao } from "./termometro-blocos";
 
 /**
  * Termômetro do Mercado Livre.
@@ -51,18 +51,6 @@ import type { CatalogoSemana } from "@/lib/dados/catalogo-semana";
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 const dataBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-
-/**
- * Os acontecimentos agrupados por data, do mais recente ao mais antigo.
- *
- * Agrupar na tela e não no carregador porque o carregador devolve uma
- * lista plana, que é o formato que também serve para contar e filtrar.
- */
-function agruparPorDia(lista: DadosTermometro["acontecimentos"]) {
-  const porDia = new Map<string, DadosTermometro["acontecimentos"]>();
-  for (const a of lista) porDia.set(a.data, [...(porDia.get(a.data) ?? []), a]);
-  return [...porDia.entries()].sort((x, y) => y[0].localeCompare(x[0]));
-}
 
 const varPct = (agora: number | null, antes: number | null) =>
   agora != null && antes != null && antes !== 0 ? ((agora - antes) / Math.abs(antes)) * 100 : undefined;
@@ -209,28 +197,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
         }
       />
       <PageBody className={decisaoCss.workspace}>
-        {/* ── O que fazer hoje, antes de qualquer gráfico ─────────── */}
-        <Panel className="overflow-hidden">
-          <PanelHeader title="Precisa de olho hoje" hint={`${dados.atencao.length} ponto(s), do mais grave para o menos.`} />
-          {dados.atencao.length === 0 ? (
-            <p className="px-4 py-6 text-[13px] text-ink-3">Nada fora do esperado nas regras que a tela checa.</p>
-          ) : (
-            <ul className="divide-y divide-line">
-              {dados.atencao.map((a) => (
-                <li key={a.chave} className="flex items-start gap-2.5 px-4 py-3">
-                  <TriangleAlert
-                    className={cn("w-4 h-4 shrink-0 mt-0.5", a.gravidade === "alta" ? "text-down" : a.gravidade === "media" ? "text-warn" : "text-ink-3")}
-                    strokeWidth={2}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-[14px] font-medium text-ink">{a.titulo}</p>
-                    <p className="text-[12px] text-ink-2">{a.detalhe}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+        <PontosDeAtencao atencao={dados.atencao} />
 
         {/* ── O termômetro ───────────────────────────────────────── */}
         <Panel className="overflow-hidden">
@@ -378,45 +345,7 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           />
         </MetricStrip>
 
-        {/* ── O que aconteceu, no mesmo eixo do gráfico de cima ──── */}
-        {dados.acontecimentos.length > 0 && (
-          <Panel className="overflow-hidden">
-            <PanelHeader
-              title="O que aconteceu"
-              hint="campanha, preço acima de 10% e estoque"
-            />
-            <ul className="divide-y divide-line">
-              {agruparPorDia(dados.acontecimentos).map(([data, itens]) => (
-                <li key={data} className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:gap-4">
-                  <span className="shrink-0 sm:w-[112px]">
-                    <span className="num text-[12.5px] font-semibold text-ink">
-                      {dataBr(data)}
-                    </span>
-                    <span className="ml-1.5 text-[12px] text-ink-3 sm:ml-0 sm:block">
-                      {DIAS[new Date(`${data}T12:00:00Z`).getUTCDay()]}
-                    </span>
-                  </span>
-                  <ul className="flex min-w-0 flex-col gap-1">
-                    {itens.map((a, i) => (
-                      <li key={i} className="flex items-baseline gap-2">
-                        {/* Um ponto, não um ícone: são três tipos e a cor
-                            já diz se puxa a venda para cima ou para baixo. */}
-                        <span
-                          aria-hidden
-                          className={cn(
-                            "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
-                            a.tom === "up" ? "bg-up" : a.tom === "down" ? "bg-down" : "bg-ink-3",
-                          )}
-                        />
-                        <span className="text-[12.5px] text-ink-2">{a.texto}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-        )}
+        {dados.acontecimentos.length > 0 && <OQueAconteceu lista={dados.acontecimentos} />}
 
         {/* ── Catálogo na semana ─────────────────────────────────── */}
         {dados.catalogo && <CatalogoDaSemana dados={dados.catalogo} />}
@@ -479,111 +408,13 @@ export default function TermometroCliente({ dados }: { dados: DadosTermometro })
           </div>
         </Panel>
 
-        {/* ── O que o Planejamento diz que está no ar ─────────────── */}
-        <div className="grid gap-3">
-          <Panel className="overflow-hidden">
-            <PanelHeader
-              title="No ar nas duas semanas"
-              hint="Do Planejamento"
-              action={
-                <Link href="/planejamento" className="text-[12.5px] font-medium text-brand hover:underline">
-                  Abrir planejamento →
-                </Link>
-              }
-            />
-            {dados.campanhas.length === 0 ? (
-              <p className="px-4 py-6 text-[13px] text-ink-3">Nenhuma campanha cadastrada nestas duas semanas.</p>
-            ) : (
-              <ul className="divide-y divide-line">
-                {dados.campanhas.map((c) => (
-                  <li key={`${c.titulo}-${c.inicio}`} className="flex items-start justify-between gap-3 px-4 py-2.5">
-                    <div className="min-w-0">
-                      <p className="text-[13px] text-ink truncate">{c.titulo}</p>
-                      <p className="num text-[11.5px] text-ink-3">
-                        {dataBr(c.inicio)} a {dataBr(c.fim)}
-                        {c.skus > 0 && ` · ${c.skus} SKUs`}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <Badge tone={c.status === "Concluída" ? "neutral" : c.status === "Em andamento" ? "up" : "warn"}>{c.status}</Badge>
-                      <span className="text-[11px] text-ink-3">{c.onde}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-        </div>
+        <NoAr canal={dados.noCanal} campanhas={dados.campanhas} hoje={dados.hoje} />
 
-        {/* ── Mais vistos ────────────────────────────────────────── */}
-        <Panel className="overflow-hidden">
-          <PanelHeader
-            title={`Mais vistos em ${dataBr(dados.diaDoRanking)}`}
-            hint="Visitas do dia por anúncio, com o que cada um converteu. Visita alta sem venda é preço, foto ou prazo."
-          />
-          {dados.maisVistos.length === 0 ? (
-            <p className="px-4 py-6 text-[13px] text-ink-3">Sem visita medida neste dia.</p>
-          ) : (
-            <div className="gerizo-table-scroll" tabIndex={0} role="region" aria-label="Produtos mais vistos do dia">
-              <table className="w-full border-collapse text-[13px] min-w-[620px]">
-                <thead>
-                  <tr className="bg-panel-2">
-                    {["Produto", "Visitas", "Unidades", "Conversão", "Receita", "Estoque"].map((h, i) => (
-                      <th
-                        key={h}
-                        className={cn(
-                          "h-10 px-4 border-b border-line text-[12px] font-medium text-ink-2 whitespace-nowrap",
-                          i === 0 ? "text-left" : "text-right"
-                        )}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {dados.maisVistos.map((p, i) => (
-                    <tr key={p.mlb} className={cn("border-b border-line last:border-0", i % 2 === 1 && "bg-panel-2/55")}>
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="num text-[12.5px] font-medium text-ink">{p.sku || "sem SKU"}</span>
-                          {linkDoAnuncio(p.mlb) ? (
-                            <a href={linkDoAnuncio(p.mlb)!} target="_blank" rel="noreferrer" className="num text-[11.5px] text-brand hover:underline">
-                              {p.mlb}
-                            </a>
-                          ) : (
-                            <span className="num text-[11.5px] text-ink-3">{p.mlb}</span>
-                          )}
-                          {p.tipo === "Premium" && <Badge tone="neutral">premium</Badge>}
-                        </div>
-                        <p className="text-[12px] text-ink-2 break-words max-w-[320px]">
-                          {p.titulo}
-                        </p>
-                      </td>
-                      <td className="num px-4 py-2.5 text-right text-ink">{count(p.visitas)}</td>
-                      <td className={cn("num px-4 py-2.5 text-right", p.unidades === 0 ? "text-down font-medium" : "text-ink")}>{count(p.unidades)}</td>
-                      <td className="num px-4 py-2.5 text-right text-ink-2">{p.conversao == null ? "—" : pct(p.conversao, 2)}</td>
-                      <td className="num px-4 py-2.5 text-right text-ink-2">{p.receita > 0 ? money(p.receita) : "—"}</td>
-                      <td className={cn("num px-4 py-2.5 text-right", p.estoque === 0 ? "text-down font-semibold" : "text-ink-2")}>
-                        {p.estoque == null ? "—" : count(p.estoque)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Panel>
+        <MaisVistos lista={dados.maisVistos} dia={dados.diaDoRanking} />
 
-        <p className="text-[12px] leading-relaxed text-ink-3">
-          Vendas e visitas atualizadas em{" "}
-          <span className="num">{dados.frescor.vendas ? new Date(dados.frescor.vendas).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—"}</span>
-          {dados.frescor.ads && (
-            <>
-              {" "}· mídia em <span className="num">{new Date(dados.frescor.ads).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
-            </>
-          )}
-          . O botão Atualizar, no topo, relê o canal.
+        <p className="num text-[12px] text-ink-3">
+          vendas {dados.frescor.vendas ? new Date(dados.frescor.vendas).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) : "—"}
+          {dados.frescor.ads && ` · mídia ${new Date(dados.frescor.ads).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}`}
         </p>
       </PageBody>
     </>

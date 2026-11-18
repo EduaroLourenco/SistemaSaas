@@ -61,6 +61,7 @@ export default function EstudioShell({
   planejar,
   hoje,
   abrirItem,
+  abrirPromo,
   children,
 }: {
   dados: Dados;
@@ -88,6 +89,7 @@ export default function EstudioShell({
   planejar: (o: Oportunidade) => void;
   hoje: string;
   abrirItem: (i: Item) => void;
+  abrirPromo: (id: string) => void;
   children: ReactNode;
 }) {
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null);
@@ -356,7 +358,7 @@ export default function EstudioShell({
               </button>
             </div>
           </div>
-          <div className="st-view-body">{aba === "Hoje" && <Hoje dados={dados} hoje={hoje} abrir={abrirItem} />}{children}</div>
+          <div className="st-view-body">{aba === "Hoje" && <Hoje dados={dados} hoje={hoje} abrir={abrirItem} abrirPromo={abrirPromo} />}{children}</div>
         </section>
       </div>
       {(aviso || erro) && (

@@ -2,6 +2,9 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "@/lib/dados/paginar";
 import { carregarExclusoes, aplicar } from "@/lib/dados/exclusoes";
+import { operacaoPadrao } from "@/lib/dados/operacao";
+import { carregarEnvios } from "@/lib/dados/envios-meli";
+import { carregarPromocoesNoCanal } from "@/lib/dados/promocoes-no-canal";
 
 /**
  * As ferramentas que o Claude usa para consultar a operação.
@@ -137,6 +140,20 @@ export const FERRAMENTAS: Ferramenta[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "envios_pendentes",
+    description:
+      "Envios do Mercado Livre que ainda não saíram: atrasados, para hoje, amanhã e depois, " +
+      "com pedido, conta, prazo e produtos. Traz a hora da leitura; diga-a se não for de hoje.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "promocoes_no_ar",
+    description:
+      "Promoções do Mercado Livre no ar, agendadas e encerradas há até 15 dias, inclusive " +
+      "pré-acordo do consultor e relâmpago por dia, com datas e número de anúncios.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
 ];
 
 /* ══════════════════════════════════════════════════════════════
@@ -158,9 +175,45 @@ export async function executar(
       return anuncios(entrada as never);
     case "cancelamentos":
       return cancelamentos(entrada as never);
+    case "envios_pendentes":
+      return enviosPendentes();
+    case "promocoes_no_ar":
+      return promocoesNoAr();
     default:
       return { erro: `Ferramenta desconhecida: ${nome}` };
   }
+}
+
+async function enviosPendentes() {
+  const d = await carregarEnvios();
+  const ordem = [...d.envios].sort((a, b) => (a.dias ?? 999) - (b.dias ?? 999));
+  const conta = (f: (n: number) => boolean) => d.envios.filter((e) => e.dias != null && f(e.dias)).length;
+  return {
+    leitura: d.geradoEm,
+    hoje: d.hoje,
+    total: d.envios.length,
+    atrasados: conta((n) => n < 0),
+    paraHoje: conta((n) => n === 0),
+    amanha: conta((n) => n === 1),
+    depois: conta((n) => n >= 2),
+    contasSemResposta: d.falhas,
+    primeiros: ordem.slice(0, 30).map((e) => ({
+      pedido: e.pedido, conta: e.conta, limite: e.limite, dias: e.dias, situacao: e.situacao,
+      itens: e.itens.map((i) => `${i.quantidade}x ${i.sku ?? i.titulo}`),
+    })),
+  };
+}
+
+async function promocoesNoAr() {
+  const op = await operacaoPadrao();
+  if (!op) return { erro: "Nenhuma operação acessível." };
+  const sb = await clienteServidor();
+  const { data } = await sb.from("contas_canal").select("id").eq("operacao_id", op.id);
+  const lista = await carregarPromocoesNoCanal(sb, (data ?? []).map((c) => c.id as string), new Map());
+  return lista.map((p) => ({
+    nome: p.nome, grupo: p.grupo, situacao: p.situacao, inicio: p.inicio, fim: p.fim,
+    anuncios: p.anuncios, leitura: p.lidoEm,
+  }));
 }
 
 type Pedido = {

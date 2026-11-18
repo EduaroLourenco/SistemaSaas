@@ -53,6 +53,13 @@ function Marcar({ envio, marcados, alternar, impedimento }: { envio: EnvioMeli; 
 
 type Chave = "dias" | "limite" | "produto" | "pedido" | "conta" | "situacao";
 
+const PRAZOS = {
+  Atrasados: (d: number) => d < 0,
+  Hoje: (d: number) => d === 0,
+  Amanhã: (d: number) => d === 1,
+  Depois: (d: number) => d >= 2,
+};
+
 const ORDENACAO: { valor: Chave; rotulo: string }[] = [
   { valor: "dias", rotulo: "Prazo restante" },
   { valor: "limite", rotulo: "Enviar até" },
@@ -79,6 +86,7 @@ function Produtos({ envio }: { envio: EnvioMeli }) {
 
 export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
   const [conta, setConta] = React.useState("");
+  const [prazo, setPrazo] = React.useState<keyof typeof PRAZOS | "">("");
   const [ordem, setOrdem] = React.useState<{ chave: Chave; asc: boolean }>({ chave: "dias", asc: true });
   const [tabelaMobile, setTabelaMobile] = React.useState(false);
   const [marcados, setMarcados] = React.useState<Set<number>>(new Set());
@@ -145,7 +153,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
     }
   }
 
-  const lista = React.useMemo(() => {
+  const todos = React.useMemo(() => {
     const base = dados.envios.filter((e) => !conta || e.conta === conta);
     const val = (e: EnvioMeli) =>
       ordem.chave === "dias" || ordem.chave === "limite"
@@ -156,6 +164,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
       return (x < y ? -1 : x > y ? 1 : 0) * (ordem.asc ? 1 : -1);
     });
   }, [dados.envios, conta, ordem]);
+  const lista = React.useMemo(() => (prazo ? todos.filter((e) => e.dias != null && PRAZOS[prazo](e.dias)) : todos), [todos, prazo]);
 
   const disponiveis = lista.filter(temEtiqueta);
   const selecionados = disponiveis.filter(e => marcados.has(e.envio!));
@@ -173,12 +182,12 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
     setMarcados(atuais => { const novos = new Set(atuais); if (novos.has(id)) novos.delete(id); else novos.add(id); return novos; });
   };
 
-  const n = (f: (d: number) => boolean) => lista.filter((e) => e.dias != null && f(e.dias)).length;
+  const n = (f: (d: number) => boolean) => todos.filter((e) => e.dias != null && f(e.dias)).length;
   const resumo = [
-    { r: "Atrasados", v: n((d) => d < 0), tom: "text-down" },
-    { r: "Hoje", v: n((d) => d === 0), tom: "text-warn" },
-    { r: "Amanhã", v: n((d) => d === 1), tom: "text-warn" },
-    { r: "Depois", v: n((d) => d >= 2), tom: "text-ink" },
+    { r: "Atrasados" as const, v: n(PRAZOS.Atrasados), tom: "text-down" },
+    { r: "Hoje" as const, v: n(PRAZOS.Hoje), tom: "text-warn" },
+    { r: "Amanhã" as const, v: n(PRAZOS.Amanhã), tom: "text-warn" },
+    { r: "Depois" as const, v: n(PRAZOS.Depois), tom: "text-ink" },
   ];
   const falhasVisiveis = dados.falhas.filter((f) => !conta || f.conta === conta);
   const consultaIncompleta = falhasVisiveis.length > 0;
@@ -232,20 +241,19 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
         <section aria-label="Resumo de envios" className="grid min-w-0 gap-5 border-b border-line pb-6 lg:grid-cols-[minmax(160px,1fr)_minmax(0,3fr)] lg:items-end lg:gap-8">
           <div>
             <p className="mb-2 text-[14px] font-medium text-ink-2">{consultaIncompleta ? "Pendentes nas contas consultadas" : "Envios pendentes"}</p>
-            <p className="num text-[48px] font-semibold leading-[56px] tracking-[-0.045em] text-ink md:text-[56px] md:leading-[64px]">{semContas ? "—" : count(lista.length)}</p>
+            <p className="num text-[48px] font-semibold leading-[56px] tracking-[-0.045em] text-ink md:text-[56px] md:leading-[64px]">{semContas ? "—" : count(todos.length)}</p>
           </div>
-          <dl className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-            {resumo.map((s) => <div key={s.r}>
-              <dt className="mb-1 text-[14px] text-ink-2">{s.r}</dt>
-              <dd className={cn("num text-[24px] font-semibold leading-8 tracking-tight", s.v ? s.tom : "text-ink-3")}>{semContas ? "—" : count(s.v)}</dd>
-            </div>)}
-          </dl>
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Filtrar por prazo">
+            {resumo.map((s) => <button key={s.r} type="button" aria-pressed={prazo === s.r} disabled={semContas} onClick={() => setPrazo((p) => p === s.r ? "" : s.r)} className={cn("min-h-[72px] rounded-r2 border px-3 py-2 text-left", prazo === s.r ? "border-brand bg-brand-wash" : "border-line bg-panel hover:bg-panel-2")}>
+              <span className="block text-[14px] text-ink-2">{s.r}</span>
+              <span className={cn("num block text-[24px] font-semibold leading-8 tracking-tight", s.v ? s.tom : "text-ink-3")}>{semContas ? "—" : count(s.v)}</span>
+            </button>)}
+          </div>
         </section>
 
         {lista.length > 0 && <section className="shipping-documents" aria-labelledby="documentos-envios">
           <div className="shipping-documents-heading">
-            <div><h2 id="documentos-envios"><FileText size={18} aria-hidden="true" />Documentos de expedição</h2><p>Etiqueta, DANFE com SKU e lista de separação em um PDF.</p></div>
-            <span className="shipping-paper">Térmica · 10 × 15 cm</span>
+            <div><h2 id="documentos-envios"><FileText size={18} aria-hidden="true" />Etiquetas e separação</h2></div>
           </div>
           <div className="shipping-documents-body">
             <div className="shipping-selection" aria-live="polite">
@@ -259,7 +267,6 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
               <Button variant="primary" disabled={!selecionadosIds.size || imprimindo} onClick={() => { setAviso(null); setRevisando(true); }}><Printer size={16} aria-hidden="true" />Revisar documentos</Button>
             </div>
           </div>
-          <p className="shipping-document-note">Gerar o PDF marca os envios como impressos no Mercado Livre. Você confirma na próxima etapa.</p>
           {leituraAntiga && <p className="shipping-document-note"><AlertCircle size={16} aria-hidden="true" />Há envios sem os dados necessários para os documentos. Atualize a leitura de Envios para habilitar a seleção.</p>}
           {aviso && <p role={aviso.tom === "down" ? "alert" : "status"} className={cn("shipping-document-feedback", aviso.tom === "down" ? "text-down" : aviso.tom === "warn" ? "text-warn" : "text-up")}>{aviso.texto}</p>}
           {arquivo && <div className="shipping-file"><FileText size={20} aria-hidden="true" /><div><strong>Documentos prontos</strong><span>PDF com os envios liberados pelo Mercado Livre.</span></div><a href={arquivo} target="_blank" rel="noopener noreferrer">Abrir PDF</a><a href={arquivo} download="documentos-expedicao.pdf">Baixar PDF</a></div>}

@@ -3,6 +3,8 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarCatalogoSemana, type CatalogoSemana } from "./catalogo-semana";
 import { carregarAcontecimentos, type Acontecimento } from "./acontecimentos-semana";
+import { carregarPromocoesNoCanal } from "./promocoes-no-canal";
+import { situacaoDoItem, type PromoCanal } from "@/lib/planejamento/canal";
 
 /**
  * Termômetro do Mercado Livre — a leitura operacional do dia.
@@ -85,8 +87,10 @@ export type ProdutoDoDia = {
 export type Atencao = {
   chave: string;
   gravidade: "alta" | "media" | "baixa";
-  titulo: string;
-  detalhe: string;
+  numero: string;
+  rotulo: string;
+  itens?: { texto: string; mlb?: string }[];
+  href?: string;
   /** Em R$, quando o ponto tem dinheiro medido. Ordena a lista. */
   valor: number | null;
 };
@@ -150,6 +154,8 @@ export type DadosTermometro = {
   diaDoRanking: string;
   /** O que estava no ar nas duas semanas, do Planejamento. */
   campanhas: CampanhaNaSemana[];
+  /** O que o canal informa, inclusive relâmpago negociado. */
+  noCanal: PromoCanal[];
   atencao: Atencao[];
   /** Última vez que cada fonte foi atualizada, para a tela dizer. */
   frescor: { vendas: string | null; visitas: string | null; ads: string | null; reputacao: string | null };
@@ -206,7 +212,7 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
   if (!canalML || !contas.length) {
     return {
       vazio: true, hoje, semana: { inicio, fim }, semanaAnterior: { inicio: inicioAnt, fim: fimAnt },
-      diasCorridos, parcial, contas, contaSelecionada: "", dias: [], diasAnteriores: [], diaDoRanking: ate, campanhas: [],
+      diasCorridos, parcial, contas, contaSelecionada: "", dias: [], diasAnteriores: [], diaDoRanking: ate, campanhas: [], noCanal: [],
       ritmo: { receita: 0, receitaAnterior: 0, pedidos: 0, pedidosAnterior: 0, unidades: 0, unidadesAnterior: 0, visitas: null, visitasAnterior: null, investimento: 0, investimentoAnterior: 0, conversao: null, conversaoAnterior: null, ticket: null, ticketAnterior: null },
       dia: null, reputacao: [], catalogo: null, acontecimentos: [], maisVistos: [], atencao: [],
       frescor: { vendas: null, visitas: null, ads: null, reputacao: null },
@@ -453,7 +459,12 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
   /* ── Catálogo: o estado da vitrine nas duas semanas ── */
   /* A semana inteira, não só os dias completos: o que aconteceu hoje
      explica o que está acontecendo hoje. */
-  const acontecimentos = await carregarAcontecimentos(sb, inicioAnt, fim);
+  const noCanal = await carregarPromocoesNoCanal(
+    sb,
+    contasAtivas,
+    new Map(anuncios.flatMap((a) => (a.sku_canal ? [[a.codigo_externo.toUpperCase(), a.sku_canal.toUpperCase()] as const] : []))),
+  );
+  const acontecimentos = await carregarAcontecimentos(sb, inicioAnt, ate, noCanal);
 
   const catalogo = await carregarCatalogoSemana(sb, {
     contas: contaSelecionada ? contas.filter((c) => c.id === contaSelecionada) : contas,
@@ -470,29 +481,34 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     ateAnterior: dia(ultimoCompleto, -7),
   });
 
-  /* ── Pontos de atenção ── */
+  /* ── Pontos de atenção: um cartão por assunto, não uma linha por anúncio ── */
   const atencao: Atencao[] = [];
+  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const pctBr = (v: number) => `${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
   const mediaVisitas = maisVistos.length ? maisVistos.reduce((s, p) => s + p.visitas, 0) / maisVistos.length : 0;
+  const reps = [...repPorConta.values()];
 
-  for (const p of maisVistos) {
-    if (p.visitas >= Math.max(30, mediaVisitas) && p.unidades === 0) {
-      atencao.push({
-        chave: `sem-venda-${p.mlb}`,
-        gravidade: "alta",
-        titulo: `${p.sku || p.mlb} teve ${p.visitas} visitas e nenhuma venda`,
-        detalhe: `${p.titulo} · ${p.tipo}${p.preco ? ` · ${p.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}`,
-        valor: null,
-      });
-    }
-    if (p.estoque === 0 && p.visitas > 0) {
-      atencao.push({
-        chave: `sem-estoque-${p.mlb}`,
-        gravidade: "alta",
-        titulo: `${p.sku || p.mlb} está com estoque zero e recebeu ${p.visitas} visitas`,
-        detalhe: p.titulo,
-        valor: null,
-      });
-    }
+  const semVenda = maisVistos.filter((p) => p.visitas >= Math.max(30, mediaVisitas) && p.unidades === 0);
+  if (semVenda.length) {
+    atencao.push({
+      chave: "sem-venda",
+      gravidade: "alta",
+      numero: String(semVenda.length),
+      rotulo: "com visita e sem venda",
+      itens: semVenda.map((p) => ({ texto: `${p.sku || p.mlb} · ${p.visitas} visitas`, mlb: p.mlb })),
+      valor: null,
+    });
+  }
+  const zerados = maisVistos.filter((p) => p.estoque === 0 && p.visitas > 0);
+  if (zerados.length) {
+    atencao.push({
+      chave: "sem-estoque",
+      gravidade: "alta",
+      numero: String(zerados.length),
+      rotulo: "sem estoque e com visita",
+      itens: zerados.map((p) => ({ texto: `${p.sku || p.mlb} · ${p.visitas} visitas`, mlb: p.mlb })),
+      valor: null,
+    });
   }
 
   const hojeDia = dias.find((d) => d.data === ate) ?? null;
@@ -500,27 +516,35 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     atencao.push({
       chave: "ads-sem-retorno",
       gravidade: "media",
-      titulo: `Mídia sem retorno atribuído hoje`,
-      detalhe: `${hojeDia.investimento.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} investidos e nenhuma receita creditada pelo canal até agora.`,
+      numero: brl(hojeDia.investimento),
+      rotulo: "em mídia sem retorno hoje",
       valor: hojeDia.investimento,
     });
   }
-  for (const r of repPorConta.values()) {
-    if ((r.perguntasSemResposta ?? 0) > 0) {
-      atencao.push({
-        chave: `perguntas-${r.conta}`,
-        gravidade: (r.perguntasSemResposta ?? 0) >= 5 ? "alta" : "media",
-        titulo: `${r.perguntasSemResposta} pergunta(s) sem resposta em ${r.conta}`,
-        detalhe: "Pergunta parada derruba a reputação e trava a venda de quem já estava decidindo.",
-        valor: null,
-      });
-    }
-    if ((r.atrasos ?? 0) >= 2) {
+
+  const comPerguntas = reps.filter((r) => (r.perguntasSemResposta ?? 0) > 0);
+  if (comPerguntas.length) {
+    const total = comPerguntas.reduce((s, r) => s + (r.perguntasSemResposta ?? 0), 0);
+    atencao.push({
+      chave: "perguntas",
+      gravidade: total >= 5 ? "alta" : "media",
+      numero: String(total),
+      rotulo: total === 1 ? "pergunta sem resposta" : "perguntas sem resposta",
+      itens: comPerguntas.map((r) => ({ texto: `${r.conta} · ${r.perguntasSemResposta}` })),
+      valor: null,
+    });
+  }
+  for (const r of reps) {
+    const a = r.anterior;
+    const piorou = a?.atrasos != null && r.atrasos != null && r.atrasos > a.atrasos + 0.3;
+    if ((r.atrasos ?? 0) >= 2 || piorou) {
       atencao.push({
         chave: `atraso-${r.conta}`,
-        gravidade: (r.atrasos ?? 0) >= 4 ? "alta" : "media",
-        titulo: `Atrasos em ${r.atrasos?.toFixed(2)}% em ${r.conta}`,
-        detalhe: "O canal corta exposição acima do limite da categoria.",
+        gravidade: (r.atrasos ?? 0) >= 4 || (piorou && (r.atrasos ?? 0) >= 2) ? "alta" : "media",
+        numero: pctBr(r.atrasos ?? 0),
+        rotulo: "envios atrasados",
+        itens: [{ texto: r.conta }, ...(a?.atrasos != null ? [{ texto: `era ${pctBr(a.atrasos)}` }] : [])],
+        href: "/mercado-livre/envios",
         valor: null,
       });
     }
@@ -528,42 +552,9 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
       atencao.push({
         chave: `reclamacao-${r.conta}`,
         gravidade: (r.reclamacoes ?? 0) >= 2 ? "alta" : "media",
-        titulo: `Reclamações em ${r.reclamacoes?.toFixed(2)}% em ${r.conta}`,
-        detalhe: "Acima de 2% a conta sai do verde.",
-        valor: null,
-      });
-    }
-  }
-  /*
-   * Perder catálogo é a causa que não aparecia em tela nenhuma: a receita
-   * cai, e o motivo é que o anúncio saiu da vitrine do produto. Entra como
-   * ponto de atenção porque é a primeira coisa a explicar a semana.
-   */
-  if (catalogo.medido && catalogo.perdidos.length) {
-    const antes = catalogo.totais.ganhandoAnterior;
-    atencao.push({
-      chave: "catalogo-perdido",
-      gravidade: catalogo.perdidos.length >= 5 ? "alta" : "media",
-      titulo: `${catalogo.perdidos.length} anúncio(s) perderam a vitrine do catálogo desde a semana passada`,
-      detalhe:
-        (antes != null ? `Ganhando ${antes} → ${catalogo.totais.ganhando} de ${catalogo.totais.disputando} disputas. ` : "") +
-        catalogo.perdidos.slice(0, 4).map((x) => x.sku || x.mlb).join(" · ") +
-        (catalogo.perdidos.length > 4 ? ` e mais ${catalogo.perdidos.length - 4}` : ""),
-      valor: null,
-    });
-  }
-  for (const r of repPorConta.values()) {
-    /*
-     * Envios: o número que derrubou a conta de São Paulo. Sozinho ele não
-     * diz nada; contra o da semana passada, diz se está piorando.
-     */
-    const a = r.anterior;
-    if (a?.atrasos != null && r.atrasos != null && r.atrasos > a.atrasos + 0.3) {
-      atencao.push({
-        chave: `envios-${r.conta}`,
-        gravidade: r.atrasos >= 2 ? "alta" : "media",
-        titulo: `Envios piorando em ${r.conta}: ${a.atrasos.toFixed(2)}% → ${r.atrasos.toFixed(2)}% de atraso`,
-        detalhe: "É a métrica que tira a conta da disputa de catálogo antes de aparecer na receita.",
+        numero: pctBr(r.reclamacoes ?? 0),
+        rotulo: "reclamações",
+        itens: [{ texto: r.conta }],
         valor: null,
       });
     }
@@ -571,18 +562,39 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
       atencao.push({
         chave: `nivel-${r.conta}`,
         gravidade: r.nivel < a.nivel ? "alta" : "baixa",
-        titulo: `${r.conta} mudou de nível: ${a.nivel} → ${r.nivel}`,
-        detalhe: `Medido em ${a.data.slice(8)}/${a.data.slice(5, 7)} e em ${r.data.slice(8)}/${r.data.slice(5, 7)}.`,
+        numero: r.nivel < a.nivel ? "caiu" : "subiu",
+        rotulo: "nível da conta",
+        itens: [{ texto: r.conta }, { texto: `${a.nivel} → ${r.nivel}` }],
         valor: null,
       });
     }
+  }
+
+  /* Trocar anúncios na vitrine com saldo positivo não é problema: só aparece, sem alarme. */
+  if (catalogo.medido && catalogo.perdidos.length) {
+    const antes = catalogo.totais.ganhandoAnterior;
+    const saldoBom = antes != null && catalogo.totais.ganhando >= antes;
+    atencao.push({
+      chave: "catalogo-perdido",
+      gravidade: saldoBom ? "baixa" : catalogo.perdidos.length >= 5 ? "alta" : "media",
+      numero: String(catalogo.perdidos.length),
+      rotulo: "saíram da vitrine",
+      itens: [
+        ...(antes != null ? [{ texto: `ganhando ${antes} → ${catalogo.totais.ganhando}` }] : []),
+        ...catalogo.perdidos.map((x) => ({ texto: x.sku || x.mlb, mlb: x.mlb })),
+      ],
+      href: "/anuncios/catalogo",
+      valor: null,
+    });
   }
   if (ritmo.receitaAnterior > 0 && ritmo.receita < ritmo.receitaAnterior * 0.7) {
     atencao.push({
       chave: "ritmo",
       gravidade: "alta",
-      titulo: `A semana está ${Math.round((1 - ritmo.receita / ritmo.receitaAnterior) * 100)}% abaixo da anterior`,
-      detalhe: `${ritmo.receita.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} contra ${ritmo.receitaAnterior.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} nos mesmos ${diasCorridos} dias.`,
+      numero: `−${Math.round((1 - ritmo.receita / ritmo.receitaAnterior) * 100)}%`,
+      rotulo: "receita contra a semana anterior",
+      itens: [{ texto: `${brl(ritmo.receita)} · era ${brl(ritmo.receitaAnterior)}` }],
+      href: "/vendas/semanal",
       valor: r2(ritmo.receitaAnterior - ritmo.receita),
     });
   }
@@ -607,15 +619,16 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     .map((c) => {
       const ini = String(c.inicio).slice(0, 10);
       const f = String(c.fim).slice(0, 10);
+      const skus = (c.skus ?? []) as string[];
       const naSemana = ini <= fim && f >= inicio;
       const naAnterior = ini <= fimAnt && f >= inicioAnt;
       return {
         titulo: String(c.titulo),
         inicio: ini,
         fim: f,
-        status: String(c.status),
+        status: situacaoDoItem({ status: String(c.status), inicio: ini, fim: f, skus }, hoje, noCanal),
         tipo: String(c.tipo),
-        skus: ((c.skus ?? []) as string[]).length,
+        skus: skus.length,
         onde: (naSemana && naAnterior ? "as duas" : naSemana ? "esta semana" : "semana anterior") as CampanhaNaSemana["onde"],
       };
     });
@@ -626,11 +639,10 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     atencao.push({
       chave: "campanha-acabou",
       gravidade: "media",
-      titulo:
-        acabou.length === 1
-          ? "A campanha que estava no ar na semana passada terminou"
-          : `${acabou.length} campanhas que estavam no ar na semana passada terminaram`,
-      detalhe: acabou.map((c) => `${c.titulo} (até ${c.fim.slice(8)}/${c.fim.slice(5, 7)})`).join(" · "),
+      numero: String(acabou.length),
+      rotulo: acabou.length === 1 ? "campanha terminou" : "campanhas terminaram",
+      itens: acabou.map((c) => ({ texto: `${c.titulo} · ${c.fim.slice(8)}/${c.fim.slice(5, 7)}` })),
+      href: "/planejamento",
       valor: null,
     });
   }
@@ -665,6 +677,7 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     maisVistos,
     diaDoRanking,
     campanhas,
+    noCanal,
     atencao: atencao.slice(0, 12),
     frescor: {
       vendas: ultima("vendas_atualizadas_em"),

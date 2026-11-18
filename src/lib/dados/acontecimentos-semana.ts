@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { paginar } from "./paginar";
 import { SOB_ENCOMENDA } from "@/lib/estoque-sem-controle";
+import type { PromoCanal } from "@/lib/planejamento/canal";
 
 /**
  * O que ACONTECEU na semana, dia a dia.
@@ -47,6 +48,10 @@ export type Acontecimento = {
   tom: "up" | "down" | "neutral";
   /** Para a tela poder levar ao produto. */
   sku?: string;
+  /** Só em preço: a tela ordena e mostra sem reler o texto. */
+  de?: number;
+  para?: number;
+  pct?: number;
 };
 
 type LinhaDiaria = {
@@ -76,6 +81,7 @@ export async function carregarAcontecimentos(
   sb: SupabaseClient,
   de: string,
   ate: string,
+  noCanal: PromoCanal[] = [],
 ): Promise<Acontecimento[]> {
   const [diarias, plano] = await Promise.all([
     paginar(() =>
@@ -117,6 +123,21 @@ export async function carregarAcontecimentos(
     }
   }
 
+  /* O relâmpago do dia é, quase sempre, o motivo do preço do dia. */
+  for (const p of noCanal) {
+    if (p.grupo === "automatica" || p.grupo === "cupom") continue;
+    if (p.grupo === "relampago") {
+      if (p.dia >= de && p.dia <= ate) {
+        saida.push({ data: p.dia, tipo: "campanha", texto: `Relâmpago: ${p.anuncios ?? 0} anúncios · ${p.nome}`, tom: "up" });
+      }
+      continue;
+    }
+    if (p.dia >= de && p.dia <= ate) saida.push({ data: p.dia, tipo: "campanha", texto: `No canal, começou: ${p.nome}`, tom: "up" });
+    if (p.diaFim >= de && p.diaFim <= ate && p.situacao === "encerrada") {
+      saida.push({ data: p.diaFim, tipo: "campanha", texto: `No canal, terminou: ${p.nome}`, tom: "down" });
+    }
+  }
+
   /*
    * ── Preço e estoque, por anúncio ──
    *
@@ -155,6 +176,9 @@ export async function carregarAcontecimentos(
     { sku: string; titulo: string; de: number; para: number; pct: number }
   >();
 
+  /* O mesmo SKU em quatro anúncios é um acontecimento, não quatro. */
+  const estoquePorSkuDia = new Map<string, { sku: string; data: string; voltou: boolean }>();
+
   for (const x of porAnuncio.values()) {
     const dias = [...x.dias].sort((a, b) => a.data.localeCompare(b.data));
 
@@ -177,25 +201,19 @@ export async function carregarAcontecimentos(
     for (let i = 1; i < reais.length; i++) {
       const antes = reais[i - 1].estoque!;
       const agora = reais[i].estoque!;
-      if (antes > 0 && agora === 0) {
-        saida.push({
-          data: reais[i].data,
-          tipo: "estoque",
-          texto: `${x.sku} acabou o estoque`,
-          tom: "down",
-          sku: x.sku,
-        });
-      }
-      if (antes === 0 && agora > 0) {
-        saida.push({
-          data: reais[i].data,
-          tipo: "estoque",
-          texto: `${x.sku} voltou ao estoque`,
-          tom: "up",
-          sku: x.sku,
-        });
-      }
+      if (antes > 0 && agora === 0) estoquePorSkuDia.set(`${x.sku}|${reais[i].data}|acabou`, { sku: x.sku, data: reais[i].data, voltou: false });
+      if (antes === 0 && agora > 0) estoquePorSkuDia.set(`${x.sku}|${reais[i].data}|voltou`, { sku: x.sku, data: reais[i].data, voltou: true });
     }
+  }
+
+  for (const e of estoquePorSkuDia.values()) {
+    saida.push({
+      data: e.data,
+      tipo: "estoque",
+      texto: e.voltou ? `${e.sku} voltou` : `${e.sku} acabou`,
+      tom: e.voltou ? "up" : "down",
+      sku: e.sku,
+    });
   }
 
   for (const [chave, p] of precoPorSkuDia) {
@@ -210,6 +228,9 @@ export async function carregarAcontecimentos(
          ajuda a explicar o gráfico, não um juízo sobre a decisão. */
       tom: p.pct < 0 ? "up" : "down",
       sku: p.sku,
+      de: p.de,
+      para: p.para,
+      pct: p.pct,
     });
   }
 

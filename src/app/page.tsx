@@ -30,6 +30,6 @@ export default async function Pagina() {
   const { data: membros } = await sb.from("membros").select("organizacao_id").limit(1);
   if (!membros?.length) redirect("/comecar");
 
-  const dados = await carregarPainel();
-  return <VisaoGeral dados={dados} />;
+  /* A entrada é o dia. A análise de 30 dias mora em /vendas/periodo. */
+  redirect("/vendas/dia");
 }

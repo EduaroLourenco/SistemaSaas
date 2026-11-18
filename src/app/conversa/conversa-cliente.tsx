@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { OperationMethod } from "@/components/analise/operation-layout";
 import { Panel, Button } from "@/components/ui/primitives";
 import { ErroComSaida } from "@/components/ui/leitura";
 import { cn } from "@/lib/utils";
@@ -22,10 +21,10 @@ type Consulta = { nome: string; entrada: Record<string, unknown> };
 type Mensagem = { papel: Papel; texto: string; consultas?: Consulta[] };
 
 const SUGESTOES = [
-  "O que aconteceu na última semana?",
-  "Quais canais mais cancelam, e quanto isso custou?",
-  "Quais SKUs concentram a receita?",
-  "A conversão do Mercado Livre caiu? Em quais anúncios?",
+  "O que mudou nas vendas de ontem?",
+  "Quais envios estão atrasados?",
+  "Quais promoções terminam esta semana?",
+  "Quais anúncios têm visita e não vendem?",
 ];
 
 const NOME_CONSULTA: Record<string, string> = {
@@ -34,7 +33,11 @@ const NOME_CONSULTA: Record<string, string> = {
   produtos_vendidos: "Consultando produtos",
   desempenho_anuncios: "Consultando desempenho dos anúncios",
   cancelamentos: "Consultando cancelamentos",
+  envios_pendentes: "Consultando envios",
+  promocoes_no_ar: "Consultando promoções",
 };
+
+const CHAVE_CONVERSA = "conversa-atual";
 
 export default function Conversa() {
   const [mensagens, setMensagens] = React.useState<Mensagem[]>([]);
@@ -46,6 +49,28 @@ export default function Conversa() {
 
   React.useEffect(() => {
     fim.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [mensagens, pensando]);
+
+  /* Sair para olhar outra tela não apaga a conversa. Trocar de empresa, sim. */
+  React.useEffect(() => {
+    try {
+      const salva = sessionStorage.getItem(CHAVE_CONVERSA);
+      if (salva) setMensagens(JSON.parse(salva));
+    } catch {}
+    const limpar = () => {
+      try { sessionStorage.removeItem(CHAVE_CONVERSA); } catch {}
+      setMensagens([]);
+      setErro(null);
+    };
+    window.addEventListener("gerizo:operacao-trocada", limpar);
+    return () => window.removeEventListener("gerizo:operacao-trocada", limpar);
+  }, []);
+  React.useEffect(() => {
+    if (pensando) return;
+    try {
+      if (mensagens.length) sessionStorage.setItem(CHAVE_CONVERSA, JSON.stringify(mensagens));
+      else sessionStorage.removeItem(CHAVE_CONVERSA);
+    } catch {}
   }, [mensagens, pensando]);
 
   async function perguntar(pergunta: string) {
@@ -170,18 +195,9 @@ export default function Conversa() {
 
       <PageBody className="op-workspace op-conversa op-chat">
         <div className="mx-auto w-full max-w-[840px]">
-          <OperationMethod title="Sobre as respostas"><p>A conversa usa os dados atuais da empresa selecionada. Você pode conferir as consultas junto de cada resposta.</p></OperationMethod>
           <Panel className="op-conversation flex flex-col overflow-hidden min-w-0">
-            <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
-              <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-semibold text-ink">
-                  {vazio ? "Nova conversa" : "Conversa sobre a operação"}
-                </span>
-                <span className="block text-[12px] text-ink-3">
-                  {vazio ? "Escolha uma sugestão ou escreva abaixo" : `${mensagens.filter((m) => m.papel === "user").length} pergunta(s)`}
-                </span>
-              </span>
-              {!vazio && (
+            {!vazio && (
+              <div className="flex justify-end border-b border-line px-4 py-2">
                 <Button
                   variant="default"
                   size="sm"
@@ -193,14 +209,13 @@ export default function Conversa() {
                   <RotateCcw className="w-3.5 h-3.5" strokeWidth={2.25} />
                   Nova conversa
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-6 md:px-6" aria-live="polite" aria-busy={pensando}>
               {vazio && (
                 <div className="m-auto w-full max-w-xl py-6">
-                  <h2 className="mb-2 text-[24px] font-semibold leading-8 tracking-tight text-ink">Pergunte sobre a operação</h2>
-                  <p className="mb-6 text-[14px] leading-6 text-ink-2">As fontes consultadas acompanham cada resposta.</p>
+                  <h2 className="mb-5 text-[24px] font-semibold leading-8 tracking-tight text-ink">O que você quer saber?</h2>
                   <div className="grid gap-3 sm:grid-cols-2">{SUGESTOES.map((sugestao) => <button key={sugestao} type="button" onClick={() => perguntar(sugestao)} disabled={pensando} className="flex min-h-[76px] items-start justify-between gap-4 rounded-r2 border border-line bg-panel p-4 text-left text-[14px] leading-5 text-ink-2 hover:border-brand-edge hover:bg-brand-wash hover:text-brand disabled:opacity-60"><span>{sugestao}</span><ChevronRight size={16} className="mt-0.5 shrink-0" aria-hidden="true"/></button>)}</div>
                 </div>
               )}
@@ -236,20 +251,6 @@ export default function Conversa() {
             </div>
 
             <div className="border-t border-line px-4 py-4 flex flex-col gap-3 md:px-6">
-              {!vazio && !pensando && (
-                <div className="flex gap-2 overflow-x-auto pb-0.5">
-                  {SUGESTOES.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => perguntar(s)}
-                      className="shrink-0 rounded-full border border-line-2 bg-panel px-3 py-1.5 text-[14px] text-ink-2 hover:text-ink hover:bg-panel-3"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -270,9 +271,9 @@ export default function Conversa() {
                   }}
                   rows={1}
                   aria-label="Sua pergunta"
-                  placeholder="Pergunte sobre vendas, produtos, anúncios…"
+                  placeholder="Vendas, envios, promoções, anúncios…"
                   disabled={pensando}
-                  className="flex-1 min-w-0 resize-none px-3 py-2.5 rounded-r1 bg-panel-2 border border-line-2 text-[14px] text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand-wash disabled:opacity-60 max-h-[140px]"
+                  className="flex-1 min-w-0 resize-none px-3 py-2.5 rounded-r1 bg-panel-2 border border-line-2 text-[16px] md:text-[14px] text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand-wash disabled:opacity-60 max-h-[140px]"
                 />
                 <Button
                   type="submit"

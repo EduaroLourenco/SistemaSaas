@@ -11,6 +11,7 @@ import {
   sobrepoe,
 } from "@/lib/planejamento/modelo";
 import type { Oportunidade } from "@/lib/planejamento/sazonal";
+import { ROTULO_GRUPO, type GrupoCanal } from "@/lib/planejamento/canal";
 type Evento = {
   id: string;
   titulo: string;
@@ -21,6 +22,11 @@ type Evento = {
   legenda: string;
   clicar: () => void;
   item?: Item;
+  canais?: string[];
+};
+const COR_CANAL: Partial<Record<GrupoCanal, string>> = {
+  relampago: "var(--down)",
+  consultor: "var(--up)",
 };
 
 export function faixas<T extends { inicio: string; fim: string }>(
@@ -120,6 +126,32 @@ export default function Calendario({
       clicar: () => oportunidade(o),
     }),
   );
+  if (mostrarPromos)
+    dados.noCanal
+      .filter((p) => {
+        const canais = dados.contas.filter((c) => p.contas.includes(c.id));
+        return (
+          p.grupo !== "automatica" &&
+          p.grupo !== "cupom" &&
+          (!filtrarCanal ||
+            p.contas.includes(filtrarCanal) ||
+            canais.some((c) => c.canal_id === filtrarCanal)) &&
+          (!sku || p.skus.some((s) => s.toLowerCase().includes(sku.toLowerCase())))
+        );
+      })
+      .forEach((p) =>
+        eventos.push({
+          id: "canal-" + p.id,
+          titulo: p.grupo === "relampago" ? `Relâmpago · ${p.nome}` : p.nome,
+          inicio: p.dia,
+          fim: p.diaFim,
+          cor: COR_CANAL[p.grupo] ?? "var(--info)",
+          categoria: "promo",
+          legenda: `${ROTULO_GRUPO[p.grupo]}${p.anuncios ? ` · ${p.anuncios} anúncios` : ""}`,
+          clicar: () => promocao(p.id),
+          canais: dados.contas.filter((c) => p.contas.includes(c.id)).map((c) => c.canal_id),
+        }),
+      );
   if (mostrarPromos)
     dados.promocoes
       .filter(
@@ -235,9 +267,10 @@ export default function Calendario({
                         a.canal_id === c.id && e.item!.contas.includes(a.id),
                     )
                 : e.categoria === "promo" &&
-                  dados.promocoes.some(
-                    (p) => "promo-" + p.id === e.id && p.canal_id === c.id,
-                  ),
+                  (e.canais?.includes(c.id) ||
+                    dados.promocoes.some(
+                      (p) => "promo-" + p.id === e.id && p.canal_id === c.id,
+                    )),
             );
             const fs = faixas(lista, inicio, somarDias(inicio, 6));
             return (

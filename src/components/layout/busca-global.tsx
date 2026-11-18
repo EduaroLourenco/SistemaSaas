@@ -46,6 +46,14 @@ function montarIndice(): Achado[] {
       detalhe: "",
       href: g.href ?? "/",
     })),
+    /* Nomes antigos e telas fora do menu continuam achados pela busca. */
+    ...([
+      ["Alertas", "/alertas"],
+      ["Dia", "/vendas/dia"],
+      ["Visão geral", "/vendas/periodo"],
+      ["Automações", "/automacoes"],
+      ["Campanhas", "/promocoes/campanhas"],
+    ] as const).map(([rotulo, href]) => ({ tipo: "tela" as const, rotulo, detalhe: "", href })),
   ];
 
   // A redução do menu não remove as páginas da busca por nome.

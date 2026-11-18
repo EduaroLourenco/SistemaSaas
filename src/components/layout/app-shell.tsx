@@ -12,6 +12,7 @@ import {
   Moon,
   Sun,
   Menu,
+  MessagesSquare,
   UserRound,
   CircleHelp,
   SlidersHorizontal,
@@ -56,7 +57,7 @@ function Wordmark() {
     };
   }, []);
   return (
-    <Link href="/" aria-label={gdf3 ? "GDF3 by Gerizo — Visão geral" : "Gerizo — Visão geral"} className="inline-flex items-center py-1">
+    <Link href="/" aria-label={gdf3 ? "GDF3 by Gerizo — Hoje" : "Gerizo — Hoje"} className="inline-flex items-center py-1">
       {gdf3 ? <span className="whitespace-nowrap text-[17px] font-bold tracking-tight text-ink">GDF3 <span className="font-medium text-ink-2">by Gerizo</span></span> : <Brand />}
     </Link>
   );
@@ -104,6 +105,58 @@ function ThemeToggle() {
     >
       {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
     </button>
+  );
+}
+
+/* ══ Sino ════════════════════════════════════════════════════ */
+
+const CHAVE_SINO = "alertas-resumo";
+const VALIDADE_SINO = 30 * 60_000;
+
+/* Calcular alertas é pesado: uma leitura a cada 30 minutos, fora da navegação. */
+function SinoAlertas() {
+  const [r, setR] = React.useState<{ total: number; criticos: number } | null>(null);
+  React.useEffect(() => {
+    let vivo = true;
+    async function ler() {
+      try {
+        const salvo = JSON.parse(sessionStorage.getItem(CHAVE_SINO) ?? "null");
+        if (salvo && Date.now() - salvo.em < VALIDADE_SINO) return setR(salvo);
+      } catch {}
+      const res = await fetch("/api/alertas/resumo").catch(() => null);
+      if (!res?.ok || !vivo) return;
+      const novo = await res.json().catch(() => null);
+      if (!novo || !vivo) return;
+      setR(novo);
+      try { sessionStorage.setItem(CHAVE_SINO, JSON.stringify({ ...novo, em: Date.now() })); } catch {}
+    }
+    const trocou = () => {
+      try { sessionStorage.removeItem(CHAVE_SINO); } catch {}
+      setR(null);
+      void ler();
+    };
+    void ler();
+    window.addEventListener("gerizo:operacao-trocada", trocou);
+    return () => {
+      vivo = false;
+      window.removeEventListener("gerizo:operacao-trocada", trocou);
+    };
+  }, []);
+  const total = r?.total ?? 0;
+  return (
+    <Link
+      href="/alertas"
+      aria-label={total ? `Alertas: ${total}` : "Alertas"}
+      title="Alertas"
+      className="relative w-9 h-9 rounded-r1 flex items-center justify-center text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
+    >
+      <Bell className="w-4 h-4" />
+      {total > 0 && (
+        <span className={cn("num absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-panel", r?.criticos ? "bg-down" : "bg-warn")}>
+          {total > 9 ? "9+" : total}
+        </span>
+      )}
+    </Link>
   );
 }
 
@@ -219,9 +272,6 @@ function NavSection({
   );
 }
 
-const ORDEM_AREAS = ["Visão geral", "Alertas", "Conversar", "Vendas", "Mercado Livre", "Produtos", "Tráfego pago", "Planejamento", "Financeiro", "Relatórios"];
-const NAV_ORDENADA = [...NAV].sort((a, b) => ORDEM_AREAS.indexOf(a.label) - ORDEM_AREAS.indexOf(b.label));
-
 function NavTree({
   pathname,
   onNavigate,
@@ -231,7 +281,7 @@ function NavTree({
 }) {
   return (
     <nav aria-label="Navegação principal" className="flex flex-col gap-1 px-3 py-4">
-      {NAV_ORDENADA.map((g) => (
+      {NAV.map((g) => (
         <NavSection
           key={g.label}
           group={g}
@@ -240,7 +290,7 @@ function NavTree({
         />
       ))}
       <div className="h-px bg-line my-4 mx-2" />
-      <NavSection group={{ label: "Administração", icon: Settings, items: NAV_FOOTER.flatMap((g) => g.href ? [{ label: g.label, href: g.href }] : g.items ?? []) }} pathname={pathname} onNavigate={onNavigate} />
+      <NavSection group={{ label: "Ajustes", icon: Settings, items: NAV_FOOTER.flatMap((g) => g.href ? [{ label: g.label, href: g.href }] : g.items ?? []) }} pathname={pathname} onNavigate={onNavigate} />
     </nav>
   );
 }
@@ -252,7 +302,7 @@ function MobileTabBar({ pathname, onMore }: { pathname: string; onMore: () => vo
   return <nav aria-label="Navegação" className="gerizo-mobile-nav md:hidden">
     {MOBILE_TABS.map((t) => {
       const Icon = t.icon;
-      const active = pathname === t.href || (t.href.startsWith("/vendas") && pathname.startsWith("/vendas/")) || (t.href === "/mercado-livre" && ["/anuncios/", "/promocoes/", "/mercado-livre", "/automacoes"].some((p) => pathname.startsWith(p)) && pathname !== "/anuncios/trafego-pago");
+      const active = pathname === t.href || Boolean(t.rotas?.some((r) => pathname === r || pathname.startsWith(r + "/")));
       return <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined}>
         <Icon size={21} aria-hidden="true" /><span>{t.label}</span>
       </Link>;
@@ -374,13 +424,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="hidden md:block"><BotaoAtualizar compacto /></div>
 
           <Link
-            href="/alertas"
-            aria-label="Alertas"
-            title="Alertas"
+            href="/conversa"
+            aria-label="Conversar"
+            title="Conversar"
             className="w-9 h-9 rounded-r1 flex items-center justify-center text-ink-2 hover:bg-panel-3 hover:text-ink transition-colors"
           >
-            <Bell className="w-4 h-4" />
+            <MessagesSquare className="w-4 h-4" />
           </Link>
+
+          <SinoAlertas />
 
           <div className="hidden md:flex"><ThemeToggle /></div>
 
@@ -399,7 +451,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <div className="flex-1 overflow-y-auto">
           {menu.aberto ? <NavTree pathname={pathname} /> : <nav aria-label="Navegação recolhida" className="flex flex-col items-center gap-1 py-4">
-            {NAV_ORDENADA.map((group) => {
+            {NAV.map((group) => {
               const Icon = group.icon;
               const active = group.href ? group.href === pathname : group.items?.some((item) => item.href === pathname || item.rotas?.includes(pathname));
               return <Link key={group.label} href={group.href ?? group.items![0].href} title={group.label} aria-label={group.label} aria-current={active ? "page" : undefined} className={cn("grid h-11 w-11 place-items-center rounded-r1 text-ink-2 hover:bg-panel-3", active && "gerizo-nav-active")}><Icon size={19} strokeWidth={1.75} /></Link>;

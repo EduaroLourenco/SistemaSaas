@@ -15,7 +15,7 @@ const MODOS = [
 ] as const;
 
 /** Uma pergunta por vez. A série e o destaque usam o mesmo recorte. */
-export function PulsoOperacao({ recorte }: { recorte: Recorte }) {
+export function PulsoOperacao({ recorte, compact = false }: { recorte: Recorte; compact?: boolean }) {
   const [modo, setModo] = useState<"faturamento" | "pedidos">("faturamento");
   const indicador = recorte.kpis.find((k) => k.id === modo);
   const apoio = recorte.kpis.find((k) => k.id === (modo === "faturamento" ? "pedidos" : "faturamento"));
@@ -41,13 +41,13 @@ export function PulsoOperacao({ recorte }: { recorte: Recorte }) {
         </div>
       </div>
 
-      <div className="grid min-w-0 overflow-hidden rounded-r3 border border-line bg-panel lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <div className="min-w-0 p-4 sm:p-6 lg:flex lg:flex-col lg:justify-center">
+      <div className={`grid min-w-0 overflow-hidden rounded-r3 border border-line bg-panel ${compact ? "lg:grid-cols-[minmax(0,4fr)_minmax(0,6fr)]" : "lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]"}`}>
+        <div className={`min-w-0 p-4 lg:flex lg:flex-col lg:justify-center ${compact ? "sm:p-5" : "sm:p-6"}`}>
           <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-ink-2">
             <span>{indicador.label}</span>
             {modo === "faturamento" && <span className="text-ink-3">· R$</span>}
           </div>
-          <strong className="home-hero-number block text-[48px] font-semibold leading-[56px] tracking-[-0.045em] text-ink tabular-nums [overflow-wrap:anywhere] xl:text-[56px] xl:leading-[64px]" aria-label={valor}>
+          <strong className={`home-hero-number block font-semibold tracking-[-0.045em] text-ink tabular-nums [overflow-wrap:anywhere] ${compact ? "text-[36px] leading-[44px] xl:text-[40px] xl:leading-[48px]" : "text-[48px] leading-[56px] xl:text-[56px] xl:leading-[64px]"}`} aria-label={valor}>
             {compactarMobile ? <><span className="sm:hidden">{moneyShort(indicador.value).replace("R$", "").trim()}</span><span className="hidden sm:inline">{valorSemMoeda}</span></> : valorSemMoeda}
           </strong>
           {compactarMobile && <p className="mt-2 text-[14px] leading-5 text-ink-2 sm:hidden">Valor integral: {valor.replace(/\u00a0/g, " ")}</p>}
@@ -73,7 +73,7 @@ export function PulsoOperacao({ recorte }: { recorte: Recorte }) {
 
         <div className="min-w-0 border-t border-line p-4 lg:border-t-0 lg:p-6 lg:pl-2">
           <div className="flex items-center justify-between gap-3 text-[12px] text-ink-3"><span>{indicador.label} por dia</span><span className="tabular-nums">{recorte.intervalo}</span></div>
-          <div className="mt-3 h-[200px] min-w-0 lg:h-[240px]" aria-label={`Evolução de ${indicador.label.toLowerCase()} no período. Valores disponíveis em Ver dados por dia.`}>
+          <div className={`mt-3 min-w-0 ${compact ? "h-[150px] lg:h-[180px]" : "h-[200px] lg:h-[240px]"}`} aria-label={`Evolução de ${indicador.label.toLowerCase()} no período. Valores disponíveis em Ver dados por dia.`}>
             {semDados ? <div className="flex h-full items-center justify-center text-[14px] text-ink-3">Sem dados para traçar a evolução</div> : <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={recorte.faturamento} margin={{ top: 12, right: 4, bottom: 0, left: 0 }}>
                 <CartesianGrid {...GRID} />

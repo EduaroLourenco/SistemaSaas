@@ -3,6 +3,7 @@ import {
   validarEstrategia,
   type Estrategia,
 } from "./estrategia";
+import type { PromoCanal } from "./canal";
 export const STATUS = [
   "Rascunho",
   "Planejada",
@@ -146,6 +147,8 @@ export type Dados = {
   canais: Canal[];
   contas: Conta[];
   promocoes: Promocao[];
+  /** O que o canal informa, inclusive relâmpago negociado. */
+  noCanal: PromoCanal[];
   avisos: string[];
   pronto: boolean;
 };

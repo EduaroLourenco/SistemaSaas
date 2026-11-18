@@ -9,6 +9,7 @@ import {
   formatarData,
   sobrepoe,
 } from "@/lib/planejamento/modelo";
+import { ROTULO_GRUPO, type PromoCanal } from "@/lib/planejamento/canal";
 
 export function Painel({
   titulo,
@@ -370,6 +371,54 @@ export function ResumoPromocao({
         {new Date(p.atualizado_em).toLocaleDateString("pt-BR")}. A aprovação
         interna não confirma publicação no canal.
       </small>
+    </article>
+  );
+}
+export function ResumoCanal({
+  promocao: p,
+  dados,
+}: {
+  promocao: PromoCanal;
+  dados: Dados;
+}) {
+  const quando = (iso: string) =>
+    new Date(iso).toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  return (
+    <article className="pl-promo">
+      <strong>{p.nome}</strong>
+      <small>
+        {ROTULO_GRUPO[p.grupo]} ·{" "}
+        {{ "no-ar": "no ar", agendada: "agendada", encerrada: "encerrada" }[p.situacao]}
+      </small>
+      <small>
+        {quando(p.inicio)} → {quando(p.fim)}
+      </small>
+      <p>
+        <b>{p.anuncios ?? "Adesão não informada"}</b>
+        {p.anuncios != null && " anúncios"}
+        {" · "}
+        {dados.contas
+          .filter((c) => p.contas.includes(c.id))
+          .map((c) => c.nome)
+          .join(" · ")}
+      </p>
+      {p.skus.length > 0 && (
+        <div className="pl-chips">
+          {p.skus.slice(0, 40).map((s) => (
+            <span className="pl-chip" key={s}>
+              {s}
+            </span>
+          ))}
+          {p.skus.length > 40 && <span>+{p.skus.length - 40}</span>}
+        </div>
+      )}
+      <small>leitura {quando(p.lidoEm)}</small>
     </article>
   );
 }

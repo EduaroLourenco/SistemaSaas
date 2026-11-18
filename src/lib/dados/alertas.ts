@@ -2,6 +2,8 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { paginar } from "./paginar";
 import { carregarExclusoes, aplicar, type Exclusao } from "./exclusoes";
+import { carregarPromocoesNoCanal } from "./promocoes-no-canal";
+import { diaSP } from "@/lib/planejamento/canal";
 
 /**
  * Alertas que carregam a própria prova.
@@ -25,7 +27,7 @@ import { carregarExclusoes, aplicar, type Exclusao } from "./exclusoes";
 export type Alerta = {
   id: string;
   severidade: "critico" | "atencao" | "info";
-  tipo: "cancelamento" | "conversao" | "estoque" | "preco" | "receita" | "custo";
+  tipo: "cancelamento" | "conversao" | "estoque" | "preco" | "receita" | "custo" | "promocao";
   titulo: string;
   /** A frase que explica. Deve bastar sozinha. */
   leitura: string;
@@ -51,6 +53,14 @@ const MIN_PEDIDOS = 20;
 const QUEDA_RECEITA = 25;
 const MIN_VISITAS_SEMANA = 300;
 const QUEDA_CONVERSAO = 30;
+const JANELA_CANCELAMENTO = 30;
+const DIAS_PARA_FIM_DA_PROMOCAO = 3;
+/* Cobre as 8 semanas da evidência e as duas janelas de cancelamento. */
+const HISTORICO_DIAS = 90;
+
+const diasAntes = (iso: string, n: number) =>
+  new Date(Date.parse(iso + "T12:00:00Z") - n * 86_400_000).toISOString().slice(0, 10);
+const segundaDe = (iso: string) => diasAntes(iso, (new Date(iso + "T12:00:00Z").getUTCDay() + 6) % 7);
 
 export type DadosAlertas = {
   alertas: Alerta[];
@@ -67,12 +77,18 @@ export type DadosAlertas = {
 export async function carregarAlertas(): Promise<DadosAlertas> {
   const sb = await clienteServidor();
   const alertas: Alerta[] = [];
+  const hoje = diaSP(Date.now());
+  const desde = diasAntes(hoje, HISTORICO_DIAS);
+  const segundaAtual = segundaDe(hoje);
+  const inicioJanela = diasAntes(hoje, JANELA_CANCELAMENTO);
+  const inicioJanelaAnterior = diasAntes(hoje, JANELA_CANCELAMENTO * 2);
 
   const [pedidos, { data: contasRaw }, desempenho, exclusoes] = await Promise.all([
     paginar(() =>
       sb
         .from("pedidos")
         .select("data,cancelado,total,conta_canal_id")
+        .gte("data", desde)
         .order("data", { ascending: true })
     ),
     sb.from("contas_canal").select("id,nome,canal_id,canais(nome)").limit(200),
@@ -80,6 +96,8 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
       sb
         .from("anuncio_desempenho_semanal")
         .select("anuncio_id,visitas,vendas,receita,ano_iso,semana_iso,inicio")
+        .gte("inicio", desde)
+        .lt("inicio", segundaAtual)
         .order("inicio", { ascending: true })
     ),
     carregarExclusoes(),
@@ -112,7 +130,7 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
   /* ── 1. Cancelamento por canal ── */
   const canais = new Map<
     string,
-    { nome: string; pedidos: number; cancelados: number; valor: number; porMes: Map<string, number> }
+    { nome: string; pedidos: number; cancelados: number; valor: number; pedidosAntes: number; canceladosAntes: number; porSemana: Map<string, number> }
   >();
 
   for (const p of linhas) {
@@ -121,13 +139,21 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
     const nome = c.canais?.nome ?? "Outros";
     const at =
       canais.get(nome) ??
-      { nome, pedidos: 0, cancelados: 0, valor: 0, porMes: new Map<string, number>() };
-    at.pedidos += 1;
+      { nome, pedidos: 0, cancelados: 0, valor: 0, pedidosAntes: 0, canceladosAntes: 0, porSemana: new Map<string, number>() };
+    const data = String(p.data).slice(0, 10);
+    if (data > inicioJanela) {
+      at.pedidos += 1;
+      if (p.cancelado) {
+        at.cancelados += 1;
+        at.valor += n(p.total);
+      }
+    } else if (data > inicioJanelaAnterior) {
+      at.pedidosAntes += 1;
+      if (p.cancelado) at.canceladosAntes += 1;
+    }
     if (p.cancelado) {
-      at.cancelados += 1;
-      at.valor += n(p.total);
-      const mes = String(p.data).slice(0, 7);
-      at.porMes.set(mes, (at.porMes.get(mes) ?? 0) + n(p.total));
+      const semana = segundaDe(data);
+      at.porSemana.set(semana, (at.porSemana.get(semana) ?? 0) + n(p.total));
     }
     canais.set(nome, at);
   }
@@ -137,13 +163,14 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
     const taxa = (c.cancelados * 100) / c.pedidos;
     if (taxa < CANCELAMENTO_ATENCAO) continue;
 
-    const meses = [...c.porMes.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const semanasCanc = [...c.porSemana.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-8);
+    const taxaAntes = c.pedidosAntes ? (c.canceladosAntes * 100) / c.pedidosAntes : null;
 
     alertas.push({
       id: `cancelamento-${c.nome}`,
       severidade: taxa >= CANCELAMENTO_CRITICO ? "critico" : "atencao",
       tipo: "cancelamento",
-      titulo: `${c.nome} cancela ${pctBr(taxa)} dos pedidos`,
+      titulo: `${c.nome} cancelou ${pctBr(taxa)} em ${JANELA_CANCELAMENTO} dias`,
       leitura:
         `São ${c.cancelados} de ${c.pedidos} pedidos, ${moeda(c.valor)} que ` +
         `entraram no faturamento e voltaram. ` +
@@ -152,13 +179,12 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
           : "Vale acompanhar: ainda não é ruptura, mas está acima do resto da operação."),
       numeros: [
         { rotulo: "Taxa", valor: pctBr(taxa) },
+        { rotulo: "30 dias antes", valor: taxaAntes == null ? "sem pedidos" : pctBr(taxaAntes) },
         { rotulo: "Cancelados", valor: `${c.cancelados} de ${c.pedidos}` },
         { rotulo: "Valor", valor: moeda(c.valor) },
       ],
-      evidencia: meses.map(([mes, v]) => ({
-        rotulo: new Date(mes + "-15T12:00:00").toLocaleDateString("pt-BR", {
-          month: "short",
-        }),
+      evidencia: semanasCanc.map(([s, v]) => ({
+        rotulo: dataBr(s).slice(0, 5),
         valor: Number(v.toFixed(2)),
       })),
       formato: "moeda",
@@ -178,10 +204,9 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
   }
 
   const semanas = [...porSemana.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  // A última é quase sempre parcial: comparar com ela acusaria queda toda
-  // segunda-feira, e alerta que grita sozinho todo começo de semana ensina
-  // a ser ignorado.
-  const fechadas = semanas.slice(0, -1);
+  // A semana corrente é parcial: comparar com ela acusaria queda toda
+  // segunda-feira, e alerta que grita sozinho ensina a ser ignorado.
+  const fechadas = semanas.filter(([s]) => s < segundaAtual);
 
   if (fechadas.length >= 4) {
     const ultima = fechadas[fechadas.length - 1];
@@ -238,6 +263,8 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
     if (ord.length < 4) continue;
 
     const ultima = ord[ord.length - 1];
+    /* Anúncio parado não tem queda de agora para mostrar. */
+    if (String(ultima.inicio).slice(0, 10) < diasAntes(segundaAtual, 7)) continue;
     if ((ultima.visitas ?? 0) < MIN_VISITAS_SEMANA) continue;
 
     const conv = (d: Des) => (d.visitas ? (d.vendas * 100) / d.visitas : 0);
@@ -361,6 +388,29 @@ export async function carregarAlertas(): Promise<DadosAlertas> {
     }
   } catch {
     // Custos é uma tela à parte; se ela falhar, o resto dos alertas vale.
+  }
+
+  /* ── Promoção do canal perto do fim: a venda muda quando o preço volta ── */
+  const noCanal = await carregarPromocoesNoCanal(sb, contas.map((c) => c.id), new Map());
+  const limite = new Date(Date.parse(hoje + "T12:00:00Z") + DIAS_PARA_FIM_DA_PROMOCAO * 86_400_000).toISOString().slice(0, 10);
+  const acabando = noCanal.filter(
+    (p) => p.situacao === "no-ar" && ["consultor", "meli", "nossa"].includes(p.grupo) && p.diaFim <= limite,
+  );
+  if (acabando.length) {
+    alertas.push({
+      id: "promocoes-acabando",
+      severidade: "atencao",
+      tipo: "promocao",
+      titulo: `${acabando.length} ${acabando.length === 1 ? "promoção termina" : "promoções terminam"} em até ${DIAS_PARA_FIM_DA_PROMOCAO} dias`,
+      leitura: acabando.map((p) => `${p.nome}: até ${dataBr(p.diaFim)}`).join(" · "),
+      numeros: [
+        { rotulo: "Primeira", valor: dataBr(acabando[0].diaFim).slice(0, 5) },
+        { rotulo: "Anúncios", valor: String(acabando.reduce((s, p) => s + (p.anuncios ?? 0), 0)) },
+      ],
+      evidencia: acabando.map((p) => ({ rotulo: p.nome, valor: p.anuncios ?? 0 })),
+      formato: "numero",
+      destino: { href: "/planejamento", texto: "Abrir planejamento" },
+    });
   }
 
   const ordem = { critico: 0, atencao: 1, info: 2 };

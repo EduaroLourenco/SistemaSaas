@@ -214,17 +214,30 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
   return (
     <>
       <PageHeader
-        title="Visão geral"
-        inlineFilters
-        actions={
-          <>
-            <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-3 tabular-nums">
-              <CalendarDays className="w-3.5 h-3.5" />
-              {recorte.intervalo}
+        title="Análise do período"
+        actions={<Link href="/vendas/dia" className="inline-flex min-h-11 items-center gap-2 text-[14px] font-medium text-brand hover:underline">Voltar ao dia <ArrowUpRight size={16} aria-hidden="true" /></Link>}
+      />
+      <PageBody className="home-overview">
+
+        {/* Fontes ficam em Integrações por decisão do usuário. Aqui, só o aviso de atraso. */}
+        {dados.fontes.piorAtraso !== null && dados.fontes.piorAtraso >= 2 && (
+          <Link
+            href="/integracoes"
+            className="flex items-center justify-between gap-3 rounded-r2 border border-warn/40 bg-[var(--warn-wash)] px-4 py-2.5 text-[13px] text-ink hover:border-warn"
+          >
+            <span>
+              Algum dado do painel está {dados.fontes.piorAtraso} dias atrasado. Os números abaixo podem estar incompletos.
             </span>
-          </>
-        }
-        filters={
+            <span className="shrink-0 font-medium text-brand">Ver fontes</span>
+          </Link>
+        )}
+
+
+        <section aria-label="Análise de vendas no recorte" className="min-w-0 space-y-5">
+          <div className="flex min-w-0 flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
+            <div><h2 className="text-[18px] font-semibold text-ink">Vendas no recorte</h2><p className="mt-1 text-[14px] text-ink-2">Escolha canal e período para os indicadores e a evolução abaixo.</p></div>
+            <span className="inline-flex items-center gap-2 text-[12px] text-ink-3 tabular-nums"><CalendarDays size={14} aria-hidden="true" />{recorte.intervalo}</span>
+          </div>
           <BarraFiltros>
             {/*
               Seletor de canal E de conta: `canaisInfo` já traz o item do
@@ -266,32 +279,15 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
               </div>
             </Filtro>
           </BarraFiltros>
-        }
-      />
-
-      <PageBody className="home-overview">
-        {/* Fontes ficam em Integrações por decisão do usuário. Aqui, só o aviso de atraso. */}
-        {dados.fontes.piorAtraso !== null && dados.fontes.piorAtraso >= 2 && (
-          <Link
-            href="/integracoes"
-            className="flex items-center justify-between gap-3 rounded-r2 border border-warn/40 bg-[var(--warn-wash)] px-4 py-2.5 text-[13px] text-ink hover:border-warn"
-          >
-            <span>
-              Algum dado do painel está {dados.fontes.piorAtraso} dias atrasado. Os números abaixo podem estar incompletos.
-            </span>
-            <span className="shrink-0 font-medium text-brand">Ver fontes</span>
-          </Link>
-        )}
-
-        <PainelExclusoes
-          exclusoes={dados.exclusoes}
-          canais={dados.canaisDisponiveis}
-          removidas={dados.removidas}
-        />
-
-        <PulsoOperacao recorte={recorte} />
-        <FilaRecomendacoes itens={dados.recomendacoes} semDados={dados.vazio} />
-        <section aria-label="Indicadores do período" className="home-metric-strip grid min-w-0 grid-cols-1 gap-px overflow-hidden rounded-r2 border border-line bg-line sm:grid-cols-2 xl:grid-cols-4">
+          <PainelExclusoes
+            exclusoes={dados.exclusoes}
+            canais={dados.canaisDisponiveis}
+            removidas={dados.removidas}
+          />
+          <PulsoOperacao recorte={recorte} compact />
+          <details className="group min-w-0 border-y border-line">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-medium text-ink-2">Outros indicadores do recorte <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open:rotate-180" /></summary>
+            <div className="pb-4"><section aria-label="Indicadores do período" className="home-metric-strip grid min-w-0 grid-cols-1 gap-px overflow-hidden rounded-r2 border border-line bg-line sm:grid-cols-2 xl:grid-cols-4">
           {KPIS.filter((k) => k.id !== "faturamento" && k.id !== "pedidos").map((k) => {
             /*
              * Conversão sem visita não é zero, é desconhecido. Mostrar
@@ -314,11 +310,11 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
               />
             );
           })}
-        </section>
-
-        <details className="home-history group min-w-0 border-y border-line py-1"><summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-medium text-ink-2">Histórico de vendas <ChevronDown size={16} className="transition-transform group-open:rotate-180" aria-hidden="true" /></summary>
-        <div className="gerizo-overview-charts grid grid-cols-1 xl:grid-cols-3 gap-3">
-          <Panel className="xl:col-span-2 overflow-hidden">
+        </section></div>
+          </details>
+          <details className="home-history group min-w-0 border-y border-line py-1"><summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-medium text-ink-2">Histórico de vendas <ChevronDown size={16} className="transition-transform group-open:rotate-180" aria-hidden="true" /></summary>
+        <div className="gerizo-overview-charts min-w-0">
+          <Panel className="overflow-hidden">
             <PanelHeader
               title="Faturamento por dia"
               hint={`${recorte.dias} dias com movimento`}
@@ -367,7 +363,43 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
             </div>
           </Panel>
 
-          <Panel className="overflow-hidden">
+
+        </div>
+
+        </details>
+          <details className="group min-w-0 border-b border-line">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-medium text-ink-2">Comparar todos os canais no período <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open:rotate-180" /></summary>
+            <div className="pb-4"><Panel className="min-w-0 overflow-hidden">
+          <PanelHeader
+            title="Canais — visão consolidada"
+            hint={`Todos os canais · ${recorte.intervalo}`}
+          />
+          <ul className="divide-y divide-line">
+            {CANAIS.map((c) => (
+              <li key={c.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 px-4 py-4">
+                <div className="flex min-w-0 items-start gap-2">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-[2px]" style={{ background: CANAL_CORES[c.id] }} aria-hidden="true" />
+                  <span className="text-[14px] font-medium text-ink [overflow-wrap:anywhere]">{c.nome}</span>
+                </div>
+                <span className="text-right text-[14px] font-semibold text-ink tabular-nums [overflow-wrap:anywhere]">{money(c.faturamento)}</span>
+                <span className="pl-4 text-[12px] text-ink-3 tabular-nums">{pct(c.participacao)} do total</span>
+                <span className="text-right">
+                  <Delta value={c.delta} />
+                </span>
+                <span className="col-span-2 ml-4 h-1 overflow-hidden rounded-full bg-panel-3" aria-hidden="true"><span className="block h-full rounded-full" style={{ width: `${c.participacao}%`, background: CANAL_CORES[c.id] }} /></span>
+              </li>
+            ))}
+          </ul>
+        </Panel></div>
+          </details>
+        </section>
+
+        <section aria-label="Leituras complementares" className="min-w-0 space-y-5 border-t border-line pt-5">
+          <div><h2 className="text-[18px] font-semibold text-ink">Leituras complementares</h2><p className="mt-1 text-[14px] text-ink-2">Prioridades, quedas e histórico têm as janelas indicadas em cada bloco.</p></div>
+          <FilaRecomendacoes itens={dados.recomendacoes} semDados={dados.vazio} limiteInicial={3} />
+          <details className="group min-w-0 border-y border-line">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-medium text-ink-2">Participação dos canais nas últimas 12 semanas <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open:rotate-180" /></summary>
+            <div className="pb-4"><Panel className="overflow-hidden">
             <PanelHeader
               title="Participação por canal"
               hint={
@@ -418,18 +450,19 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
                 </table>
               </div>
             </details>
-          </Panel>
-        </div>
-
-        </details>
-
-
-        {/* Top SKUs e canais lado a lado, como na referência aprovada. */}
-        <div className="home-insights grid grid-cols-1 gap-5 items-start xl:grid-cols-5">
-          <Panel className="overflow-hidden xl:col-span-3 min-w-0">
+          </Panel></div>
+          </details>
+          <details className="group min-w-0 border-y border-line">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-medium text-ink-2">Investigar produtos em queda <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open:rotate-180" /></summary>
+            <div className="pb-4"><SkusEmQueda itens={dados.quedas} semDados={dados.vazio} /></div>
+          </details>
+          <details className="group min-w-0 border-b border-line">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-medium text-ink-2">Produtos com maior receita no histórico <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open:rotate-180" /></summary>
+            <p className="pb-3 text-[13px] leading-5 text-ink-3">O ranking considera o histórico semanal disponível e o canal selecionado. O filtro de período acima não se aplica a este bloco.</p>
+            <div className="pb-4"><Panel className="min-w-0 overflow-hidden">
             <PanelHeader
-              title="Produtos com maior receita"
-              hint={canalAtual ? `no período · ${canalAtual.nome}` : "no período"}
+              title="Produtos no histórico disponível"
+              hint={canalAtual ? `${canalAtual.nome} · histórico semanal disponível` : "Todos os canais · histórico semanal disponível"}
               action={
                 <div className="flex flex-wrap items-center gap-3">
                 <Link href="/produtos" className="inline-flex min-h-11 items-center gap-1 text-[14px] text-ink-2 hover:text-brand">Comparar <ArrowUpRight size={14} aria-hidden="true" /></Link>
@@ -448,42 +481,9 @@ export default function VisaoGeral({ dados }: { dados: DadosPainel }) {
               rowKey={(r) => r.mlb}
               defaultSort={{ key: "receita", dir: "desc" }}
             />
-          </Panel>
-
-        {/* Resumo dos canais — lista, um por linha: cabe na coluna estreita e
-            o olho desce comparando receita e variação na mesma vertical. */}
-        <Panel className="order-first min-w-0 overflow-hidden xl:order-none xl:col-span-2">
-          <PanelHeader
-            title="Canais"
-            hint={
-              canalAtual
-                ? "no período · todos os canais"
-                : "faturamento no período"
-            }
-          />
-          <ul className="divide-y divide-line">
-            {CANAIS.map((c) => (
-              <li key={c.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 px-4 py-4">
-                <div className="flex min-w-0 items-start gap-2">
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-[2px]" style={{ background: CANAL_CORES[c.id] }} aria-hidden="true" />
-                  <span className="text-[14px] font-medium text-ink [overflow-wrap:anywhere]">{c.nome}</span>
-                </div>
-                <span className="text-right text-[14px] font-semibold text-ink tabular-nums [overflow-wrap:anywhere]">{money(c.faturamento)}</span>
-                <span className="pl-4 text-[12px] text-ink-3 tabular-nums">{pct(c.participacao)} do total</span>
-                <span className="text-right">
-                  <Delta value={c.delta} />
-                </span>
-                <span className="col-span-2 ml-4 h-1 overflow-hidden rounded-full bg-panel-3" aria-hidden="true"><span className="block h-full rounded-full" style={{ width: `${c.participacao}%`, background: CANAL_CORES[c.id] }} /></span>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-        </div>
-        {/*
-          Quedas por SKU no fim: os totais dizem QUANTO, esta seção diz
-          ONDE. Vem depois porque só faz sentido depois de saber que caiu.
-        */}
-        <SkusEmQueda itens={dados.quedas} semDados={dados.vazio} />
+          </Panel></div>
+          </details>
+        </section>
       </PageBody>
     </>
   );

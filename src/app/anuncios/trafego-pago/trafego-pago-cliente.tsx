@@ -541,30 +541,6 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
       <BarraCarregando ativo={atualizando} />
       <PageBody className={decisaoCss.workspace}>
         {pendente && <p role="status" className="text-[12px] text-ink-3">Atualizando seleção…</p>}
-        {/* ── O gasto dia a dia, no período do calendário ──
-            Esta é a única parte que aceita qualquer intervalo: a rotina
-            noturna pergunta ao canal o número de CADA dia. A tabela por
-            anúncio, mais abaixo, segue presa aos relatórios. */}
-        {dados.serie.length > 0 ? (
-          <Panel className="p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <p className="label">
-                Dia a dia · {dataBr(dados.periodo.de)} a {dataBr(dados.periodo.ate)}
-              </p>
-              <p className="num text-[12px] text-ink-2">
-                {money(serieTotais.investimento)} de mídia ·{" "}
-                {serieTotais.receita > 0
-                  ? `${pct((serieTotais.investimento * 100) / serieTotais.receita, 1)} do faturamento`
-                  : "sem faturamento no período"}
-              </p>
-            </div>
-            <div className="decision-chart-pair mt-4">
-              {([{chave:"investimento",nome:"Investimento em mídia",cor:"var(--brand)"},{chave:"receita",nome:"Faturamento",cor:"var(--ink-2)"}] as const).map(grafico=><section key={grafico.chave} className="min-w-0"><h3 className="text-[14px] font-medium text-ink">{grafico.nome} · R$</h3><div className="mt-3 h-[200px] min-w-0 md:h-[240px]"><ResponsiveContainer width="100%" height="100%" minWidth={0}><ComposedChart data={dados.serie} margin={{top:4,right:4,left:0,bottom:0}}><CartesianGrid {...GRID}/><XAxis dataKey="data" {...AXIS} tickFormatter={dataBr} minTickGap={28}/><YAxis {...AXIS} width={76} tickFormatter={v=>moneyShort(Number(v))}/><Tooltip labelFormatter={v=>dataBr(String(v))} content={<ChartTooltip formatter={money}/>}/>{grafico.chave === "investimento" ? <Bar dataKey={grafico.chave} name={grafico.nome} fill={grafico.cor} isAnimationActive={false}/> : <Line type="linear" dataKey={grafico.chave} name={grafico.nome} stroke={grafico.cor} strokeWidth={2.5} dot={false} isAnimationActive={false}/>}</ComposedChart></ResponsiveContainer></div></section>)}
-            </div>
-            <p className="mt-4 text-[14px] text-ink-2">Recorte do gráfico: {dataBr(dados.periodo.de)} a {dataBr(dados.periodo.ate)}. As datas são independentes do relatório por anúncio.</p>
-            <details className="decision-method mt-4"><summary>Ver dados diários</summary><div className="decision-table" role="region" tabIndex={0} aria-label="Investimento e faturamento diários"><table className="w-full min-w-[480px]"><thead><tr><th>Data</th><th>Mídia</th><th>Faturamento</th><th>Receita atribuída</th></tr></thead><tbody>{dados.serie.map(d=><tr key={d.data} className="border-t border-line"><th scope="row">{dataBr(d.data)}</th><td>{d.midiaInformada === false ? "Sem registro" : money(d.investimento)}</td><td>{money(d.receita)}</td><td>{money(d.receitaAds)}</td></tr>)}</tbody></table></div></details>
-          </Panel>
-        ) : <Panel className="p-4 text-[13px] text-ink-2">Sem dado diário neste intervalo.</Panel>}
 
         {dados.vazio ? <SemFonte titulo="Sem relatório de publicidade neste canal" origem="Escolha outro canal acima. No Mercado Livre, use Atualizar agora para buscar a publicidade ou importe um relatório. O gráfico diário continua disponível quando houver dados." /> : <>
 
@@ -575,14 +551,12 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         <section className="decision-data-tools">
           <p className="text-[14px] font-medium text-ink-2">Relatório por anúncio</p>
           <select aria-label="Relatório por anúncio" value={filtros.janela} onChange={(e) => navegar({ janela: e.target.value })} className="min-h-11 w-full max-w-xl rounded-r1 border border-line bg-panel px-3 text-sm text-ink">{periodos.map((p) => <option key={`${p.inicio}|${p.fim}`} value={`${p.inicio}|${p.fim}`}>{p.rotulo} · {money(p.investimento)}</option>)}</select>
-          <p className="mt-2.5 text-[12px] leading-relaxed text-ink-3">
-            {dados.contasDoRelatorio?.join(" · ") || "Conta selecionada"} · Indicadores e tabelas usam este intervalo.
-          </p>
+          <p className="mt-2.5 text-[12px] leading-relaxed text-ink-3">{dados.contasDoRelatorio?.join(" · ") || "Conta selecionada"}</p>
           {dados.contaNaoIdentificada && <p className="mt-2 text-xs text-warn">Anúncio sem conta · TACoS indisponível</p>}
         </section>
 
-        <HeroMetric label="Margem depois da mídia" value={totais.sobraAposMidia == null ? "—" : money(totais.sobraAposMidia)} hint={`Margem de contribuição ${totais.margem == null ? "—" : money(totais.margem)} menos ${money(totais.investimento)} de mídia · cobertura de custos ${pct(totais.coberturaMargem,0)}`}>
-          <div className="grid gap-5 sm:grid-cols-2"><div><p className="text-[14px] text-ink-2">Quanto o canal credita à mídia</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.atribuicao == null ? "—" : pct(totais.atribuicao,1)}</p><p className="mt-2 text-[14px] leading-6 text-ink-3">{money(totais.receitaAtribuida)} atribuídos sobre {money(totais.receitaReal)} nos pedidos desses anúncios. São medidas diferentes.</p></div><div><p className="text-[14px] text-ink-2">Receita indireta</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.receitaAtribuida > 0 ? pct(totais.receitaIndireta / totais.receitaAtribuida * 100,1) : "—"}</p><p className="mt-2 text-[14px] leading-6 text-ink-3">O clique e a compra ocorreram em anúncios diferentes. Entra no ROAS publicado.</p></div></div>
+        <HeroMetric label="Margem depois da mídia" value={totais.sobraAposMidia == null ? "—" : money(totais.sobraAposMidia)} hint={`${totais.margem == null ? "—" : money(totais.margem)} de margem − ${money(totais.investimento)} de mídia · custos em ${pct(totais.coberturaMargem,0)}`}>
+          <div className="grid gap-5 sm:grid-cols-2"><div><p className="text-[14px] text-ink-2">Quanto o canal credita à mídia</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.atribuicao == null ? "—" : pct(totais.atribuicao,1)}</p><p className="mt-2 text-[14px] leading-6 text-ink-3">{money(totais.receitaAtribuida)} de {money(totais.receitaReal)}</p></div><div><p className="text-[14px] text-ink-2">Receita indireta</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.receitaAtribuida > 0 ? pct(totais.receitaIndireta / totais.receitaAtribuida * 100,1) : "—"}</p></div></div>
         </HeroMetric>
 
         {/* ── Os cinco números da janela escolhida ── */}
@@ -619,30 +593,6 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           />
         </MetricStrip>
 
-        <Disclosure title="Conferir os valores da conta">
-          <p>TACoS: {money(totais.investimento)} ÷ {money(totais.receitaTotalConta)}. Faturamento de pedidos válidos das contas listadas no relatório, incluindo vendas sem mídia.</p>
-          <p className="mt-2">ACoS: {money(totais.investimento)} ÷ {money(totais.receitaAtribuida)} atribuídos pelo canal. ROAS usa a divisão inversa.</p>
-        </Disclosure>
-
-        <Disclosure title="ACoS, TACoS e ROAS — qual decide o quê">
-          <p>
-            <strong>ACoS</strong> é mídia ÷ receita que o canal <em>atribui</em> à mídia.
-            Compare com a margem de contribuição e confira a cobertura dos custos.
-          </p>
-          <p className="mt-2">
-            <strong>ROAS</strong> é o inverso do ACoS (ACoS de 10% = ROAS 10). É a métrica que o
-            painel do canal passou a destacar. Não traz informação nova.
-          </p>
-          <p className="mt-2">
-            <strong>TACoS</strong> é mídia ÷ faturamento <em>total</em> da conta, orgânico incluído.
-            Se subir, a mídia consome uma parcela maior das vendas. Isso, sozinho, não comprova canibalização nem decide se vale aumentar a verba.
-          </p>
-          <p className="mt-2">
-            O que esta tela <strong>não</strong> tem: impressões perdidas por orçamento e por
-            classificação, que diriam se o caminho é subir verba ou melhorar o anúncio. O relatório
-            que o canal exporta não traz essas colunas.
-          </p>
-        </Disclosure>
 
 
         {conferencia && (conferencia.diario == null || Math.abs(conferencia.relatorio - conferencia.diario) > 1 || conferencia.registrosRegistrados < conferencia.registrosEsperados) && (
@@ -863,7 +813,55 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
             </div>
           )}
         </Panel>
+        <Disclosure title="Conferir os valores da conta">
+          <p>TACoS: {money(totais.investimento)} ÷ {money(totais.receitaTotalConta)}. Faturamento de pedidos válidos das contas listadas no relatório, incluindo vendas sem mídia.</p>
+          <p className="mt-2">ACoS: {money(totais.investimento)} ÷ {money(totais.receitaAtribuida)} atribuídos pelo canal. ROAS usa a divisão inversa.</p>
+        </Disclosure>
+
+        <Disclosure title="ACoS, TACoS e ROAS — qual decide o quê">
+          <p>
+            <strong>ACoS</strong> é mídia ÷ receita que o canal <em>atribui</em> à mídia.
+            Compare com a margem de contribuição e confira a cobertura dos custos.
+          </p>
+          <p className="mt-2">
+            <strong>ROAS</strong> é o inverso do ACoS (ACoS de 10% = ROAS 10). É a métrica que o
+            painel do canal passou a destacar. Não traz informação nova.
+          </p>
+          <p className="mt-2">
+            <strong>TACoS</strong> é mídia ÷ faturamento <em>total</em> da conta, orgânico incluído.
+            Se subir, a mídia consome uma parcela maior das vendas. Isso, sozinho, não comprova canibalização nem decide se vale aumentar a verba.
+          </p>
+          <p className="mt-2">
+            O que esta tela <strong>não</strong> tem: impressões perdidas por orçamento e por
+            classificação, que diriam se o caminho é subir verba ou melhorar o anúncio. O relatório
+            que o canal exporta não traz essas colunas.
+          </p>
+        </Disclosure>
         </>}
+
+        {/* ── O gasto dia a dia, no período do calendário ──
+            Esta é a única parte que aceita qualquer intervalo: a rotina
+            noturna pergunta ao canal o número de CADA dia. A tabela por
+            anúncio, mais abaixo, segue presa aos relatórios. */}
+        {dados.serie.length > 0 ? (
+          <Panel className="p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <p className="label">
+                Dia a dia · {dataBr(dados.periodo.de)} a {dataBr(dados.periodo.ate)}
+              </p>
+              <p className="num text-[12px] text-ink-2">
+                {money(serieTotais.investimento)} de mídia ·{" "}
+                {serieTotais.receita > 0
+                  ? `${pct((serieTotais.investimento * 100) / serieTotais.receita, 1)} do faturamento`
+                  : "sem faturamento no período"}
+              </p>
+            </div>
+            <div className="decision-chart-pair mt-4">
+              {([{chave:"investimento",nome:"Investimento em mídia",cor:"var(--brand)"},{chave:"receita",nome:"Faturamento",cor:"var(--ink-2)"}] as const).map(grafico=><section key={grafico.chave} className="min-w-0"><h3 className="text-[14px] font-medium text-ink">{grafico.nome} · R$</h3><div className="mt-3 h-[200px] min-w-0 md:h-[240px]"><ResponsiveContainer width="100%" height="100%" minWidth={0}><ComposedChart data={dados.serie} margin={{top:4,right:4,left:0,bottom:0}}><CartesianGrid {...GRID}/><XAxis dataKey="data" {...AXIS} tickFormatter={dataBr} minTickGap={28}/><YAxis {...AXIS} width={76} tickFormatter={v=>moneyShort(Number(v))}/><Tooltip labelFormatter={v=>dataBr(String(v))} content={<ChartTooltip formatter={money}/>}/>{grafico.chave === "investimento" ? <Bar dataKey={grafico.chave} name={grafico.nome} fill={grafico.cor} isAnimationActive={false}/> : <Line type="linear" dataKey={grafico.chave} name={grafico.nome} stroke={grafico.cor} strokeWidth={2.5} dot={false} isAnimationActive={false}/>}</ComposedChart></ResponsiveContainer></div></section>)}
+            </div>
+            <details className="decision-method mt-4"><summary>Ver dados diários</summary><div className="decision-table" role="region" tabIndex={0} aria-label="Investimento e faturamento diários"><table className="w-full min-w-[480px]"><thead><tr><th>Data</th><th>Mídia</th><th>Faturamento</th><th>Receita atribuída</th></tr></thead><tbody>{dados.serie.map(d=><tr key={d.data} className="border-t border-line"><th scope="row">{dataBr(d.data)}</th><td>{d.midiaInformada === false ? "Sem registro" : money(d.investimento)}</td><td>{money(d.receita)}</td><td>{money(d.receitaAds)}</td></tr>)}</tbody></table></div></details>
+          </Panel>
+        ) : <Panel className="p-4 text-[13px] text-ink-2">Sem dado diário neste intervalo.</Panel>}
       </PageBody>
     </>
   );

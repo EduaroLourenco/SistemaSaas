@@ -213,7 +213,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
   if (dados.semConexao) {
     return (
       <>
-        <PageHeader title="Automações" />
+        <PageHeader title="Promoções abertas" />
         <PageBody className="op-workspace op-automacoes">
           <EmptyState
             title="Nenhuma conta do Mercado Livre conectada"
@@ -227,7 +227,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
   return (
     <>
       <PageHeader
-        title="Automações"
+        title="Promoções abertas"
         badge={<Badge tone="warn">envio com confirmação</Badge>}
         inlineFilters
         actions={

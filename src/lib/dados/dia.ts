@@ -112,8 +112,15 @@ export type DiaProduto = {
   canais: string[];
 };
 
+export type DiaRecente = DiaLinha & {
+  /** Contra o mesmo dia da semana anterior, em %. Null sem base. */
+  contraSemana: number | null;
+};
+
 export type DadosDia = {
   vazio: boolean;
+  /** Os últimos 7 dias até hoje, sempre, qualquer que seja o dia em foco. */
+  recentes: DiaRecente[];
   /** O dia em foco. Sem `data` na URL, é o último com movimento. */
   hoje: DiaLinha | null;
   /** Todos os dias do mês do dia em foco. */
@@ -268,7 +275,7 @@ export async function carregarDia(
 
   if (!linhas.length) {
     return {
-      vazio: true, hoje: null, mes: [], mesRotulo: "", comparacoes: [],
+      vazio: true, recentes: [], hoje: null, mes: [], mesRotulo: "", comparacoes: [],
       melhor: null, pior: null, bateram: 0, comMeta: 0,
       opcoes, canalId: canalId ?? "", metaPorConta, ultimaData: null, atualizacao,
       primeiraData: null, canaisSelecionados, porCanal: [], produtos: [],
@@ -335,7 +342,8 @@ export async function carregarDia(
       ? dataPedida
       : mesPedido && /^\d{4}-\d{2}$/.test(mesPedido)
         ? (doMesPedido[doMesPedido.length - 1] ?? `${mesPedido}-01`)
-        : ultimaData;
+        : /* A rotina cria a linha do dia antes da primeira venda. */
+          (datas.filter((d) => porDia.get(d)!.pedidos > 0).at(-1) ?? ultimaData);
 
   /* O hoje de São Paulo, que é onde a operação vive. */
   const hojeIso = new Date().toLocaleDateString("en-CA", {
@@ -413,6 +421,16 @@ export async function carregarDia(
   /* ── Comparações do dia em foco ── */
   const hoje = montar(foco);
   const variacao = (a: number, b: number) => (b > 0 ? ((a - b) / b) * 100 : null);
+
+  const recentes: DiaRecente[] = Array.from({ length: 7 }, (_, i) => {
+    const d = montar(somarDias(hojeIso, i - 6));
+    const antes = somarDias(d.data, -7);
+    return {
+      ...d,
+      /* O dia em andamento não se compara com um dia inteiro. */
+      contraSemana: d.parcial || d.emAndamento || !porDia.has(antes) ? null : variacao(d.receitaLiquida, montar(antes).receitaLiquida),
+    };
+  });
 
   const ontem = porDia.has(somarDias(foco, -1)) ? montar(somarDias(foco, -1)) : null;
   const semanaPassada = porDia.has(somarDias(foco, -7))
@@ -548,6 +566,7 @@ export async function carregarDia(
 
   return {
     vazio: false,
+    recentes,
     primeiraData,
     canaisSelecionados,
     porCanal,

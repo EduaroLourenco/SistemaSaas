@@ -1,5 +1,7 @@
 import { carregarDia } from "@/lib/dados/dia";
+import { Suspense } from "react";
 import DiaCliente from "./dia-cliente";
+import { OperacaoHoje } from "./operacao-hoje";
 
 export const dynamic = "force-dynamic";
 
@@ -20,5 +22,7 @@ export default async function Pagina({
   const { data, canal, mes } = await searchParams;
   // canal aceita lista ("a,conta:b"); mes ("AAAA-MM") é a navegação do calendário.
   const dados = await carregarDia(data, canal || undefined, mes || undefined);
-  return <DiaCliente dados={dados} />;
+  /* Olhando outro dia, a operação de agora só atrapalharia. */
+  const operacao = !data && !mes ? <Suspense fallback={<div className="min-h-[120px]" />}><OperacaoHoje /></Suspense> : null;
+  return <DiaCliente dados={dados} operacao={operacao} />;
 }

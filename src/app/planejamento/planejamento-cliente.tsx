@@ -29,7 +29,13 @@ import {
   formatarData,
 } from "@/lib/planejamento/modelo";
 import { oportunidades, type Oportunidade } from "@/lib/planejamento/sazonal";
-import { Campo, Painel, Produtos, ResumoPromocao } from "./componentes";
+import {
+  Campo,
+  Painel,
+  Produtos,
+  ResumoCanal,
+  ResumoPromocao,
+} from "./componentes";
 import Calendario from "./calendario";
 const Editor = dynamic(() => import("./editor"));
 const Mapa = dynamic(() => import("./mapa"));
@@ -76,7 +82,7 @@ export default function Planejamento({
     [busca, setBusca] = useState(""),
     [sku, setSku] = useState("");
   const [sazonais, setSazonais] = useState(true),
-    [promos, setPromos] = useState(false),
+    [promos, setPromos] = useState(true),
     [editor, setEditor] = useState<Item | null>(null),
     [editorKey, setEditorKey] = useState(0);
   const [painel, setPainel] = useState<
@@ -401,6 +407,10 @@ export default function Planejamento({
         planejar={planejar}
         hoje={hoje}
         abrirItem={abrirFicha}
+        abrirPromo={(id) => {
+          setPromoId(id);
+          setPainel("promo");
+        }}
       >
         {mostrarFiltros && aba !== "Grupos de produtos" && (
           <div className="pl-filters">
@@ -590,7 +600,7 @@ export default function Planejamento({
                     checked={promos}
                     onChange={(e) => setPromos(e.target.checked)}
                   />
-                  Promoções registradas
+                  Promoções do canal
                 </label>
               </div>
               <span>
@@ -623,13 +633,6 @@ export default function Planejamento({
               filtrarCanal={canal}
               sku={sku}
             />
-            {promos &&
-              dados.promocoes.some((p) => p.ativa && (!p.inicio || !p.fim)) && (
-                <p className="pl-note">
-                  Há promoções sem início ou fim informado. Consulte a Central
-                  de Promoções; elas não são posicionadas no calendário.
-                </p>
-              )}
           </section>
         )}
         {aba === "Onde focar agora" && (
@@ -1014,11 +1017,16 @@ export default function Planejamento({
       )}
       {painel === "promo" && (
         <Painel
-          titulo="Promoção registrada"
-          subtitulo="Informação de contexto. O planejamento não modifica esta oferta."
+          titulo="Promoção"
+          subtitulo="Somente consulta."
           fechar={() => setPainel(null)}
         >
           <div className="pl-drawer-body">
+            {dados.noCanal
+              .filter((p) => p.id === promoId)
+              .map((p) => (
+                <ResumoCanal key={p.id} promocao={p} dados={dados} />
+              ))}
             {dados.promocoes
               .filter((p) => p.id === promoId)
               .map((p) => (
