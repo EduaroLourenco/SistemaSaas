@@ -555,7 +555,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           {dados.contaNaoIdentificada && <p className="mt-2 text-xs text-warn">Anúncio sem conta · TACoS indisponível</p>}
         </section>
 
-        <HeroMetric label="Margem depois da mídia" value={totais.sobraAposMidia == null ? "—" : money(totais.sobraAposMidia)} hint={`${totais.margem == null ? "—" : money(totais.margem)} de margem − ${money(totais.investimento)} de mídia · custos em ${pct(totais.coberturaMargem,0)}`}>
+        <HeroMetric label={totais.sobraAposMidia == null ? "Investido em mídia" : "Margem depois da mídia"} value={money(totais.sobraAposMidia ?? totais.investimento)} hint={totais.sobraAposMidia == null ? `margem indisponível · custos em ${pct(totais.coberturaMargem,0)}` : `${totais.margem == null ? "—" : money(totais.margem)} de margem − ${money(totais.investimento)} de mídia · custos em ${pct(totais.coberturaMargem,0)}`}>
           <div className="grid gap-5 sm:grid-cols-2"><div><p className="text-[14px] text-ink-2">Quanto o canal credita à mídia</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.atribuicao == null ? "—" : pct(totais.atribuicao,1)}</p><p className="mt-2 text-[14px] leading-6 text-ink-3">{money(totais.receitaAtribuida)} de {money(totais.receitaReal)}</p></div><div><p className="text-[14px] text-ink-2">Receita indireta</p><p className="mt-2 text-[24px] font-semibold tabular-nums text-ink">{totais.receitaAtribuida > 0 ? pct(totais.receitaIndireta / totais.receitaAtribuida * 100,1) : "—"}</p></div></div>
         </HeroMetric>
 

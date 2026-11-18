@@ -251,7 +251,8 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
           </div>
         </section>
 
-        {lista.length > 0 && <section className="shipping-documents" aria-labelledby="documentos-envios">
+        {lista.length > 0 && !disponiveis.length && !arquivo && leituraAntiga && <p className="shipping-document-note"><AlertCircle size={16} aria-hidden="true" />Etiquetas indisponíveis nesta leitura.</p>}
+        {(disponiveis.length > 0 || arquivo) && <section className="shipping-documents" aria-labelledby="documentos-envios">
           <div className="shipping-documents-heading">
             <div><h2 id="documentos-envios"><FileText size={18} aria-hidden="true" />Etiquetas e separação</h2></div>
           </div>

@@ -271,7 +271,7 @@ export default function Conversa() {
                   }}
                   rows={1}
                   aria-label="Sua pergunta"
-                  placeholder="Vendas, envios, promoções, anúncios…"
+                  placeholder="Escreva sua pergunta"
                   disabled={pensando}
                   className="flex-1 min-w-0 resize-none px-3 py-2.5 rounded-r1 bg-panel-2 border border-line-2 text-[16px] md:text-[14px] text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand-wash disabled:opacity-60 max-h-[140px]"
                 />
