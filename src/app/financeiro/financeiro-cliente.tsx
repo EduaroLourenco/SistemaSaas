@@ -8,6 +8,7 @@ import Link from "next/link";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select } from "@/components/ui/controls";
+import { BarraLista } from "@/components/ui/barra-lista";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { money, moneyShort, pct, count } from "@/lib/format";
 import { AlertCircle, ArrowRight } from "lucide-react";
@@ -344,21 +345,14 @@ export default function FinanceiroCliente({
           </Panel>
 
           {/* ── Margem por dimensão ── */}
-          <Panel className="overflow-hidden">
-            {/*
-              A tabela abria direto nas abas, sem dizer o que ela é. Com
-              oito colunas de número e nenhum título, a leitura mais
-              provável era "outra tabela" — quando na verdade é a MESMA
-              DRE da esquerda, aberta por um eixo de cada vez.
-            */}
-            <div className="px-4 py-3 border-b border-line">
-              <p className="text-[14px] font-semibold text-ink">
-                Receita, custos e margem por
-              </p>
-              <p className="text-[12px] text-ink-3 mt-0.5">
-                Custos conhecidos por componente. A cobertura indica a parte com margem apurada.
-              </p>
-            </div>
+          <BarraLista
+            titulo="Receita, custos e margem"
+            detalhe={`por ${DIMENSOES.find((d) => d.valor === dim)?.rotulo.toLowerCase()}`}
+            valor={`${count(linhas.length)} linhas`}
+            abertaNoComputador
+            largura="1100px"
+            className="h-fit"
+          >
             <Tabs
               tabs={DIMENSOES.map((d) => ({ value: d.valor, label: d.rotulo }))}
               value={dim}
@@ -452,7 +446,7 @@ export default function FinanceiroCliente({
                 </tbody>
               </table>
             </div>
-          </Panel>
+          </BarraLista>
         </div>
 
         {/*

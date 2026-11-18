@@ -10,6 +10,7 @@ import { Button, Panel, PanelHeader, Delta, Badge } from "@/components/ui/primit
 import { Sparkline } from "@/components/ui/stat-tile";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
+import { BarraLista } from "@/components/ui/barra-lista";
 import { type Canal } from "@/mock";
 import type { DadosCanais } from "@/lib/dados/vendas";
 import { CompararPeriodo, type LinhaComparacao } from "@/components/ui/comparar-periodo";
@@ -447,8 +448,13 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
         </div>
 
         {/* tabela comparativa */}
-        <Panel className="overflow-hidden">
-          <PanelHeader title="Comparativo" hint="clique no cabeçalho para ordenar" />
+        <BarraLista
+          titulo="Comparativo"
+          detalhe={visiveis[0] && `${visiveis[0].nome} · ${money(visiveis[0].faturamento)}`}
+          valor={`${count(visiveis.length)} canais`}
+          vazio={visiveis.length ? undefined : "nenhum canal selecionado"}
+          largura="1100px"
+        >
           <DataTable
             columns={colunas}
             rows={visiveis}
@@ -456,7 +462,7 @@ export default function VendasPorCanal({ dados }: { dados: DadosCanais }) {
             defaultSort={{ key: "faturamento", dir: "desc" }}
             onRowClick={(r) => setCanalAberto(r.id)}
           />
-        </Panel>
+        </BarraLista>
       </PageBody>
 
       {canalAberto && (() => {

@@ -386,6 +386,7 @@ export function Sheet({
   footer,
   children,
   width = "520px",
+  className,
 }: {
   title: string;
   subtitle?: string;
@@ -393,6 +394,7 @@ export function Sheet({
   footer?: React.ReactNode;
   children: React.ReactNode;
   width?: string;
+  className?: string;
 }) {
   const ref = React.useRef<HTMLDialogElement>(null);
   const titleId = React.useId();
@@ -412,7 +414,7 @@ export function Sheet({
       ref={ref}
       aria-labelledby={titleId}
       aria-describedby={subtitle ? descriptionId : undefined}
-      className="gerizo-sheet"
+      className={cn("gerizo-sheet", className)}
       style={{ "--sheet-width": width } as React.CSSProperties}
       onCancel={(event) => { event.preventDefault(); onClose(); }}
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}

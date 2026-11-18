@@ -1338,6 +1338,30 @@
     opacity: 1;
   }
 }
+/* No celular a semana cabe inteira: nada de coluna cortada na borda. */
+@media (max-width: 640px) {
+  .pl-calendar-scroll { overflow-x: visible; }
+  .pl-calendar,
+  .pl-channel-calendar { min-width: 0; }
+  .pl-weekdays span { padding: 8px 2px; font-size: 11px; letter-spacing: 0; text-align: center; }
+  .pl-week { min-height: 104px; }
+  .weekly .pl-week { min-height: 240px; }
+  .pl-date { justify-content: center; padding: 4px 0 2px; }
+  .pl-day-add { display: none; }
+  .pl-event-cell { margin: 1px 2px; }
+  .pl-event { gap: 3px; padding: 5px 3px; font-size: 11px; }
+  .pl-event svg,
+  .pl-event small { display: none; }
+  .pl-event > span:not(.pl-dot) { text-overflow: clip; }
+  .pl-calendar-help { align-items: flex-start; }
+  .pl-channel-header { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .pl-channel-header > strong { display: none; }
+  .pl-channel-header > * { padding: 8px 1px; font-size: 11px; text-align: center; }
+  .pl-channel-row { grid-template-columns: minmax(0, 1fr); }
+  .pl-channel-row > strong { padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .pl-channel-row small { display: inline; margin: 0 0 0 8px; }
+  .pl-channel-tracks > div { padding: 0 2px; }
+}
 @media (max-width: 480px) {
   .pl-campaigns {
     grid-template-columns: 1fr;

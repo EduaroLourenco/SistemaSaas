@@ -1767,9 +1767,9 @@
 .st-studio .hj-card .hj-prazo { min-width:0; margin:0; text-align:left; }
 .st-studio .hj-mais { margin-top:12px; }
 .st-studio .hj-mais summary { display:flex; align-items:center; min-height:44px; color:var(--ink-2); font-size:14px; font-weight:550; cursor:pointer; }
-.st-studio .hj-dias { list-style:none; margin:0; padding:0 0 4px; display:flex; gap:8px; overflow-x:auto; }
-.st-studio .hj-dias button { display:grid; gap:2px; width:136px; min-height:84px; padding:12px; text-align:left; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:12px; cursor:pointer; }
+.st-studio .hj-dias { list-style:none; margin:0; padding:0 0 4px; display:grid; gap:8px; grid-template-columns:repeat(auto-fill,minmax(136px,1fr)); }
+.st-studio .hj-dias button { display:grid; grid-template-columns:minmax(0,1fr); gap:2px; width:100%; height:100%; min-height:84px; padding:12px; text-align:left; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:12px; cursor:pointer; }
 .st-studio .hj-dias b { font-family:var(--f-num); font-size:18px; font-weight:600; }
 .st-studio .hj-dias span { color:var(--ink-2); font-size:13px; }
 .st-studio .hj-dias small { color:var(--ink-3); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-@media(max-width:640px) { .st-studio .hj-cards { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; } .st-studio .hj-card { padding:12px; } }
+@media(max-width:640px) { .st-studio .hj-cards { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; } .st-studio .hj-card { padding:12px; } .st-studio .hj-dias { grid-template-columns:repeat(3,minmax(0,1fr)); } .st-studio .hj-dias button { padding:10px; } }

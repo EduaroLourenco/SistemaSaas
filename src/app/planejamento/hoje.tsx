@@ -43,7 +43,7 @@ export default function Hoje({
   const campanhas = noAr.filter((p) => p.grupo !== "relampago" && p.grupo !== "automatica");
   const limite = somarDias(hoje, 7);
   const proximos = dados.noCanal
-    .filter((p) => p.grupo === "relampago" && p.situacao === "agendada" && p.dia <= limite)
+    .filter((p) => p.grupo === "relampago" && p.situacao === "agendada")
     .sort((a, b) => a.inicio.localeCompare(b.inicio));
 
   const acoes = itens.filter((i) => i.natureza === "acao");
@@ -53,6 +53,7 @@ export default function Hoje({
   const chegando = acoes.filter((i) => i.inicio > hoje && i.inicio <= limite && i.status !== "Cancelada");
   const vencidos = itens.filter((i) => i.status === "Rascunho" && i.fim < hoje);
   const leitura = dados.noCanal.map((p) => p.lidoEm).sort().at(-1);
+  const falhou = dados.noCanalFalhou;
 
   const cartao = (p: PromoCanal) => {
     const t = prazo(p.diaFim, hoje);
@@ -93,15 +94,15 @@ export default function Hoje({
     <section className="hj">
       <div className="hj-cab">
         <div className="hj-big">
-          <b>{relampagos.length + campanhas.length}</b>
+          <b>{falhou ? "—" : relampagos.length + campanhas.length}</b>
           <span>promoções no ar</span>
         </div>
         <div className="hj-pills">
           <span className="hj-pill">
-            <b>{relampagos.reduce((s, p) => s + (p.anuncios ?? 0), 0)}</b> anúncios em relâmpago
+            <b>{falhou ? "—" : relampagos.reduce((s, p) => s + (p.anuncios ?? 0), 0)}</b> anúncios em relâmpago
           </span>
           <span className="hj-pill">
-            <b>{automaticas.length}</b> automáticas
+            <b>{falhou ? "—" : automaticas.length}</b> automáticas
           </span>
           <span className="hj-pill">
             <b>{doPlano.length}</b> ações do plano
@@ -123,7 +124,7 @@ export default function Hoje({
       {campanhas.length ? (
         <ul className="hj-cards">{campanhas.map(cartao)}</ul>
       ) : (
-        <p className="hj-vazio">nenhuma campanha na última leitura</p>
+        <p className="hj-vazio">{falhou ? "promoções não lidas agora" : "nenhuma campanha na última leitura"}</p>
       )}
       {automaticas.length > 0 && (
         <details className="hj-mais">

@@ -10,6 +10,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { Segmented, FilterSheet } from "@/components/ui/controls";
 import { ChartTooltip, AXIS, GRID, Legend } from "@/components/ui/chart";
 import { DataTable, type Column } from "@/components/ui/data-table";
+import { BarraLista } from "@/components/ui/barra-lista";
 import { Matriz, type IndicadorMatriz, type ColunaMatriz } from "@/components/ui/matriz";
 import { SeletorCanal } from "@/components/ui/seletor-canal";
 import {
@@ -642,38 +643,37 @@ export default function VendasSemanal({ dados }: { dados: DadosSemanal }) {
         </Panel>
 
         <div className="decision-operation-strip"><h2 className="decision-surface-title">Investigar as semanas</h2><Segmented options={[{value:"matriz",label:"Matriz"},{value:"lista",label:"Lista ordenável"}]} value={visaoSemanas} onChange={setVisaoSemanas} /></div>
-        {visaoSemanas === "matriz" && <Panel className="overflow-hidden">
-          <PanelHeader
-            title="Semana a semana"
-            hint="Semanas nas colunas · indicadores nas linhas · a seta compara com a semana à esquerda"
-            action={
-              <span className="num text-[12px] text-ink-3">
-                {exibidas.length} semanas
-              </span>
-            }
-          />
+        {visaoSemanas === "matriz" && <BarraLista
+          titulo="Semana a semana"
+          detalhe={exibidas.length ? `${exibidas[0].rotulo} a ${exibidas[exibidas.length - 1].rotulo}` : undefined}
+          valor={`${exibidas.length} semanas`}
+          vazio={exibidas.length ? undefined : "sem semana no período"}
+          largura="1200px"
+        >
           <Matriz
             colunas={colunasMatriz}
             periodos={exibidas}
             indicadores={INDICADORES}
             onAbrirColuna={setComparando}
           />
-        </Panel>
+        </BarraLista>
 
         }
         {/* a lista continua disponível para quem quiser ordenar por métrica */}
-        {visaoSemanas === "lista" && <Panel className="overflow-hidden">
-          <PanelHeader
-            title="Lista ordenável"
-            hint="Mesmo dado, uma linha por semana — para ordenar por qualquer indicador"
-          />
+        {visaoSemanas === "lista" && <BarraLista
+          titulo="Lista de semanas"
+          detalhe={exibidas.length ? `${exibidas[0].rotulo} a ${exibidas[exibidas.length - 1].rotulo}` : undefined}
+          valor={`${exibidas.length} semanas`}
+          vazio={exibidas.length ? undefined : "sem semana no período"}
+          largura="1200px"
+        >
           <DataTable
             columns={colunas}
             rows={exibidas}
             rowKey={(l) => l.rotulo}
             defaultSort={{ key: "semana", dir: "asc" }}
           />
-        </Panel>}
+        </BarraLista>}
       </PageBody>
 
       {comparando != null && exibidas[comparando] && (

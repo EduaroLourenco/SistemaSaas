@@ -98,9 +98,9 @@ export function BlocoOperacao({ termometro: t, envios }: { termometro: DadosTerm
       {t && t.contas.length > 0 && (
         <section aria-label="Próximos dias" className="min-w-0">
           <h2 className="mb-2 text-[15px] font-semibold text-ink">Próximos dias</h2>
-          <ul className="flex gap-2 overflow-x-auto pb-1">
+          <ul className="grid auto-rows-fr grid-cols-2 gap-2 pb-1 max-sm:[&>*:last-child]:hidden sm:grid-cols-4 lg:grid-cols-7">
             {proximos.map(({ d, relampago, eventos }) => (
-              <li key={d} className="w-[148px] shrink-0">
+              <li key={d} className="min-w-0">
                 <Link href="/planejamento" className="flex h-full min-h-[104px] flex-col gap-1 rounded-r2 border border-line bg-panel p-3 hover:bg-panel-2">
                   <span className="text-[12px] text-ink-3">
                     {DIAS[new Date(`${d}T12:00:00Z`).getUTCDay()]} · <span className="num">{br(d)}</span>

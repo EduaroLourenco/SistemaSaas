@@ -4,7 +4,7 @@ import { operacaoPadrao } from "./operacao";
 import { paginar } from "./paginar";
 import { ultimosPrecosDeVenda } from "./preco-atual";
 import { semControleDeEstoque } from "@/lib/estoque-sem-controle";
-import { carregarPromocoesNoCanal } from "./promocoes-no-canal";
+import { lerPromocoesNoCanal } from "./promocoes-no-canal";
 import { diaSP, situacaoDoItem } from "@/lib/planejamento/canal";
 import {
   detalhesVazios,
@@ -29,6 +29,7 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
     contas: [],
     promocoes: [],
     noCanal: [],
+    noCanalFalhou: false,
     avisos: [],
     pronto: false,
   };
@@ -202,22 +203,31 @@ export async function carregarPlanejamentoComercial(): Promise<Dados> {
           : [];
       }),
   }));
-  const noCanal = await carregarPromocoesNoCanal(
-    sb,
-    dados<{ id: string }>(6).map((c) => c.id),
-    new Map(
-      anuncios.flatMap((a) => {
-        const s = skuAnuncio(a);
-        return s ? [[a.codigo_externo.toUpperCase(), s] as const] : [];
-      }),
-    ),
-  );
+  let noCanal: Dados["noCanal"] = [];
+  let noCanalFalhou = false;
+  try {
+    noCanal = await lerPromocoesNoCanal(
+      sb,
+      dados<{ id: string }>(6).map((c) => c.id),
+      new Map(
+        anuncios.flatMap((a) => {
+          const s = skuAnuncio(a);
+          return s ? [[a.codigo_externo.toUpperCase(), s] as const] : [];
+        }),
+      ),
+    );
+  } catch (e) {
+    console.error("[planejamento/promoções do canal]", e);
+    noCanalFalhou = true;
+    vazio.avisos.push("Não foi possível ler as promoções do Mercado Livre. Tente atualizar a página.");
+  }
   const hoje = diaSP(Date.now());
   return {
     ...vazio,
     pronto: resultados.slice(0, 3).every((r) => r.status === "fulfilled"),
     avisos: [...new Set(vazio.avisos)],
     noCanal,
+    noCanalFalhou,
     itens: dados<Item>(0).map((i) => ({
       ...i,
       status: situacaoDoItem(i, hoje, noCanal),

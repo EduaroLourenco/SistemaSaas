@@ -149,6 +149,8 @@ export type Dados = {
   promocoes: Promocao[];
   /** O que o canal informa, inclusive relâmpago negociado. */
   noCanal: PromoCanal[];
+  /** A leitura falhou: `noCanal` vazio aqui não quer dizer zero promoções. */
+  noCanalFalhou: boolean;
   avisos: string[];
   pronto: boolean;
 };

@@ -12,7 +12,7 @@ import { Panel, Badge, Delta, EmptyState } from "@/components/ui/primitives";
 import { money, moneyShort, pct, count, nomeDoDia } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, CalendarDays, Trophy, TrendingDown, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { Pagination, usePagination } from "@/components/ui/pagination";
+import { BarraLista } from "@/components/ui/barra-lista";
 import type { GrupoRecorte } from "@/lib/recorte";
 import { SeletorCanais } from "@/components/ui/seletor-canais";
 import type { DadosDia, DiaLinha, DiaCanal, DiaProduto } from "@/lib/dados/dia";
@@ -91,9 +91,9 @@ function somarMes(mes: string, n: number) {
 /** A semana até hoje: cada dia abre com um toque. */
 function UltimosDias({ dias, foco, aoEscolher }: { dias: DadosDia["recentes"]; foco: string; aoEscolher: (data: string) => void }) {
   const NOMES = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-  /* No celular a faixa rola, então começa em hoje e anda para trás. */
+  /* No celular: hoje e os cinco dias anteriores, em cartões iguais e inteiros. */
   return (
-    <section aria-label="Últimos dias" className="grid auto-cols-[92px] grid-flow-col gap-2 overflow-x-auto pb-1 lg:auto-cols-fr">
+    <section aria-label="Últimos dias" className="grid auto-rows-fr grid-cols-3 gap-2 pb-1 max-lg:[&>*:first-child]:hidden lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none">
       {dias.map((d, i) => (
         <button
           key={d.data}
@@ -103,12 +103,12 @@ function UltimosDias({ dias, foco, aoEscolher }: { dias: DadosDia["recentes"]; f
           aria-pressed={d.data === foco}
           onClick={() => aoEscolher(d.data)}
           className={cn(
-            "flex min-h-[84px] flex-col gap-0.5 rounded-r2 border p-2.5 text-left max-lg:[order:var(--ordem)]",
+            "flex min-h-[84px] min-w-0 flex-col gap-0.5 rounded-r2 border p-2.5 text-left max-lg:[order:var(--ordem)]",
             d.data === foco ? "border-brand bg-brand-wash" : "border-line bg-panel hover:bg-panel-2",
             d.parcial && "opacity-50",
           )}
         >
-          <span className="text-[12px] text-ink-3">{d.emAndamento ? "hoje" : NOMES[d.diaSemana]} · <span className="num">{br(d.data)}</span></span>
+          <span className="whitespace-nowrap text-[12px] text-ink-3">{d.emAndamento ? "hoje" : NOMES[d.diaSemana]} · <span className="num">{br(d.data)}</span></span>
           <span className="num text-[15px] font-semibold text-ink">{d.parcial ? "sem dado" : compacto(d.receitaLiquida)}</span>
           {d.contraSemana != null ? <Delta value={d.contraSemana} /> : d.emAndamento && !d.parcial ? <span className="text-[12px] text-ink-3">em andamento</span> : null}
         </button>
@@ -317,8 +317,8 @@ export default function DiaCliente({ dados, operacao }: { dados: DadosDia; opera
 
           </Panel>
 
-          <PorCanal linhas={dados.porCanal} />
-          <ProdutosDoDia produtos={dados.produtos} />
+          <PorCanal linhas={dados.porCanal} dia={`${nomeDoDia(h.diaSemana)}, ${br(h.data)}`} />
+          <ProdutosDoDia produtos={dados.produtos} dia={`${nomeDoDia(h.diaSemana)}, ${br(h.data)}`} />
         </div>
 
         </div>
@@ -491,15 +491,18 @@ function compacto(v: number) {
  * Tabela no desktop, cartões no celular: oito colunas não cabem em 390px,
  * e rolar uma tabela de lado no telefone esconde metade da linha.
  */
-function PorCanal({ linhas }: { linhas: DiaCanal[] }) {
+function PorCanal({ linhas, dia }: { linhas: DiaCanal[]; dia: string }) {
   if (!linhas.length) return null;
   const nome = (l: DiaCanal) => (l.conta && l.conta !== "Conta principal" ? `${l.canal} · ${l.conta}` : l.canal);
+  const maior = linhas.reduce((a, b) => (b.receitaLiquida > a.receitaLiquida ? b : a));
   return (
-    <Panel className="overflow-hidden mb-3">
-      <div className="px-4 py-3 border-b border-line">
-        <p className="text-[15px] font-semibold text-ink">Por canal</p>
-        <p className="text-[12px] text-ink-3">o dia aberto em cada conta, com visita e mídia onde o canal informa</p>
-      </div>
+    <BarraLista
+      className="mb-2"
+      titulo="Por canal"
+      detalhe={`${nome(maior)} · ${money(maior.receitaLiquida)}`}
+      valor={`${count(linhas.length)} ${linhas.length === 1 ? "conta" : "contas"}`}
+      subtitulo={dia}
+    >
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-[13px]">
           <thead>
@@ -552,24 +555,22 @@ function PorCanal({ linhas }: { linhas: DiaCanal[] }) {
           </li>
         ))}
       </ul>
-    </Panel>
+    </BarraLista>
   );
 }
 
 /* ══ Produtos do dia ═════════════════════════════════════════ */
-function ProdutosDoDia({ produtos }: { produtos: DiaProduto[] }) {
-  const { visible, pagination } = usePagination(produtos, 10);
+function ProdutosDoDia({ produtos, dia }: { produtos: DiaProduto[]; dia: string }) {
+  const primeiro = produtos[0];
   return (
-    <Panel className="overflow-hidden mb-3">
-      <div className="px-4 py-3 border-b border-line">
-        <p className="text-[15px] font-semibold text-ink">Produtos mais vendidos no dia</p>
-        <p className="text-[12px] text-ink-3">pedidos válidos do dia, nos canais escolhidos, por receita</p>
-      </div>
-      {produtos.length === 0 ? (
-        <p className="px-4 py-4 text-[13px] text-ink-3">
-          Nenhum item de pedido registrado neste dia. Canal que entra por lançamento manual tem receita, mas não produto.
-        </p>
-      ) : (
+    <BarraLista
+      className="mb-3"
+      titulo="Produtos vendidos"
+      detalhe={primeiro && `${primeiro.titulo || primeiro.sku} · ${money(primeiro.receita)}`}
+      valor={`${count(produtos.length)} ${produtos.length === 1 ? "produto" : "produtos"}`}
+      subtitulo={dia}
+      vazio={produtos.length ? undefined : "sem item de pedido neste dia"}
+    >
         <>
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-[13px]">
@@ -584,7 +585,7 @@ function ProdutosDoDia({ produtos }: { produtos: DiaProduto[] }) {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((p) => (
+                {produtos.map((p) => (
                   <tr key={p.sku + p.titulo} className="border-t border-line">
                     <td className="px-4 py-2.5">
                       <span className="block max-w-[360px] break-words font-medium text-ink">
@@ -602,7 +603,7 @@ function ProdutosDoDia({ produtos }: { produtos: DiaProduto[] }) {
             </table>
           </div>
           <ul className="md:hidden divide-y divide-line">
-            {visible.map((p) => (
+            {produtos.map((p) => (
               <li key={p.sku + p.titulo} className="px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <span className="min-w-0 text-[13px] font-medium leading-snug text-ink">{p.titulo || p.sku}</span>
@@ -614,10 +615,8 @@ function ProdutosDoDia({ produtos }: { produtos: DiaProduto[] }) {
               </li>
             ))}
           </ul>
-          <Pagination {...pagination} />
         </>
-      )}
-    </Panel>
+    </BarraLista>
   );
 }
 
