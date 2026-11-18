@@ -9,7 +9,10 @@ import { fileURLToPath } from "node:url";
 import { createJiti } from "../node_modules/jiti/lib/jiti.mjs";
 
 const raiz = fileURLToPath(new URL("../", import.meta.url));
-const jiti = createJiti(import.meta.url, { alias: { "@": path.join(raiz, "src") }, interopDefault: true });
+const jiti = createJiti(import.meta.url, {
+  alias: { "@": path.join(raiz, "src"), "server-only": path.join(raiz, "node_modules/server-only/empty.js") },
+  interopDefault: true,
+});
 const { NextRequest, NextResponse } = await jiti.import("next/server");
 const { barrarForaDaExpedicao: barrar } = await jiti.import(path.join(raiz, "src/lib/acesso-expedicao-proxy.ts"));
 
@@ -41,4 +44,19 @@ assert.equal((await pedir("/financeiro", nao)).b, null, "perfil comum continua i
 assert.match((await pedir("/financeiro", nao, "gerizo_expedicao=1")).resposta.headers.get("set-cookie") ?? "", /gerizo_expedicao=;/);
 assert.equal((await pedir("/financeiro", { data: null, error: { code: "PGRST202", message: "sem função" } })).b, null, "antes da migração");
 assert.equal((await pedir("/financeiro", { data: null, error: { code: "57014", message: "tempo" } })).b.status, 503, "sem resposta não libera");
+const { aplicarRecorte } = await jiti.import(path.join(raiz, "src/lib/dados/envios-meli.ts"));
+const envio = (contaId, conta) => ({ contaId, conta, pedido: 1 });
+const dados = {
+  hoje: "2026-11-18", geradoEm: "x", contas: ["São Paulo", "A prazo"],
+  envios: [envio("sp", "São Paulo"), envio("prazo", "A prazo"), { conta: "A prazo", pedido: 2 }],
+  enviados: [envio("prazo", "A prazo")],
+  falhas: [{ conta: "A prazo", motivo: "x" }],
+};
+const soSp = aplicarRecorte(dados, { ids: new Set(["sp"]), nomes: ["São Paulo"] });
+assert.deepEqual(soSp.contas, ["São Paulo"]);
+assert.deepEqual(soSp.envios.map((e) => e.contaId), ["sp"], "outra conta e retrato sem conta ficam fora");
+assert.equal(soSp.enviados.length, 0);
+assert.equal(soSp.falhas.length, 0, "falha da outra conta não aparece");
+assert.equal(aplicarRecorte(dados, { ids: new Set(), nomes: [] }).envios.length, 0, "sem conta marcada não vê pedido");
+assert.equal(aplicarRecorte(dados, null), dados, "perfil comum continua igual");
 console.log("ok");

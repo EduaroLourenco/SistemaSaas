@@ -25,7 +25,9 @@ async function autorizar() {
 
 /** Na resposta de Expedição fica só o andamento de Envios. */
 function somenteEnvios(e: Awaited<ReturnType<typeof estadoDaEmpresa>>) {
-  const etapas = e.pedido?.etapas.filter((x) => x.bloco === "envios") ?? [];
+  /* Sem detalhe nem aviso: eles somam ou citam as outras contas da empresa. */
+  const etapas = (e.pedido?.etapas.filter((x) => x.bloco === "envios") ?? [])
+    .map((x) => ({ ...x, detalhe: undefined, avisos: undefined }));
   return {
     ultima: e.ultima.envios ? { envios: e.ultima.envios } : {},
     pedido: e.pedido && etapas.length

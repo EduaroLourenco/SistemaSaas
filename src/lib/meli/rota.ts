@@ -88,6 +88,11 @@ export async function contaDeExpedicao(id: string): Promise<ContaCanal | null> {
   const sb = await clienteServidor();
   const { data: pode, error } = await sb.rpc("pode_expedir_operacao", { op: op.id });
   if (error || pode !== true) return null;
+  const { data: restrito } = await sb.rpc("acesso_so_expedicao", { p_operacao: op.id });
+  if (restrito !== false) {
+    const { data: liberadas, error: e2 } = await sb.rpc("contas_da_expedicao", { p_operacao: op.id });
+    if (e2 || !((liberadas ?? []) as { id: string }[]).some((c) => c.id === id)) return null;
+  }
   const { data } = await clientePrivilegiado()
     .from("contas_canal")
     .select("id,operacao_id,canal_id,nome,identificador")

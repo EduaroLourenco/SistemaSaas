@@ -288,6 +288,41 @@ export default function EquipeCliente({ equipe }: { equipe: Equipe }) {
                   )}
                 </div>
               </div>
+              {administra && m.papel === "expedicao" && (
+                <fieldset className="mt-3 border-t border-line pt-3">
+                  <legend className="float-left mb-2 w-full text-[12px] font-medium text-ink-2">Contas liberadas</legend>
+                  {equipe.faltaContasExpedicao ? (
+                    <p className="clear-both text-[12px] text-warn">Rode db/49_contas_da_expedicao.sql no Supabase.</p>
+                  ) : (
+                    <div className="clear-both flex flex-wrap gap-x-4 gap-y-1">
+                      {equipe.contasMeli.map((c) => {
+                        const marcada = m.contasExpedicao.includes(c.id);
+                        return (
+                          <label key={c.id} className="flex min-h-11 items-center gap-2 text-[13px] text-ink">
+                            <input
+                              type="checkbox"
+                              className="h-5 w-5 accent-[var(--brand)]"
+                              checked={marcada}
+                              disabled={ocupado}
+                              onChange={() =>
+                                chamar({
+                                  acao: "contas",
+                                  membroId: m.id,
+                                  contas: marcada ? m.contasExpedicao.filter((id) => id !== c.id) : [...m.contasExpedicao, c.id],
+                                })
+                              }
+                            />
+                            {c.nome}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {!equipe.faltaContasExpedicao && !m.contasExpedicao.length && (
+                    <p className="mt-1 text-[12px] text-warn">Sem conta marcada, esta pessoa não vê pedidos.</p>
+                  )}
+                </fieldset>
+              )}
             </Panel>
           ))}
         </div>

@@ -3,6 +3,7 @@ import { operacaoPadrao } from "./operacao";
 import { integracoesDoProvedor } from "@/lib/integracoes/cofre";
 import { meliGet, vendedor } from "@/lib/meli/cliente";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
+import { clienteServidor } from "@/lib/supabase/servidor";
 
 /**
  * Envios do Mercado Livre: o que está pago e ainda não saiu, e até quando.
@@ -223,12 +224,44 @@ export async function atualizarEnvios(operacaoId: string): Promise<DadosEnvios> 
   return v;
 }
 
+export type RecorteContas = { ids: Set<string>; nomes: string[] } | null;
+
+/** Expedição só recebe as contas liberadas. Null: quem pergunta vê todas. */
+async function recorteDaExpedicao(operacaoId: string): Promise<RecorteContas> {
+  const sb = await clienteServidor();
+  const ausente = (c?: string) => c === "PGRST202" || c === "42883";
+  const { data: restrito, error } = await sb.rpc("acesso_so_expedicao", { p_operacao: operacaoId });
+  if (error) {
+    if (ausente(error.code)) return null;
+    throw new Error(`Não consegui conferir seu acesso: ${error.message}`);
+  }
+  if (restrito !== true) return null;
+  const { data, error: e2 } = await sb.rpc("contas_da_expedicao", { p_operacao: operacaoId });
+  /* Sem a lista, não libera conta nenhuma. */
+  if (e2 && !ausente(e2.code)) throw new Error(`Não consegui ler suas contas: ${e2.message}`);
+  const contas = (e2 ? [] : (data ?? [])) as { id: string; nome: string }[];
+  return { ids: new Set(contas.map((c) => c.id)), nomes: contas.map((c) => c.nome) };
+}
+
+export function aplicarRecorte(d: DadosEnvios, r: RecorteContas): DadosEnvios {
+  if (!r) return d;
+  const dentro = (e: EnvioMeli) => Boolean(e.contaId && r.ids.has(e.contaId));
+  return {
+    ...d,
+    contas: r.nomes,
+    envios: d.envios.filter(dentro),
+    enviados: (d.enviados ?? []).filter(dentro),
+    falhas: d.falhas.filter((f) => r.nomes.includes(f.conta)),
+  };
+}
+
 export async function carregarEnvios(): Promise<DadosEnvios> {
   const op = await operacaoPadrao();
   if (!op) return { hoje: brt(Date.now()).slice(0, 10), contas: [], envios: [], falhas: [], geradoEm: new Date().toISOString() };
   const { data } = await clientePrivilegiado().from("agendamentos").select("config").eq("operacao_id", op.id).eq("tipo", TIPO).limit(1).maybeSingle();
   const salvo = data?.config as DadosEnvios | undefined;
-  if (!salvo?.geradoEm) return atualizarEnvios(op.id);
+  const recorte = await recorteDaExpedicao(op.id);
+  if (!salvo?.geradoEm) return aplicarRecorte(await atualizarEnvios(op.id), recorte);
   // O "hoje" e os dias até o limite mudam à meia-noite, mesmo sem retrato novo.
   const hoje = brt(Date.now()).slice(0, 10);
   /* Retrato antigo não traz `saiu`: o substatus guardado responde. */
@@ -241,5 +274,5 @@ export async function carregarEnvios(): Promise<DadosEnvios> {
       dias: e.limite && !saiu ? dias(e.limite.slice(0, 10), hoje) : null,
     };
   });
-  return { ...salvo, hoje, ...separar(lista) };
+  return aplicarRecorte({ ...salvo, hoje, ...separar(lista) }, recorte);
 }

@@ -2,6 +2,7 @@ import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { ORDEM_PAPEL, type Papel } from "./papeis";
 import { operacaoPadrao } from "./operacao";
+import { integracoesDoProvedor } from "@/lib/integracoes/cofre";
 
 /*
  * Só o TIPO é reexportado. `PAPEIS` fica em `papeis.ts` e a tela importa de
@@ -29,6 +30,8 @@ export type Membro = {
   desde: string;
   /** É a própria pessoa que está vendo a tela. */
   euMesmo: boolean;
+  /** Contas liberadas, para quem é Expedição. */
+  contasExpedicao: string[];
 };
 
 export type Convite = {
@@ -49,6 +52,9 @@ export type Equipe = {
   membros: Membro[];
   convites: Convite[];
   faltaMigracao: string | null;
+  /** Contas do Mercado Livre que podem ser liberadas à Expedição. */
+  contasMeli: { id: string; nome: string }[];
+  faltaContasExpedicao: boolean;
 };
 
 const VAZIA: Equipe = {
@@ -58,6 +64,8 @@ const VAZIA: Equipe = {
   membros: [],
   convites: [],
   faltaMigracao: null,
+  contasMeli: [],
+  faltaContasExpedicao: false,
 };
 
 function faltando(code?: string) {
@@ -114,6 +122,22 @@ export async function carregarEquipe(): Promise<Equipe> {
     ((usuarios ?? []) as { id: string; nome: string | null; email: string }[]).map((u) => [u.id, u])
   );
 
+  const administra = meuPapel === "proprietario" || meuPapel === "administrador";
+  const temExpedicao = (membros ?? []).some((m) => m.papel === "expedicao");
+  const liberadas = new Map<string, string[]>();
+  let contasMeli: Equipe["contasMeli"] = [];
+  let faltaContasExpedicao = false;
+  if (administra && temExpedicao) {
+    contasMeli = (await integracoesDoProvedor("mercado_livre", ativa.id))
+      .filter((i) => i.ref)
+      .map((i) => ({ id: i.contaCanalId as string, nome: i.nome }));
+    const { data, error } = await sb.rpc("contas_expedicao_da_empresa", { p_organizacao: organizacaoId });
+    faltaContasExpedicao = error?.code === "PGRST202" || error?.code === "42883" || error?.code === "42P01";
+    for (const l of (error ? [] : (data ?? [])) as { membro_id: string; conta_canal_id: string }[]) {
+      liberadas.set(l.membro_id, [...(liberadas.get(l.membro_id) ?? []), l.conta_canal_id]);
+    }
+  }
+
   const lista: Membro[] = (membros ?? []).map((m) => {
     const u = porUsuario.get(m.usuario_id as string);
     return {
@@ -126,6 +150,7 @@ export async function carregarEquipe(): Promise<Equipe> {
       papel: m.papel as Papel,
       desde: m.criado_em as string,
       euMesmo: m.usuario_id === eu,
+      contasExpedicao: liberadas.get(m.id as string) ?? [],
     };
   });
   lista.sort(
@@ -154,5 +179,7 @@ export async function carregarEquipe(): Promise<Equipe> {
     membros: lista,
     convites: pendentes,
     faltaMigracao: eConvites && faltando(eConvites.code) ? "db/20_cadastro_e_convites.sql" : null,
+    contasMeli,
+    faltaContasExpedicao,
   };
 }

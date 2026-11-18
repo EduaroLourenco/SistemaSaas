@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     papel?: string;
     membroId?: string;
     conviteId?: string;
+    contas?: string[];
   };
   try {
     corpo = await req.json();
@@ -76,6 +77,24 @@ export async function POST(req: Request) {
         p_membro: corpo.membroId,
         p_papel: corpo.papel,
       });
+      if (error) {
+        const t = erroDoBanco(error);
+        return NextResponse.json({ erro: t.erro }, { status: t.status });
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    case "contas": {
+      if (!corpo.membroId || !Array.isArray(corpo.contas)) {
+        return NextResponse.json({ erro: "Pedido incompleto." }, { status: 400 });
+      }
+      const { error } = await sb.rpc("definir_contas_expedicao", {
+        p_membro: corpo.membroId,
+        p_contas: corpo.contas,
+      });
+      if (error?.code === "PGRST202" || error?.code === "42883") {
+        return NextResponse.json({ erro: "Rode db/49_contas_da_expedicao.sql no Supabase." }, { status: 503 });
+      }
       if (error) {
         const t = erroDoBanco(error);
         return NextResponse.json({ erro: t.erro }, { status: t.status });
