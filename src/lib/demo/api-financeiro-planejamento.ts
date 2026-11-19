@@ -2,7 +2,8 @@ import { corpoDemo, demoJson } from "./http";
 import { getDemoState, updateDemoState } from "./store";
 import { produtosDemo, DEMO_OPERACAO, DEMO_SINCRONIZADO } from "./fixtures-base";
 import { planejamentoDemo } from "./fixtures-planejamento";
-import { faixasFreteDemo, despesasDemo } from "./fixtures-financeiro";
+import { faixasFreteDemo } from "./fixtures-financeiro";
+import { despesasGestaoFinanceiraDemo } from "./fixtures-gestao-financeira";
 
 const id = () => crypto.randomUUID();
 const registros = (v:unknown):Record<string,unknown>[] => Array.isArray(v) ? v.filter((r):r is Record<string,unknown>=>!!r&&typeof r==="object") : [];
@@ -22,7 +23,7 @@ export async function apiFinanceiroPlanejamento(req:Request):Promise<Response|nu
     updateDemoState(s=>{for(const e of edicoes){const chave=String(e.produtoId);s.custos[chave]={...s.custos[chave],...Object.fromEntries(permitidos.filter(k=>k in e).map(k=>[k,e[k]]))};}});return demoJson({ok:true,gravados:edicoes.length});
   }
   if(path==="/api/custos/faixas") { const faixas=registros(corpo.faixas);if(faixas.some(f=>Number(f.pesoMax)<=Number(f.pesoMin)||Number(f.valor)<0))return demoJson({erro:"Confira os pesos e valores das faixas."},400);const apagar=Array.isArray(corpo.apagar)?corpo.apagar:[];updateDemoState(s=>{s.faixasFrete=faixas.filter(f=>!apagar.includes(f.id)).map(f=>({...f,id:f.id||id()}));});return demoJson({ok:true}); }
-  if(path==="/api/custos/canal") { const apagar=Array.isArray(corpo.apagar)?corpo.apagar:[];const novas=registros(corpo.despesas).map(d=>({...d,id:d.id||id()}));updateDemoState(s=>{s.despesasCanal=[...(s.despesasCanal??despesasDemo).filter(d=>!apagar.includes((d as {id:string}).id)),...novas];});return demoJson({ok:true}); }
+  if(path==="/api/custos/canal") { const apagar=Array.isArray(corpo.apagar)?corpo.apagar:[];const novas=registros(corpo.despesas).map(d=>({...d,id:d.id||id()}));updateDemoState(s=>{s.despesasCanal=[...(s.despesasCanal??despesasGestaoFinanceiraDemo(s)).filter(d=>!apagar.includes((d as {id:string}).id)&&!novas.some(n=>n.id===(d as {id:string}).id)),...novas];});return demoJson({ok:true}); }
   if(path==="/api/custos/produto"&&corpo.acao==="abastecer")return demoJson({criados:0,ligados:0});
   if(path==="/api/custos/planilha"&&req.method==="POST") {
     const arquivo=corpo.arquivo;if(!(arquivo instanceof File))return demoJson({erro:"Selecione uma planilha XLSX."},400);

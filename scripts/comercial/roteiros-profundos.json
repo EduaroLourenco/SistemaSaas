@@ -1,0 +1,50 @@
+{
+  "versao": 1,
+  "nota": "Histórias do cenário fictício Atlas Casa. Movimento de preço e volume indica uma pista, não comprova causalidade. O dia 18/11 permanece identificado como parcial pela interface.",
+  "voz": "pt-BR-FranciscaNeural",
+  "videos": [
+    {
+      "id": "v13",
+      "titulo": "O preço mudou. E as vendas?",
+      "rota": "/anuncios/analise?de=2026-11-05&ate=2026-11-18&vs=nenhum&anuncio=MLB900000000002",
+      "fonte": "AT-LUZ-02; antes 05–11/11, depois 12–18/11/2026. Preço 239,90→259,09; unidades 19→11; visitas 952→952; conversão 2,00%→1,16%; contribuição após Ads 1.577,17→1.029,34.",
+      "cenas": [
+        { "captura": "luz-preco", "nuvem": "Preço subiu. Deu bom?", "legenda": "Preço maior pode esconder um resultado menor.", "fala": "O preço da luminária subiu oito por cento. Boa notícia? Vamos espiar.", "humor": "curioso" },
+        { "captura": "luz-preco", "nuvem": "Olha a mudança aqui", "legenda": "R$ 239,90 → R$ 259,09 · a partir de 12/11", "fala": "De quase duzentos e quarenta para duzentos e cinquenta e nove reais. A mudança aparece aqui.", "humor": "curioso" },
+        { "captura": "luz-volume", "nuvem": "E o volume?", "legenda": "19 → 11 unidades · as visitas ficaram iguais", "fala": "Só que o volume foi de dezenove para onze unidades. E as visitas ficaram iguais.", "humor": "curioso" },
+        { "captura": "luz-volume", "nuvem": "A pista apareceu", "legenda": "Conversão: 2,00% → 1,16%", "fala": "A conversão caiu de dois para um vírgula dezesseis por cento. A pista ficou mais clara.", "humor": "feliz" },
+        { "captura": "luz-volume", "nuvem": "Mais caro. Entrou mais?", "legenda": "Receita: R$ 4.558,10 → R$ 2.849,99", "fala": "O faturamento caiu trinta e sete e meio por cento. Preço maior, receita menor nesse exemplo.", "humor": "curioso" },
+        { "captura": "luz-conversao", "nuvem": "Compare antes de mexer", "legenda": "Preço + volume + visitas, na mesma investigação.", "fala": "Preço, volume e visitas, juntos. É uma pista para investigar, não uma promessa de venda.", "humor": "feliz" }
+      ]
+    },
+    {
+      "id": "v14",
+      "titulo": "Caiu. Foi mesmo o preço?",
+      "rota": "/anuncios/analise?de=2026-11-12&ate=2026-11-18&vs=anterior&anuncio=MLB900000000001",
+      "fonte": "AT-MESA-01; 05–11/11 versus 12–18/11/2026: visitas 833→518, conversão 2,04%→2,51%, unidades 17→13; vitrine 704,91 só desde 16/11. Kit AT-ORG-06 teve 9 unidades em 10/11, durante a relâmpago histórica.",
+      "cenas": [
+        { "captura": "mesa-visitas", "nuvem": "Baixa o preço? Calma!", "legenda": "Antes de mudar o preço, abra a história.", "fala": "Vendeu menos. Bora baixar o preço? Calma, olha as visitas primeiro.", "humor": "curioso" },
+        { "captura": "mesa-visitas", "nuvem": "A entrada diminuiu", "legenda": "Visitas: 833 → 518 · queda de 38%", "fala": "A Mesa Aurora perdeu quase trinta e oito por cento das visitas.", "humor": "curioso" },
+        { "captura": "mesa-conversao", "nuvem": "Opa, esta subiu!", "legenda": "Conversão: 2,04% → 2,51%", "fala": "A conversão, olha só, melhorou. Uma fatia maior das visitas virou venda.", "humor": "feliz" },
+        { "captura": "mesa-preco", "nuvem": "Não foi uma coisa só", "legenda": "O desconto veio no fim do período, em 16/11.", "fala": "O preço caiu no fim do período. Mesmo assim, o volume diminuiu.", "humor": "curioso" },
+        { "captura": "kit-evolucao", "nuvem": "Agora, outro ritmo", "legenda": "Kit organizador: 9 unidades no dia da relâmpago.", "fala": "Agora este kit: nove unidades no dia da relâmpago. Outro ritmo, outra história.", "humor": "feliz" },
+        { "captura": "kit-evolucao", "nuvem": "O gráfico faz a pergunta", "legenda": "Compare visitas, conversão e preço antes de agir.", "fala": "Queda e crescimento pedem contexto. O gráfico ajuda a encontrar a próxima pergunta.", "humor": "feliz" }
+      ]
+    },
+    {
+      "id": "v15",
+      "titulo": "Relâmpago: vendeu e sobrou?",
+      "rota": "/planejamento/resultados",
+      "fonte": "Relâmpago histórica encerrada em 10/11/2026, AT-ORG-06: preço 110,31, piso 107,91, 9un, receita 992,79; comissão 44,68, frete 125,10, CMV 324, embalagem 36, imposto 59,57, contribuição 403,45 e Ads 32,00 = 371,45 antes das despesas fixas. Antes 03–09/11: 17un/7dias=2,43un/dia; depois 11–15/11:14un/5dias=2,8un/dia. Janelas desiguais são comparadas por unidades/dia.",
+      "cenas": [
+        { "captura": "relampago-resultado", "nuvem": "Vendeu. E sobrou?", "legenda": "Uma oferta encerrada, com resultado para conferir.", "fala": "Relâmpago vendeu mais. Mas sobrou dinheiro, ou só fez barulho?",
+          "humor": "curioso" },
+        { "captura": "relampago-precos", "nuvem": "Primeiro, o limite", "legenda": "Preço: R$ 110,31 · piso: R$ 107,91", "fala": "A oferta ficou acima do piso. Cento e dez reais e trinta e um centavos, sem furar seu mínimo.", "humor": "feliz" },
+        { "captura": "relampago-comparacao", "nuvem": "Um dia contra outro dia", "legenda": "09/11: 2 unidades → 10/11: 9 unidades", "fala": "Na comparação da tela, duas unidades no dia anterior. No dia da oferta, nove.", "humor": "feliz" },
+        { "captura": "relampago-resultado", "nuvem": "Receita não é lucro", "legenda": "9 unidades · R$ 992,79 de receita", "fala": "Nove unidades. Quase mil reais de receita. Aí vem a pergunta boa: quanto ficou?", "humor": "curioso" },
+        { "captura": "relampago-custos", "nuvem": "Agora, a conta completa", "legenda": "R$ 371,45 de contribuição após os Ads", "fala": "Descontando os custos da venda e os Ads, ficaram trezentos e setenta e um reais e quarenta e cinco centavos.", "humor": "feliz" },
+        { "captura": "relampago-grafico", "nuvem": "A próxima oferta já tem memória", "legenda": "Contribuição antes das despesas fixas. Dados de exemplo.", "fala": "É contribuição antes das despesas fixas. A oferta fica registrada para você aprender com a próxima.", "humor": "feliz" }
+      ]
+    }
+  ]
+}

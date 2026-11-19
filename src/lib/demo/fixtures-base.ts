@@ -2,13 +2,12 @@ import type { GrupoRecorte } from "@/lib/recorte";
 
 /** Dados exclusivamente fictícios. O cenário não contém identificadores reais. */
 export const DEMO_HOJE = "2026-11-18";
-export const DEMO_INICIO = "2026-09-01";
+export const DEMO_INICIO = "2026-10-05";
 export const DEMO_SINCRONIZADO = `${DEMO_HOJE}T10:30:00-03:00`;
 export const DEMO_OPERACAO = "d0000000-0000-4000-8000-000000000001";
 export const DEMO_EMPRESA = "Atlas Casa";
 export const canaisDemo = [
   { id: "d1000000-0000-4000-8000-000000000001", nome: "Mercado Livre", codigo: "mercado_livre", cor: "#7045d1", contaCanalId: "d2000000-0000-4000-8000-000000000001" },
-  { id: "d1000000-0000-4000-8000-000000000002", nome: "Shopee", codigo: "shopee", cor: "#168679", contaCanalId: "d2000000-0000-4000-8000-000000000002" },
 ];
 export const contasDemo = canaisDemo.map(c => ({ id: c.contaCanalId, nome: `${DEMO_EMPRESA} · ${c.nome}`, canal_id: c.id, canalCodigo: c.codigo }));
 export const opcoesDemo: GrupoRecorte[] = [{ rotulo: "Canais", opcoes: canaisDemo.map(c => ({ valor: c.id, rotulo: c.nome })) }];
@@ -29,18 +28,40 @@ export const diasDemo = (inicio: string, fim: string) => {
 };
 export const somarDiasDemo = (data: string, quantidade: number) => new Date(Date.parse(data + "T12:00:00Z") + quantidade * 86400000).toISOString().slice(0, 10);
 export const mlbDemo = (i: number) => `MLB9000000000${String(i + 1).padStart(2, "0")}`;
+/** Episódio encerrado do cenário: permite comparar antes/durante/depois sem prever vendas. */
+export const RELAMPAGO_HISTORICA_DEMO = {
+  id: "d5000000-0000-4000-8000-000000000003", codigo: "P-DEMO-ORG-RELAMPAGO", nome: "Relâmpago · Organização em foco",
+  sku: "AT-ORG-06", data: "2026-11-10", inicio: "2026-11-10T08:00:00-03:00", fim: "2026-11-10T20:00:00-03:00",
+  preco: 110.31, unidades: 9, visitas: 238, comissaoPct: 4.5,
+} as const;
 export type MovimentoDemo = { data: string; canalId: string; contaId: string; produtoId: string; sku: string; titulo: string; quantidade: number; pedidos: number; receita: number; visitas: number; preco: number; ads: number; comissaoPct: number; freteUnidade: number; estoque: number };
 export const movimentosDemo: MovimentoDemo[] = diasDemo(DEMO_INICIO, DEMO_HOJE).flatMap((data, d) => canaisDemo.flatMap((canal, c) => produtosDemo.map((p, i) => {
   const recente = data >= "2026-11-12";
   const semEstoque = i === 2 && data >= "2026-11-12" && data <= "2026-11-16";
   const unidadesBase = 1 + ((d + i * 2 + c) % 4);
-  const quantidade = semEstoque ? 0 : recente && i < 2 ? Math.max(1, unidadesBase - 1) : unidadesBase;
-  const preco = moedaDemo(p.preco * (i === 1 && recente ? 1.08 : 1));
-  const visitas = Math.round((95 + (d % 7) * 8 + i * 17) * (c ? .6 : 1) * (recente && i === 0 ? .62 : 1));
-  return { data, canalId: canal.id, contaId: canal.contaCanalId, produtoId: p.id, sku: p.sku, titulo: p.titulo, quantidade, pedidos: quantidade ? 1 : 0, receita: moedaDemo(preco * quantidade), visitas, preco, ads: c ? 0 : moedaDemo(11 + i * 4 + (d % 5)), comissaoPct: c ? 14 : p.tipo === "premium" ? 13.5 : 8.5, freteUnidade: c ? 9.8 : p.peso > 20 ? 39.9 : p.peso > 5 ? 24.9 : 13.9, estoque: semEstoque ? 0 : p.estoque };
+  const emCampanha = data >= "2026-10-19" && data <= "2026-11-01" && i < 3;
+  const ofertaAtual = data >= "2026-11-16" && [0, 3, 4, 5].includes(i);
+  const relampagoHistorica = p.sku === RELAMPAGO_HISTORICA_DEMO.sku && data === RELAMPAGO_HISTORICA_DEMO.data;
+  const quantidade = relampagoHistorica ? RELAMPAGO_HISTORICA_DEMO.unidades : semEstoque ? 0 : recente && i < 2 ? Math.max(1, unidadesBase - 1) : unidadesBase + (emCampanha ? 1 : 0);
+  const preco = relampagoHistorica ? RELAMPAGO_HISTORICA_DEMO.preco : moedaDemo(p.preco * (emCampanha || ofertaAtual ? .94 : i === 1 && recente ? 1.08 : 1));
+  const visitas = relampagoHistorica ? RELAMPAGO_HISTORICA_DEMO.visitas : Math.round((95 + (d % 7) * 8 + i * 17) * (c ? .6 : 1) * (recente && i === 0 ? .62 : 1));
+  return { data, canalId: canal.id, contaId: canal.contaCanalId, produtoId: p.id, sku: p.sku, titulo: p.titulo, quantidade, pedidos: quantidade ? 1 : 0, receita: moedaDemo(preco * quantidade), visitas, preco, ads: c ? 0 : moedaDemo(11 + i * 4 + (d % 5)), comissaoPct: relampagoHistorica ? RELAMPAGO_HISTORICA_DEMO.comissaoPct : c ? 14 : p.tipo === "premium" ? 13.5 : 8.5, freteUnidade: c ? 9.8 : p.peso > 20 ? 39.9 : p.peso > 5 ? 24.9 : 13.9, estoque: semEstoque ? 0 : p.estoque };
 })));
 export function filtrarMovimentosDemo(inicio = DEMO_INICIO, fim = DEMO_HOJE, canal = "") {
   const selecionados = canal.split(",").filter(Boolean);
   return movimentosDemo.filter(m => m.data >= inicio && m.data <= fim && (!selecionados.length || selecionados.some(c => c === m.canalId || c === m.contaId || c === `conta:${m.contaId}`)));
 }
 export const somarDemo = <T,>(linhas: T[], valor: (l: T) => number) => moedaDemo(linhas.reduce((s, l) => s + valor(l), 0));
+export const precoAtualProdutoDemo = (sku: string) => movimentosDemo.findLast(m => m.sku === sku)?.preco ?? produtosDemo.find(p => p.sku === sku)?.preco ?? 0;
+
+/** Os movimentos acima representam vendas válidas; estes três pedidos completam o bruto. */
+export const cancelamentosCenarioDemo = [
+  { id: "cancelamento-demo-1", codigo: "990000009001", data: "2026-10-14", produto: produtosDemo[0], quantidade: 1, total: produtosDemo[0].preco },
+  { id: "cancelamento-demo-2", codigo: "990000009002", data: "2026-11-04", produto: produtosDemo[2], quantidade: 2, total: moedaDemo(produtosDemo[2].preco * 2) },
+  { id: "cancelamento-demo-3", codigo: "990000009003", data: "2026-11-14", produto: produtosDemo[1], quantidade: 1, total: moedaDemo(produtosDemo[1].preco * 1.08) },
+];
+export function resumoCancelamentosDemo(inicio = DEMO_INICIO, fim = DEMO_HOJE, canal = "") {
+  const dentro = !canal || canal.split(",").some(c => [canaisDemo[0].id, contasDemo[0].id, `conta:${contasDemo[0].id}`].includes(c));
+  const linhas = dentro ? cancelamentosCenarioDemo.filter(c => c.data >= inicio && c.data <= fim) : [];
+  return { pedidos: linhas.length, valor: somarDemo(linhas, c => c.total), linhas };
+}

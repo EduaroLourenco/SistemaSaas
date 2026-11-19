@@ -12,7 +12,7 @@ import { FilterSheet, Field, Select } from "@/components/ui/controls";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { BlocosDoSku } from "./blocos-sku";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { DadosAnalise } from "@/lib/dados/analise";
 import type { AnuncioAnalisado } from "@/lib/analise";
 import { FILAS, prepararAnuncios, pertenceFila, resumoAnuncios, sinalAnuncio, type FilaAnuncios } from "@/lib/central-anuncios";
@@ -216,7 +216,10 @@ function Dado({nome,valor,nota,variacao}:{nome:string;valor:React.ReactNode;nota
 
 function Detalhe({item:a,periodo,porDia,antes,motivoVisitas,itens,fechar,abrir,atualizar,atualizando}:{item:AnuncioAnalisado;periodo:string;porDia:boolean;antes:Totais|null|undefined;motivoVisitas?:string;itens:AnuncioAnalisado[];fechar:()=>void;abrir:(id:string)=>void;atualizar:()=>void;atualizando:boolean}) {
   const [aba,setAba]=React.useState<Aba>("desempenho");
-  const [serie,setSerie]=React.useState<"vendas"|"visitas"|"receita">("vendas");
+  const [serie,setSerie]=React.useState<"vendas"|"visitas"|"receita"|"conversao">("vendas");
+  const historico = a.semanas.map(s=>({...s,conversao:s.visitas>0?(s.vendasComVisita??s.vendas)/s.visitas*100:null,referencia:Number.isFinite(s.precoIdeal)&&s.precoIdeal>0?s.precoIdeal:null}));
+  const temReferencia = historico.some(s=>s.referencia!=null);
+  const temPrecos = historico.some(s=>s.precoRealizado!=null||s.precoAnunciado!=null);
   const m=a.metricas;
   const ref=m.precoIdeal || a.precoReferencia;
   const ultimaVenda=[...a.semanas].reverse().find(s=>s.vendas>0);
@@ -238,14 +241,29 @@ function Detalhe({item:a,periodo,porDia,antes,motivoVisitas,itens,fechar,abrir,a
         <p className="ads-source">{periodo}</p>
         <dl className="ads-metrics"><Dado nome="Receita" valor={medido(a,money(m.receita))} variacao={compara&&<Variacao atual={m.receita} antes={antes?.receita??null} formato={moneyShort}/>}/><Dado nome="Unidades" valor={medido(a,count(m.vendas))} variacao={compara&&<Variacao atual={m.vendas} antes={antes?.vendas??null} formato={count}/>}/><Dado nome="Visitas" valor={m.visitas===0&&motivoVisitas?"Sem coleta":medido(a,count(m.visitas))} variacao={compara&&m.visitas>0&&<Variacao atual={m.visitas} antes={antes?.visitas??null} formato={count} motivo={motivoVisitas}/>}/><Dado nome="Conversão" valor={m.visitas?pct(m.conversao,2):"Sem base"} variacao={compara&&<Variacao atual={m.visitas?m.conversao:null} antes={taxa(antes??null)} formato={v=>pct(v,2)}/>}/></dl>
         {a.semanas.length>0?<>
-          <div className="ads-chart-switch" role="group" aria-label="Métrica no período">{([['vendas','Unidades'],['visitas','Visitas'],['receita','Receita']] as const).map(([v,n])=><button key={v} aria-pressed={serie===v} onClick={()=>setSerie(v)}>{n}</button>)}</div>
-          <div className="ads-chart"><ResponsiveContainer width="100%" height="100%" minWidth={0}><BarChart data={a.semanas} margin={{top:12,right:8,bottom:0,left:0}}><XAxis dataKey="semana" tick={{fontSize:11,fill:"var(--ink-3)"}} axisLine={false} tickLine={false} minTickGap={20}/><YAxis width={50} tick={{fontSize:11,fill:"var(--ink-3)"}} tickLine={false} axisLine={false} tickFormatter={v=>serie==='receita'?`${Math.round(v/1000)} mil`:count(v)}/><Tooltip formatter={v=>serie==='receita'?money(Number(v)):count(Number(v))} contentStyle={{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:8}}/><Bar dataKey={serie} name={serie==='vendas'?'Unidades':serie==='visitas'?'Visitas':'Receita'} fill="var(--s1)" radius={[3,3,0,0]} isAnimationActive={false}/></BarChart></ResponsiveContainer></div>
-          <details className="ads-disclosure"><summary>Valores por {unidade}</summary><div className="ads-week-table"><table><thead><tr><th>{porDia?"Dia":"Semana"}</th><th>Unidades</th><th>Visitas</th><th>Receita</th></tr></thead><tbody>{a.semanas.map(s=><tr key={s.semana}><th scope="row">{s.intervalo}</th><td>{count(s.vendas)}</td><td>{count(s.visitas)}</td><td>{money(s.receita)}</td></tr>)}</tbody></table></div></details>
+          <div className="ads-chart-switch" role="group" aria-label="Métrica no período">{([['vendas','Unidades'],['visitas','Visitas'],['receita','Receita'],['conversao','Conversão']] as const).map(([v,n])=><button key={v} aria-pressed={serie===v} onClick={()=>setSerie(v)}>{n}</button>)}</div>
+          <div className="ads-chart" role="img" aria-label={`${serie==='conversao'?'Conversão':serie==='vendas'?'Unidades':serie==='visitas'?'Visitas':'Receita'} por ${unidade} no período selecionado`}><ResponsiveContainer width="100%" height="100%" minWidth={0}><BarChart data={historico} margin={{top:12,right:8,bottom:0,left:0}}><XAxis dataKey="semana" tick={{fontSize:11,fill:"var(--ink-3)"}} axisLine={false} tickLine={false} minTickGap={20}/><YAxis width={50} tick={{fontSize:11,fill:"var(--ink-3)"}} tickLine={false} axisLine={false} tickFormatter={v=>serie==='receita'?`${Math.round(v/1000)} mil`:serie==='conversao'?pct(Number(v),1):count(v)}/><Tooltip formatter={v=>serie==='receita'?money(Number(v)):serie==='conversao'?pct(Number(v),2):count(Number(v))} contentStyle={{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:8}}/><Bar dataKey={serie} name={serie==='vendas'?'Unidades':serie==='visitas'?'Visitas':serie==='conversao'?'Conversão':'Receita'} fill="var(--s1)" radius={[3,3,0,0]} isAnimationActive={false}/></BarChart></ResponsiveContainer></div>
+          <details className="ads-disclosure"><summary>Valores por {unidade}</summary><div className="ads-week-table"><table><thead><tr><th>{porDia?"Dia":"Semana"}</th><th>Unidades</th><th>Visitas</th><th>Receita</th><th>Conversão</th></tr></thead><tbody>{historico.map(s=><tr key={s.semana}><th scope="row">{s.intervalo}</th><td>{count(s.vendas)}</td><td>{count(s.visitas)}</td><td>{money(s.receita)}</td><td>{s.conversao==null?"Sem base":pct(s.conversao,2)}</td></tr>)}</tbody></table></div></details>
         </>:<div className="ads-empty"><h3>Sem histórico neste período</h3><p>Preço e estoque continuam disponíveis nas outras abas.</p></div>}
         <details className="ads-disclosure"><summary>Critérios dos filtros</summary><p>“Abaixo/acima da tabela” exige diferença de pelo menos 3% em relação à referência. “Baixa conversão” reúne mais visitas e menos conversão que a média dos anúncios com histórico. “Poucas visitas” exige pelo menos duas vendas e conversão acima dessa média. São sinais para investigar, não causas confirmadas.</p></details>
       </>}
       {aba==="precos"&&<>
         <dl className="ads-price-grid"><Dado nome="Vitrine · cadastro" valor={a.precoAtual==null?"Sem leitura":money(a.precoAtual)} nota={`Sincronização: ${data(a.sincronizadoEm)}`}/><Dado nome="Preço de referência" valor={ref?money(ref):"Sem referência"} nota="Fórmula base"/><Dado nome="Preço pago" valor={m.precoPraticado==null?"Sem venda":money(m.precoPraticado)} nota={ultimaVenda?`Média · ${ultimaVenda.semana}`:undefined}/><Dado nome="Vitrine no período" valor={m.precoVitrine==null?"Sem leitura":money(m.precoVitrine)} nota={ultimaVitrine?.semana}/></dl>
+        {temPrecos&&<section className="ads-price-history" aria-labelledby={`ads-price-history-${a.mlb}`}>
+          <h3 id={`ads-price-history-${a.mlb}`}>Preço pago e vitrine</h3>
+          <p>Leituras disponíveis no período.</p>
+          <div className="ads-price-legend" aria-hidden="true"><span><i/>Pago</span><span><i/>Vitrine</span>{temReferencia&&<span><i/>Referência cadastrada</span>}</div>
+          <div className="ads-price-chart" role="img" aria-label="Evolução do preço pago e das leituras da vitrine. Valores completos na tabela de preços por período.">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}><LineChart data={historico} margin={{top:12,right:14,bottom:0,left:0}}>
+              <XAxis dataKey="semana" tick={{fontSize:11,fill:"var(--ink-3)"}} axisLine={false} tickLine={false} minTickGap={24}/>
+              <YAxis width={68} domain={["auto","auto"]} tick={{fontSize:11,fill:"var(--ink-3)"}} axisLine={false} tickLine={false} tickFormatter={v=>moneyShort(Number(v))}/>
+              <Tooltip formatter={(v,n)=>[money(Number(v)),String(n??"Preço")]} contentStyle={{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:8}}/>
+              <Line dataKey="precoRealizado" name="Preço pago" stroke="var(--s1)" strokeWidth={2} dot={{r:3,strokeWidth:1.5}} activeDot={{r:5}} connectNulls={false} isAnimationActive={false}/>
+              <Line dataKey="precoAnunciado" name="Vitrine" stroke="var(--s2)" strokeWidth={2} dot={{r:3,strokeWidth:1.5}} activeDot={{r:5}} connectNulls={false} isAnimationActive={false}/>
+              {temReferencia&&<Line dataKey="referencia" name="Referência cadastrada" stroke="var(--ink-3)" strokeWidth={1.5} strokeDasharray="5 5" dot={false} connectNulls={false} isAnimationActive={false}/>}
+            </LineChart></ResponsiveContainer>
+          </div>
+        </section>}
         <Button onClick={atualizar} disabled={atualizando}><RefreshCw size={16} className={atualizando?"animate-spin":""}/>{atualizando?"Consultando…":"Atualizar este preço"}</Button>
         <dl className="ads-price-grid"><Dado nome="Tarifa cobrada" valor={m.tarifaCobrada==null?"Sem leitura":pct(m.tarifaCobrada,2)} nota={`${pct(m.coberturaTarifa*100)} da receita coberta`}/><Dado nome="Diferença acumulada" valor={a.semanas.length&&ref?money(m.subsidio):"Sem base"} nota="Vendas abaixo da referência"/></dl>
         <details className="ads-disclosure"><summary>Como comparar os preços</summary><p>O preço pago é a média do último {unidade} com venda. A vitrine é o preço publicado na última leitura da semana. A referência vem da Fórmula base; quando não existe referência histórica, usa a fórmula atual. A diferença acumulada soma valores abaixo dessa referência e não representa perda de lucro.</p></details>

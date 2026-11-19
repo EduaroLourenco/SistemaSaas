@@ -1,8 +1,8 @@
-.gerizo-demo-ribbon { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px 20px; padding:12px 24px; background:var(--brand-wash); border-bottom:1px solid var(--brand-edge); color:var(--ink-2); font-size:13px; }
+.gerizo-demo-ribbon { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px 20px; padding:4px 24px; background:var(--panel-2); border-bottom:1px solid var(--line); color:var(--ink-2); font-size:13px; }
 .gerizo-demo-ribbon > span { display:flex; align-items:center; flex-wrap:wrap; gap:6px 14px; }
 .gerizo-demo-ribbon strong { color:var(--brand); font-weight:600; }
 .gerizo-demo-ribbon > div { display:flex; align-items:center; gap:18px; }
-.gerizo-demo-ribbon button,.gerizo-demo-ribbon a { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:32px; font-size:13px; font-weight:500; }
+.gerizo-demo-ribbon button,.gerizo-demo-ribbon a { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; font-size:13px; font-weight:500; }
 .gerizo-demo-ribbon a { text-decoration:underline; text-underline-offset:3px; }
 .gerizo-demo-loading { min-height:260px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:12px; padding:32px 24px; color:var(--ink-2); text-align:center; font-size:15px; }
 .gerizo-demo-loading h1 { color:var(--ink); font-size:24px; font-weight:600; }

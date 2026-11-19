@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, LocateFixed, Minus, Plus, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { BookOpen, LocateFixed, Minus, X } from "lucide-react";
 import { TOUR_REAL, capituloDaRotaTourReal, caminhoTourReal, type AlvoTourReal } from "@/lib/demo/tour";
+import { passoVisual } from "@/lib/demo/tour-curto";
 import "./tour-real.css";
 
 const CHAVE = "gerizo:demo:tour-real:v1";
@@ -22,14 +24,15 @@ function indiceValido(capitulo: string, passo: number) {
 function localizarAlvo(doc: Document, alvo: AlvoTourReal) {
   try {
     const texto = alvo.texto?.toLocaleLowerCase("pt-BR");
-    return [...doc.querySelectorAll<HTMLElement>(alvo.seletor)].find(el =>
-      !el.closest(".gerizo-real-tour") && el.getClientRects().length > 0 &&
+    const candidatos = [...doc.querySelectorAll<HTMLElement>(alvo.seletor)].filter(el =>
+      !el.closest(".gerizo-real-tour") &&
       (!texto || (el.textContent ?? "").toLocaleLowerCase("pt-BR").includes(texto))
-    ) ?? null;
+    );
+    return candidatos.find(el=>el.getClientRects().length>0) ?? candidatos.find(el=>el.closest("details")) ?? null;
   } catch { return null; }
 }
 
-/** Guia da aplicação real. Não executa ações, não consulta APIs e não lê dados da operação. */
+/** Abre visualizações de leitura. Alterações e decisões continuam nas mãos da pessoa. */
 export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, documentoAlvo }: Props) {
   const caminho = caminhoTourReal(pathname);
   const tituloId = React.useId();
@@ -39,6 +42,9 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
   }));
   const [pronto, setPronto] = React.useState(false);
   const [temAlvo, setTemAlvo] = React.useState(false);
+  const [portal, setPortal] = React.useState<HTMLElement | null>(null);
+  const [aviso, setAviso] = React.useState("");
+  const coach = React.useRef<HTMLDivElement>(null);
   const alvoAtual = React.useRef<HTMLElement | null>(null);
   const ultimaRota = React.useRef(caminho);
   const inicioAnterior = React.useRef(iniciar);
@@ -83,9 +89,32 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
 
   const capitulo = TOUR_REAL.find(c => c.id === estado.capitulo) ?? TOUR_REAL[0];
   const capituloIndice = TOUR_REAL.indexOf(capitulo);
-  const passo = capitulo.passos[Math.min(estado.passo, capitulo.passos.length - 1)];
+  const original = capitulo.passos[Math.min(estado.passo, capitulo.passos.length - 1)];
+  const passo = React.useMemo(()=>passoVisual(original),[original]);
   const quantidadePassos = TOUR_REAL.reduce((s, c) => s + c.passos.length, 0);
   const numeroPasso = TOUR_REAL.slice(0, capituloIndice).reduce((s, c) => s + c.passos.length, 0) + estado.passo + 1;
+
+  React.useEffect(()=>{
+    const doc=documentoAlvo??document;
+    const sincronizar=()=>{const aberto=[...doc.querySelectorAll<HTMLDialogElement>("dialog[open]")].at(-1);const destino=aberto??doc.body;setPortal(atual=>atual===destino?atual:destino);};
+    sincronizar();const observer=new MutationObserver(sincronizar);observer.observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:["open"]});return()=>observer.disconnect();
+  },[documentoAlvo]);
+  React.useEffect(()=>{
+    const doc=documentoAlvo??document;
+    if(!estado.ativo||estado.compacto){delete doc.body.dataset.gerizoTourAtivo;return;}
+    doc.body.dataset.gerizoTourAtivo="true";
+    const medir=()=>doc.documentElement.style.setProperty("--gerizo-coach-height",`${coach.current?.getBoundingClientRect().height??190}px`);
+    medir();const observer=new ResizeObserver(medir);if(coach.current)observer.observe(coach.current);
+    return()=>{observer.disconnect();delete doc.body.dataset.gerizoTourAtivo;doc.documentElement.style.removeProperty("--gerizo-coach-height");};
+  },[estado.ativo,estado.compacto,passo,portal,documentoAlvo]);
+
+  function mostrarAlvo(el:HTMLElement) {
+    const win=el.ownerDocument.defaultView??window, reduzido=win.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if(el.closest("dialog[open]")){el.scrollIntoView({behavior:reduzido?"auto":"smooth",block:"center",inline:"nearest"});return;}
+    const topo=76,limite=coach.current?.getBoundingClientRect().top??win.innerHeight-220,altura=Math.max(80,limite-topo-20),r=el.getBoundingClientRect();
+    const destino=win.scrollY+r.top-topo-Math.max(8,(altura-Math.min(r.height,altura))/2);
+    win.scrollTo({top:Math.max(0,destino),behavior:reduzido?"auto":"smooth"});
+  }
 
   React.useEffect(() => {
     if (ultimaRota.current === caminho) return;
@@ -108,19 +137,28 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
     let marcado: HTMLElement | null = null;
     let encerrado = false;
     let frame = 0;
-    const estilo = doc.createElement("style");
-    estilo.textContent = '[data-gerizo-tour-alvo="true"]{outline:2px solid var(--brand,#7045d1)!important;outline-offset:4px;scroll-margin-block:110px}';
-    estilo.dataset.gerizoTour = "destaque";
-    doc.head.appendChild(estilo);
+    const realizadas = new Set<number>();
     const buscar = () => {
       if (encerrado) return;
-      const el = localizarAlvo(doc, passo.alvo!);
+      for(const [indice,acao] of (passo.demonstrar??[]).entries()){
+        if(realizadas.has(indice))continue;
+        const controle=localizarAlvo(doc,acao);
+        if(!controle||!controle.getClientRects().length)continue;
+        realizadas.add(indice);
+        if(controle.getAttribute("aria-selected")!=="true"&&controle.getAttribute("aria-pressed")!=="true")controle.click();
+        requestAnimationFrame(buscar);return;
+      }
+      let el = localizarAlvo(doc, passo.alvo!);
+      if(el?.matches("input[type=file]"))el=el.closest("label")??el.parentElement;
+      const detalhe=el?.closest<HTMLDetailsElement>("details");if(detalhe&&!detalhe.open)detalhe.open=true;
+      if(!el?.getClientRects().length)el=null;
       if (el === marcado) return;
       marcado?.removeAttribute("data-gerizo-tour-alvo");
       marcado = el;
       if (el) el.setAttribute("data-gerizo-tour-alvo", "true");
       alvoAtual.current = el;
       setTemAlvo(Boolean(el));
+      if(el)requestAnimationFrame(()=>{if(!encerrado&&el?.isConnected)mostrarAlvo(el);});
     };
     const agendar = () => {
       if (frame) return;
@@ -128,7 +166,7 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
     };
     buscar();
     const observador = new MutationObserver(agendar);
-    observador.observe(doc.body, { childList: true, subtree: true });
+    observador.observe(doc.body, { childList: true, subtree: true, attributes:true, attributeFilter:["open","hidden","aria-expanded","aria-selected"] });
     doc.defaultView?.addEventListener("resize", agendar);
     return () => {
       encerrado = true;
@@ -136,12 +174,18 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
       observador.disconnect();
       doc.defaultView?.removeEventListener("resize", agendar);
       marcado?.removeAttribute("data-gerizo-tour-alvo");
-      estilo.remove();
       alvoAtual.current = null;
     };
   }, [estado.ativo, estado.compacto, passo, caminho, documentoAlvo]);
 
   const ir = React.useCallback((indice: number, etapa: number) => {
+    const aberto=[...document.querySelectorAll<HTMLDialogElement>("dialog[open]")].at(-1);
+    if(aberto){
+      const edicao=[...aberto.querySelectorAll<HTMLButtonElement>("button")].some(b=>!b.closest(".gerizo-real-tour")&&/^(Salvar|Criar|Confirmar|Adicionar)/i.test(b.textContent?.trim()??""));
+      if(edicao){setAviso("Feche esta ficha para continuar o guia.");return;}
+      aberto.querySelector<HTMLButtonElement>('button[aria-label="Fechar painel"],button[aria-label="Fechar"]')?.click();
+    }
+    setAviso("");
     const c = TOUR_REAL[indice];
     const p = c.passos[etapa];
     setEstado({ capitulo: c.id, passo: etapa, ativo: true, compacto: false, terminou: false });
@@ -182,25 +226,23 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
   const localizar = () => {
     const el = alvoAtual.current;
     if (!el) return;
-    const reduzido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.scrollIntoView({ behavior: reduzido ? "auto" : "smooth", block: "center", inline: "nearest" });
+    mostrarAlvo(el);
   };
   const fechado = !estado.ativo || estado.compacto;
   const ultimo = capituloIndice === TOUR_REAL.length - 1 && estado.passo === capitulo.passos.length - 1;
 
-  return <section className={`gerizo-real-tour${fechado ? " gerizo-real-tour--compacto" : ""}`} aria-label="Guia da demonstração" data-tour-active={estado.ativo}>
+  const barra = <section className="gerizo-real-tour gerizo-real-tour--compacto" aria-label="Guia da demonstração"><div className="gerizo-real-tour-header"><span className="gerizo-real-tour-mark"><BookOpen size={17}/></span><div className="gerizo-real-tour-identity"><strong>{estado.terminou?"Continue explorando":capitulo.nome}</strong></div><button type="button" className="gerizo-real-tour-resume" onClick={retomar}>{estado.ativo?"Continuar o guia":"Começar o guia"}</button></div></section>;
+  if(fechado)return barra;
+  const painel=<div ref={coach} className="gerizo-real-tour gerizo-tour-coach" role="region" aria-label="Guia passo a passo">
     <div className="gerizo-real-tour-header">
-      <span className="gerizo-real-tour-mark"><BookOpen size={18} aria-hidden /></span>
-      <div className="gerizo-real-tour-identity"><span>Guia da demonstração</span><strong>{estado.terminou ? "Continue explorando no seu ritmo" : capitulo.nome}</strong></div>
-      {!fechado && <label className="gerizo-real-tour-select"><span className="sr-only">Escolher área do guia</span><select value={capitulo.id} onChange={e => ir(TOUR_REAL.findIndex(c => c.id === e.target.value), 0)}>{TOUR_REAL.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>}
-      {fechado ? <button type="button" className="gerizo-real-tour-resume" onClick={retomar}><Plus size={16} aria-hidden />{estado.terminou ? "Reabrir guia" : estado.ativo ? "Abrir passo" : "Iniciar guia"}</button> : <div className="gerizo-real-tour-header-actions"><button type="button" onClick={() => setEstado(e => ({ ...e, compacto: true }))} aria-label="Minimizar guia"><Minus size={18} aria-hidden /></button><button type="button" onClick={() => setEstado(e => ({ ...e, ativo: false, compacto: true }))} aria-label="Explorar livremente sem o guia"><X size={18} aria-hidden /></button></div>}
+      <label className="gerizo-real-tour-select"><span className="sr-only">Escolher área do guia</span><select value={capitulo.id} onChange={e => ir(TOUR_REAL.findIndex(c => c.id === e.target.value), 0)}>{TOUR_REAL.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
+      <span className="gerizo-tour-count">{estado.passo+1}/{capitulo.passos.length}</span><button type="button" onClick={()=>setEstado(e=>({...e,compacto:true}))} aria-label="Recolher guia"><Minus size={18}/></button><button type="button" onClick={()=>setEstado(e=>({...e,ativo:false,compacto:true}))} aria-label="Fechar guia"><X size={18}/></button>
     </div>
-    {!fechado && <>
-      <div className="gerizo-real-tour-reading" aria-live="polite" aria-atomic="true"><div><p className="gerizo-real-tour-step">Passo {estado.passo + 1} de {capitulo.passos.length} nesta área</p><h2 id={tituloId}>{passo.titulo}</h2><p>{passo.descricao}</p></div><div className="gerizo-real-tour-experiment"><span>Experimente</span><p>{passo.experimentar}</p>{temAlvo && <button type="button" onClick={localizar}><LocateFixed size={15} aria-hidden />Localizar na tela</button>}</div></div>
-      <div className="gerizo-real-tour-footer"><span>{capituloIndice + 1} de {TOUR_REAL.length} áreas</span><button type="button" className="gerizo-real-tour-free" onClick={() => setEstado(e => ({ ...e, ativo: false, compacto: true }))}>Explorar livremente</button><div><button type="button" disabled={numeroPasso === 1} onClick={anterior}>Anterior</button><button type="button" className="gerizo-real-tour-next" onClick={proximo}>{ultimo ? "Concluir guia" : estado.passo === capitulo.passos.length - 1 ? "Próxima área" : "Próximo passo"}</button></div></div>
+      <div className="gerizo-tour-short-copy" key={passo.id} aria-live="polite"><h2 id={tituloId}>{passo.titulo}</h2><p>{aviso||passo.descricao}</p><span>{passo.experimentar}</span></div>
+      <div className="gerizo-real-tour-footer">{temAlvo&&<button type="button" className="gerizo-tour-show" onClick={localizar}><LocateFixed size={15}/>Mostrar</button>}<div><button type="button" disabled={numeroPasso === 1} onClick={anterior}>Voltar</button><button type="button" className="gerizo-real-tour-next" onClick={proximo}>{ultimo?"Concluir":"Próximo"}</button></div></div>
       <div className="gerizo-real-tour-progress" role="progressbar" aria-label="Posição no guia" aria-valuenow={numeroPasso} aria-valuemin={1} aria-valuemax={quantidadePassos}><span style={{ width: `${numeroPasso / quantidadePassos * 100}%` }} /></div>
-    </>}
-  </section>;
+  </div>;
+  return portal?createPortal(painel,portal):barra;
 }
 
 export default TourReal;

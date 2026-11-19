@@ -70,6 +70,27 @@ const LISTA: Omit<Funcionalidade, "video">[] = [
     narracao: "Simule antes de mudar o preço.", cenas: ["Preço", "Canais", "Frete", "Comparação"] },
 ];
 
-export const FUNCIONALIDADES: Funcionalidade[] = LISTA.map((f) => ({ ...f, video: { src: `/site/videos/${f.id}.mp4`, poster: `/site/videos/${f.id}.webp` } }));
+/** Histórias curtas: dados observados na loja fictícia, sem previsão de resultado. */
+export const HISTORIAS_DECISOES: Funcionalidade[] = [
+  { id:"v13",titulo:"O preço mudou. E as vendas?",categoria:"Dinheiro",duracaoSugerida:41,
+    pergunta:"Mais caro. Vendeu menos. E agora?",gancho:"Olhe além da margem de uma unidade.",
+    descricao:"A luminária ficou mais cara e manteve as visitas. Compare vendas, conversão e preço antes de decidir.",
+    rotaDemo:`${demo}/anuncios/analise?de=2026-11-12&ate=2026-11-18&vs=anterior&anuncio=MLB900000000002`,
+    narracao:"Uma investigação de preço com a tela e os dados do exemplo.",cenas:["Preço e vitrine","Unidades","Visitas","Conversão","Receita"],
+    video:{src:"/site/videos/v13-motion.mp4",poster:"/site/videos/v13-motion.webp"}},
+  { id:"v14",titulo:"Anúncio caiu. Qual é a pista?",categoria:"Mercado Livre",duracaoSugerida:36,
+    pergunta:"Foi o preço ou faltou visita?",gancho:"Dois anúncios podem cair por caminhos diferentes.",
+    descricao:"A mesa perdeu visitas, mas converteu melhor. Use os gráficos para separar os sinais e escolher o que investigar.",
+    rotaDemo:`${demo}/anuncios/analise?de=2026-11-12&ate=2026-11-18&vs=anterior&anuncio=MLB900000000001`,
+    narracao:"Visitas, conversão e preço lado a lado, sem concluir a causa por um único número.",cenas:["Visitas","Conversão","Preço","Evolução de outro produto"],
+    video:{src:"/site/videos/v14-motion.mp4",poster:"/site/videos/v14-motion.webp"}},
+  { id:"v15",titulo:"A relâmpago valeu a pena?",categoria:"Promoções",duracaoSugerida:42,
+    pergunta:"O desconto trouxe resultado?",gancho:"O pico de vendas é só o começo da conta.",
+    descricao:"Confira preço, piso, vendas e o que sobrou depois da mídia. Volte ao histórico antes de repetir a oferta.",
+    rotaDemo:`${demo}/planejamento/resultados`,
+    narracao:"Uma oferta encerrada da loja fictícia, do preço mínimo ao resultado observado.",cenas:["Preço e piso","Antes e durante","Gráfico da campanha","Contribuição depois da mídia","Histórico"],
+    video:{src:"/site/videos/v15-motion.mp4",poster:"/site/videos/v15-motion.webp"}},
+];
+export const FUNCIONALIDADES: Funcionalidade[] = [...HISTORIAS_DECISOES,...LISTA.map((f) => ({ ...f, video: { src: `/site/videos/${f.id}.mp4`, poster: `/site/videos/${f.id}.webp` } }))];
 
 export const funcionalidadePorId = (id: string) => FUNCIONALIDADES.find(item => item.id === id);

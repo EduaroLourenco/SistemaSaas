@@ -76,6 +76,22 @@ export const TOUR_REAL: readonly CapituloTourReal[] = [
     { id: "prioridade-envios", rota: "/mercado-livre/envios", titulo: "Priorize o que precisa ser despachado", descricao: "A lista reúne prazo, situação e produtos dos pedidos. O recorte da conta mantém cada operação no contexto correto.", experimentar: "Filtre os pedidos e selecione um envio do exemplo.", alvo: { seletor: "#conteudo .shipping-workspace, #conteudo .envios-lista" } },
     { id: "documentos-envios", rota: "/mercado-livre/envios", titulo: "Confira os documentos antes de gerar", descricao: "A revisão reúne os pedidos selecionados e as opções de documentos. No cenário fictício, qualquer arquivo gerado é apenas um exemplo de demonstração.", experimentar: "Abra a revisão de documentos para conhecer etiquetas, DANFE e separação.", alvo: { seletor: "#conteudo button", texto: "documentos" } },
   ] },
+  { id: "anual", nome: "Vendas no ano", passos: [
+    { id: "resultado-anual", rota: "/vendas/anual", titulo: "Veja o ano por inteiro", descricao: "Receita e meta mostram o caminho percorrido no ano.", experimentar: "Confira os meses com movimento no exemplo.", alvo: { seletor: "#conteudo .gerizo-annual .decision-comparison" } },
+    { id: "evolucao-anual", rota: "/vendas/anual", titulo: "Compare mês com mês", descricao: "As barras colocam a receita realizada ao lado da meta.", experimentar: "Toque no gráfico para ver os valores.", alvo: { seletor: '#conteudo [data-gerizo-tour="anual-mensal"]' } },
+  ] },
+  { id: "cancelamentos", nome: "Cancelamentos", passos: [
+    { id: "cancelamentos-valor", rota: "/vendas/cancelamentos", titulo: "Quanto voltou da venda?", descricao: "O valor cancelado mostra a parte que saiu do faturamento.", experimentar: "Confira o valor e o período.", alvo: { seletor: '#conteudo [aria-label="Valor cancelado"]' } },
+    { id: "cancelamentos-sku", rota: "/vendas/cancelamentos", titulo: "Encontre o produto", descricao: "A lista mostra quais produtos concentraram os cancelamentos.", experimentar: "Compare unidades e valor por SKU.", alvo: { seletor: '#conteudo [data-gerizo-tour="cancelamentos-sku"]' } },
+  ] },
+  { id: "precificacao", nome: "Preço e cotação", passos: [
+    { id: "precos-canais", rota: "/produtos/precificacao", titulo: "O preço fecha a conta?", descricao: "Preço, frete e taxas entram no cálculo da margem.", experimentar: "Experimente outro preço na coluna Simular.", alvo: { seletor: '#conteudo [aria-label="Tabela de preços e custos"]' } },
+    { id: "cotacao-preco", rota: "/produtos/precificacao", titulo: "Compare os canais", descricao: "A cotação calcula o preço para a margem que você escolheu.", experimentar: "Selecione um produto e informe suas medidas.", alvo: { seletor: '#conteudo [data-gerizo-tour="cotacao-produto"]' } },
+  ] },
+  { id: "conversa", nome: "Conversar", passos: [
+    { id: "perguntas-conversa", rota: "/conversa", titulo: "Comece por uma pergunta", descricao: "As sugestões ajudam a investigar vendas, mídia e envios.", experimentar: "Toque em uma sugestão ou escreva sua pergunta.", alvo: { seletor: '#conteudo [data-gerizo-tour="perguntas-conversa"], #conteudo .op-conversation form' } },
+    { id: "sua-pergunta", rota: "/conversa", titulo: "Pergunte do seu jeito", descricao: "Use a conversa para chegar ao número e à tela certa.", experimentar: "Escreva sua pergunta e toque em enviar.", alvo: { seletor: '#conteudo .op-conversation form' } },
+  ] },
 ];
 
 export function caminhoTourReal(pathname: string) {

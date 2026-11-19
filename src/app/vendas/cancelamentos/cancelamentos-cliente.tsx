@@ -352,7 +352,7 @@ function PorSku({ dados }: { dados: DadosCancelamento }) {
   ];
 
   return (
-    <Panel className="p-4">
+    <Panel data-gerizo-tour="cancelamentos-sku" className="p-4">
       <p className="label mb-2.5">
         SKUs mais cancelados{" "}
         <span className="text-ink-3 font-normal">— os 60 maiores em valor</span>

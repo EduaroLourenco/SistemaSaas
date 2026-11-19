@@ -638,7 +638,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
           </div>
         </details>
 
-        <Panel className="overflow-hidden">
+        <Panel data-gerizo-tour="midia-anuncios" className="overflow-hidden">
           <Tabs
             tabs={[
               { value: "anuncios" as const, label: "Por anúncio", count: linhas.length },

@@ -632,7 +632,7 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
   );
 
   return (
-    <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+    <div data-gerizo-tour="cotacao-produto" className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
       <Panel className="p-5 xl:sticky xl:top-[calc(var(--topbar)+24px)]">
         <h2 className="mb-5 text-[20px] font-semibold tracking-tight text-ink">Produto e medidas</h2>
         <Field label="Produto" className="mb-3 max-w-[480px]">

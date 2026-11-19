@@ -106,6 +106,15 @@
 .ads-metrics dt,.ads-price-grid dt { font-size:14px;line-height:20px; }
 .ads-metrics > div:first-child { grid-column:1/-1;border-bottom:1px solid var(--line);padding-bottom:20px; }
 .ads-metrics > div:first-child dd { font-size:clamp(26px,9.5cqi,40px);line-height:1.2;white-space:nowrap; }
+.ads-price-history { min-width:0; padding-top:6px; }
+.ads-price-history h3 { margin:0; font-size:15px; font-weight:600; color:var(--ink); }
+.ads-price-history > p { margin-top:4px; font-size:13px; color:var(--ink-3); }
+.ads-price-legend { display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:12px; font-size:12px; color:var(--ink-2); }
+.ads-price-legend > span { display:inline-flex; align-items:center; gap:6px; }
+.ads-price-legend i { width:16px; height:0; border-top:2px solid var(--s1); }
+.ads-price-legend > span:nth-child(2) i { border-color:var(--s2); }
+.ads-price-legend > span:nth-child(3) i { border-color:var(--ink-3); border-top-style:dashed; }
+.ads-price-chart { width:100%; min-width:0; height:250px; margin-top:8px; }
 @media(min-width:1240px) {
   .ads-period > div { grid-template-columns:100px auto minmax(0,1fr); }
   .ads-dates { grid-column:3; }
@@ -137,6 +146,8 @@
   .ads-detail-body,.ads-identity { padding:16px; }
   .ads-inspector-head { flex-wrap:wrap; }
   .ads-price-grid dd { font-size:17px; }
+  .ads-price-chart { height:225px; }
+  .ads-chart-switch { flex-wrap:wrap; }
   .ads-identity > :first-child { width:48px!important;height:48px!important;flex-shrink:0; }
   .ads-identity h2 { font-size:16px;line-height:1.4; }
   .ads-comparison { padding:12px; }

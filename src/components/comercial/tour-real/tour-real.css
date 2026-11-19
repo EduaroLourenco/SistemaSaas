@@ -59,3 +59,55 @@
   .gerizo-real-tour-resume { min-height: 44px; padding-inline: 6px; font-size: 13px; }
 }
 @media(prefers-reduced-motion:reduce) { .gerizo-real-tour-progress span { transition: none; } }
+
+/* O guia flutua no espaço reservado; o dado continua livre para uso. */
+.gerizo-tour-coach {
+  position: fixed; inset: auto 24px 24px auto; z-index: 1100;
+  width: min(390px, calc(100vw - 32px)); margin: 0;
+  max-height: calc(100dvh - 110px); overflow: auto;
+  border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: 0 12px 40px -12px rgba(25, 23, 42, .24), 0 2px 8px rgba(25, 23, 42, .05);
+  animation: gerizo-coach-enter 200ms ease-out both;
+}
+.gerizo-tour-coach .gerizo-real-tour-header { flex-wrap: nowrap; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.gerizo-tour-coach .gerizo-real-tour-select { order: 0; flex: 1; width: auto; max-width: none; }
+.gerizo-tour-coach .gerizo-real-tour-select select { min-height: 40px; padding-left: 8px; border-color: transparent; background: transparent; font-size: 14px; font-weight: 600; }
+.gerizo-tour-coach .gerizo-real-tour-header > button { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 8px; color: var(--ink-2); }
+.gerizo-tour-coach .gerizo-real-tour-header > button:hover { background: var(--panel-2); }
+.gerizo-tour-count { flex-shrink: 0; color: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.gerizo-tour-short-copy { padding: 14px 18px 12px; animation: gerizo-coach-copy 180ms ease-out both; }
+.gerizo-tour-short-copy h2 { margin: 0; color: var(--ink); font-size: 17px; line-height: 24px; letter-spacing: -.025em; font-weight: 600; }
+.gerizo-tour-short-copy p { margin: 5px 0 0; color: var(--ink-2); font-size: 14px; line-height: 21px; }
+.gerizo-tour-short-copy > span { display: block; margin-top: 8px; color: var(--ink-3); font-size: 13px; line-height: 19px; }
+.gerizo-tour-coach .gerizo-real-tour-footer { justify-content: space-between; flex-wrap: nowrap; gap: 6px; padding: 10px 12px; }
+.gerizo-tour-coach .gerizo-real-tour-footer > div { width: auto; margin-left: auto; gap: 6px; }
+.gerizo-tour-coach .gerizo-real-tour-footer button { min-height: 44px; padding: 8px 12px; font-size: 14px; }
+.gerizo-tour-coach .gerizo-tour-show { display: inline-flex; align-items: center; gap: 5px; border-color: transparent; padding-left: 4px; color: var(--brand); }
+body[data-gerizo-tour-ativo=true] #conteudo { padding-bottom: calc(var(--gerizo-coach-height, 220px) + 7rem); }
+[data-gerizo-tour-alvo=true] {
+  outline: 2px solid var(--brand, #7657b5) !important; outline-offset: 5px;
+  scroll-margin-block: 100px calc(var(--gerizo-coach-height, 220px) + 7rem);
+  animation: gerizo-tour-focus 1100ms ease-out 2;
+}
+dialog[open]:has(.gerizo-tour-coach) { padding-bottom: calc(var(--gerizo-coach-height, 220px) + 24px); }
+@keyframes gerizo-coach-enter { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+@keyframes gerizo-coach-copy { from { opacity: .3; translate: 0 3px; } to { opacity: 1; translate: 0 0; } }
+@keyframes gerizo-tour-focus { 0% { box-shadow: 0 0 0 5px transparent; } 35% { box-shadow: 0 0 0 9px rgba(118,87,181,.13); } 100% { box-shadow: 0 0 0 5px transparent; } }
+@media(max-width: 767px) {
+  .gerizo-tour-coach { inset: auto 12px calc(88px + env(safe-area-inset-bottom)) 12px; width: auto; max-height: min(290px, calc(100dvh - 190px)); border-radius: 14px; }
+  .gerizo-tour-coach .gerizo-real-tour-header { padding: 4px 8px; }
+  .gerizo-tour-coach .gerizo-real-tour-header > button { width: 44px; height: 44px; flex-basis: 44px; }
+  .gerizo-tour-coach .gerizo-real-tour-select select { font-size: 16px; min-height: 44px; }
+  .gerizo-tour-short-copy { padding: 10px 14px; }
+  .gerizo-tour-short-copy > span { margin-top: 4px; }
+  .gerizo-tour-coach .gerizo-real-tour-footer { padding: 7px 10px; }
+  .gerizo-tour-coach .gerizo-real-tour-footer > div button { flex: none; }
+}
+@media(max-width: 350px) {
+  .gerizo-tour-coach { left: 8px; right: 8px; }
+  .gerizo-tour-coach .gerizo-real-tour-footer button { padding-inline: 8px; }
+  .gerizo-tour-coach .gerizo-tour-show { font-size: 13px; gap: 3px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .gerizo-tour-coach, .gerizo-tour-short-copy, [data-gerizo-tour-alvo=true] { animation: none; }
+}

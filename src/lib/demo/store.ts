@@ -6,9 +6,12 @@ export type DemoState = {
   promocoes: { fila: unknown[] | null; processamentos: unknown[]; historico: unknown[]; campanhas: unknown[]; piso?: { usarComoPiso: boolean; toleranciaPct: number }; folgas?: Record<string, number> };
   exclusoes: string[];
   metas: Record<string, unknown>;
+  lancamentos?: Record<string, Record<string, number>>;
   enviosImpressos: string[];
   faixasFrete?: unknown[];
   despesasCanal?: unknown[];
+  cadastros?: Record<string, unknown[]>;
+  anunciosExtras?: { precos?: Record<string, number>; sincronizadoEm?: string; visitasAtualizadas?: string; comissoesConfiguradas?: boolean };
 };
 
 const CHAVE = "gerizo-demo-real-v1";

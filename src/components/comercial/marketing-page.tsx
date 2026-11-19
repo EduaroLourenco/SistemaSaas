@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Hand, Play } from "lucide-react";
-import { FUNCIONALIDADES, type CategoriaFuncionalidade } from "@/lib/comercial/funcionalidades";
+import { ArrowRight, Hand, Play } from "lucide-react";
+import { FUNCIONALIDADES, HISTORIAS_DECISOES, type CategoriaFuncionalidade } from "@/lib/comercial/funcionalidades";
 import { TelaAnotada, type Marca } from "./anotacao";
 import { FeatureVideoFeed } from "./feature-video-feed";
 import { fontesSite } from "./fontes";
-import { MontadorModulos } from "./montador-modulos";
+import { MontadorModulos, PedidoDemonstracao } from "./montador-modulos";
 import { SiteRodape, SiteTopo } from "./site-comum";
 import "./site.css";
 
@@ -16,7 +16,7 @@ export const COR_CATEGORIA: Record<CategoriaFuncionalidade, string> = {
 };
 
 const PERGUNTAS: { id: string; titulo: string; texto: string; tela: string; alt: string; nota: string; rota: string; marcas: Marca[] }[] = [
-  { id: "v03", titulo: "Caiu? A pista já vem pronta.", texto: "O Gerizo separa a queda por produto e mostra se foi estoque, preço, visitas ou conversão.",
+  { id: "v03", titulo: "Caiu? Veja por onde começar.", texto: "Compare sinais de estoque, preço, visitas e conversão para investigar cada produto.",
     tela: "/site/queda.webp", alt: "Tela Por que caiu, com a queda da receita e o motivo de cada produto", nota: "sem estoque, não é falta de cliente", rota: "/demonstracao/sistema/vendas/queda",
     marcas: [{ tipo: "marca-texto", x: 17.6, y: 22.5, w: 22.4, h: 6 }, { tipo: "circulo", x: 88.6, y: 70.8, w: 9.8, h: 6.6 }] },
   { id: "v07", titulo: "Essa promoção cabe no seu preço?", texto: "Veja o que o Mercado Livre pede ao lado do seu preço mínimo e aceite só o que faz sentido, com revisão antes.",
@@ -38,6 +38,7 @@ function CelularAoVivo() {
   useEffect(() => {
     const el = caixa.current;
     if (!el) return;
+    if (window.matchMedia("(max-width: 760px)").matches) return;
     const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setCarregar(true); obs.disconnect(); } }, { rootMargin: "300px" });
     obs.observe(el);
     return () => obs.disconnect();
@@ -45,8 +46,11 @@ function CelularAoVivo() {
   return (
     <div className="gz-celular" ref={caixa}>
       <div className="gz-celular-tela">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="gz-celular-preview" src="/site/videos/v01.webp" alt="Hoje na loja fictícia Atlas Casa" loading="lazy" width={1080} height={1920}/>
         {carregar && <iframe src="/demonstracao/sistema/vendas/dia" title="Sistema Gerizo de exemplo" loading="lazy" tabIndex={mexer ? 0 : -1} />}
-        {!mexer && <button type="button" className="gz-celular-toque" onClick={() => setMexer(true)}><span><Hand size={17} aria-hidden />Tocar para mexer</span></button>}
+        {!mexer && <button type="button" className="gz-celular-toque gz-celular-ativar" onClick={() => setMexer(true)}><span><Hand size={17} aria-hidden />Tocar para mexer</span></button>}
+        <Link href="/demonstracao/sistema/vendas/dia?tour=1" className="gz-celular-toque gz-celular-abrir"><span>Experimentar em tela cheia <ArrowRight size={17} aria-hidden/></span></Link>
       </div>
     </div>
   );
@@ -54,8 +58,9 @@ function CelularAoVivo() {
 
 export function MarketingPage() {
   const [video, setVideo] = useState<string | null>(null);
-  const montador = useRef<HTMLElement>(null);
-  const pedir = () => montador.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  const [pedido, setPedido] = useState(false);
+  const pedir = () => setPedido(true);
+  useEffect(() => { if (new URLSearchParams(window.location.search).get("demonstracao") === "1") setPedido(true); }, []);
 
   return (
     <main className={`gz ${fontesSite}`} id="inicio">
@@ -67,14 +72,19 @@ export function MarketingPage() {
         <div className="gz-abre-linha">
           <p>Vendas, anúncios do Mercado Livre, promoções, envios e custos lidos juntos, com o próximo passo à vista.</p>
           <div className="gz-abre-acoes">
-            <button type="button" className="gz-btn gz-btn-primary" onClick={() => setVideo(FUNCIONALIDADES[0].id)}><Play size={18} fill="currentColor" aria-hidden />Ver funcionalidades</button>
-            <button type="button" className="gz-link" onClick={pedir}>Pedir demonstração</button>
+            <Link href="/funcionalidades" className="gz-btn gz-btn-primary">Ver funcionalidades <ArrowRight size={18} aria-hidden /></Link>
+            <Link href="/demonstracao/sistema/vendas/dia?tour=1" className="gz-link">Experimentar agora</Link>
           </div>
         </div>
         <div className="gz-abre-tela">
           <TelaAnotada prioridade src="/site/hoje.webp" alt="Tela Hoje do Gerizo com a receita do dia, a meta e os últimos dias" nota="caiu 39% hoje. por quê?"
             marcas={[{ tipo: "circulo", x: 86.4, y: 39.6, w: 11.2, h: 6.4 }, { tipo: "circulo", x: 52.6, y: 26.6, w: 6.8, h: 5.4 }]} />
         </div>
+      </section>
+
+      <section className="gz-historias gz-wrap" aria-labelledby="historias-titulo">
+        <h2 id="historias-titulo">Veja uma decisão acontecer.</h2>
+        <div>{HISTORIAS_DECISOES.map(h=><button type="button" key={h.id} onClick={()=>setVideo(h.id)}><Play size={17} aria-hidden/><span>{h.pergunta}</span><ArrowRight size={17} aria-hidden/></button>)}</div>
       </section>
 
       <section className="gz-perguntas gz-wrap" aria-labelledby="perguntas">
@@ -86,7 +96,7 @@ export function MarketingPage() {
               <p>{p.texto}</p>
               <div className="gz-pergunta-acoes">
                 <button type="button" className="gz-btn gz-btn-line gz-btn-small" onClick={() => setVideo(p.id)}><Play size={15} fill="currentColor" aria-hidden />Assistir</button>
-                <Link className="gz-link" href={p.rota}>Abrir no sistema de exemplo</Link>
+                <Link className="gz-link" href={`${p.rota}${p.rota.includes("?")?"&":"?"}tour=1`}>Experimentar esta tela</Link>
               </div>
             </div>
             <TelaAnotada src={p.tela} alt={p.alt} nota={p.nota} marcas={p.marcas} />
@@ -97,15 +107,15 @@ export function MarketingPage() {
       <section className="gz-vivo" aria-labelledby="vivo">
         <div className="gz-wrap">
           <div>
-            <h2 className="gz-titulo-secao" id="vivo">Ainda na dúvida? Mexa você mesmo.</h2>
-            <p>Uma loja de exemplo, com as mesmas telas que nossos clientes usam. Nada da sua conta, nada é enviado.</p>
+            <h2 className="gz-titulo-secao" id="vivo">Conheça por dentro.</h2>
+            <p>Explore uma loja fictícia nas telas do Gerizo. O guia mostra por onde começar.</p>
             <Link href="/demonstracao/sistema/vendas/dia?tour=1" className="gz-btn gz-btn-primary">Abrir o sistema de exemplo</Link>
           </div>
           <CelularAoVivo />
         </div>
       </section>
 
-      <section className="gz-monte gz-wrap" id="monte" ref={montador} aria-labelledby="monte-titulo" tabIndex={-1}>
+      <section className="gz-monte gz-wrap" id="monte" aria-labelledby="monte-titulo" tabIndex={-1}>
         <div className="gz-monte-cab">
           <h2 className="gz-titulo-secao" id="monte-titulo">Monte seu pacote.</h2>
           <p>Marque o que faz sentido para sua loja. A gente mostra funcionando e passa o preço na conversa.</p>
@@ -115,6 +125,7 @@ export function MarketingPage() {
 
       <SiteRodape />
       {video && <FeatureVideoFeed items={FUNCIONALIDADES} initialId={video} onClose={() => setVideo(null)} />}
+      {pedido && <PedidoDemonstracao escolhidos={[]} aoFechar={() => { setPedido(false); const u=new URL(window.location.href);u.searchParams.delete("demonstracao");window.history.replaceState(window.history.state,"",u); }} />}
     </main>
   );
 }

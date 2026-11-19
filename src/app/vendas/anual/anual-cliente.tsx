@@ -349,7 +349,7 @@ export default function VendasAnual({ dados }: { dados: DadosAnual }) {
         </div>
 
         <div className="decision-chart-pair">
-          {(["mensal", "acumulado"] as const).map((visao) => <Panel key={visao} className="min-w-0 overflow-hidden">
+          {(["mensal", "acumulado"] as const).map((visao) => <Panel key={visao} data-gerizo-tour={`anual-${visao}`} className="min-w-0 overflow-hidden">
             <PanelHeader title={visao === "mensal" ? "Receita por mês" : "Receita acumulada"} hint={visao === "mensal" ? "Realizado e meta · R$" : "Do início do ano até cada mês · R$"} />
             <div className="h-[220px] min-w-0 px-2 pt-4 md:h-[280px]">
               <ResponsiveContainer width="100%" height="100%" minWidth={0}>

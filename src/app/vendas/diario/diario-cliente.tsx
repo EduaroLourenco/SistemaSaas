@@ -236,9 +236,11 @@ const ROTULOS_COLUNA = ["Coluna 1", "Coluna 2", "Coluna 3", "Coluna 4"];
 export default function ComparativoDiario({
   dados,
   canalAtual,
+  colunasIniciais = COLUNAS_INICIAIS,
 }: {
   dados: DadosDiario;
   canalAtual: string;
+  colunasIniciais?: (PeriodoId | "")[];
 }) {
   /* A navegação entra numa transição: a tela antiga fica visível e
      interativa enquanto a nova carrega, em vez de congelar inteira. */
@@ -281,9 +283,9 @@ export default function ComparativoDiario({
   );
 
   const [rascunho, setRascunho] =
-    React.useState<(PeriodoId | "")[]>(COLUNAS_INICIAIS);
+    React.useState<(PeriodoId | "")[]>(colunasIniciais);
   const [aplicado, setAplicado] =
-    React.useState<(PeriodoId | "")[]>(COLUNAS_INICIAIS);
+    React.useState<(PeriodoId | "")[]>(colunasIniciais);
   const [base, setBase] = React.useState<Base>("total");
   const [metricaGrafico, setMetricaGrafico] =
     React.useState<MetricaGrafico>("receita");

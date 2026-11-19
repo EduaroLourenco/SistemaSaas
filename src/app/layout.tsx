@@ -59,7 +59,8 @@ export const viewport: Viewport = {
 /** Aplica o tema salvo antes da primeira pintura — evita piscar. */
 const noFlash = `
 (function(){try{
-  var t=localStorage.getItem("tema");
+  var demo=location.pathname==="/demonstracao"||location.pathname.indexOf("/demonstracao/")===0;
+  var t=demo?(sessionStorage.getItem("tema:demo")||"light"):localStorage.getItem("tema");
   if(t) document.documentElement.setAttribute("data-theme",t);
   var d=localStorage.getItem("densidade");
   if(d) document.documentElement.setAttribute("data-density",d);

@@ -42,7 +42,9 @@ const NOME_CONSULTA: Record<string, string> = {
 const CHAVE_CONVERSA = "conversa-atual";
 
 export default function Conversa() {
-  const chaveConversa = useDemoMode() ? CHAVE_CONVERSA + ":demo" : CHAVE_CONVERSA;
+  const demo = useDemoMode();
+  const chaveConversa = demo ? CHAVE_CONVERSA + ":demo" : CHAVE_CONVERSA;
+  const sugestoes = demo ? ["Qual produto está perdendo vendas?", "Onde os Ads consomem margem?", "Que pedidos preciso despachar hoje?"] : SUGESTOES;
   const [mensagens, setMensagens] = React.useState<Mensagem[]>([]);
   const [entrada, setEntrada] = React.useState("");
   const [pensando, setPensando] = React.useState(false);
@@ -217,9 +219,9 @@ export default function Conversa() {
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-6 md:px-6" aria-live="polite" aria-busy={pensando}>
               {vazio && (
-                <div className="m-auto w-full max-w-xl py-6">
+                <div data-gerizo-tour="perguntas-conversa" className="m-auto w-full max-w-xl py-6">
                   <h2 className="mb-5 text-[24px] font-semibold leading-8 tracking-tight text-ink">O que você quer saber?</h2>
-                  <div className="grid gap-3 sm:grid-cols-2">{SUGESTOES.map((sugestao) => <button key={sugestao} type="button" onClick={() => perguntar(sugestao)} disabled={pensando} className="flex min-h-[76px] items-start justify-between gap-4 rounded-r2 border border-line bg-panel p-4 text-left text-[14px] leading-5 text-ink-2 hover:border-brand-edge hover:bg-brand-wash hover:text-brand disabled:opacity-60"><span>{sugestao}</span><ChevronRight size={16} className="mt-0.5 shrink-0" aria-hidden="true"/></button>)}</div>
+                  <div className="grid gap-3 sm:grid-cols-2">{sugestoes.map((sugestao) => <button key={sugestao} type="button" onClick={() => perguntar(sugestao)} disabled={pensando} className="flex min-h-[76px] items-start justify-between gap-4 rounded-r2 border border-line bg-panel p-4 text-left text-[14px] leading-5 text-ink-2 hover:border-brand-edge hover:bg-brand-wash hover:text-brand disabled:opacity-60"><span>{sugestao}</span><ChevronRight size={16} className="mt-0.5 shrink-0" aria-hidden="true"/></button>)}</div>
                 </div>
               )}
 

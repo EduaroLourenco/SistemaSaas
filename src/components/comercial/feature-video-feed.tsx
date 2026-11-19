@@ -11,7 +11,7 @@ type Props = { items: Funcionalidade[]; initialId: string; onClose: () => void }
 const COR: Record<CategoriaFuncionalidade, string> = {
   Vendas: "#7045d1", "Mercado Livre": "#2f6fe4", Promoções: "#c2367a", Operação: "#0f8f7e", Dinheiro: "#b45b17",
 };
-const linkDemo = (rota: string) => rota.startsWith("/demonstracao") ? rota : `/demonstracao/sistema${rota.startsWith("/") ? rota : "/" + rota}`;
+const linkDemo = (rota: string) => { const u=new URL(rota.startsWith("/demonstracao")?rota:`/demonstracao/sistema${rota.startsWith("/")?rota:"/"+rota}`,"https://gerizo.local");u.searchParams.set("tour","1");return u.pathname+u.search; };
 
 /** Feed vertical: painel lateral no computador e tela cheia no celular. */
 export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
@@ -28,6 +28,7 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
   const [legendas, setLegendas] = useState(true);
   const [progresso, setProgresso] = useState(0);
   const [falhas, setFalhas] = useState<Record<string, boolean>>({});
+  const [carregando, setCarregando] = useState(false);
   const titulo = useId();
   const fechar = useRef(onClose);
   fechar.current = onClose;
@@ -64,15 +65,21 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
     paginas.current.forEach((p) => p && obs.observe(p));
     return () => obs.disconnect();
   }, [pronto, items.length]);
+  useEffect(()=>{
+    if(!pronto||!feed.current)return;
+    const el=feed.current;let altura=el.clientHeight;
+    const observer=new ResizeObserver(()=>{if(el.clientHeight!==altura){altura=el.clientHeight;el.scrollTop=indiceAtivo.current*altura;}});
+    observer.observe(el);return()=>observer.disconnect();
+  },[pronto]);
 
   useEffect(() => {
-    setTocando(false); setProgresso(0);
+    setTocando(false); setProgresso(0); setCarregando(false);
     videos.current.forEach((v, i) => { if (v && i !== ativo) v.pause(); });
     const v = videos.current[ativo];
     if (!v || !pronto) return;
     v.muted = mudo;
     for (const f of v.textTracks) f.mode = legendas ? "showing" : "hidden";
-    void v.play().catch(() => setTocando(false));
+    void v.play().catch(() => { if(indiceAtivo.current===ativo)setTocando(false); });
     return () => v.pause();
     // Só a troca de página inicia o vídeo; som e legenda não reiniciam.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,8 +139,9 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
                       <video ref={(el) => { videos.current[i] = el; }} src={item.video!.src} poster={item.video?.poster} muted={mudo} playsInline loop
                         preload={selecionado || i === ativo + 1 ? "metadata" : "none"} aria-label={`Vídeo: ${item.titulo}`} onClick={() => { const v = videos.current[i]; if (v) { if (v.paused) void v.play(); else v.pause(); } }}
                         onPlay={() => { if (i === indiceAtivo.current) setTocando(true); }} onPause={() => { if (i === indiceAtivo.current) setTocando(false); }}
+                        onWaiting={()=>{if(i===indiceAtivo.current)setCarregando(true);}} onPlaying={()=>{if(i===indiceAtivo.current)setCarregando(false);}}
                         onTimeUpdate={(e) => { if (i === indiceAtivo.current && e.currentTarget.duration) setProgresso(e.currentTarget.currentTime / e.currentTarget.duration); }}
-                        onError={() => setFalhas((f) => ({ ...f, [item.id]: true }))}>
+                        onError={() => {setCarregando(false);setFalhas((f) => ({ ...f, [item.id]: true }));}}>
                         {item.video?.legendas && <track kind="captions" src={item.video.legendas} srcLang="pt-BR" label="Português" default />}
                       </video>
                     ) : (
@@ -145,17 +153,21 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
                       </div>
                     )}
                   </div>
+                  {selecionado&&carregando&&<span className="gz-feed-loading" role="status">Carregando vídeo…</span>}
                   <div className="gz-feed-info">
                     <span className="gz-feed-cat">{item.categoria}</span>
                     <h3>{item.titulo}</h3>
                     <p>{item.descricao}</p>
-                    <Link className="gz-feed-cta" href={linkDemo(item.rotaDemo)} onClick={() => fechar.current()}>Abrir esta tela ao vivo <ArrowUpRight size={17} aria-hidden /></Link>
+                    <Link className="gz-feed-cta" href={linkDemo(item.rotaDemo)} onClick={() => fechar.current()}>Experimentar esta tela <ArrowUpRight size={17} aria-hidden /></Link>
                   </div>
                   {temVideo && selecionado && (
                     <div className="gz-feed-acoes">
                       <button type="button" className="gz-feed-icone" onClick={() => { const v = videos.current[i]; if (v) { if (v.paused) void v.play(); else v.pause(); } }} aria-label={tocando ? "Pausar" : "Reproduzir"}>{tocando ? <Pause size={20} aria-hidden /> : <Play size={20} aria-hidden />}</button>
                       <button type="button" className={`gz-feed-icone${mudo ? " gz-feed-som" : ""}`} onClick={() => setMudo((m) => !m)} aria-label={mudo ? "Ativar som" : "Tirar som"}>{mudo ? <><VolumeX size={20} aria-hidden /><span aria-hidden>Ativar som</span></> : <Volume2 size={20} aria-hidden />}</button>
                       {item.video?.legendas && <button type="button" className="gz-feed-icone" onClick={() => setLegendas((l) => !l)} aria-pressed={legendas} aria-label="Legendas"><Captions size={20} aria-hidden /></button>}
+                      <span className="gz-feed-gesture">{i===items.length-1?"Explore a tela acima":"Deslize para ver mais"}</span>
+                      <button type="button" className="gz-feed-icone gz-feed-step" onClick={()=>ir(ativo-1)} disabled={ativo===0} aria-label="Vídeo anterior"><ChevronUp size={20} aria-hidden/></button>
+                      <button type="button" className="gz-feed-icone gz-feed-step" onClick={()=>ir(ativo+1)} disabled={ativo===items.length-1} aria-label="Próximo vídeo"><ChevronDown size={20} aria-hidden/></button>
                     </div>
                   )}
                 </article>

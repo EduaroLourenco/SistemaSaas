@@ -1,0 +1,249 @@
+GERIZO — TRÊS HISTÓRIAS DE DECISÃO NAS TELAS REAIS
+Base editorial para os vídeos v13, v14 e v15
+Empresa fictícia: Atlas Casa · Mercado Livre · referência em 18/11/2026
+
+COMO USAR ESTE ARQUIVO
+
+Os valores abaixo foram somados dos movimentos do cenário local, não de uma loja real. O histórico vai de 05/10 a 18/11/2026, com referência em 18/11 às 10h30; esse último dia ainda está em andamento. Não há vendas futuras. A oferta encerrada em 10/11 foi adicionada ao mesmo conjunto que alimenta Vendas, Anúncios, Custos, Tráfego e Planejamento.
+
+Reinicie a demonstração antes de gravar. Use as rotas com as datas deste documento; o recorte padrão de uma tela pode ser diferente. Abra a empresa modelo em tela cheia, sem o guia por cima. A gravação deve mostrar a interface real e manter visíveis as datas. Os números do mês inteiro não podem ser apresentados como números da semana.
+
+Nove unidades não são nove pedidos: o cenário organiza as unidades em movimentos diários. Conversão nestas histórias significa unidades divididas pelas visitas medidas. Mostre o mesmo nome que a tela usa.
+
+O movimento conduz a leitura: selecionar produto, chegar ao gráfico, destacar só uma curva ou barra, tocar no período e abrir o preço. A tela não muda sozinha durante a explicação. Até duas pequenas chamadas visuais por cena; os números que não estiverem em foco ficam quietos.
+
+Evitar “o desconto fez vender”, “se baixar vai vender tanto” ou “o Gerizo provou a causa”. Preferir “aconteceu junto”, “o histórico mostra”, “vale investigar” e “o próximo teste”. Cenários hipotéticos de preço devem ser identificados como simulação, sem prometer previsão.
+
+
+V13 — O PREÇO SUBIU. O RESULTADO ACOMPANHOU?
+
+Produto: Luminária de mesa Arco
+SKU: AT-LUZ-02
+Anúncio: MLB900000000002 · Premium
+Pergunta principal: ganhar mais por unidade compensou vender menos?
+
+Dois recortes de sete dias no calendário; o segundo inclui 18/11 ainda em andamento:
+
+                         05–11/11/2026      12–18/11/2026
+Preço pago médio          R$ 239,90          R$ 259,09
+Unidades                  19                11
+Receita                   R$ 4.558,10        R$ 2.849,99
+Visitas                   952               952
+Conversão                 2,00%             1,16%
+Unidades por dia          2,71              1,57
+Margem antes de mídia     37,19%            40,40%
+Contribuição após Ads     R$ 1.577,17        R$ 1.029,34
+
+Até a referência do exemplo, o preço subiu aproximadamente 8%. As unidades recuaram 42,11% e a receita recuou 37,47%. A margem percentual aumentou, mas a contribuição total depois da mídia diminuiu R$ 547,83. O último dia é parcial; não tratar essa variação como fechamento de semana. Isso ainda é contribuição antes das despesas fixas; não chamar de lucro líquido.
+
+Histórico completo, por faixa de preço:
+R$ 225,51: 47 unidades em 14 dias → 3,36 unidades/dia.
+R$ 239,90: 64 unidades em 24 dias → 2,67 unidades/dia.
+R$ 259,09: 11 unidades em 7 dias → 1,57 unidade/dia.
+
+O preço de R$ 225,51 coincidiu com “Casa em foco · outubro”, de 19/10 a 01/11. Não concluir que toda a diferença veio do preço. O histórico contém contexto de campanha, que também pode afetar vendas e tráfego.
+
+CAMINHO EXATO NAS TELAS
+
+1. Abrir:
+/demonstracao/sistema/vendas/queda?de=2026-11-12&ate=2026-11-18
+Buscar AT-LUZ-02 e tocar na linha para expandir. A pista é “preço subiu”.
+
+2. No produto aberto, tocar em “Evolução”. Mostrar a mudança em 12/11 e alternar preço, visitas e conversão conforme os controles da tela. Não simular um botão que não exista.
+
+3. Abrir o anúncio diretamente:
+/demonstracao/sistema/anuncios/analise?de=2026-11-12&ate=2026-11-18&vs=anterior&anuncio=MLB900000000002
+A aba “Desempenho” mostra os números disponíveis no período contra os sete dias anteriores. Alternar os botões “Unidades”, “Visitas”, “Receita” e “Conversão” para mostrar o gráfico diário. O recorte é de sete dias, inclui um dia parcial e não é a semana de segunda a domingo.
+
+4. Tocar na aba “Preços”. Mostrar “Vitrine · cadastro” e “Preço pago”, com suas definições. A vitrine atual está em R$ 259,09; não transformar vitrine em receita realizada.
+
+5. Abrir:
+/demonstracao/sistema/anuncios/preco-performance?de=2026-10-05&ate=2026-11-18
+Buscar AT-LUZ-02 e tocar na linha. O detalhe abre o gráfico de unidades por dia em cada preço. “Ver dados por faixa de preço” revela os valores de cada barra. O melhor desempenho observado não é uma promessa de preço ideal futuro.
+
+6. Conferir os custos com o SKU:
+/demonstracao/sistema/anuncios/trafego-pago?de=2026-11-05&ate=2026-11-11
+e depois o mesmo caminho com de=2026-11-12&ate=2026-11-18.
+Localizar a Luminária e destacar investimento, margem e sobra após mídia. Evitar colocar a DRE inteira no vídeo.
+
+SEQUÊNCIA SUGERIDA, 35–45 SEGUNDOS
+
+0–4s: preço de R$ 239,90 muda para R$ 259,09 sobre a própria linha do produto.
+Voz: “Aumentou o preço. Mas será que ganhou mais?”
+4–11s: abrir o produto e destacar 19 → 11 unidades, com as duas datas.
+Voz: “A luminária ficou oito por cento mais cara. Na comparação, vendeu menos.”
+11–18s: tocar Visitas, depois Conversão; destacar 952 dos dois lados e 2,00% → 1,16%.
+Voz: “As visitas ficaram iguais. A conversão caiu. Aqui tem uma pista para investigar.”
+18–28s: abrir o gráfico por faixa de preço. Destacar unidades/dia, sem movimentar todas as barras.
+Voz: “Veja como o mesmo produto se comportou em cada preço.”
+28–37s: mostrar margem percentual maior e contribuição após Ads menor.
+Voz: “A margem por venda melhorou. O total que sobrou depois da mídia, não.”
+37–43s: voltar ao produto, manter a tela utilizável e encerrar.
+Voz: “Antes de baixar de novo, confira o contexto e escolha o próximo teste.”
+
+
+V14 — CAIU A VENDA. FOI PREÇO OU EXPOSIÇÃO?
+
+Parte A: Mesa lateral Aurora · AT-MESA-01 · MLB900000000001.
+Parte B: Kit organizador de mesa em madeira · AT-ORG-06 · MLB900000000006.
+Pergunta principal: como acompanhar anúncios que caem e anúncios que crescem, sem confundir sinais?
+
+Mesa, dois recortes de sete dias no calendário; o segundo inclui 18/11 ainda em andamento:
+
+                         05–11/11/2026      12–18/11/2026
+Unidades                  17                13
+Receita                   R$ 12.748,30       R$ 9.478,76
+Visitas                   833               518
+Conversão                 2,04%             2,51%
+Preço médio pago          R$ 749,90          R$ 729,14
+
+As visitas caíram 37,82%; as unidades, 23,53%; a receita, 25,65%. A conversão subiu. A vitrine atual está em R$ 704,91 desde 16/11. O preço médio vendido de R$ 729,14 mistura os dias antes e depois dessa oferta, dentro do recorte. Não dizer que R$ 729,14 é o preço que o cliente encontra hoje.
+
+Kit Organizador, duas semanas fechadas de sete dias:
+
+                         02–08/11/2026      09–15/11/2026
+Unidades                  18                25
+Receita                   R$ 2.158,20        R$ 2.911,19
+Visitas                   1.428             1.478
+Conversão                 1,26%             1,69%
+Preço médio pago          R$ 119,90          R$ 116,45
+
+A segunda semana contém a relâmpago de 10/11. As unidades cresceram 38,89%; a receita, 34,89%. Mostrar o crescimento como observação do período, e não como efeito isolado comprovado da oferta.
+
+CAMINHO EXATO NAS TELAS
+
+1. Abrir a Mesa com o recorte certo:
+/demonstracao/sistema/anuncios/analise?de=2026-11-12&ate=2026-11-18&vs=anterior&anuncio=MLB900000000001
+A aba inicial é “Desempenho”. Os botões do gráfico são “Unidades”, “Visitas” e “Receita”. Tocar em “Visitas” e realçar os dias a partir de 12/11. Abrir “Valores por dia” se precisar de uma leitura precisa.
+
+2. Tocar em “Preços”. Mostrar lado a lado “Vitrine · cadastro” e “Preço pago”. Abrir “Preços por dia” para explicar por que oferta atual e média histórica são diferentes.
+
+3. Opcionalmente, abrir a investigação:
+/demonstracao/sistema/vendas/queda?de=2026-11-12&ate=2026-11-18
+Buscar AT-MESA-01, expandir e tocar em “Evolução”. Aqui a pista é “perdeu visitas”.
+
+4. Abrir o anúncio que cresceu em um período fechado:
+/demonstracao/sistema/anuncios/analise?de=2026-11-09&ate=2026-11-15&vs=anterior&anuncio=MLB900000000006
+Mostrar 25 unidades contra 18. Tocar em “Unidades” no gráfico para localizar 10/11; depois em “Receita”. A mudança de período precisa aparecer visualmente antes de comparar os produtos.
+
+5. Para enquadrar o contexto, abrir “Preços” no Kit e mostrar o preço pago por dia. A linha de 10/11 é R$ 110,31; a vitrine atual é R$ 112,71, porque outra campanha começou em 16/11. Não apresentar esses dois valores como simultâneos.
+
+SEQUÊNCIA SUGERIDA, 35–45 SEGUNDOS
+
+0–4s: lista de anúncios, seleção da Mesa, gráfico real abrindo.
+Voz: “A venda caiu. Baixar o preço é o primeiro passo?”
+4–13s: alternar Unidades → Visitas e mostrar a queda de exposição.
+Voz: “Neste anúncio, caíram as visitas. A conversão até melhorou.”
+13–22s: abrir Preços e destacar vitrine atual contra preço pago no período.
+Voz: “Confira também o preço de hoje e o que os clientes realmente pagaram.”
+22–32s: transição visível para o Kit, com datas novas; abrir o gráfico e realçar 10/11.
+Voz: “E este cresceu. O gráfico mostra quando, e o histórico ajuda a entender o contexto.”
+32–42s: encerrar no anúncio com acesso a Produto e à investigação.
+Voz: “Você acompanha a mudança antes de escolher onde mexer.”
+
+
+V15 — A RELÂMPAGO ENTROU. SOBROU ALGUMA COISA?
+
+Campanha histórica: Relâmpago · Organização em foco
+Código: P-DEMO-ORG-RELAMPAGO
+Produto: Kit organizador de mesa em madeira · AT-ORG-06 · MLB900000000006
+Janela da oferta: 10/11/2026, das 08h às 20h, horário de São Paulo.
+Situação: encerrada, aprovação guardada no histórico fictício.
+
+Preço de referência: R$ 119,90.
+Preço da oferta: R$ 110,31, aproximadamente 8% abaixo da referência.
+Piso registrado: R$ 107,91. A oferta ficou R$ 2,40 acima desse piso.
+Tarifa praticada no dia: 4,5%, ante 8,5% nos dias normais do mesmo SKU; a diferença é 4 pontos percentuais, não 4% de desconto no produto.
+Imposto configurado: 6%.
+Custo unitário da mercadoria: R$ 36,00.
+Embalagem por unidade: R$ 4,00.
+Frete praticado por unidade: R$ 13,90.
+
+Observado no dia completo de 10/11:
+9 unidades; receita de R$ 992,79; 238 visitas; conversão de 3,78%.
+Mercadoria: R$ 324,00.
+Embalagem: R$ 36,00.
+Frete: R$ 125,10.
+Comissão: R$ 44,68.
+Imposto: R$ 59,57.
+Contribuição antes da mídia: R$ 403,45, ou 40,64% da receita.
+Ads: R$ 32,00.
+Contribuição depois da mídia: R$ 371,45, antes das despesas fixas da operação.
+
+O cenário tem granularidade diária: essas nove unidades são do dia inteiro, não uma medição exclusiva das doze horas de promoção. Não colocar um relógio às 20h como se todas as vendas tivessem sido isoladas por hora.
+
+ANTES / DURANTE / DEPOIS, SEM COMPARAR TOTAIS DE JANELAS DESIGUAIS
+
+Antes: 03–09/11, 7 dias.
+17 unidades; R$ 2.038,30; 1.428 visitas; conversão de 1,19%.
+2,43 unidades/dia; R$ 291,19 de receita/dia.
+Contribuição após Ads de R$ 595,45 no intervalo; R$ 85,06/dia.
+
+Durante: dia 10/11, 1 dia.
+9 unidades; R$ 992,79; 238 visitas; conversão de 3,78%.
+9 unidades/dia; R$ 992,79 de receita/dia.
+Contribuição após Ads de R$ 371,45 no dia.
+
+Depois: 11–15/11, 5 dias.
+14 unidades; R$ 1.678,60; 1.060 visitas; conversão de 1,32%.
+2,80 unidades/dia; R$ 335,72 de receita/dia.
+Contribuição após Ads de R$ 515,60 no intervalo; R$ 103,12/dia.
+
+A comparação termina em 15/11 porque outra campanha começa em 16/11. O pico coincide com a oferta e com mais visitas. Não atribuir toda a alta ao desconto. R$ 110,31 durou apenas um dia; a tela de performance exige pelo menos três dias e três unidades para disputar o melhor preço observado. Portanto, não chamar esse preço de “o melhor preço” nessa tela.
+
+CAMINHO EXATO NAS TELAS
+
+1. Abrir:
+/demonstracao/sistema/promocoes/historico
+Buscar AT-ORG-06. Abrir o produto. Nos filtros, selecionar “Relâmpago · Organização em foco” para isolar a rodada de 10/11. Mostrar oferta de R$ 110,31, referência de R$ 119,90, piso de R$ 107,91 e a aprovação já registrada. O processamento está identificado como “relampago-organizacao-exemplo.xlsx”. Não criar um aceite de hoje e apresentá-lo como a aprovação passada.
+
+2. Abrir:
+/demonstracao/sistema/planejamento/resultados
+Na aba “Planejamento”, abrir a campanha “Relâmpago · Organização em foco”. O comparativo próprio desta ficha usa dois dias completos de igual duração: 09/11 e 10/11. Mostrar 2 → 9 unidades, R$ 239,80 → R$ 992,79. O restante do canal vai de R$ 11.558,40 a R$ 6.989,10. A tela chama a leitura relativa de “deu certo”; o vídeo deve preservar o contexto de comparação, sem tratar o selo como prova causal.
+
+3. No detalhe da campanha, acompanhar o gráfico diário e abrir “Ver valores por dia”. A série cobre 03–15/11 e permite enxergar o pico e os dias posteriores. O comparativo da ficha e a série do gráfico têm intervalos identificados diferentes; não trocar um pelo outro na locução.
+
+4. Para o gráfico de unidades do anúncio:
+/demonstracao/sistema/anuncios/analise?de=2026-11-03&ate=2026-11-15&vs=nenhum&anuncio=MLB900000000006
+Aba “Desempenho” → “Unidades”. Em seguida, “Preços” → “Preços por dia”. Esse caminho mostra que o preço voltou à referência de R$ 119,90 depois da relâmpago, antes da outra campanha.
+
+5. Para conferir a contribuição do dia:
+/demonstracao/sistema/anuncios/trafego-pago?de=2026-11-10&ate=2026-11-10
+Localizar AT-ORG-06. Mostrar os R$ 32,00 de mídia e os R$ 371,45 depois dela. O total do painel inclui os outros produtos; enquadrar a linha do Kit, não o total da conta.
+
+6. Para conferir o custo praticado:
+/demonstracao/sistema/financeiro/custos?inicio=2026-11-10&fim=2026-11-10
+Buscar AT-ORG-06. Mostrar comissão e frete praticados ao lado dos custos cadastrados. A comissão de tabela é uma referência diferente da comissão praticada. Para o dia da ação, usar os 4,5% praticados.
+
+SEQUÊNCIA SUGERIDA, 38–48 SEGUNDOS
+
+0–5s: abrir a rodada histórica e enquadrar proposta e piso.
+Voz: “Essa relâmpago entrou. E depois do desconto, sobrou quanto?”
+5–13s: destaque sequencial em R$ 110,31, piso R$ 107,91 e comissão praticada.
+Voz: “O preço ficou acima do piso. A tarifa menor também entrou na conta.”
+13–23s: gráfico do Kit, ponto de 10/11; mostrar nove unidades sem ocultar a data.
+Voz: “No dia da oferta, foram nove unidades. Antes, a média era de duas vírgula quatro por dia.”
+23–34s: abrir custos do dia e depois a linha do tráfego pago.
+Voz: “Frete, comissão, custo e mídia considerados: trezentos e setenta e um reais de contribuição.”
+34–42s: gráfico mostra o retorno aos dias seguintes; legenda curta “antes das despesas fixas”.
+Voz: “O pico passou. O histórico ficou, para comparar antes de repetir.”
+42–48s: voltar à ficha da campanha com uma ação de acompanhamento.
+Voz: “Uma decisão com memória, do preço ao resultado.”
+
+
+MARCAÇÕES PARA CAPTAÇÃO MOBILE
+
+Usar o anúncio já selecionado pela URL para não gastar metade do vídeo procurando. Ainda mostrar um toque verdadeiro de entrada no detalhe para o visitante entender o caminho. No celular, deixar uma métrica por enquadramento. Gráficos devem manter eixo, período e nome da medida. Uma ampliação pode aproximar a leitura, mas não cortar o valor que dá contexto.
+
+Legendas curtas, com contraste e respiro, sem sobrepor os controles do aplicativo. Nome do produto no começo; SKU como contexto secundário. Narração próxima, curiosa e contente quando a investigação fica clara, sem comemorar lucro que não foi apurado. Evitar ler todos os números de uma tabela; a imagem mostra a comparação, e a voz explica por que olhar para ela.
+
+FONTES INTERNAS DO CENÁRIO
+
+src/lib/demo/fixtures-base.ts: movimentos, preços, tarifa e episódio histórico.
+src/lib/demo/fixtures-promocoes.ts: rodada, piso, aprovação e arquivo de memória.
+src/lib/demo/fixtures-planejamento.ts: campanha encerrada, ação preparatória e resultado diário.
+src/lib/demo/fixtures-vendas.ts: investigação e tráfego derivados das mesmas vendas.
+src/lib/demo/fixtures-financeiro.ts: mercadoria, embalagem, imposto, frete e contribuição.
+src/lib/demo/fixtures-anuncios-extra.ts: faixas de preço e critérios mínimos de evidência.
+
+Todos os números se referem à empresa modelo. Não são casos de sucesso de clientes e não demonstram desempenho garantido.

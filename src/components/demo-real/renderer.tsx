@@ -8,10 +8,13 @@ import { getDemoFixture } from "@/lib/demo/fixtures";
 import { getDemoState, resetDemoState, EVENTO_DEMO } from "@/lib/demo/store";
 import { caminhoLogico, useDemoLocation, navegarDemo, EVENTO_REFRESH, avisarDemo, DEMO_PREFIX, gerizoFetch } from "@/lib/demo/runtime";
 import { BlocoOperacao } from "@/app/vendas/dia/operacao-hoje-blocos";
+import { ANUNCIOS_EXTRA_DEMO, AnunciosExtraDemo } from "./anuncios-extra";
+import { ROTAS_GESTAO_FINANCEIRA_DEMO } from "@/lib/demo/fixtures-gestao-financeira";
 import "./demo-real.css";
 
 const esperando = () => <div className="gerizo-demo-loading" role="status">Preparando a tela do Gerizo…</div>;
 const carregar = (loader: () => Promise<unknown>) => dynamic<Record<string, unknown>>(() => loader().then(m => (m as { default: React.ComponentType<Record<string, unknown>> }).default), { ssr: false, loading: esperando });
+const GestaoFinanceiraDemo = dynamic(() => import("./gestao-financeira"), { ssr: false, loading: esperando });
 
 // Estes são os componentes do produto. Não há cópia reduzida de suas interfaces.
 const TELAS: Record<string, React.ComponentType<Record<string, unknown>>> = {
@@ -22,6 +25,12 @@ const TELAS: Record<string, React.ComponentType<Record<string, unknown>>> = {
   "/vendas/mtd": carregar(() => import("@/app/vendas/mtd/mtd-cliente")),
   "/vendas/anual": carregar(() => import("@/app/vendas/anual/anual-cliente")),
   "/vendas/canais": carregar(() => import("@/app/vendas/canais/canais-cliente")),
+  "/vendas/cancelamentos": carregar(() => import("@/app/vendas/cancelamentos/cancelamentos-cliente")),
+  "/vendas/comparativos": carregar(() => import("@/app/vendas/comparativos/comparativos-cliente")),
+  "/vendas/diario": carregar(() => import("@/app/vendas/diario/diario-cliente")),
+  "/vendas/lancamentos": carregar(() => import("@/app/vendas/lancamentos/lancamentos-cliente")),
+  "/vendas/metas": carregar(() => import("@/app/vendas/metas/metas-cliente")),
+  "/vendas/periodo": carregar(() => import("@/app/painel-cliente")),
   "/anuncios/analise": carregar(() => import("@/components/analise/central-anuncios")),
   "/anuncios/trafego-pago": carregar(() => import("@/app/anuncios/trafego-pago/trafego-pago-cliente")),
   "/mercado-livre": carregar(() => import("@/app/mercado-livre/termometro-cliente")),
@@ -53,7 +62,12 @@ export function DemoRealRenderer({ iniciarTour = false }: { iniciarTour?: boolea
   const url = useDemoLocation();
   const pathname = caminhoLogico(url.split("?")[0]);
   const apresentacao = new URLSearchParams(url.split("?")[1] ?? "").get("apresentacao") === "1";
-  React.useEffect(() => { if (apresentacao) document.documentElement.setAttribute("data-theme", "light"); }, [apresentacao]);
+  React.useEffect(() => {
+    const anterior=document.documentElement.getAttribute("data-theme");
+    let tema="light";try{tema=sessionStorage.getItem("tema:demo")??"light";}catch{}
+    document.documentElement.setAttribute("data-theme",apresentacao?"light":tema);
+    return()=>{let salvo:string|null=null;try{salvo=localStorage.getItem("tema");}catch{}if(salvo??anterior)document.documentElement.setAttribute("data-theme",(salvo??anterior)!);else document.documentElement.removeAttribute("data-theme");};
+  }, [apresentacao]);
   const [versao, setVersao] = React.useState(0);
   const [reinicio, setReinicio] = React.useState(0);
   const [aviso, setAviso] = React.useState("");
@@ -76,6 +90,8 @@ export function DemoRealRenderer({ iniciarTour = false }: { iniciarTour?: boolea
     return dados;
   }, [pathname, url, versao]);
   const Tela = TELAS[pathname];
+  const anunciosExtra = Object.hasOwn(ANUNCIOS_EXTRA_DEMO, pathname);
+  const gestaoFinanceira = (ROTAS_GESTAO_FINANCEIRA_DEMO as readonly string[]).includes(pathname);
   async function baixarExemplo() {
     const resposta = await gerizoFetch(pathname === "/promocoes/processar" ? "/api/demo/planilha-promocoes" : "/api/custos/planilha");
     if (!resposta.ok) { setAviso("Não foi possível preparar a planilha do exemplo."); return; }
@@ -99,10 +115,10 @@ export function DemoRealRenderer({ iniciarTour = false }: { iniciarTour?: boolea
     }
   }
   return <div className="gerizo-demo-real" onClickCapture={protegerLink}>
-    {!apresentacao && <div className="gerizo-demo-ribbon"><span><strong>Demonstração</strong><span>Dados fictícios · nenhuma loja conectada</span></span><div>{["/promocoes/processar","/financeiro/custos"].includes(pathname)&&<button type="button" onClick={baixarExemplo}>Baixar planilha de exemplo</button>}<button type="button" onClick={reiniciar}><RefreshCw size={14} aria-hidden />Reiniciar</button><a href="/conheca#interesse" data-demo-exit>Conhecer o acesso</a></div></div>}
+    {!apresentacao && <div className="gerizo-demo-ribbon"><span><strong>Loja de exemplo</strong><span>Dados fictícios</span></span><div>{["/promocoes/processar","/financeiro/custos"].includes(pathname)&&<button type="button" onClick={baixarExemplo}>Planilha de exemplo</button>}<button type="button" onClick={reiniciar}><RefreshCw size={14} aria-hidden />Reiniciar</button><a href="/funcionalidades" data-demo-exit>Ver vídeos</a><a href="/conheca?demonstracao=1" data-demo-exit>Pedir acesso</a></div></div>}
     {!apresentacao && <TourReal key={reinicio} pathname={pathname} navegar={navegarDemo} iniciar={iniciarTour || reinicio > 0} />}
     {aviso && <div className="gerizo-demo-notice" role="status"><p>{aviso}</p><button type="button" onClick={() => setAviso("")} aria-label="Fechar aviso"><X size={17} /></button></div>}
-    <TelaSegura key={pathname + ":" + versao}>{Tela ? <Tela {...props} /> : <div className="gerizo-demo-loading"><h1>Fora deste tour</h1><p>Use o menu para explorar as principais áreas do Gerizo.</p></div>}</TelaSegura>
+    <TelaSegura key={pathname + ":" + versao}>{anunciosExtra ? <AnunciosExtraDemo pathname={pathname} query={new URLSearchParams(url.split("?")[1] ?? "")} estado={getDemoState()} /> : gestaoFinanceira ? <GestaoFinanceiraDemo pathname={pathname} /> : Tela ? <Tela {...props} /> : <div className="gerizo-demo-loading"><h1>Fora deste tour</h1><p>Use o menu para explorar as principais áreas do Gerizo.</p></div>}</TelaSegura>
   </div>;
 }
 

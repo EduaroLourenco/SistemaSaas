@@ -1,0 +1,792 @@
+﻿GERIZO — ESTRUTURA DOS VÍDEOS EM MOTION
+Plano editorial e base para o roteiro técnico
+Referência editorial: 18/11/2026 · atualização: 19/11/2026
+
+FINALIDADE
+
+Este arquivo organiza 19 temas possíveis para os vídeos da página de funcionalidades. Define o que cada tema precisa explicar, o caminho nas telas, as cenas e uma locução de referência. É um plano editorial, não a lista de arquivos publicados. O catálogo atual tem doze apresentações das telas e três histórias aprofundadas sobre preço, anúncios e uma oferta relâmpago. Não há resultados de teste de audiência.
+
+Na próxima etapa, confrontar cada cena com a empresa modelo publicada e transformar estas referências em roteiros técnicos de animação, locução, legenda e edição. Não inventar dados que ainda não apareçam no cenário.
+
+A EXPERIÊNCIA DO VISITANTE
+
+A página comercial deve ser breve e convidativa, com uma entrada clara para Funcionalidades. Essa página reúne os temas por tarefa. Ao abrir um vídeo, o visitante vê o nome da funcionalidade, uma descrição curta e o vídeo vertical. Pode avançar e voltar pelo gesto de rolagem ou por controles visíveis; sair devolve à mesma posição da lista.
+
+No celular, um vídeo por vez, usando a altura disponível e respeitando as áreas do aparelho. No computador, manter a proporção vertical do vídeo e um contexto lateral discreto, sem esticar a tela gravada. O foco permanece no conteúdo.
+
+Enquanto um vídeo não existir, o tema continua explicável por título, descrição e acesso à demonstração. Identificar Em preparação. Não usar reprodução falsa, duração como se o arquivo existisse, poster que promete um vídeo ausente ou animação que imita conteúdo pronto.
+
+Cada vídeo deve ter uma pergunta, uma investigação ou tarefa e um desfecho. A sequência de vídeos forma uma apresentação maior, mas cada peça deve fazer sentido sozinha.
+
+DIREÇÃO CRIATIVA
+
+A personalidade desejada é profissional, próxima, precisa e curiosa. O produto é o protagonista: próprias telas do Gerizo, mesmos controles, mesma identidade, mesmos nomes de funções. A animação ajuda a acompanhar uma decisão e não substitui o sistema por um painel inventado.
+
+Usar o branco e os neutros do produto, a marca oficial e o roxo como acento de seleção ou intenção. Evitar gradientes, brilhos, badges em excesso, contadores dançando e títulos enormes em todas as cenas. Alternar composição apenas quando isso ajudar a explicar a tarefa.
+
+Produzir o master vertical em 9:16, preferencialmente 1080 × 1920. Definir espaços de respiro para título, legendas e controles do player; não tratar uma margem fixa como segura para todos os aparelhos. Gerar versões alternativas de enquadramento para desktop quando necessário. Não reduzir um dashboard inteiro até os números ficarem ilegíveis.
+
+Usar o layout móvel real para cenas de rotina e o layout de notebook para comparações, tabelas e mapa. Reenquadrar trechos reais da interface quando o fluxo exigir leitura. O visitante precisa enxergar o dado que fundamenta a explicação.
+
+Os primeiros segundos apresentam a pergunta ou a tarefa, acompanhadas da tela correspondente. Evitar vinheta longa antes de mostrar o produto. Transições conectam origem e destino: seleção de produto abre seu detalhe; uma data leva ao período; uma campanha leva às ações. Não fazer tudo se mover ao mesmo tempo.
+
+Ritmo sugerido como ponto de partida: gancho breve, contexto da tela, dois ou três movimentos úteis, conclusão e uma chamada simples. As durações abaixo são propostas editoriais. Ajustar à narração e à legibilidade depois de montar as cenas, sem acelerar a voz para caber.
+
+NARRAÇÃO E SOM
+
+Voz brasileira natural, alegre na medida certa, com curiosidade e intenção. Imagine alguém mostrando uma ferramenta útil a um colega: satisfação ao encontrar uma resposta, pausa ao levantar uma dúvida e clareza ao explicar o próximo passo.
+
+Evitar voz de locutor institucional, euforia de anúncio, sorriso constante, leitura com a mesma cadência e frases com ênfase em todas as palavras. Usar pausas curtas entre a pergunta e a descoberta. As palavras importantes mudam conforme a história: preço, prazo, margem, produto, comparação.
+
+Definir a pronúncia da marca antes da primeira gravação. Gravar uma amostra curta de voz e escolher a interpretação antes de produzir a série inteira. As locuções deste arquivo são referências editáveis; a versão final deve soar falada.
+
+A música, quando usada, fica discreta. Sons de toque e transição são pontuais, sem transformar a operação em jogo. Legendas acompanham a fala e não repetem grandes blocos de texto da interface. Manter contraste, tamanho legível e, em geral, até duas linhas por vez. A compreensão não pode depender só do áudio ou só da cor.
+
+EMPRESA MODELO E CONTINUIDADE DOS DADOS
+
+Usar uma única empresa fictícia, Atlas Casa, com uma conta de venda e um canal: Mercado Livre. Isso reduz a quantidade de dados e permite mostrar a integração mais completa. Não criar pedidos, anúncios ou empresas fictícias nas tabelas de clientes reais para gravar os vídeos; a demonstração pública mantém seu cenário isolado.
+
+Preparar seis produtos e de seis a oito anúncios do exemplo. Quando uma comparação exigir dois anúncios do mesmo produto, incluir formatos ou condições identificáveis. Não somar o estoque de dois anúncios como se fossem depósitos independentes.
+
+Usar apenas um ano, 2026, e aproximadamente cinco a seis semanas de histórico. Sugestão de recorte: 12/10 a 18/11/2026. O filme anual mostra esse recorte dentro do ano e o acesso aos meses; não cria doze meses de vendas nem afirma sazonalidade inexistente.
+
+Produtos de referência do cenário:
+- AT-MESA-01 — Mesa lateral Aurora: exemplo de queda de visitas.
+- AT-LUZ-02 — Luminária de mesa Arco: exemplo de alteração de preço para investigação.
+- AT-PUFF-03 — Puff Linho: exemplo de indisponibilidade em alguns dias.
+- AT-EST-04 — Estante Horizonte: produto de maior valor para leitura de custos e frete.
+- AT-CAD-05 — Cadeira Serena: produto estável para comparação de contexto.
+- AT-ORG-06 — Kit organizador: produto de menor valor para simulação de preço e volume.
+
+Esses papéis são requisitos de preparação, não afirmações de que as telas já demonstram todos os casos. Antes da produção dos vídeos, ajustar o cenário para que os números narrados, os filtros, as datas, os estoques, os preços e a composição dos custos sejam coerentes entre todas as telas.
+
+Preparar também: alguns pedidos para hoje e para os próximos dias; um caso de cancelamento; uma campanha ativa e uma encerrada dentro do recorte; poucas ações com responsáveis e checklist; propostas elegíveis e propostas que precisam de revisão; uma planilha pequena de referência de preço e uma de ofertas; custos completos em alguns SKUs e uma ausência de custo identificada para explicar cobertura.
+
+PADRÃO DE CADA PEÇA
+
+1. Pergunta concreta, com a interface logo no início.
+2. Contexto: produto, conta e período necessários à leitura.
+3. Duas ou três ações que mostrem o valor da funcionalidade.
+4. Uma conclusão sustentada pelo que apareceu.
+5. Chamada leve: explorar essa tela ou continuar para a próxima funcionalidade.
+
+Não repetir apresentação da empresa e explicação de todos os recursos em cada vídeo. Não terminar todas as peças com a mesma frase. Variar a pergunta e a interpretação, preservando a identidade visual e a continuidade do cenário.
+
+CUIDADOS EDITORIAIS QUE MUDAM A HISTÓRIA
+
+Queda e insights: correlação é pista. Não afirmar que o aumento de preço causou uma queda apenas porque as datas coincidem. Mostrar outras evidências, como visitas, conversão, estoque e mídia.
+
+Campanhas: relatar desempenho observado no período, com os produtos e a comparação disponíveis. Não atribuir toda melhora à ação nem inventar retorno incremental. Campanha que deu certo precisa de um critério explicitado no exemplo.
+
+Financeiro: contribuição, receita e resultado da operação são leituras diferentes. Mostrar cobertura de custos. Dados automáticos continuam dependentes das fontes disponíveis; diferenciar frete e comissão praticados de tabela, cotação ou estimativa. Não apresentar valores fictícios como tarifas vigentes do Mercado Livre.
+
+Publicidade: receita atribuída ao anúncio não é prova de venda incremental. ACoS, TACoS e ROAS precisam aparecer no contexto certo. Não afirmar que o sistema altera orçamento ou preço automaticamente se o fluxo demonstrado não faz isso.
+
+Promoções: regras baseadas em referência de preço e leitura de margem não são a mesma coisa. Explicar rapidamente qual critério está sendo usado. Preservar revisão e confirmação. A simulação não envia propostas ao Mercado Livre.
+
+Preço e volume: a simulação de preço não prevê demanda. Volumes usados para comparar receita total devem estar marcados como hipóteses. Uma receita maior pode vir com menor margem; acompanhar também o valor de contribuição e os custos usados.
+
+Outros canais: Shopee ou TikTok só entram como condições de comparação ou possibilidades explicitadas quando a tela e a configuração existentes suportarem isso. Não inventar uma conta conectada, integração direta ou canal ativo no cenário de uma conta do Mercado Livre. Se o produto não oferecer o controle, tratar como sugestão futura, fora da captura da interface.
+
+Conversa: neste ambiente público, respostas guiadas do exemplo. Não apresentar o diálogo como consulta de IA ao vivo. A peça mostra perguntas úteis e o caminho para as evidências.
+
+DOCUMENTOS E MÉDIA
+
+PDF de expedição: exemplo identificado, sem validade fiscal, sem dados pessoais reais e sem etiqueta operacional válida. Não filmar pedidos de clientes.
+
+Vídeos precisam de arquivo real, poster e legenda antes de entrar como publicados. O catálogo atual deixa video ausente. Futuramente, associar o MP4 em src, o poster quando disponível e o WebVTT em legendas. Não publicar botões de reprodução com arquivo fictício.
+
+======================================================================
+CATÁLOGO E ESTRUTURA POR VÍDEO
+======================================================================
+
+01. SEU DIA DE VENDAS
+ID de catálogo: vendas-hoje
+Categoria: Vendas
+Duração proposta: 32 segundos
+Tela de referência: /demonstracao/sistema/vendas/dia
+
+Pergunta da peça
+Como está o dia e o que mudou desde ontem?
+
+Benefício a comunicar
+Veja o dia, volte no histórico e acompanhe o resultado no contexto da meta.
+
+Gancho
+“Como está a operação hoje?”
+
+Cenas de referência
+  00–03s | Abrir Hoje na interface real, com a data e a conta fictícia visíveis.
+  03–10s | Destacar receita e pedidos; apresentar a meta sem transformar um dia parcial em fechamento.
+  10–18s | Selecionar ontem e depois um dia anterior no calendário; manter a mudança de data legível.
+  18–27s | Abrir Produtos vendidos e destacar um SKU do exemplo.
+  27–32s | Encerrar na tela do dia, com a chamada Explorar a demonstração.
+
+Locução-base
+Como está a operação hoje? Abra o dia e veja receita, pedidos e meta juntos. Quer entender a mudança? Volte para ontem ou escolha outra data. O calendário mantém o histórico perto, e o detalhe por produto ajuda a encontrar o que merece atenção. Uma entrada para começar a rotina com contexto.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+02. O RITMO DA SEMANA
+ID de catálogo: vendas-semanal
+Categoria: Vendas
+Duração proposta: 32 segundos
+Tela de referência: /demonstracao/sistema/vendas/semanal
+
+Pergunta da peça
+A semana mudou de ritmo ou foi só um dia fora da curva?
+
+Benefício a comunicar
+Compare semanas e reconheça mudanças de ritmo sem se perder em números diários.
+
+Gancho
+“Um dia caiu. A semana também?”
+
+Cenas de referência
+  00–03s | Partir do resultado de um dia e entrar em Semanal.
+  03–10s | Destacar duas semanas fechadas do cenário, com seus intervalos.
+  10–18s | Mostrar a tendência e a média sem animar valores que não existem.
+  18–27s | Trocar de receita para pedidos ou visitas e abrir uma semana.
+  27–32s | Fechar com a ideia O período certo muda a leitura.
+
+Locução-base
+Um dia caiu. A semana também? No Gerizo, você muda a leitura para enxergar o ritmo. Compare semanas fechadas, acompanhe a média e abra o período que chamou atenção. Depois, alterne a métrica para conferir pedidos ou visitas. Fica mais fácil separar uma oscilação do dia de uma mudança que precisa ser investigada.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+03. O ANO EM PERSPECTIVA
+ID de catálogo: vendas-anual
+Categoria: Vendas
+Duração proposta: 28 segundos
+Tela de referência: /demonstracao/sistema/vendas/anual
+
+Pergunta da peça
+Onde o período atual se encaixa no ano?
+
+Benefício a comunicar
+Localize o resultado no ano e aprofunde os meses com histórico disponível.
+
+Gancho
+“E quando você abre o campo de visão?”
+
+Cenas de referência
+  00–03s | Abrir Anual com o ano do cenário visível.
+  03–09s | Identificar o recorte fictício de poucas semanas dentro desse ano.
+  09–16s | Destacar os meses que realmente têm registros, sem inventar sazonalidade.
+  16–23s | Abrir o detalhe de um mês e conectar a leitura ao acompanhamento semanal.
+  23–28s | Encerrar com Do ano ao detalhe.
+
+Locução-base
+E quando você abre o campo de visão? A visão anual organiza os meses e ajuda a chegar ao período que interessa. Neste exemplo, o histórico é curto e está identificado. A proposta é mostrar o caminho: olhar o ano, escolher um mês e voltar ao detalhe. Sem misturar falta de histórico com resultado ruim.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+04. VENDAS POR CANAL
+ID de catálogo: vendas-canal
+Categoria: Vendas
+Duração proposta: 27 segundos
+Tela de referência: /demonstracao/sistema/vendas/canais
+
+Pergunta da peça
+De qual canal e conta vem esse resultado?
+
+Benefício a comunicar
+Leia o resultado com o canal e a conta escolhidos, preservando o contexto da operação.
+
+Gancho
+“Todo resultado precisa de contexto.”
+
+Cenas de referência
+  00–03s | Abrir Por canal e destacar a conta fictícia do Mercado Livre.
+  03–09s | Selecionar um período curto, com início e fim visíveis.
+  09–16s | Ler receita, pedidos e conversão no mesmo recorte.
+  16–23s | Mostrar o seletor sem criar uma segunda conta ou um canal conectado inexistente.
+  23–27s | Concluir com a conta selecionada e o período na tela.
+
+Locução-base
+Todo resultado precisa de contexto. Veja qual canal e qual conta estão na leitura antes de comparar receita, pedidos e conversão. A empresa do exemplo usa uma única conta do Mercado Livre. Assim, você conhece o fluxo com poucos dados e entende como o Gerizo organiza cada origem sem misturar a análise.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+05. CANCELAMENTOS NO CONTEXTO
+ID de catálogo: cancelamentos
+Categoria: Vendas
+Duração proposta: 30 segundos
+Tela de referência: /demonstracao/sistema/vendas/cancelamentos
+
+Pergunta da peça
+Quanto do resultado mudou com os cancelamentos?
+
+Benefício a comunicar
+Entenda o peso dos cancelamentos e encontre os produtos que concentram o impacto.
+
+Gancho
+“O total vendido conta a história inteira?”
+
+Cenas de referência
+  00–03s | Apresentar receita e cancelamentos do mesmo período fictício.
+  03–09s | Abrir a análise de cancelamentos do produto real.
+  09–16s | Destacar um SKU e sua participação no valor cancelado.
+  16–23s | Mostrar os registros e a comparação disponível, sem inventar motivo de cancelamento.
+  23–30s | Fechar com Entenda o que mudou no resultado.
+
+Locução-base
+O total vendido conta a história inteira? Os cancelamentos também mudam a leitura. Acompanhe o valor cancelado no período e veja onde ele se concentra. Abra um produto e confira os registros do exemplo. O objetivo é reconhecer o impacto com clareza, sem tratar todo pedido cancelado como um problema de estoque ou de atendimento.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+06. INVESTIGUE POR QUE CAIU
+ID de catálogo: por-que-caiu
+Categoria: Vendas
+Duração proposta: 38 segundos
+Tela de referência: /demonstracao/sistema/vendas/queda
+
+Pergunta da peça
+A queda veio de menos visitas, conversão, preço ou disponibilidade?
+
+Benefício a comunicar
+Cruze visitas, conversão, preço e estoque para investigar uma queda com evidências.
+
+Gancho
+“Caiu. Mas por onde você começa?”
+
+Cenas de referência
+  00–03s | Abrir a lista com duas janelas de comparação visíveis.
+  03–10s | Selecionar a mesa Aurora com queda de visitas no cenário.
+  10–18s | Abrir Evolução e destacar a data em que o ritmo muda.
+  18–27s | Trocar para a luminária com mudança de preço ou para o puff sem estoque, mostrando evidências distintas.
+  27–38s | Encerrar com Investigue antes de decidir e acesso à tela real.
+
+Locução-base
+Caiu. Mas por onde você começa? Compare os períodos e abra o produto que mudou. Menos visitas, conversão, preço e estoque aparecem como pistas para investigar. Olha a evolução ao longo dos dias: ela ajuda a localizar quando a mudança começou. O Gerizo aproxima as evidências; uma coincidência sozinha não vira certeza sobre a causa.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+07. UMA ROTINA DE ENVIOS MAIS SIMPLES
+ID de catálogo: envios
+Categoria: Operação
+Duração proposta: 30 segundos
+Tela de referência: /demonstracao/sistema/mercado-livre/envios
+
+Pergunta da peça
+O que precisa sair hoje e como eu preparo esses pedidos?
+
+Benefício a comunicar
+Encontre os pedidos do dia, confira os itens e prepare a separação com poucos passos.
+
+Gancho
+“O que precisa sair hoje?”
+
+Cenas de referência
+  00–03s | Abrir Envios com as filas por prazo na tela real.
+  03–09s | Destacar os pedidos para hoje e um prazo próximo, sem animação de urgência falsa.
+  09–16s | Abrir os itens de um pedido e mostrar o SKU.
+  16–23s | Selecionar dois pedidos e passar pela revisão dos documentos.
+  23–30s | Mostrar o PDF de demonstração claramente identificado, sem código ou documento real de comprador.
+
+Locução-base
+O que precisa sair hoje? Comece pelo prazo, encontre os pedidos e confira os produtos sem trocar de tela. Selecione o que vai separar e revise os documentos. Na demonstração, o arquivo é só um exemplo. Na rotina do produto, etiquetas e o DANFE disponível no canal acompanham a preparação. Menos procura, mais clareza para executar.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+08. CAMPANHAS COM PRÓXIMOS PASSOS
+ID de catálogo: planejamento
+Categoria: Operação
+Duração proposta: 38 segundos
+Tela de referência: /demonstracao/sistema/planejamento
+
+Pergunta da peça
+O que já está em campanha e qual é a próxima ação?
+
+Benefício a comunicar
+Organize campanhas, conecte ações e abra o mapa para entender o próximo passo.
+
+Gancho
+“A campanha tem uma ideia. E o próximo passo?”
+
+Cenas de referência
+  00–03s | Abrir a campanha fictícia Semana da Casa no planejamento.
+  03–10s | Exibir as próximas ações com datas e andamento.
+  10–18s | Entrar no Mapa e destacar uma ligação já existente entre campanha e ação.
+  18–27s | Abrir a ficha da ação e mostrar responsável e checklist.
+  27–38s | Voltar ao dia da campanha e mostrar a promoção no ar quando a leitura existir.
+
+Locução-base
+A campanha tem uma ideia. E o próximo passo? No planejamento, datas, ações e responsáveis ficam ligados à campanha. Abra o mapa para ver as conexões, entre na ficha de uma ação e acompanhe seu andamento. As promoções no ar também entram no contexto do dia. O plano deixa de ser uma lista solta e passa a acompanhar a operação.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+09. ACOMPANHE O RESULTADO DA CAMPANHA
+ID de catálogo: resultados-campanhas
+Categoria: Crescimento
+Duração proposta: 34 segundos
+Tela de referência: /demonstracao/sistema/planejamento/resultados
+
+Pergunta da peça
+O que aconteceu no período da campanha?
+
+Benefício a comunicar
+Leia o desempenho dos produtos e do período associados à campanha, com comparação e contexto.
+
+Gancho
+“A ação foi feita. O que aconteceu depois?”
+
+Cenas de referência
+  00–03s | Partir da ficha de uma campanha e abrir Resultados.
+  03–10s | Destacar datas, produtos incluídos e base de comparação.
+  10–18s | Mostrar um resultado positivo do exemplo como desempenho observado, sem selo de sucesso inventado.
+  18–27s | Relacionar o período à ação planejada e às promoções registradas.
+  27–34s | Encerrar em uma próxima ação da campanha.
+
+Locução-base
+A ação foi feita. O que aconteceu depois? Abra os resultados da campanha e acompanhe os produtos escolhidos no período. Compare o comportamento antes e durante a ação, mantendo o recorte visível. Uma campanha pode coincidir com uma melhora sem provar que causou toda ela. O valor está em acompanhar, aprender e planejar o próximo movimento com mais contexto.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+10. MÍDIA COM CONTEXTO
+ID de catálogo: trafego-pago
+Categoria: Crescimento
+Duração proposta: 36 segundos
+Tela de referência: /demonstracao/sistema/anuncios/trafego-pago
+
+Pergunta da peça
+O investimento está acompanhado de receita e contribuição?
+
+Benefício a comunicar
+Relacione investimento, receita atribuída e margem para investigar o desempenho da mídia.
+
+Gancho
+“Mais venda com anúncio. Mas o que ficou?”
+
+Cenas de referência
+  00–03s | Mostrar o investimento e a margem depois da mídia no mesmo recorte.
+  03–10s | Destacar ACoS ou TACoS somente depois de mostrar o que está sendo comparado.
+  10–18s | Abrir um produto e a série diária correspondente.
+  18–27s | Mostrar um sinal do exemplo que merece revisão, com dados de base visíveis.
+  27–36s | Entrar em Promoções para demonstrar a continuidade da análise, sem aplicar ações automaticamente.
+
+Locução-base
+Mais venda com anúncio. Mas o que ficou? Veja o investimento junto da receita atribuída e da margem apurada. Abra a campanha ou o produto que chamou atenção e acompanhe a série diária. Depois, leve a investigação para as oportunidades de promoção. A decisão continua com você: uma métrica isolada não manda aumentar orçamento nem aprovar uma oferta.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+11. PROMOÇÕES COM REGRAS
+ID de catálogo: automacao-promocoes
+Categoria: Crescimento
+Duração proposta: 38 segundos
+Tela de referência: /demonstracao/sistema/automacoes
+
+Pergunta da peça
+Que ofertas respeitam os critérios da minha operação?
+
+Benefício a comunicar
+Revise oportunidades com critérios de preço, disponibilidade e margem antes de simular o envio.
+
+Gancho
+“Nem toda promoção merece um sim.”
+
+Cenas de referência
+  00–03s | Abrir Promoções abertas e selecionar a oportunidade do Mercado Livre.
+  03–10s | Mostrar proposta, referência e piso de um item elegível.
+  10–18s | Abrir as regras e evidenciar apenas um critério por vez.
+  18–27s | Comparar um item aprovado e um item que pede revisão, com motivo legível.
+  27–38s | Passar pela revisão e simular a confirmação sem qualquer envio ao canal real.
+
+Locução-base
+Nem toda promoção merece um sim. Compare a oferta com a referência de preço, confira o piso e veja quais critérios a operação definiu. As regras ajudam a organizar o que aprovar, revisar ou deixar de fora. Quando houver custos completos, a margem também dá contexto. Antes de enviar, revise os itens e confirme a decisão. Aqui, tudo acontece no cenário de demonstração.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+12. DA PLANILHA À REVISÃO
+ID de catálogo: planilha-promocoes
+Categoria: Crescimento
+Duração proposta: 38 segundos
+Tela de referência: /demonstracao/sistema/promocoes/processar
+
+Pergunta da peça
+Como transformar a planilha de promoções em uma revisão organizada?
+
+Benefício a comunicar
+Importe a planilha do exemplo, processe as propostas e acompanhe preços e decisões.
+
+Gancho
+“A planilha chegou. E agora?”
+
+Cenas de referência
+  00–03s | Baixar a planilha de exemplo da demonstração.
+  03–10s | Arrastar o XLSX para a área de importação da tela real.
+  10–18s | Mostrar as condições do processamento sem abrir explicações secundárias.
+  18–27s | Processar e destacar uma linha aprovada e outra em revisão.
+  27–38s | Abrir o resultado e conectar ao Histórico, preservando os motivos e preços da rodada.
+
+Locução-base
+A planilha chegou. E agora? Importe o arquivo, escolha as condições e processe as propostas. O Gerizo organiza preços, decisões e motivos para você revisar. A referência de preço e o piso não somem no meio da planilha. Abra o resultado, confira o que ficou de fora e acompanhe o histórico das rodadas. O exemplo usa um arquivo pequeno para mostrar o fluxo inteiro.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+13. CUSTOS POR SKU
+ID de catálogo: custos-sku
+Categoria: Financeiro
+Duração proposta: 36 segundos
+Tela de referência: /demonstracao/sistema/financeiro/custos
+
+Pergunta da peça
+Qual componente está consumindo a margem deste produto?
+
+Benefício a comunicar
+Confira o custo do produto, frete, comissão e mídia para entender onde a margem muda.
+
+Gancho
+“Esse produto vende bem. E a margem?”
+
+Cenas de referência
+  00–03s | Abrir Custos e encontrar um SKU pela busca.
+  03–10s | Destacar custo de mercadoria e os componentes disponíveis, um de cada vez.
+  10–18s | Abrir a origem do frete e da comissão, distinguindo valor praticado de tabela ou estimativa.
+  18–27s | Alterar e salvar um custo do cenário fictício.
+  27–36s | Mostrar a margem recalculada e o acesso ao Financeiro.
+
+Locução-base
+Esse produto vende bem. E a margem? Abra os custos por SKU e veja mercadoria, embalagem, imposto, frete e comissão no mesmo contexto. O que já vem das fontes aparece com sua origem; o que falta continua identificado. Altere um custo do exemplo e acompanhe a leitura financeira. Fica mais fácil reconhecer onde o resultado está ficando pelo caminho.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+14. DO FATURAMENTO AO RESULTADO
+ID de catálogo: painel-dre
+Categoria: Financeiro
+Duração proposta: 36 segundos
+Tela de referência: /demonstracao/sistema/financeiro
+
+Pergunta da peça
+Como a receita se transforma no resultado da operação?
+
+Benefício a comunicar
+Acompanhe a composição do resultado e a cobertura dos custos no painel e na DRE.
+
+Gancho
+“Faturar é uma parte da história.”
+
+Cenas de referência
+  00–03s | Apresentar receita, contribuição e resultado no resumo real.
+  03–10s | Percorrer comissão, frete, mercadoria e mídia no demonstrativo, mantendo a leitura calma.
+  10–18s | Destacar a cobertura dos custos próxima do resultado.
+  18–27s | Abrir o demonstrativo mês a mês do período disponível.
+  27–36s | Conectar a alteração do custo por SKU à composição do resultado.
+
+Locução-base
+Faturar é uma parte da história. No Financeiro, acompanhe o caminho da receita aos custos, à mídia e às despesas da operação. A DRE organiza essa composição, e a cobertura mostra quanto da receita tem custos apurados. Se faltar informação, o resultado não vira um lucro presumido. Você enxerga o que já pode ler e o que ainda precisa completar.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+15. TRÊS PERGUNTAS DA ROTINA
+ID de catálogo: conversar
+Categoria: Operação
+Duração proposta: 38 segundos
+Tela de referência: /demonstracao/sistema/conversa
+
+Pergunta da peça
+Como começar uma investigação conversando sobre os dados?
+
+Benefício a comunicar
+Explore perguntas sobre a semana, os produtos que pedem atenção e a margem da operação.
+
+Gancho
+“O que você perguntaria antes de abrir todas as telas?”
+
+Cenas de referência
+  00–03s | Abrir Conversar na interface real, com três perguntas curtas como sugestões.
+  03–10s | Enviar O que mudou nas vendas desta semana? e destacar uma resposta concisa do cenário.
+  10–18s | Mostrar Qual produto merece atenção hoje? e a ligação com o diagnóstico.
+  18–27s | Mostrar Quais produtos têm melhor margem depois de frete e mídia? sem inventar consulta automática não disponível.
+  27–38s | Encerrar com a indicação Respostas guiadas da demonstração e um caminho para a evidência.
+
+Locução-base
+O que você perguntaria antes de abrir todas as telas? O que mudou nas vendas da semana? Qual produto merece atenção hoje? E quais têm melhor margem depois do frete e da mídia? A conversa ajuda a começar a investigação e chegar às evidências. Na demonstração, as respostas são guiadas e usam só o cenário fictício. A análise continua nas telas do Gerizo.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+16. ANÚNCIOS EM INVESTIGAÇÃO
+ID de catálogo: anuncios-mercado-livre
+Categoria: Crescimento
+Duração proposta: 36 segundos
+Tela de referência: /demonstracao/sistema/anuncios/analise
+
+Pergunta da peça
+O que está mudando no desempenho deste anúncio?
+
+Benefício a comunicar
+Acompanhe a evolução, compare anúncios e relacione preço, visitas e conversão.
+
+Gancho
+“Dois anúncios. O mesmo resultado?”
+
+Cenas de referência
+  00–03s | Buscar um dos anúncios da conta fictícia.
+  03–10s | Mostrar evolução no período e um sinal que pede atenção.
+  10–18s | Selecionar dois anúncios e abrir a comparação real.
+  18–27s | Destacar visitas, conversão e preços, sem alternar todos os indicadores ao mesmo tempo.
+  27–36s | Voltar ao detalhe e apontar o próximo dado a investigar.
+
+Locução-base
+Dois anúncios. O mesmo resultado? Abra o desempenho, escolha o período e acompanhe visitas, conversão e vendas. Compare anúncios lado a lado e confira o preço que foi publicado e o que foi pago. O histórico ajuda a localizar a mudança. Antes de concluir, considere produto, disponibilidade e formato: números diferentes não contam sozinhos a causa.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+17. PREÇO COM MARGEM EM VISTA
+ID de catálogo: produtos-precos
+Categoria: Financeiro
+Duração proposta: 40 segundos
+Tela de referência: /demonstracao/sistema/produtos/precificacao
+
+Pergunta da peça
+O que muda na margem se eu mudar este preço?
+
+Benefício a comunicar
+Simule preços e leia a contribuição por produto, com frete e condições do canal no contexto.
+
+Gancho
+“E se esse produto custasse um pouco menos?”
+
+Cenas de referência
+  00–03s | Abrir um produto na precificação e destacar o canal Mercado Livre.
+  03–10s | Mostrar custo, frete disponível, comissão e preço antes da alteração.
+  10–18s | Alterar o preço na simulação e acompanhar a contribuição por unidade.
+  18–27s | Comparar dois cenários com volumes explicitamente hipotéticos, sem sugerir previsão de demanda.
+  27–40s | Encerrar com as condições do canal e a leitura de margem na tela.
+
+Locução-base
+E se esse produto custasse um pouco menos? Na precificação, experimente um valor e veja como os custos e as condições do canal entram na conta. No Mercado Livre, o frete disponível ajuda a dar contexto. Para comparar receita total, use volumes assumidos e deixe isso claro. Uma simulação pode mostrar possibilidades; ela não prevê quantas unidades o mercado vai comprar.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+18. O HISTÓRICO DE CADA SKU
+ID de catálogo: investigacao-sku
+Categoria: Vendas
+Duração proposta: 38 segundos
+Tela de referência: /demonstracao/sistema/vendas/skus
+
+Pergunta da peça
+Como preço, volume e conversão caminharam juntos neste SKU?
+
+Benefício a comunicar
+Investigue preço, volume e conversão ao longo do histórico disponível do produto.
+
+Gancho
+“O preço mudou. O volume acompanhou?”
+
+Cenas de referência
+  00–03s | Buscar o SKU da luminária e abrir sua análise real.
+  03–10s | Selecionar as semanas disponíveis dentro do único ano do cenário.
+  10–18s | Alternar preço, unidades e conversão, mantendo o mesmo produto e as mesmas datas.
+  18–27s | Destacar a mudança de preço junto do comportamento do volume, como hipótese a investigar.
+  27–38s | Abrir os anúncios relacionados e encerrar em uma próxima investigação.
+
+Locução-base
+O preço mudou. O volume acompanhou? Encontre o SKU e percorra o histórico disponível. Compare preço, unidades e conversão nos períodos, sempre no mesmo recorte. Depois, abra os anúncios relacionados para aprofundar. A mudança pode ter várias explicações, do estoque à mídia. O importante é conseguir investigar sem perder a ligação entre produto, preço e resultado.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+19. A MEMÓRIA DAS PROMOÇÕES
+ID de catálogo: historico-promocoes
+Categoria: Crescimento
+Duração proposta: 32 segundos
+Tela de referência: /demonstracao/sistema/promocoes/historico
+
+Pergunta da peça
+O que foi decidido para esse produto nas últimas rodadas?
+
+Benefício a comunicar
+Recupere decisões, preços e motivos de cada rodada antes de comparar uma nova proposta.
+
+Gancho
+“Essa oferta já passou por aqui?”
+
+Cenas de referência
+  00–03s | Buscar um SKU no Histórico de promoções.
+  03–10s | Abrir a decisão mais recente e as rodadas disponíveis.
+  10–18s | Destacar proposta, piso e motivo em uma rodada.
+  18–27s | Entrar em Comparar propostas com o produto já selecionado.
+  27–32s | Encerrar com a ideia O contexto da decisão fica junto do produto.
+
+Locução-base
+Essa oferta já passou por aqui? No histórico, encontre o produto e abra as decisões anteriores. Preço de referência, piso, proposta e motivo permanecem ligados à rodada. Compare as condições antes de aceitar uma nova oferta. Assim, a decisão de hoje pode conversar com o que já foi feito, sem depender de lembrar qual planilha estava certa.
+
+Fechamento sugerido
+Concluir na própria tela, com o próximo passo acessível. A chamada pode ser Explorar esta funcionalidade ou seguir para a peça relacionada, sem prometer um resultado comercial.
+
+Preparação
+Os controles, estados e números citados devem existir no cenário publicado. Reenquadrar a interface real; não inventar uma tela equivalente.
+
+----------------------------------------------------------------------
+
+======================================================================
+DECISÕES DE PRODUÇÃO POR TEMA
+======================================================================
+
+Vendas por canal: como o modelo tem só uma conta do Mercado Livre, mostrar seleção e contexto, não uma disputa inventada entre canais. A amplitude de canais pode ser explicada em outro momento, com uma configuração representativa.
+
+Cancelamentos: a rota real do produto é /vendas/cancelamentos. Ela precisa estar disponível no namespace de demonstração e receber alguns registros fictícios antes da captura. Se a conta modelo não tiver o caso, não substituir por um gráfico inventado no vídeo.
+
+Planejamento: se um filme de 38 segundos ficar denso, desdobrar em duas versões: Campanha, mapa e próximas ações; Ficha da ação e acompanhamento do resultado. A primeira peça deve mostrar um fluxo, sem passear por todas as abas.
+
+Promoções: priorizar a sequência Referência de preço → proposta → critério → revisão. A peça da planilha explica importação e processamento; a peça de automação explica critérios. Isso evita duplicar o mesmo tutorial.
+
+Histórico de promoções: é uma peça complementar útil para demonstrar memória de decisões e comparação. Pode ser publicada depois dos dois filmes centrais de promoções.
+
+Custos e DRE: manter duas peças. A primeira mostra o componente do produto; a segunda mostra o resultado da operação. Conectar as duas por um mesmo SKU e uma única alteração de custo. Não animar todas as linhas da DRE ao mesmo tempo.
+
+Conversar: produzir exatamente três perguntas rotineiras como mini-histórias dentro do mesmo filme ou três cortes curtos reaproveitáveis:
+1. O que mudou nas vendas desta semana?
+2. Qual produto merece atenção hoje?
+3. Quais produtos têm melhor margem depois de frete e mídia?
+Cada resposta deve ser curta e coerente com o modelo; a prova continua nas telas de análise.
+
+Precificação: se for útil mostrar menor margem e maior receita total, usar uma comparação assumida e identificada. Exemplo editorial a preparar, não promessa de venda:
+- Mesmo SKU; custos e taxas hipotéticos constantes entre os cenários.
+- Cenário A: preço de R$ 119,90 e volume assumido de 20 unidades.
+- Cenário B: preço de R$ 109,90 e volume assumido de 26 unidades.
+- Receita A: R$ 2.398,00; receita B: R$ 2.857,40.
+- Exemplo de custo do produto R$ 36,00, embalagem R$ 4,00 e frete R$ 16,90 por unidade; comissão de 8,5%, imposto de 6% e mídia assumida de 4,5% da receita.
+- Contribuição antes das despesas fixas: aproximadamente R$ 804,38 em A e R$ 835,09 em B, calculando totais sem arredondar o valor unitário antes.
+- Essa conta ilustra uma hipótese. O cenário B só ocorre se aquele volume acontecer; a mudança de preço não garante mais demanda. As taxas não representam tabela vigente do canal.
+- Se a interface real não tiver uma simulação de quantidade, mostrar os volumes como comparação editorial explicitamente hipotética, sem fingir que são uma previsão ou um controle nativo do Gerizo.
+
+Investigação de preço: criar uma continuidade entre o filme SKU, a comparação de anúncios e a precificação. A mesma luminária pode aparecer nas três peças, com as mesmas datas e preços. O gancho muda; a base não muda.
+
+======================================================================
+SUGESTÕES ADICIONAIS
+======================================================================
+
+SUGESTÃO A — UMA DECISÃO PERCORRENDO O SISTEMA
+Peça de apresentação de aproximadamente 40–50 segundos: uma queda chama atenção; o produto abre; preço, estoque ou tráfego dão contexto; uma proposta é revisada; a ação entra na campanha; os resultados ficam acessíveis. Mostra a conexão entre módulos sem tentar explicar todas as telas. O elo entre as etapas deve existir no cenário.
+
+SUGESTÃO B — O QUE AINDA FALTA SABER
+Peça curta sobre confiança: mostrar uma margem indisponível por custo incompleto, preencher o dado e acompanhar a nova cobertura. A mensagem é entender a qualidade do número, sem anunciar lucro que não foi apurado.
+
+SUGESTÃO C — O MESMO DIA NO CELULAR E NO NOTEBOOK
+Corte visual curto acompanhando a mesma tarefa em dois tamanhos: consultar o dia no celular e aprofundar um produto no notebook. Usar os layouts reais e preservar o mesmo contexto. A transição demonstra continuidade de uso, não uma sincronização em tempo real que não esteja implementada.
+
+SUGESTÃO D — RECORTE DE ENVIO PARA CAMPANHAS COMERCIAIS
+Versão de 15–20 segundos da rotina de Envios: o que sai hoje, seleção, itens e revisão. É uma peça de benefício imediato, simples de entender para quem ainda não conhece análises avançadas.
+
+ORDEM DE PRODUÇÃO SUGERIDA
+
+Primeiro lote: Seu dia de vendas; Investigue por que caiu; Uma rotina de envios mais simples; Promoções com regras; Custos por SKU; Do faturamento ao resultado.
+Segundo lote: Mídia com contexto; Da planilha à revisão; Campanhas com próximos passos; Anúncios em investigação; Preço com margem em vista; Três perguntas da rotina.
+Terceiro lote: O ritmo da semana; O ano em perspectiva; Vendas por canal; Cancelamentos; Resultados da campanha; Histórico de cada SKU; Memória das promoções.
+
+A ordem é uma hipótese editorial: começar por tarefas reconhecíveis e depois aprofundar as análises. Não representa uma ordem de importância do produto nem um resultado comprovado de conversão.
+
+ENTREGA DA PRÓXIMA ETAPA
+
+Com a empresa modelo publicada e os casos preparados, transformar cada peça escolhida em: roteiro técnico por tempo, locução final, movimentos e enquadramentos, textos de tela, legendas, direção de áudio, lista de capturas e arquivos finais. Usar os IDs do catálogo para manter vídeo, poster, legenda e funcionalidade associados.
+
+Este documento não afirma que os vídeos já existem, que os dados fictícios já cobrem todos os casos nem que a nova apresentação foi aprovada por usuários. A pesquisa de referências e fontes poderá ser anexada ao plano pelo responsável pela produção.

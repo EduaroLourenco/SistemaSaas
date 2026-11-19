@@ -202,7 +202,7 @@ export default function DiaCliente({ dados, operacao }: { dados: DadosDia; opera
         <AvisoFalha a={dados.atualizacao} />
 
         <UltimosDias dias={dados.recentes} foco={h.data} aoEscolher={abrirDia} />
-        <div ref={detalhe} className="min-w-0 scroll-mt-[calc(var(--topbar)+12px)]">
+        <div ref={detalhe} data-gerizo-tour="resultado-dia" className="min-w-0 scroll-mt-[calc(var(--topbar)+12px)]">
           <HeroMetric label="Receita líquida do dia" value={money(h.receitaLiquida)} hint={`${nomeDoDia(h.diaSemana)}, ${br(h.data)}${h.parcial ? " · sem movimento registrado" : h.emAndamento ? " · dia em andamento" : ""}`} />
           <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-px bg-line border border-line rounded-r2 overflow-hidden mb-3 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
             <Cartao
@@ -244,7 +244,7 @@ export default function DiaCliente({ dados, operacao }: { dados: DadosDia; opera
 
         <div className="decision-calendar">
         {/* ── O mês em calendário: escolhe o dia ── */}
-        <Panel className="order-1 min-w-0 overflow-hidden">
+        <Panel data-gerizo-tour="calendario-dia" className="order-1 min-w-0 overflow-hidden">
           <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b border-line flex-wrap">
             <button
               type="button"

@@ -24,41 +24,43 @@ function Dicas({ escolhidos, aoAdicionar }: { escolhidos: ModuloId[]; aoAdiciona
   );
 }
 
-function Pedido({ escolhidos, aoFechar }: { escolhidos: ModuloId[]; aoFechar: () => void }) {
+export function PedidoDemonstracao({ escolhidos, aoFechar }: { escolhidos: ModuloId[]; aoFechar: () => void }) {
   const [estado, setEstado] = useState<"pronto" | "enviando" | "ok">("pronto");
   const [erro, setErro] = useState("");
   const [nome, setNome] = useState("");
   const primeiro = useRef<HTMLInputElement>(null);
+  const dialogo = useRef<HTMLDialogElement>(null);
   const fechar = useRef(aoFechar);
   fechar.current = aoFechar;
   useEffect(() => {
     const anterior = document.activeElement as HTMLElement | null;
+    const el=dialogo.current;
+    if (!el) return;
+    el.showModal();
     primeiro.current?.focus();
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") fechar.current(); };
     const rolagem = document.documentElement.style.overflow;
     document.documentElement.style.overflow = "hidden";
-    window.addEventListener("keydown", esc);
-    return () => { window.removeEventListener("keydown", esc); document.documentElement.style.overflow = rolagem; anterior?.focus?.(); };
+    return () => { if(el.open)el.close(); document.documentElement.style.overflow = rolagem; if(anterior?.isConnected)anterior.focus({preventScroll:true}); };
   }, []);
   const nomes = escolhidos.map((id) => moduloPorId(id).nome);
   const textoWhats = encodeURIComponent(`Olá! Quero uma demonstração do Gerizo.\nNome: ${nome}\nMódulos: ${nomes.join(", ")}`);
 
   return (
-    <div className="gz-pedido" role="dialog" aria-modal="true" aria-labelledby="pedido-titulo" onClick={(e) => { if (e.target === e.currentTarget) aoFechar(); }}>
+    <dialog ref={dialogo} className="gz-pedido" aria-labelledby="pedido-titulo" onCancel={e=>{e.preventDefault();fechar.current();}} onClick={(e) => { if (e.target === e.currentTarget) aoFechar(); }}>
       <div className="gz-pedido-box">
         <button type="button" className="gz-fechar" onClick={aoFechar} aria-label="Fechar"><X size={20} aria-hidden /></button>
         {estado === "ok" ? (
           <div className="gz-ok" role="status">
             <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 8C76 8 92 26 91 50 90 74 72 92 48 91 24 90 8 72 9 48 10 26 28 9 54 10" pathLength={1} /><path d="M30 52 44 66 72 36" pathLength={1} /></svg>
-            <h3 id="pedido-titulo">Você entrou na fila!</h3>
-            <p>Vamos te chamar para mostrar o Gerizo com o que você escolheu.</p>
+            <h3 id="pedido-titulo">Pedido recebido!</h3>
+            <p>Vamos falar com você para apresentar o Gerizo.</p>
             <a className="gz-btn gz-btn-primary" href={`https://wa.me/${WHATSAPP_COMERCIAL}?text=${textoWhats}`} target="_blank" rel="noreferrer"><MessageCircle size={18} aria-hidden /> Adiantar pelo WhatsApp</a>
             <button type="button" className="gz-link" onClick={aoFechar}>Voltar ao site</button>
           </div>
         ) : (
           <>
             <h3 id="pedido-titulo">Peça sua demonstração</h3>
-            <p className="gz-resumo">{nomes.join(", ")}.</p>
+            <p className="gz-resumo">{nomes.length ? nomes.join(", ")+"." : "Deixe seu contato. Os módulos você escolhe depois."}</p>
             <form className="gz-form" onSubmit={async (e) => {
               e.preventDefault();
               if (estado === "enviando") return;
@@ -76,16 +78,15 @@ function Pedido({ escolhidos, aoFechar }: { escolhidos: ModuloId[]; aoFechar: ()
             }}>
               <label>Seu nome<input ref={primeiro} name="nome" value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" required minLength={2} maxLength={100} placeholder="Como podemos te chamar?" /></label>
               <label>WhatsApp<input name="telefone" type="tel" inputMode="tel" autoComplete="tel" required minLength={10} maxLength={24} placeholder="(16) 99999-9999" /></label>
-              <label>Loja ou empresa<input name="empresa" autoComplete="organization" maxLength={80} placeholder="Opcional" /></label>
               <div className="gz-bot" aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
               {erro && <p className="gz-erro" role="alert">{erro}</p>}
-              <button className="gz-btn gz-btn-primary" type="submit" disabled={estado === "enviando"}>{estado === "enviando" ? "Enviando…" : "Entrar na fila de demonstração"}</button>
+              <button className="gz-btn gz-btn-primary" type="submit" disabled={estado === "enviando"}>{estado === "enviando" ? "Enviando…" : "Quero conhecer o Gerizo"}</button>
               <p className="gz-legal">Usamos seus dados só para falar sobre o Gerizo. <Link href="/privacidade">Privacidade</Link></p>
             </form>
           </>
         )}
       </div>
-    </div>
+    </dialog>
   );
 }
 
@@ -156,7 +157,7 @@ export function MontadorModulos() {
         <div><b>{escolhidos.length} módulos</b><span>Preço a consultar</span></div>
         <button type="button" className="gz-btn gz-btn-primary gz-btn-small" tabIndex={barra ? 0 : -1} onClick={() => setPedindo(true)}>Pedir demonstração</button>
       </div>
-      {pedindo && <Pedido escolhidos={escolhidos} aoFechar={() => setPedindo(false)} />}
+      {pedindo && <PedidoDemonstracao escolhidos={escolhidos} aoFechar={() => setPedindo(false)} />}
     </div>
   );
 }

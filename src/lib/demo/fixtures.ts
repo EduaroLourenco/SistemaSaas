@@ -5,6 +5,7 @@ import type { DadosPromocoes } from "@/lib/dados/promocoes";
 import type { Regra } from "@/lib/planilhas/avaliar-regras";
 import type { Fila } from "@/lib/dados/fila-aprovacao";
 import type { CoberturaCampo } from "@/lib/dados/cobertura-regras";
+import type { DespesaCanal } from "@/lib/dados/custos";
 import { lerPeriodo } from "@/lib/periodo-anuncios";
 import { DEMO_HOJE, DEMO_SINCRONIZADO, contasDemo, produtosDemo, somarDiasDemo } from "./fixtures-base";
 import { dadosDiaDemo, dadosSemanalDemo, dadosSkusDemo, dadosQuedaDemo, dadosTrafegoDemo, termometroDemo } from "./fixtures-vendas";
@@ -12,6 +13,9 @@ import { dadosFinanceiroDemo, dadosCustosDemo, precificacaoDemo } from "./fixtur
 import { analiseDemo, automacoesDemo, regrasDemo, filaDemo, promocoesDemo, comparacaoDemo, idealDemo } from "./fixtures-promocoes";
 import { planejamentoDemo, resultadosDemo, promocoesNoCanalDemo } from "./fixtures-planejamento";
 import { anualDemo, canaisVendasDemo, mtdDemo, produtosPrecosDemo } from "./fixtures-complementares";
+import { dadosCancelamentosDemo } from "./fixtures-cancelamentos";
+import { comparativosDemo, diarioDemo, lancamentosDemo, metasPlanejamentoDemo, painelPeriodoDemo, automacaoLancamentosDemo } from "./fixtures-vendas-expandidas";
+import { despesasGestaoFinanceiraDemo } from "./fixtures-gestao-financeira";
 
 export * from "./fixtures-base";
 export * from "./fixtures-vendas";
@@ -38,11 +42,17 @@ export const coberturaRegrasDemo: CoberturaCampo[] = [
 export function getDemoFixture(rota: string, query = new URLSearchParams(), estado?: DemoState): Record<string, unknown> {
   const custos = estado?.custos || {};
   switch (rota) {
-    case "/": case "/vendas/dia": return { dados: dadosDiaDemo(query) };
+    case "/": case "/vendas/dia": return { dados: dadosDiaDemo(query, estado) };
     case "/vendas/semanal": return { dados: dadosSemanalDemo(query) };
-    case "/vendas/mtd": return { dados: mtdDemo(query) };
-    case "/vendas/anual": return { dados: anualDemo() };
+    case "/vendas/mtd": return { dados: mtdDemo(query, estado) };
+    case "/vendas/anual": return { dados: anualDemo(estado) };
     case "/vendas/canais": return { dados: canaisVendasDemo(query) };
+    case "/vendas/cancelamentos": return { dados: dadosCancelamentosDemo() };
+    case "/vendas/comparativos": return { dados: comparativosDemo(estado) };
+    case "/vendas/diario": return { dados: diarioDemo(query, estado), canalAtual: query.get("canal") || "", colunasIniciais: ["mesAtual", "mesAnterior", "d7", ""] };
+    case "/vendas/lancamentos": return { dados: lancamentosDemo(estado), automacao: automacaoLancamentosDemo };
+    case "/vendas/metas": return { dados: metasPlanejamentoDemo(query, estado) };
+    case "/vendas/periodo": return { dados: painelPeriodoDemo(estado) };
     case "/produtos": return { dados: produtosPrecosDemo(query) };
     case "/vendas/skus": return { dados: dadosSkusDemo(query) };
     case "/vendas/queda": return { dados: dadosQuedaDemo(query) };
@@ -56,8 +66,8 @@ export function getDemoFixture(rota: string, query = new URLSearchParams(), esta
     case "/promocoes/historico": case "/promocoes/campanhas": return { dados: promocoesComEstadoDemo(estado) };
     case "/promocoes/comparar": return { dados: comparacaoDemo, buscaInicial: query.get("sku") || "" };
     case "/promocoes/processar": return {};
-    case "/financeiro": return dadosFinanceiroDemo(query, custos);
-    case "/financeiro/custos": return { ...dadosCustosDemo(query, custos), ...(estado?.faixasFrete ? { faixas: estado.faixasFrete } : {}), ...(estado?.despesasCanal ? { despesas: estado.despesasCanal } : {}) };
+    case "/financeiro": return dadosFinanceiroDemo(query, custos, estado?.despesasCanal as DespesaCanal[] ?? despesasGestaoFinanceiraDemo(estado));
+    case "/financeiro/custos": return { ...dadosCustosDemo(query, custos), ...(estado?.faixasFrete ? { faixas: estado.faixasFrete } : {}), despesas: estado?.despesasCanal ?? despesasGestaoFinanceiraDemo(estado) };
     case "/produtos/precificacao": return { dados: { ...precificacaoDemo, produtos: precificacaoDemo.produtos.map(p => { const e=custos[p.id]||{};return{...p,...("custoMercadoria" in e?{custo:e.custoMercadoria}:{}),...("embalagem" in e?{embalagem:e.embalagem}:{}),...("freteUnitario" in e?{freteSalvo:e.freteUnitario}:{}),...("aliquotaImpostos" in e?{impostoPct:e.aliquotaImpostos}:{}),...("pesoKg" in e?{pesoKg:e.pesoKg}:{}),...("margemMinimaPct" in e?{margemMinimaPct:e.margemMinimaPct}:{})};}) } };
     case "/planejamento": return { dados: planejamentoComEstadoDemo(estado), hoje: DEMO_HOJE };
     case "/planejamento/resultados": return { dados: resultadosDemo };

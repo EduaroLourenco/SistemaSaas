@@ -83,6 +83,7 @@ function Wordmark() {
 /* ══ Tema ════════════════════════════════════════════════════ */
 
 function ThemeToggle() {
+  const demo = useDemoMode();
   const [dark, setDark] = React.useState(false);
 
   React.useEffect(() => {
@@ -102,7 +103,7 @@ function ThemeToggle() {
     const next = !dark;
     setDark(next);
     document.documentElement.setAttribute("data-theme", next ? "dark" : "light");
-    try { localStorage.setItem("tema", next ? "dark" : "light"); } catch {}
+    try { if(demo)sessionStorage.setItem("tema:demo",next?"dark":"light");else localStorage.setItem("tema", next ? "dark" : "light"); } catch {}
   }
 
   return (

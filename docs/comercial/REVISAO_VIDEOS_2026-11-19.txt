@@ -1,0 +1,42 @@
+REVISÃO DOS VÍDEOS DO GERIZO — 19/11/2026
+
+Escopo: leitura dos roteiros, dos scripts de captura/montagem, dos metadados de produção e da interface do player. A narração não foi ouvida nesta revisão. Não se conclui aqui se a interpretação da voz é natural ou expressiva.
+
+O QUE EXISTE
+Os doze MP4 publicados em public/site/videos usam telas do sistema modelo. Há fontes locais com roteiros, falas WAV por cena, duração de cada fala, linha de tempo e JPEGs de captura. As peças têm entre 24,1 e 34,2 segundos na linha de tempo original; o catálogo mantém durações editoriais sugeridas, que não são medições desses arquivos.
+
+PROBLEMA PRINCIPAL CONFIRMADO NO CÓDIGO
+A captura original desenha a legenda dentro da página, antes de gravar a interface. A posição era bottom:178px numa viewport 405 × 720. A legenda preta ocupa aproximadamente a região y=1270–1445 do master 1080 × 1920, variando conforme a quantidade de linhas. Ela pode esconder o dado ao qual a fala se refere. Os JPEGs intermediários já contêm esse texto: não são capturas limpas.
+
+O arquivo montar.mjs antigo junta os JPEGs e WAVs. Ele não possui uma camada de legenda removível. Mudar CSS do player, deslocar o vídeo ou criar uma faixa adicional não recupera os números escondidos. Cortar a banda da legenda também corta parte da interface. Nenhum dos doze vídeos foi alterado por esta revisão.
+
+COMO CORRIGIR SEM PERDER O TRABALHO
+É necessário capturar novamente a interface sem a legenda desenhada sobre a tela. Os WAVs existentes podem ser usados outra vez se as cenas e os valores ainda corresponderem. Se a história, o valor ou a conclusão mudar, a fala deve acompanhar a mudança. Não acelerar áudio para encaixar uma cena.
+
+PONTOS DE DIREÇÃO
+1. Mostrar uma pergunta, uma ação e uma evidência por vez. Abrir o gráfico e manter o dado tempo suficiente para leitura.
+2. Para preço e vendas, apresentar o antes e depois do mesmo produto junto com visitas e estoque. Tratar a leitura como pista; não provar causalidade só com duas curvas.
+3. Para anúncios, mostrar um anúncio em queda e outro em crescimento, incluindo o preço de vitrine e o gráfico do período. A comparação deve usar o mesmo intervalo.
+4. Para relâmpago, ligar oferta, preço, período, unidades e resultado apurado. Crescimento durante a promoção não demonstra sozinho que ela causou a alta.
+5. Balões e um personagem pequeno podem dar humor e curiosidade, desde que fiquem na faixa de explicação e não cubram a interface.
+6. Uma pergunta curta no balão e uma legenda curta devem complementar a narração. Evitar repetir todo o texto da tela ou ditar uma tabela inteira.
+
+DETALHES TÉCNICOS DAS FONTES
+O gerador antigo define voz Francisca Natural com rate 1.04. Isso é uma configuração de síntese, não evidência de que a voz final foi ouvida ou aprovada. A agenda de legenda distribui tempo pela quantidade de caracteres, sem alinhamento palavra a palavra. V06 tem um trecho de 85 caracteres; V07, um de 68, o que aumenta a área ocupada.
+
+Algumas listas de frames originais têm pequenos timestamps fora de ordem (V01:5; V03:5; V06:4; V11:3; V02/V05/V07/V08/V09:1). Como a montagem antiga usa busca binária, uma futura reutilização dessas listas deve ordená-las por tempo. Isso é um risco de seleção de frame; não foi afirmada uma falha visual específica nos MP4.
+
+O script antigo registra erros de ações e continua gravando. Na próxima produção, uma ação que não abre a tela esperada deve interromper a peça ou exigir correção antes de publicar. Não deixar a narração prometer um detalhe que o vídeo não chegou a mostrar.
+
+PIPELINE NOVO ENTREGUE
+scripts/comercial/render-motion.mjs
+scripts/comercial/README.md
+
+O compositor trabalha offline com imagens reais capturadas visualmente e WAVs locais. O master é 1080 × 1920, a área da interface termina antes de y=1520 e a faixa inferior é reservada para pergunta, legenda e personagem vetorial de caixa. Um contorno animado identifica o elemento citado sem alterar o número. O áudio é medido, preservado na velocidade original e a cena se alonga quando necessário.
+
+ENTREGA DESTA ETAPA
+Três histórias novas foram montadas em 1080 × 1920, 24 fps, H.264 e áudio AAC. V13: preço, unidades, visitas e conversão da luminária (40,6 s). V14: queda de visitas da mesa, conversão, preço e outro produto com pico de vendas (36,1 s). V15: oferta relâmpago encerrada, piso, comparação de unidades, receita e contribuição depois da mídia (41,5 s).
+
+As novas peças usam capturas limpas, balões curtos, contorno animado, personagem vetorial e uma faixa de legenda fora da interface. A revisão visual verificou os enquadramentos e os dados. A voz foi sintetizada diretamente dos roteiros, sem microfone ou captura do som do computador; não foi feita avaliação auditiva da interpretação.
+
+Os doze vídeos anteriores continuam disponíveis. Eles não foram refeitos nem têm as legendas antigas removidas. As três histórias abrem o catálogo, com os nomes v13-motion, v14-motion e v15-motion; as fontes editoriais estão em scripts/comercial/roteiros-profundos.json e os valores em CENARIOS_VIDEO_DECISOES.txt.

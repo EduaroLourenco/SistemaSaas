@@ -261,7 +261,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
         }
       />
       <PageBody className="op-workspace op-automacoes">
-          <div className="flex gap-1 rounded-r1 bg-panel-3 p-[3px]">
+          <div data-gerizo-tour="abas-automacoes" className="flex gap-1 rounded-r1 bg-panel-3 p-[3px]">
             {([["promocoes", "Promoções"], ["fila", `Fila${fila.linhas.length ? ` (${fila.linhas.length})` : ""}`], ["ads", "Tráfego pago"]] as const).map(([k, r]) => (
               <button
                 key={k} onClick={() => setTema(k)} aria-pressed={tema === k}
@@ -276,13 +276,13 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
           </div>
 
         {tema === "ads" && <Ads dados={ads} />}
-        {tema === "fila" && (
+        {tema === "fila" && (<div data-gerizo-tour="fila-aprovacao">
           <FilaAprovacao
             fila={fila}
             promocoes={dados.promocoes}
             podeEscrever={dados.contas.some((c) => c.escrita)}
           />
-        )}
+        </div>)}
         {tema === "promocoes" && (<>
         <div className="auto-lista">
           {/* Um número manda; o resto é uma frase de números, não uma
@@ -773,7 +773,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
   const podeMarcar = lista.filter((i) => situacaoDe(i) === "cabe");
 
   return (
-    <Panel className="mt-4">
+    <Panel data-gerizo-tour="proposta-promocao" className="mt-4">
       <div className="flex flex-wrap items-center gap-3 border-b border-line p-4">
         <Badge tone={TOM[promocao.tipo] ?? "neutral"}>{ROTULO[promocao.tipo] ?? promocao.tipo}</Badge>
         <div className="min-w-0">
