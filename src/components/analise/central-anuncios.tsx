@@ -1,8 +1,10 @@
 "use client";
+import { gerizoFetch, DemoAnchor } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { DemoLink as Link } from "@/lib/demo/runtime";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { ArrowLeft, ArrowRight, ExternalLink, RefreshCw, Search, SlidersHorizontal, X, Download } from "lucide-react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Button, Badge, Delta } from "@/components/ui/primitives";
@@ -148,7 +150,7 @@ export default function CentralAnuncios({ dados, inicial }: { dados: DadosAnalis
       for(const a of selecionado?[selecionado]:filtrados){const k=a.contaId??"";porConta.set(k,[...(porConta.get(k)??[]),a.mlb]);}
       let ok=0,sem=0;
       for(const [k,mlbs] of porConta){
-        const r=await fetch(`/api/anuncios/precos${k?`?conta=${k}`:""}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mlbs})});
+        const r=await gerizoFetch(`/api/anuncios/precos${k?`?conta=${k}`:""}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mlbs})});
         const j=await r.json(); if(!r.ok) throw new Error(j.erro||"Não foi possível atualizar os preços.");
         ok+=j.recebidos-j.comErro; sem+=j.comErro;
       }
@@ -224,7 +226,7 @@ function Detalhe({item:a,periodo,porDia,antes,motivoVisitas,itens,fechar,abrir,a
   /* `undefined`: sem comparação escolhida. `null`: escolhida, sem movimento no período dela. */
   const compara=antes!==undefined;
   return <>
-    <div className="ads-inspector-head"><Button onClick={fechar}><ArrowLeft size={16}/>Voltar à lista</Button>{linkCanal&&<a href={linkCanal} target="_blank" rel="noreferrer" aria-label="Abrir no Mercado Livre">Mercado Livre <ExternalLink size={14}/></a>}</div>
+    <div className="ads-inspector-head"><Button onClick={fechar}><ArrowLeft size={16}/>Voltar à lista</Button>{linkCanal&&<DemoAnchor href={linkCanal} target="_blank" rel="noreferrer" aria-label="Abrir no Mercado Livre">Mercado Livre <ExternalLink size={14}/></DemoAnchor>}</div>
     <div className="ads-identity"><FotoAnuncio mlb={a.mlb} tamanho={64}/><div><span>{a.mlb} · {a.tipo}</span><h2>{a.titulo}</h2><small>{a.conta} · {a.status}</small></div></div>
     <div role="tablist" aria-label="Dados do anúncio" className="ads-tabs">{ABAS.map((t,i)=><button role="tab" type="button" id={`ads-tab-${t.id}`} tabIndex={aba===t.id?0:-1} aria-selected={aba===t.id} aria-controls={`ads-panel-${t.id}`} key={t.id} onClick={()=>setAba(t.id)} onKeyDown={e=>{
       const proxima=e.key==="ArrowRight"?(i+1)%ABAS.length:e.key==="ArrowLeft"?(i+ABAS.length-1)%ABAS.length:e.key==="Home"?0:e.key==="End"?ABAS.length-1:null;

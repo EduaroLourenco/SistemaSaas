@@ -5,7 +5,7 @@ import { HeroMetric } from "@/components/ui/workspace";
 
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { Panel, Badge, Delta, EmptyState } from "@/components/ui/primitives";

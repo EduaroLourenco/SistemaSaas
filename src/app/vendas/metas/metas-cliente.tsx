@@ -1,11 +1,13 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import decisaoCss from "@/components/analise/decision-workspace.module.css";
 import { HeroMetric, WorkflowSteps } from "@/components/ui/workspace";
 
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
@@ -127,7 +129,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
     setErro(null);
     setAviso(null);
     try {
-      const r = await fetch("/api/metas", {
+      const r = await gerizoFetch("/api/metas", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -175,7 +177,7 @@ export default function PlanejarMetas({ dados }: { dados: DadosPlanejamento }) {
     setSalvando(true);
     setErro(null);
     try {
-      const r = await fetch("/api/metas/dia", {
+      const r = await gerizoFetch("/api/metas/dia", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

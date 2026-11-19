@@ -1,4 +1,6 @@
 "use client";
+import { DemoAnchor } from "@/lib/demo/runtime";
+
 
 import "@/components/analise/analytic-refinement.css";
 
@@ -7,7 +9,7 @@ import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
 
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import {
   Bar,
   CartesianGrid,
@@ -513,9 +515,9 @@ function CatalogoDaSemana({ dados }: { dados: CatalogoSemana }) {
                 <tr key={x.mlb} className="border-b border-line last:border-0 align-top">
                   <td className="px-4 py-2">
                     {linkDoAnuncio(x.mlb) ? (
-                      <a href={linkDoAnuncio(x.mlb)!} target="_blank" rel="noreferrer" className="num text-[12px] text-brand hover:underline">
+                      <DemoAnchor href={linkDoAnuncio(x.mlb)!} target="_blank" rel="noreferrer" className="num text-[12px] text-brand hover:underline">
                         {x.sku || x.mlb}
-                      </a>
+                      </DemoAnchor>
                     ) : (
                       <span className="num text-[12px] text-ink">{x.sku || x.mlb}</span>
                     )}

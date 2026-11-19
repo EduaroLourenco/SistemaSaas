@@ -1,8 +1,10 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import "@/components/analise/operation-pages.css";
 import { Badge, Button, EmptyState, Panel } from "@/components/ui/primitives";
@@ -82,7 +84,7 @@ export default function RegrasCliente({ regras, faltaMigracao, cobertura, contas
   async function chamar(corpo: unknown) {
     setSalvando(true);
     try {
-      const r = await fetch("/api/automacoes/regras", {
+      const r = await gerizoFetch("/api/automacoes/regras", {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(corpo),
       });
       const j = await r.json();

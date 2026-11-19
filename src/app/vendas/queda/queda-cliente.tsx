@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import "@/components/analise/analytic-refinement.css";
 
@@ -8,7 +10,7 @@ import { HeroMetric } from "@/components/ui/workspace";
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import {
   Bar,
   CartesianGrid,
@@ -171,7 +173,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
       ]
         .filter(Boolean)
         .join(" · ");
-      const r = await fetch("/api/exportar/queda", {
+      const r = await gerizoFetch("/api/exportar/queda", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -609,7 +611,7 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
     setErro(null);
     const q = new URLSearchParams({ chave: l.chave, de: dados.deAnterior, ate: dados.ate, inicioAtual: dados.de });
     if (dados.recorte.length) q.set("canais", dados.recorte.join(","));
-    fetch(`/api/queda?${q}`)
+    gerizoFetch(`/api/queda?${q}`)
       .then(async (r) => {
         const j = await r.json();
         if (!vivo) return;

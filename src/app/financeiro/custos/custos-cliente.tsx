@@ -1,4 +1,7 @@
 "use client";
+import { gerizoReload } from "@/lib/demo/runtime";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import type { GrupoRecorte } from "@/lib/recorte";
@@ -278,7 +281,7 @@ export default function CustosCliente({
     setSalvando(true);
     setErro(null);
     try {
-      const r = await fetch("/api/custos", {
+      const r = await gerizoFetch("/api/custos", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -296,7 +299,7 @@ export default function CustosCliente({
       setSalvo(true);
       // Recarrega para que a margem apareça recalculada pelo servidor —
       // refazer a conta aqui criaria uma segunda implementação dela.
-      window.location.reload();
+      gerizoReload();
     } catch {
       setErro("Sem conexão — nada foi gravado.");
     } finally {
@@ -314,7 +317,7 @@ export default function CustosCliente({
     setSalvando(true);
     setErro(null);
     try {
-      const r = await fetch("/api/custos/faixas", {
+      const r = await gerizoFetch("/api/custos/faixas", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -334,7 +337,7 @@ export default function CustosCliente({
         setErro(corpo.erro ?? `Falha ao gravar (HTTP ${r.status})`);
         return;
       }
-      window.location.reload();
+      gerizoReload();
     } catch {
       setErro("Sem conexão — nada foi gravado.");
     } finally {
@@ -369,7 +372,7 @@ export default function CustosCliente({
               },
             ],
           };
-      const r = await fetch("/api/custos/canal", {
+      const r = await gerizoFetch("/api/custos/canal", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(corpoEnvio),
@@ -379,7 +382,7 @@ export default function CustosCliente({
         setErro(corpo.erro ?? `Falha ao gravar (HTTP ${r.status})`);
         return;
       }
-      window.location.reload();
+      gerizoReload();
     } catch {
       setErro("Sem conexão — nada foi gravado.");
     } finally {

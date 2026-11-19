@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { ArrowLeft, Check, ChevronDown, ChevronRight, Target } from "lucide-react";
 import {
   CartesianGrid,

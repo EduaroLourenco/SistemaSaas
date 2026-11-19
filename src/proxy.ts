@@ -8,6 +8,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { paginaComercial } from "@/lib/rotas-publicas";
+import { caminhoDemo } from "@/lib/demo/rotas";
 import { barrarForaDaExpedicao } from "@/lib/acesso-expedicao-proxy";
 
 /*
@@ -85,7 +86,9 @@ export async function proxy(req: NextRequest) {
   // A demonstração é local e fictícia. Não renova sessão nem consulta dados
   // da operação, inclusive quando quem visita já está logado no produto.
   if (paginaComercial(caminho) || (caminho === "/api/interesse" && req.method === "POST")) {
-    return NextResponse.next({ request: req });
+    const publica = NextResponse.next({ request: req });
+    if (caminhoDemo(caminho) && process.env.NODE_ENV === "production") publica.headers.set("Content-Security-Policy", "connect-src 'none'; form-action 'none'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'");
+    return publica;
   }
   let resposta = NextResponse.next({ request: req });
 

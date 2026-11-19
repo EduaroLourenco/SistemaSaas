@@ -1,8 +1,10 @@
 "use client";
+import { gerizoFetch, DemoAnchor, useDemoMode } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { DemoLink as Link } from "@/lib/demo/runtime";
+import { useGerizoPathname as usePathname } from "@/lib/demo/runtime";
 import { cn } from "@/lib/utils";
 import { NAV, NAV_FOOTER, type NavGroup } from "@/lib/nav";
 import { BarraCelular } from "./barra-celular";
@@ -39,12 +41,14 @@ import { NavegacaoArea } from "./navegacao-area";
 /* Imprimil e Bom de Compras usam o nome "GDF3 by Gerizo" no lugar do logo. Lê a
    empresa ativa da mesma rota do rodapé e relê quando o seletor troca. */
 function Wordmark() {
+  const demo = useDemoMode();
   const [gdf3, setGdf3] = React.useState(false);
-  useTituloGdf3(gdf3);
+  useTituloGdf3(gdf3 && !demo);
   React.useEffect(() => {
+    if (demo) return;
     let vivo = true;
     const ler = () =>
-      fetch("/api/operacao")
+      gerizoFetch("/api/operacao")
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (!vivo || !d) return;
@@ -59,10 +63,10 @@ function Wordmark() {
       vivo = false;
       window.removeEventListener("gerizo:operacao-trocada", ler);
     };
-  }, []);
+  }, [demo]);
   return (
     <Link href="/" aria-label={gdf3 ? "GDF3 by Gerizo — Hoje" : "Gerizo — Hoje"} className="inline-flex items-center py-1">
-      {gdf3 ? <span className="whitespace-nowrap text-[17px] font-bold tracking-tight text-ink">GDF3 <span className="font-medium text-ink-2">by Gerizo</span></span> : <Brand />}
+      {gdf3 && !demo ? <span className="whitespace-nowrap text-[17px] font-bold tracking-tight text-ink">GDF3 <span className="font-medium text-ink-2">by Gerizo</span></span> : <Brand />}
     </Link>
   );
 }
@@ -119,23 +123,25 @@ const VALIDADE_SINO = 30 * 60_000;
 
 /* Calcular alertas é pesado: uma leitura a cada 30 minutos, fora da navegação. */
 function SinoAlertas() {
+  const demo = useDemoMode();
+  const chaveSino = demo ? CHAVE_SINO + ":demo" : CHAVE_SINO;
   const [r, setR] = React.useState<{ total: number; criticos: number } | null>(null);
   React.useEffect(() => {
     let vivo = true;
     async function ler() {
       try {
-        const salvo = JSON.parse(sessionStorage.getItem(CHAVE_SINO) ?? "null");
+        const salvo = JSON.parse(sessionStorage.getItem(chaveSino) ?? "null");
         if (salvo && Date.now() - salvo.em < VALIDADE_SINO) return setR(salvo);
       } catch {}
-      const res = await fetch("/api/alertas/resumo").catch(() => null);
+      const res = await gerizoFetch("/api/alertas/resumo").catch(() => null);
       if (!res?.ok || !vivo) return;
       const novo = await res.json().catch(() => null);
       if (!novo || !vivo) return;
       setR(novo);
-      try { sessionStorage.setItem(CHAVE_SINO, JSON.stringify({ ...novo, em: Date.now() })); } catch {}
+      try { sessionStorage.setItem(chaveSino, JSON.stringify({ ...novo, em: Date.now() })); } catch {}
     }
     const trocou = () => {
-      try { sessionStorage.removeItem(CHAVE_SINO); } catch {}
+      try { sessionStorage.removeItem(chaveSino); } catch {}
       setR(null);
       void ler();
     };
@@ -145,7 +151,7 @@ function SinoAlertas() {
       vivo = false;
       window.removeEventListener("gerizo:operacao-trocada", trocou);
     };
-  }, []);
+  }, [chaveSino]);
   const total = r?.total ?? 0;
   return (
     <Link
@@ -392,6 +398,7 @@ export function MolduraExpedicao({ children }: { children: React.ReactNode }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const demo = useDemoMode();
   const soExpedicao = React.useSyncExternalStore(semAssinatura, lerExpedicao, expedicaoServidor);
   const [moreOpen, setMoreOpen] = React.useState(false);
   const menu = useMenuLateral(pathname);
@@ -404,11 +411,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (soExpedicao) return <MolduraExpedicao>{children}</MolduraExpedicao>;
+  if (!demo && soExpedicao) return <MolduraExpedicao>{children}</MolduraExpedicao>;
 
   return (
-    <div className="min-h-full">
-      <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-r1 focus:bg-panel focus:p-3">Ir para o conteúdo</a>
+    <div key={demo ? "demonstracao" : "operacao"} className="min-h-full">
+      <DemoAnchor href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-r1 focus:bg-panel focus:p-3">Ir para o conteúdo</DemoAnchor>
       {/* barra superior */}
       <header className="fixed top-0 inset-x-0 z-40 bg-panel border-b border-line">
         <div
@@ -506,6 +513,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
  * levava a Configurações, e não existia jeito nenhum de sair da conta.
  */
 function MenuConta({ paraCima = false, semConfiguracoes = false }: { paraCima?: boolean; semConfiguracoes?: boolean }) {
+  const demo = useDemoMode();
   const [aberto, setAberto] = React.useState(false);
   const [saindo, setSaindo] = React.useState(false);
   const caixa = React.useRef<HTMLDivElement>(null);
@@ -528,9 +536,10 @@ function MenuConta({ paraCima = false, semConfiguracoes = false }: { paraCima?: 
   }, [aberto]);
 
   async function sair() {
+    if (demo) { window.location.assign("/conheca"); return; }
     setSaindo(true);
     try {
-      await fetch("/api/sair", { method: "POST" });
+      await gerizoFetch("/api/sair", { method: "POST" });
     } finally {
       // Recarga inteira, não navegação: limpa o cache do navegador junto
       // com a sessão — nada da conta anterior fica na memória da página.
@@ -597,7 +606,7 @@ function RodapeEmpresa() {
   React.useEffect(() => {
     let vivo = true;
     const ler = () =>
-      fetch("/api/operacao")
+      gerizoFetch("/api/operacao")
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (!vivo || !d?.id) return;

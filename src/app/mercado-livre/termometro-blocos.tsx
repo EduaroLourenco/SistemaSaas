@@ -1,7 +1,9 @@
 "use client";
+import { DemoAnchor } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
 import { Panel, PanelHeader, Badge } from "@/components/ui/primitives";
 import { linkDoAnuncio } from "@/lib/links";
@@ -19,9 +21,9 @@ function Chip({ texto, mlb }: { texto: string; mlb?: string }) {
   const href = mlb ? linkDoAnuncio(mlb) : null;
   const classe = "num inline-flex min-h-7 items-center rounded-r1 bg-panel-2 px-2 text-[12px] text-ink-2";
   return href ? (
-    <a href={href} target="_blank" rel="noreferrer" className={cn(classe, "hover:text-brand")}>
+    <DemoAnchor href={href} target="_blank" rel="noreferrer" className={cn(classe, "hover:text-brand")}>
       {texto}
-    </a>
+    </DemoAnchor>
   ) : (
     <span className={classe}>{texto}</span>
   );
@@ -338,9 +340,9 @@ export function MaisVistos({ lista, dia }: { lista: ProdutoDoDia[]; dia: string 
                     <p className="num flex flex-wrap items-center gap-x-2 text-[11.5px] text-ink-3">
                       {p.sku || "sem SKU"}
                       {link ? (
-                        <a href={link} target="_blank" rel="noreferrer" className="text-brand hover:underline">
+                        <DemoAnchor href={link} target="_blank" rel="noreferrer" className="text-brand hover:underline">
                           {p.mlb}
-                        </a>
+                        </DemoAnchor>
                       ) : (
                         p.mlb
                       )}

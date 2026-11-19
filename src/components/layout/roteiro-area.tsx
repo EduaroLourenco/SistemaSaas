@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { DemoLink as Link } from "@/lib/demo/runtime";
+import { useGerizoPathname as usePathname } from "@/lib/demo/runtime";
 import { ArrowUpRight, Compass } from "lucide-react";
 
 const ROTAS = [

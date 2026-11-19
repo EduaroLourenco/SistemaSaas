@@ -1,7 +1,9 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { Panel, Button, Badge, EmptyState } from "@/components/ui/primitives";
 import { Sheet, Input, Select, Field } from "@/components/ui/controls";
 import { Plus, Pencil, Trash2, AlertTriangle, Search } from "lucide-react";
@@ -151,7 +153,7 @@ export function Cadastro<T extends { id: string }>({
     setAviso(null);
     try {
       const dados = aoGravar ? aoGravar(valores) : valores;
-      const r = await fetch(`/api/cadastros/${recurso}`, {
+      const r = await gerizoFetch(`/api/cadastros/${recurso}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: aberto?.id, dados, replicar: valores.__replicar === true }),
@@ -180,7 +182,7 @@ export function Cadastro<T extends { id: string }>({
     try {
       const q = new URLSearchParams({ id: linha.id });
       if (comFilhas) q.set("filhas", "1");
-      const r = await fetch(`/api/cadastros/${recurso}?${q}`, { method: "DELETE" });
+      const r = await gerizoFetch(`/api/cadastros/${recurso}?${q}`, { method: "DELETE" });
       const j = await r.json();
       if (!r.ok) {
         setErro(j.erro ?? "Não consegui apagar.");

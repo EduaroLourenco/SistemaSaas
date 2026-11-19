@@ -1,6 +1,8 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 import * as React from "react";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import type { carregarEstoques } from "@/lib/dados/estoques";
 
 type Dados = Awaited<ReturnType<typeof carregarEstoques>>;
@@ -15,7 +17,7 @@ export function EstoqueProduto({ sku, anuncio }: { sku?: string; anuncio?: strin
     const q = new URLSearchParams({ pagina: String(pagina) });
     if (sku && sku !== "—") q.set("sku", sku); else if (anuncio) q.set("anuncio", anuncio);
     if (!q.has("sku") && !q.has("anuncio")) { setErro("Este item ainda não tem SKU ou anúncio vinculado."); return; }
-    fetch(`/api/estoques/produto?${q}`, { signal: abort.signal }).then(async (r) => {
+    gerizoFetch(`/api/estoques/produto?${q}`, { signal: abort.signal }).then(async (r) => {
       const d = await r.json(); if (!r.ok || d.erro) throw new Error(d.erro || "Falha ao consultar");
       setDados(d);
     }).catch((e) => { if (!abort.signal.aborted) setErro(e.message); });

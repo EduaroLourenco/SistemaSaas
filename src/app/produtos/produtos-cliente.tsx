@@ -5,8 +5,8 @@ import decisaoCss from "@/components/analise/decision-workspace.module.css";
 
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { DemoLink as Link } from "@/lib/demo/runtime";
+import { useGerizoSearchParams as useSearchParams } from "@/lib/demo/runtime";
 import { Download, ArrowRight } from "lucide-react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";

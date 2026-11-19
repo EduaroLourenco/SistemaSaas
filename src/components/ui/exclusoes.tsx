@@ -1,7 +1,9 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { Panel, Button, Badge } from "./primitives";
 import { Select } from "./controls";
 import { count } from "@/lib/format";
@@ -64,7 +66,7 @@ export function PainelExclusoes({
     setErro(null);
     setSalvando(true);
     try {
-      const res = await fetch("/api/exclusoes", {
+      const res = await gerizoFetch("/api/exclusoes", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -92,7 +94,7 @@ export function PainelExclusoes({
   }
 
   async function reverter(id: string) {
-    await fetch(`/api/exclusoes?id=${id}`, { method: "DELETE" });
+    await gerizoFetch(`/api/exclusoes?id=${id}`, { method: "DELETE" });
     router.refresh();
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { Panel, Badge } from "@/components/ui/primitives";
 import { count } from "@/lib/format";
 import { cn } from "@/lib/utils";

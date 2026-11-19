@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
 import { Badge } from "@/components/ui/primitives";
@@ -50,7 +52,7 @@ export function BlocosDoSku({ sku, atual, selecionar }: { sku: string; atual?: s
     }
     let vivo = true;
     setEstado("carregando");
-    fetch(`/api/anuncios/sku/${encodeURIComponent(sku)}`)
+    gerizoFetch(`/api/anuncios/sku/${encodeURIComponent(sku)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d: RaioXSku) => {
         if (!vivo) return;

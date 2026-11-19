@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 
 /* Passar o mouse de relance pelo menu não deve ir ao banco. */
 const INTENCAO_MS = 120;

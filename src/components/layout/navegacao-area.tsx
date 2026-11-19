@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { DemoLink as Link } from "@/lib/demo/runtime";
+import { useGerizoPathname as usePathname, useGerizoSearchParams as useSearchParams } from "@/lib/demo/runtime";
 import { AREAS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 

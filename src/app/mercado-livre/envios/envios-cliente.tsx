@@ -1,7 +1,9 @@
 "use client";
+import { gerizoFetch, DemoAnchor } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { atualizador, estadoInicial } from "@/lib/atualizacao-cliente";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, Button } from "@/components/ui/primitives";
@@ -177,7 +179,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
     const leitura = dados;
     const janela = window.open("", "_blank");
     try {
-      const r = await fetch("/api/envios/etiquetas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ envios: [...selecionadosIds], confirmar: true }) });
+      const r = await gerizoFetch("/api/envios/etiquetas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ envios: [...selecionadosIds], confirmar: true }) });
       if (leituraAtual.current !== leitura) { janela?.close(); return; }
       if (!r.ok) {
         janela?.close();
@@ -337,7 +339,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
           </div>
           {leituraAntiga && <p className="shipping-document-note"><AlertCircle size={16} aria-hidden="true" />Há envios sem os dados necessários para os documentos. Atualize a leitura de Envios para habilitar a seleção.</p>}
           {aviso && <p role={aviso.tom === "down" ? "alert" : "status"} className={cn("shipping-document-feedback", aviso.tom === "down" ? "text-down" : aviso.tom === "warn" ? "text-warn" : "text-up")}>{aviso.texto}</p>}
-          {arquivo && <div className="shipping-file"><FileText size={20} aria-hidden="true" /><div><strong>Documentos prontos</strong><span>PDF com os envios liberados pelo Mercado Livre.</span></div><a href={arquivo} target="_blank" rel="noopener noreferrer">Abrir PDF</a><a href={arquivo} download="documentos-expedicao.pdf">Baixar PDF</a></div>}
+          {arquivo && <div className="shipping-file"><FileText size={20} aria-hidden="true" /><div><strong>Documentos prontos</strong><span>PDF com os envios liberados pelo Mercado Livre.</span></div><DemoAnchor href={arquivo} target="_blank" rel="noopener noreferrer">Abrir PDF</DemoAnchor><DemoAnchor href={arquivo} download="documentos-expedicao.pdf">Baixar PDF</DemoAnchor></div>}
         </section>}
 
         {lista.length === 0 ? (

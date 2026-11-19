@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
+import { useGerizoPathname as usePathname } from "@/lib/demo/runtime";
 import { Carregando } from "@/components/ui/carregando";
 import { NOME_GDF3, useGdf3 } from "@/lib/marca-gdf3";
 

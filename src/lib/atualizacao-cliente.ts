@@ -1,3 +1,5 @@
+
+import { gerizoFetch, emDemo } from "@/lib/demo/runtime";
 import type { Bloco } from "@/lib/atualizacao-blocos";
 
 export type EtapaAtualizacao = {
@@ -31,7 +33,7 @@ export const estadoInicial: EstadoAtualizacao = { carregado: false, enviando: fa
  * `/api/cron/fila`), então fechar a aba ou bloquear o celular não para
  * nada: ao voltar, a leitura mostra o que já rodou.
  */
-export function criarAtualizador(requisitar: typeof fetch = (...args) => fetch(...args)) {
+export function criarAtualizador(requisitar: typeof fetch = (...args) => gerizoFetch(...args)) {
   let estado = estadoInicial;
   let relogio: ReturnType<typeof setTimeout> | null = null;
   const ouvintes = new Set<() => void>();
@@ -91,4 +93,15 @@ export function criarAtualizador(requisitar: typeof fetch = (...args) => fetch(.
   };
 }
 
-export const atualizador = criarAtualizador();
+const atualizadorOperacao = criarAtualizador();
+const atualizadorDemonstracao = criarAtualizador();
+const atual = () => emDemo() ? atualizadorDemonstracao : atualizadorOperacao;
+/** A demonstração não herda o estado ou o nome de uma operação já aberta. */
+export const atualizador: ReturnType<typeof criarAtualizador> = {
+  ler: () => atual().ler(),
+  assinar: (ouvinte) => atual().assinar(ouvinte),
+  carregar: () => atual().carregar(),
+  recarregar: () => atual().recarregar(),
+  pedir: (blocos) => atual().pedir(blocos),
+  aoTerminar: (callback) => atual().aoTerminar(callback),
+};

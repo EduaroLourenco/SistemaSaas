@@ -1,7 +1,9 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { ChevronDown, Check, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { iniciarCarregando, encerrarCarregando } from "./carregando-gerizo";
@@ -56,7 +58,7 @@ export function SeletorEmpresa() {
 
   React.useEffect(() => {
     let vivo = true;
-    fetch("/api/operacao")
+    gerizoFetch("/api/operacao")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!vivo || !d?.id) return;
@@ -111,7 +113,7 @@ export function SeletorEmpresa() {
     setErro(null);
     iniciarCarregando("manual");
     try {
-      const r = await fetch("/api/operacao", {
+      const r = await gerizoFetch("/api/operacao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),

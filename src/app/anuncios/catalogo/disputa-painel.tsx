@@ -1,4 +1,6 @@
 "use client";
+import { DemoAnchor } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
@@ -123,14 +125,14 @@ export function DisputaPainel({ disputa }: { disputa: DadosDisputa }) {
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="num text-[12.5px] font-medium text-ink">{l.sku || "sem SKU"}</span>
             {linkDoAnuncio(l.mlb) ? (
-              <a
+              <DemoAnchor
                 href={linkDoAnuncio(l.mlb)!}
                 target="_blank"
                 rel="noreferrer"
                 className="num text-[11.5px] text-brand hover:underline"
               >
                 {l.mlb}
-              </a>
+              </DemoAnchor>
             ) : (
               <span className="num text-[11.5px] text-ink-3">{l.mlb}</span>
             )}

@@ -7,7 +7,7 @@ import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
 
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { BarraFiltros, Filtro } from "@/components/layout/barra-filtros";
 import { SemFonte } from "@/components/ui/sem-fonte";
 import { atualizarFiltrosTrafego, urlTrafego } from "@/lib/trafego-pago-filtros";

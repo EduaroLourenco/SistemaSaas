@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { DemoLink as Link } from "@/lib/demo/runtime";
+import { useGerizoPathname as usePathname } from "@/lib/demo/runtime";
 
 const GRUPOS = {
   administracao: [["Empresas", "/empresas"], ["Equipe", "/equipe"], ["Canais e contas", "/integracoes/canais"], ["Fontes de dados", "/integracoes"], ["Estoques", "/integracoes/estoques"], ["Preferências", "/configuracoes"]],

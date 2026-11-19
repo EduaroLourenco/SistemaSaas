@@ -1,4 +1,6 @@
 "use client";
+import { DemoAnchor } from "@/lib/demo/runtime";
+
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X, Search, Check, Package, ExternalLink, Plus } from "lucide-react";
 import {
@@ -309,14 +311,14 @@ export function ContextoPromocoes({
           />
         ))
       )}
-      <a
+      <DemoAnchor
         className="pl-link"
         href="/promocoes/campanhas"
         target="_blank"
         rel="noreferrer"
       >
         Abrir Central de Promoções <ExternalLink size={13} />
-      </a>
+      </DemoAnchor>
     </section>
   );
 }

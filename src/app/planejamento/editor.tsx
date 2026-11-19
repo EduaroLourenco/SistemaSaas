@@ -1,4 +1,6 @@
 "use client";
+import { DemoAnchor } from "@/lib/demo/runtime";
+
 import { useState, type FormEvent } from "react";
 import { Plus, Trash2, Copy, Save, Check, ExternalLink } from "lucide-react";
 import {
@@ -607,14 +609,14 @@ export default function Editor({
                 />
               </Campo>
               {/^https?:\/\//i.test(item.detalhes.link) && (
-                <a
+                <DemoAnchor
                   className="pl-link"
                   href={item.detalhes.link}
                   target="_blank"
                   rel="noreferrer"
                 >
                   Abrir referência <ExternalLink size={13} />
-                </a>
+                </DemoAnchor>
               )}
               <section>
                 <h3>Preparativos</h3>

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { Warehouse, Package, ArrowUpRight } from "lucide-react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge } from "@/components/ui/primitives";

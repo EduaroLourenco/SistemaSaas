@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 import { useEffect, useRef, useState } from "react";
 import { Check, Target, BookOpen, BarChart3, Plus } from "lucide-react";
 import { type Dados, type Item, formatarData } from "@/lib/planejamento/modelo";
@@ -549,7 +551,7 @@ function Resultados({
     setErro("");
     setResultado(null);
     try {
-      const r = await fetch(
+      const r = await gerizoFetch(
         `/api/planejamento/resultados?${new URLSearchParams({ id: item.id, operacao, revisao: String(item.revisao) })}`,
         { signal: ctrl.signal, cache: "no-store" },
       );

@@ -77,10 +77,11 @@ const ICONE: Record<string, React.ElementType> = {
 };
 
 const CHAVE = "anotacoes-anuncio";
+const chaveAnotacoes = () => typeof window !== "undefined" && window.location.pathname.startsWith("/demonstracao/sistema/") ? CHAVE + ":demo" : CHAVE;
 
 function lerAnotacoes(): Anotacao[] {
   try {
-    return JSON.parse(localStorage.getItem(CHAVE) ?? "[]");
+    return JSON.parse(localStorage.getItem(chaveAnotacoes()) ?? "[]");
   } catch {
     return [];
   }
@@ -88,7 +89,7 @@ function lerAnotacoes(): Anotacao[] {
 
 function gravarAnotacoes(lista: Anotacao[]) {
   try {
-    localStorage.setItem(CHAVE, JSON.stringify(lista));
+    localStorage.setItem(chaveAnotacoes(), JSON.stringify(lista));
   } catch {
     // navegador com armazenamento bloqueado: a sessão segue, sem persistir
   }

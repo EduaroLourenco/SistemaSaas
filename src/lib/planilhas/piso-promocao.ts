@@ -73,6 +73,22 @@ export function faixaDoPreco(
 }
 
 /**
+ * Quanto sobra por unidade nesse preço, pelo cadastro do produto.
+ *
+ * Null quando falta qualquer custo: resultado parcial pareceria lucro.
+ * A comissão desconta a parte que o Meli banca, como em `pisoDoItem`.
+ */
+export function resultadoEstimado(
+  i: Pick<ItemAutomacao, "custos" | "comissaoCheia" | "meliPct">,
+  preco: number | null
+): number | null {
+  if (preco == null || !i.custos || i.comissaoCheia == null) return null;
+  const { custo, embalagem, impostoPct, frete } = i.custos;
+  const comissao = Math.max(0, i.comissaoCheia - (i.meliPct ?? 0) / 100);
+  return Math.round((preco * (1 - comissao - impostoPct / 100) - custo - embalagem - frete) * 100) / 100;
+}
+
+/**
  * O preço que a folga propõe a partir do piso.
  *
  * Arredonda para baixo em centavos, porque arredondar para cima devolve

@@ -1,0 +1,5 @@
+export const DEMO_PREFIX = "/demonstracao/sistema";
+export const ROTAS_DEMO = ["/vendas/dia", "/vendas/semanal", "/vendas/skus", "/vendas/queda", "/vendas/mtd", "/vendas/anual", "/vendas/canais", "/anuncios/analise", "/anuncios/trafego-pago", "/mercado-livre", "/mercado-livre/envios", "/automacoes", "/automacoes/regras", "/promocoes/processar", "/promocoes/campanhas", "/promocoes/historico", "/promocoes/comparar", "/anuncios/preco-ideal", "/financeiro", "/financeiro/custos", "/produtos", "/produtos/precificacao", "/planejamento", "/planejamento/resultados", "/conversa"] as const;
+export function caminhoDemo(pathname: string) { return pathname === DEMO_PREFIX || pathname.startsWith(DEMO_PREFIX + "/"); }
+export function caminhoLogico(pathname: string) { return caminhoDemo(pathname) ? pathname.slice(DEMO_PREFIX.length) || "/vendas/dia" : pathname; }
+export const LEGADO_DEMO: Record<string, string> = { hoje: "/vendas/dia", produtos: "/vendas/skus", anuncios: "/anuncios/analise", midia: "/anuncios/trafego-pago", promocoes: "/automacoes", planejamento: "/planejamento", financeiro: "/financeiro", envios: "/mercado-livre/envios", conversar: "/conversa" };

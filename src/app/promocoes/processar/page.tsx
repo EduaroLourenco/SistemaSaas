@@ -1,6 +1,8 @@
 "use client";
+import { gerizoFetch, DemoAnchor } from "@/lib/demo/runtime";
 
-import Link from "next/link";
+
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { FerramentasPromocoes } from "@/components/promocoes/ferramentas";
@@ -196,7 +198,7 @@ export default function ProcessarPromocoes() {
      chegar ao mesmo resultado, então o valor vem do banco (db/36). */
   React.useEffect(() => {
     let vivo = true;
-    fetch("/api/promocoes/piso")
+    gerizoFetch("/api/promocoes/piso")
       .then((r) => r.json())
       .then((j) => { if (!vivo) return; if (j.erro) { setErroPiso(j.erro); return; } setComoPiso(Boolean(j.usarComoPiso)); setTolerancia(String(j.toleranciaPct ?? 5)); })
       .catch(() => { if (vivo) setErroPiso("Não foi possível carregar a regra salva."); });
@@ -209,7 +211,7 @@ export default function ProcessarPromocoes() {
     try {
       const pct = Number(tolerancia.trim().replace(",", "."));
       if (!tolerancia.trim() || !Number.isFinite(pct) || pct < 0 || pct > 50) throw new Error("Informe uma tolerância de 0 a 50%.");
-      const r = await fetch("/api/promocoes/piso", {
+      const r = await gerizoFetch("/api/promocoes/piso", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ usarComoPiso: comoPiso, toleranciaPct: pct }),
@@ -258,7 +260,7 @@ export default function ProcessarPromocoes() {
     if (!linhas.length) return id;
     setAplicando(true);
     try {
-      const r = await fetch("/api/promocoes/ajustar", {
+      const r = await gerizoFetch("/api/promocoes/ajustar", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -299,7 +301,7 @@ export default function ProcessarPromocoes() {
     setBaixando(true);
     setErro(null);
     try {
-      const r = await fetch(`/api/promocoes/baixar/${id}`);
+      const r = await gerizoFetch(`/api/promocoes/baixar/${id}`);
       if (!r.ok) {
         const corpo = await r.json().catch(() => ({}));
         setErro(
@@ -355,7 +357,7 @@ export default function ProcessarPromocoes() {
     fd.append("margemMinima", String(parseFloat(margemMinima.replace(",", ".")) || 0));
 
     try {
-      const r = await fetch("/api/promocoes/processar", { method: "POST", body: fd });
+      const r = await gerizoFetch("/api/promocoes/processar", { method: "POST", body: fd });
 
       /*
        * Lê como TEXTO antes de tentar JSON.
@@ -899,12 +901,12 @@ export default function ProcessarPromocoes() {
                     desconto para o mesmo anúncio, e escolher uma aqui seria
                     decidir qual importa antes de você poder comparar.
                   */}
-                  <a
+                  <DemoAnchor
                     href="/promocoes/comparar"
                     className="text-brand underline underline-offset-2"
                   >
                     Comparar as ofertas
-                  </a>
+                  </DemoAnchor>
                   {resultado.gravacao.semAnuncio > 0 && (
                     <>
                       {" · "}

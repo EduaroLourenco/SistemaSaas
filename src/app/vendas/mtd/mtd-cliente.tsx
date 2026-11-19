@@ -1,12 +1,14 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import decisaoCss from "@/components/analise/decision-workspace.module.css";
 import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
 
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Select, Segmented, Progress } from "@/components/ui/controls";
@@ -148,7 +150,7 @@ export default function MtdCliente({ dados: d }: { dados: DadosMtd }) {
     setSalvando(true);
     setErro(null);
     try {
-      const r = await fetch("/api/metas/redistribuir", {
+      const r = await gerizoFetch("/api/metas/redistribuir", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

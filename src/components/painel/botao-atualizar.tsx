@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { AlertCircle, Check, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/controls";

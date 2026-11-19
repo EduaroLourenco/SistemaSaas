@@ -1,4 +1,7 @@
 "use client";
+import { gerizoReload } from "@/lib/demo/runtime";
+import { gerizoFetch, DemoAnchor } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
 import { Download, Plus, RefreshCw, Upload } from "lucide-react";
@@ -23,7 +26,7 @@ export function CadastroProdutos({ aoMudar }: { aoMudar: (msg: string) => void }
   async function trazer() {
     setOcupado("trazer");
     try {
-      const r = await fetch("/api/custos/produto", {
+      const r = await gerizoFetch("/api/custos/produto", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ acao: "abastecer" }),
@@ -35,7 +38,7 @@ export function CadastroProdutos({ aoMudar }: { aoMudar: (msg: string) => void }
           ? `${j.criados} produto(s) novo(s), ${j.ligados} anúncio(s) ligados. Preencha os custos.`
           : "Todos os SKUs anunciados e vendidos já têm produto."
       );
-      if (j.criados || j.ligados) window.location.reload();
+      if (j.criados || j.ligados) gerizoReload();
     } finally {
       setOcupado(null);
     }
@@ -46,14 +49,14 @@ export function CadastroProdutos({ aoMudar }: { aoMudar: (msg: string) => void }
     try {
       const form = new FormData();
       form.set("arquivo", f);
-      const r = await fetch("/api/custos/planilha", { method: "POST", body: form });
+      const r = await gerizoFetch("/api/custos/planilha", { method: "POST", body: form });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return aoMudar(j.erro ?? "Não consegui ler a planilha.");
       const recusa = j.recusadas?.length
         ? ` ${j.recusadas.length} linha(s) recusada(s): ${j.recusadas.slice(0, 3).join("; ")}${j.recusadas.length > 3 ? "…" : ""}`
         : "";
       aoMudar(`Planilha lida: ${j.atualizados} produto(s) atualizados, ${j.criados} criados.${recusa}`);
-      if (j.atualizados || j.criados) setTimeout(() => window.location.reload(), recusa ? 4000 : 800);
+      if (j.atualizados || j.criados) setTimeout(() => gerizoReload(), recusa ? 4000 : 800);
     } finally {
       setOcupado(null);
       if (arquivo.current) arquivo.current.value = "";
@@ -65,12 +68,12 @@ export function CadastroProdutos({ aoMudar }: { aoMudar: (msg: string) => void }
       <Button size="sm" onClick={trazer} disabled={!!ocupado} title="Usa os SKUs dos anúncios e pedidos já registrados nesta empresa, por API ou planilha. Não preenche custos.">
         <RefreshCw className="h-3.5 w-3.5" /> {ocupado === "trazer" ? "Trazendo…" : "Trazer dos pedidos e anúncios"}
       </Button>
-      <a
+      <DemoAnchor
         href="/api/custos/planilha"
         className="inline-flex h-9 items-center gap-1.5 rounded-r1 border border-line-2 bg-panel px-3 text-[12px] font-medium text-ink hover:bg-panel-3"
       >
         <Download className="h-3.5 w-3.5" /> Baixar planilha
-      </a>
+      </DemoAnchor>
       <Button size="sm" onClick={() => arquivo.current?.click()} disabled={!!ocupado}>
         <Upload className="h-3.5 w-3.5" /> {ocupado === "subir" ? "Lendo…" : "Subir planilha"}
       </Button>
@@ -103,7 +106,7 @@ function NovoProduto({ aoFechar, aoMudar }: { aoFechar: () => void; aoMudar: (m:
     setGravando(true);
     setErro(null);
     try {
-      const r = await fetch("/api/custos/produto", {
+      const r = await gerizoFetch("/api/custos/produto", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ acao: "novo", ...v }),
@@ -111,7 +114,7 @@ function NovoProduto({ aoFechar, aoMudar }: { aoFechar: () => void; aoMudar: (m:
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return setErro(j.erro ?? "Não consegui gravar.");
       aoMudar(`Produto ${v.sku} cadastrado.`);
-      window.location.reload();
+      gerizoReload();
     } finally {
       setGravando(false);
     }

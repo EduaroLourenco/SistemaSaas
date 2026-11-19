@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { carregarCanais } from "@/lib/dados/canais";
 import { carregarAutomacao } from "@/lib/dados/automacao";
 import { clienteServidor } from "@/lib/supabase/servidor";

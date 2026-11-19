@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { NAV, NAV_FOOTER, AREAS } from "@/lib/nav";
 import { Search, CornerDownLeft, X } from "lucide-react";
 

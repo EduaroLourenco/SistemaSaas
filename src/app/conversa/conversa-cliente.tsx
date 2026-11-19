@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch, useDemoMode } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -40,6 +42,7 @@ const NOME_CONSULTA: Record<string, string> = {
 const CHAVE_CONVERSA = "conversa-atual";
 
 export default function Conversa() {
+  const chaveConversa = useDemoMode() ? CHAVE_CONVERSA + ":demo" : CHAVE_CONVERSA;
   const [mensagens, setMensagens] = React.useState<Mensagem[]>([]);
   const [entrada, setEntrada] = React.useState("");
   const [pensando, setPensando] = React.useState(false);
@@ -54,24 +57,24 @@ export default function Conversa() {
   /* Sair para olhar outra tela não apaga a conversa. Trocar de empresa, sim. */
   React.useEffect(() => {
     try {
-      const salva = sessionStorage.getItem(CHAVE_CONVERSA);
+      const salva = sessionStorage.getItem(chaveConversa);
       if (salva) setMensagens(JSON.parse(salva));
     } catch {}
     const limpar = () => {
-      try { sessionStorage.removeItem(CHAVE_CONVERSA); } catch {}
+      try { sessionStorage.removeItem(chaveConversa); } catch {}
       setMensagens([]);
       setErro(null);
     };
     window.addEventListener("gerizo:operacao-trocada", limpar);
     return () => window.removeEventListener("gerizo:operacao-trocada", limpar);
-  }, []);
+  }, [chaveConversa]);
   React.useEffect(() => {
     if (pensando) return;
     try {
-      if (mensagens.length) sessionStorage.setItem(CHAVE_CONVERSA, JSON.stringify(mensagens));
-      else sessionStorage.removeItem(CHAVE_CONVERSA);
+      if (mensagens.length) sessionStorage.setItem(chaveConversa, JSON.stringify(mensagens));
+      else sessionStorage.removeItem(chaveConversa);
     } catch {}
-  }, [mensagens, pensando]);
+  }, [mensagens, pensando, chaveConversa]);
 
   async function perguntar(pergunta: string) {
     const limpa = pergunta.trim();
@@ -89,7 +92,7 @@ export default function Conversa() {
     setPensando(true);
 
     try {
-      const res = await fetch("/api/conversa", {
+      const res = await gerizoFetch("/api/conversa", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

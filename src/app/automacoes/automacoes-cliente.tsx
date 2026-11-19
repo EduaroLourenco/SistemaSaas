@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
@@ -20,9 +22,9 @@ import type { Fila } from "@/lib/dados/fila-aprovacao";
 import { FilaAprovacao } from "@/components/automacoes/fila";
 import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
 import { paraRegra, type ItemDaTela } from "@/lib/planilhas/item-para-regra";
-import { pisoDoItem, faixaDoPreco, precoComFolga } from "@/lib/planilhas/piso-promocao";
+import { pisoDoItem, faixaDoPreco, precoComFolga, resultadoEstimado } from "@/lib/planilhas/piso-promocao";
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import "./automacoes.css";
 
 /**
@@ -52,7 +54,7 @@ const TOM = TOM_PROMOCAO;
    só decide se aceita a proposta dele. */
 const NOSSO_PRECO = new Set(["DEAL", "SELLER_CAMPAIGN", "PRICE_DISCOUNT"]);
 
-type Situacao = "dentro" | "agendado" | "cabe" | "nao";
+type Situacao = "dentro" | "agendado" | "cabe" | "nao" | "conferir";
 
 const dia = (iso: string | null) =>
   iso == null ? "—" : new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
@@ -141,7 +143,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
       if (!p || !vivo) return;
       const q = new URLSearchParams({ conta: p.contaId, promocao: p.codigo, tipo: p.tipo });
       try {
-        const r = await fetch(`/api/automacoes/contagem?${q}`);
+        const r = await gerizoFetch(`/api/automacoes/contagem?${q}`);
         const j = await r.json();
         if (vivo && r.ok) setContagens((a) => new Map(a).set(p.contaId + p.codigo, j));
       } catch {
@@ -186,7 +188,7 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
     if (timerFolga.current) clearTimeout(timerFolga.current);
     timerFolga.current = setTimeout(async () => {
       try {
-        const r = await fetch("/api/automacoes/folga", {
+        const r = await gerizoFetch("/api/automacoes/folga", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ tipo: t, folga: v }),
@@ -492,7 +494,7 @@ function LinhaCampanha({ c, aberta, onAbrir }: {
 
 /* ══ O detalhe ════════════════════════════════════════════════ */
 
-type Aba = "cabem" | "nao" | "dentro" | "todos";
+type Aba = "cabem" | "nao" | "conferir" | "dentro" | "todos";
 
 function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }: {
   promocao: PromocaoAberta;
@@ -517,7 +519,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
     let vivo = true;
     setDados(null); setErro(null);
     const q = new URLSearchParams({ conta: promocao.contaId, promocao: promocao.codigo, tipo: promocao.tipo });
-    fetch(`/api/automacoes/itens?${q}`)
+    gerizoFetch(`/api/automacoes/itens?${q}`)
       .then(async (r) => {
         const j = await r.json();
         if (!vivo) return;
@@ -568,10 +570,17 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
     (i: ItemAutomacao): Situacao => {
       if (i.status === "started") return "dentro";
       if (i.status === "pending") return "agendado";
-      if (nossoPreco) return nossaOferta(i)?.valor != null ? "cabe" : "nao";
-      const p = precoDecide(i), ps = pisoDe(i);
-      if (p == null || ps == null) return "cabe";
-      return p >= ps * (1 - folga / 100) - 0.01 ? "cabe" : "nao";
+      const ps = pisoDe(i);
+      if (nossoPreco) {
+        if (ps == null) return "conferir";
+        return nossaOferta(i)?.valor != null ? "cabe" : "nao";
+      }
+      const p = precoDecide(i);
+      if (p == null) return "conferir";
+      if (ps != null) return p >= ps * (1 - folga / 100) - 0.01 ? "cabe" : "nao";
+      /* Sem preço mínimo, só o custo completo pode dizer que cabe. */
+      const r = resultadoEstimado(i, p);
+      return r == null ? "conferir" : r >= 0 ? "cabe" : "nao";
     },
     [nossoPreco, nossaOferta, pisoDe, folga]
   );
@@ -608,7 +617,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
     );
   }
 
-  const contagem = { dentro: 0, agendado: 0, cabe: 0, nao: 0, fora: 0 };
+  const contagem = { dentro: 0, agendado: 0, cabe: 0, nao: 0, conferir: 0, fora: 0 };
   for (const i of dados.itens) {
     contagem[situacaoDe(i)]++;
     const p = nossaOferta(i)?.valor ?? precoDecide(i);
@@ -618,6 +627,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
   const lista = dados.itens.filter((i) => {
     const s = situacaoDe(i);
     return aba === "todos" || (aba === "cabem" && s === "cabe") || (aba === "nao" && s === "nao")
+      || (aba === "conferir" && s === "conferir")
       || (aba === "dentro" && (s === "dentro" || s === "agendado"));
   });
 
@@ -716,6 +726,13 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
           />
         );
       } },
+    { key: "resultado", header: "Resultado est.", align: "right", mobile: "metric",
+      sortValue: (i) => resultadoEstimado(i, precoFinal(i) ?? precoDecide(i)) ?? -Infinity,
+      cell: (i) => {
+        const r = resultadoEstimado(i, precoFinal(i) ?? precoDecide(i));
+        if (r == null) return vazio("sem custo");
+        return <span className={r < 0 ? "font-semibold text-down" : "font-semibold text-up"}>{money(r)}</span>;
+      } },
     { key: "meli", header: "Meli põe", align: "right", mobile: "hidden",
       sortValue: (i) => i.meliPct ?? 0, cell: (i) => (i.meliPct == null ? vazio() : pct(i.meliPct, 1)) },
     { key: "estoque", header: "Estoque", align: "right", mobile: "hidden",
@@ -739,7 +756,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
       sortValue: (i) => situacaoDe(i),
       cell: (i) => {
         const s = situacaoDe(i);
-        const r = { dentro: ["Já dentro", "up"], agendado: ["Agendado", "info"], cabe: ["Cabe", "neutral"], nao: ["Não cabe", "down"] } as const;
+        const r = { dentro: ["Já dentro", "up"], agendado: ["Agendado", "info"], cabe: ["Cabe", "neutral"], nao: ["Não cabe", "down"], conferir: ["Sem preço mínimo", "warn"] } as const;
         return <Badge tone={r[s][1]}>{r[s][0]}</Badge>;
       } },
   ];
@@ -790,6 +807,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
         {([
           ["cabem", "Cabem", contagem.cabe],
           ["nao", "Não cabem", contagem.nao],
+          ["conferir", "Conferir", contagem.conferir],
           ["dentro", "Já dentro", contagem.dentro + contagem.agendado],
           ["todos", "Todos", dados.itens.length],
         ] as const).map(([k, r, n]) => (
@@ -916,7 +934,7 @@ function Revisao({ conta, itens, porMlb, aoFechar }: {
     setEnviando(true);
     try {
       const vao = itens.filter((i) => r?.linhas.find((l) => l.mlb === i.mlb)?.vai);
-      const res = await fetch("/api/automacoes/enviar", {
+      const res = await gerizoFetch("/api/automacoes/enviar", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ conta, itens: vao, confirmar: true }),
@@ -933,7 +951,7 @@ function Revisao({ conta, itens, porMlb, aoFechar }: {
 
   React.useEffect(() => {
     let vivo = true;
-    fetch("/api/automacoes/revisar", {
+    gerizoFetch("/api/automacoes/revisar", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ conta, itens }),
@@ -982,10 +1000,11 @@ function Revisao({ conta, itens, porMlb, aoFechar }: {
                   {l.vai ? (
                     <>
                     <dl className="my-4 grid grid-cols-2 gap-4 text-[14px]">
-                      <div><dt className="text-ink-3">Oferta revisada</dt><dd className="num mt-1 text-[20px] font-semibold text-ink">{pedido?.preco == null ? "—" : money(pedido.preco)}</dd></div>
+                      <div><dt className="text-ink-3">Oferta revisada</dt><dd className="num mt-1 text-[20px] font-semibold text-ink">{(pedido?.preco ?? i?.precoCanal) == null ? "—" : money((pedido?.preco ?? i?.precoCanal)!)}</dd></div>
                       <div><dt className="text-ink-3">Piso de referência</dt><dd className="num mt-1 text-[20px] font-semibold text-ink">{i?.piso == null ? "—" : money(i.piso)}</dd></div>
                       <div><dt className="text-ink-3">Oferta do canal</dt><dd className="num mt-1 text-ink">{i?.precoCanal == null ? "—" : money(i.precoCanal)}</dd></div>
                       <div><dt className="text-ink-3">Estoque</dt><dd className="num mt-1 text-ink">{pedido?.estoque == null ? "—" : count(pedido.estoque)}</dd></div>
+                      <div><dt className="text-ink-3">Resultado estimado</dt><dd className="num mt-1 text-ink">{i && resultadoEstimado(i, pedido?.preco ?? i.precoCanal) != null ? money(resultadoEstimado(i, pedido?.preco ?? i.precoCanal)!) : "sem custo"}</dd></div>
                     </dl>
                     <OperationMethod title="Detalhes técnicos da solicitação"><pre className="overflow-x-auto rounded bg-panel-2 p-3 font-mono text-[12px] text-ink-2">
 {l.metodo} {l.caminho}

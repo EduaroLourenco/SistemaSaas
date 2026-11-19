@@ -1,7 +1,9 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { Panel, Button, Badge, EmptyState } from "@/components/ui/primitives";
 import { money, count } from "@/lib/format";
 import type { Fila, LinhaFila } from "@/lib/dados/fila-aprovacao";
@@ -84,7 +86,7 @@ export function FilaAprovacao({
       const p = fila4.shift();
       if (!p) return;
       try {
-        const r = await fetch("/api/automacoes/fila", {
+        const r = await gerizoFetch("/api/automacoes/fila", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -120,7 +122,7 @@ export function FilaAprovacao({
   async function decidir(estado: "aprovada" | "descartada") {
     if (!marcados.size) return;
     setErro(null);
-    const r = await fetch("/api/automacoes/fila", {
+    const r = await gerizoFetch("/api/automacoes/fila", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ acao: "decidir", ids: [...marcados], estado }),

@@ -1,9 +1,11 @@
 "use client";
+import { gerizoFetch, DemoAnchor } from "@/lib/demo/runtime";
+
 
 import { linkDoAnuncio } from "@/lib/links";
 import * as React from "react";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { OperationMethod } from "@/components/analise/operation-layout";
 import { DisputaPainel } from "./disputa-painel";
@@ -185,7 +187,7 @@ export default function CatalogoAnuncios({
     setSincronizando(true);
     setErroSync(null);
     try {
-      const r = await fetch("/api/meli/sincronizar", {
+      const r = await gerizoFetch("/api/meli/sincronizar", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -590,9 +592,9 @@ export default function CatalogoAnuncios({
           <Panel className="px-4 py-3">
             <div className="flex items-baseline justify-between gap-3 mb-2">
               <p className="label">Cargas recentes do catálogo</p>
-              <a href="/importar" className="text-[12px] text-brand hover:underline shrink-0">
+              <DemoAnchor href="/importar" className="text-[12px] text-brand hover:underline shrink-0">
                 Importar nova carga
-              </a>
+              </DemoAnchor>
             </div>
             <ul className="flex flex-col divide-y divide-line border border-line rounded-r2 overflow-hidden">
               {IMPORTACOES_CATALOGO.slice(0, 5).map((imp) => (
@@ -968,7 +970,7 @@ function FichaAnuncio({
       footer={
         <>
           {linkDoAnuncio(item.mlb) ? (
-            <a
+            <DemoAnchor
               href={linkDoAnuncio(item.mlb)!}
               target="_blank"
               rel="noopener noreferrer"
@@ -976,7 +978,7 @@ function FichaAnuncio({
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Abrir no Mercado Livre
-            </a>
+            </DemoAnchor>
           ) : (
             <Button className="flex-1 max-sm:h-11" onClick={onClose}>
               Fechar

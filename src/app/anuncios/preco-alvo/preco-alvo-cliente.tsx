@@ -1,9 +1,11 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import "@/components/analise/operation-pages.css";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -89,7 +91,7 @@ export default function PrecoAlvoCliente({ dados }: { dados: DadosPrecoAlvo }) {
     setSalvando(true);
     setErro(null);
     try {
-      const r = await fetch("/api/comissoes-canal", {
+      const r = await gerizoFetch("/api/comissoes-canal", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

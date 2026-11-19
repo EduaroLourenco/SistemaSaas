@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
@@ -100,7 +102,7 @@ export default function PerformancePrecoCliente({
       const q = new URLSearchParams({ dias: String(dias) });
       if (dados.canalId) q.set("canal", dados.canalId);
 
-      const r = await fetch(`/api/exportar/preco?${q}`);
+      const r = await gerizoFetch(`/api/exportar/preco?${q}`);
       if (!r.ok) {
         const corpo = await r.json().catch(() => ({}));
         setErro(corpo.erro ?? `Falha ao gerar (HTTP ${r.status})`);

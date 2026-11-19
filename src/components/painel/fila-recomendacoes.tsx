@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { Panel, PanelHeader, Badge, Button } from "@/components/ui/primitives";
 import type { Recomendacao } from "@/lib/dados/recomendacoes";
 import { Check, ArrowRight, RotateCcw, CalendarDays } from "lucide-react";
@@ -19,6 +19,7 @@ import { Check, ArrowRight, RotateCcw, CalendarDays } from "lucide-react";
  */
 
 const CHAVE = "recomendacoes-resolvidas";
+const chaveResolvidas = () => typeof window !== "undefined" && window.location.pathname.startsWith("/demonstracao/sistema/") ? CHAVE + ":demo" : CHAVE;
 
 const TOM: Record<Recomendacao["severidade"], "down" | "warn" | "info"> = {
   critico: "down",
@@ -38,7 +39,7 @@ function hoje() {
 
 function lerResolvidas(): Set<string> {
   try {
-    const bruto = localStorage.getItem(CHAVE);
+    const bruto = localStorage.getItem(chaveResolvidas());
     if (!bruto) return new Set();
     const { dia, ids } = JSON.parse(bruto) as { dia: string; ids: string[] };
     // Marca de outro dia não vale: a fila do dia é nova.
@@ -65,7 +66,7 @@ export function FilaRecomendacoes({ itens, semDados = false, limiteInicial }: { 
   function guardar(ids: Set<string>) {
     try {
       localStorage.setItem(
-        CHAVE,
+        chaveResolvidas(),
         JSON.stringify({ dia: hoje(), ids: [...ids] })
       );
     } catch {

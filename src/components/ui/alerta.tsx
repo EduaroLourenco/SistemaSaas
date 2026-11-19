@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { cn } from "@/lib/utils";
 import { Badge } from "./primitives";
 import { AXIS } from "./chart";

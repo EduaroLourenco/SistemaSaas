@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import decisaoCss from "@/components/analise/decision-workspace.module.css";
 import { MetricStrip, WorkflowSteps } from "@/components/ui/workspace";
@@ -453,7 +455,7 @@ export default function VendasLancamentos({ dados, automacao = {} }: { dados: Da
 
     setGravando(true);
     try {
-      const r = await fetch("/api/lancamentos", {
+      const r = await gerizoFetch("/api/lancamentos", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ edicoes }),

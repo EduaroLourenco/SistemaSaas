@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
 import { money, shortDate } from "@/lib/format";
@@ -138,7 +140,7 @@ export function PromocaoAoVivo({ mlb }: { mlb: string }) {
     if (!mlb) return;
     let vivo = true;
     setEstado("carregando");
-    fetch(`/api/anuncios/promocoes/${encodeURIComponent(mlb)}`)
+    gerizoFetch(`/api/anuncios/promocoes/${encodeURIComponent(mlb)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d: PromocoesDoAnuncio) => {
         if (!vivo) return;

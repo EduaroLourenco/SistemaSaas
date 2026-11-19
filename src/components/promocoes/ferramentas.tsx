@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { useEffect, useRef } from "react";
 import { ChevronDown, MoreHorizontal } from "lucide-react";
 import "./promocoes.css";

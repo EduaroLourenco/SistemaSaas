@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 export function InterestForm() {
   const [estado, setEstado] = useState<"pronto" | "enviando" | "sucesso" | "erro">("pronto");
@@ -26,7 +26,7 @@ export function InterestForm() {
       <div className="commercial-bot-field" aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
       <p className="commercial-form-purpose">Usaremos esses dados para conversar sobre o produto e avisar sobre o acesso. <Link href="/privacidade">Política de privacidade</Link></p>
       {erro && <p className="commercial-form-error" role="alert">{erro}</p>}
-      <button className="commercial-button commercial-button-primary" type="submit" disabled={estado === "enviando"}>{estado === "enviando" ? "Registrando…" : "Quero conhecer o Gerizo"}<ArrowRight size={17} aria-hidden="true" /></button>
+      <button className="commercial-button commercial-button-primary" type="submit" disabled={estado === "enviando"}>{estado === "enviando" ? "Registrando…" : "Quero conhecer o Gerizo"}</button>
     </form>}
   </div>;
 }

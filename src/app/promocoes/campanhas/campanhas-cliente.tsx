@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
 import { PromocoesPorSku } from "@/components/promocoes/por-sku";
@@ -11,7 +13,7 @@ import { money, count, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DadosPromocoes, CampanhaResumo } from "@/lib/dados/promocoes";
 import { Search, Trash2, Loader2, ChevronDown } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 
 /**
  * Campanhas, montadas do que foi processado.
@@ -55,7 +57,7 @@ export default function Campanhas({ dados }: { dados: DadosPromocoes }) {
     setApagando(true);
     setErro(null);
     try {
-      const r = await fetch("/api/promocoes/limpar", {
+      const r = await gerizoFetch("/api/promocoes/limpar", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ campanhaId: c.id }),

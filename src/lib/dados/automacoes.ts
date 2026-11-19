@@ -236,6 +236,8 @@ export type ItemAutomacao = {
    */
   precos: (number | null)[];
   comissaoCheia: number | null;
+  /** Custos do cadastro do produto. Null se faltar algum deles. */
+  custos?: { custo: number; embalagem: number; impostoPct: number; frete: number } | null;
 };
 
 export type ItensDaPromocao = {
@@ -302,6 +304,7 @@ export async function carregarItensDaPromocao(
       piso: linha && cheia != null ? linha[bandas.indexOf(cheia)] ?? null : null,
       precos: linha ?? [],
       comissaoCheia: cheia,
+      custos: a?.custos ?? null,
     };
   });
 
@@ -316,7 +319,27 @@ type AnuncioLeve = {
   status: string;
   estoque: number | null;
   tipo: string | null;
+  custos: ItemAutomacao["custos"];
 };
+
+type CustosDoProduto = {
+  custo_unitario: string | number | null;
+  embalagem: string | number | null;
+  aliquota_impostos: string | number | null;
+  frete_unitario: string | number | null;
+};
+
+function custosDoProduto(p: CustosDoProduto | null): ItemAutomacao["custos"] {
+  if (!p || p.embalagem == null || p.aliquota_impostos == null || p.frete_unitario == null) return null;
+  const custo = Number(p.custo_unitario);
+  if (!(custo > 0)) return null;
+  return {
+    custo,
+    embalagem: Number(p.embalagem),
+    impostoPct: Number(p.aliquota_impostos),
+    frete: Number(p.frete_unitario),
+  };
+}
 
 async function lerAnunciosDaConta(contaId: string): Promise<AnuncioLeve[]> {
   const sb = await clienteServidor();
@@ -328,10 +351,11 @@ async function lerAnunciosDaConta(contaId: string): Promise<AnuncioLeve[]> {
     status: string;
     estoque: number | null;
     tipo: string | null;
+    produtos: CustosDoProduto | CustosDoProduto[] | null;
   }>(() =>
     sb
       .from("anuncios")
-      .select("codigo_externo,sku_canal,titulo,foto,status,estoque,tipo")
+      .select("codigo_externo,sku_canal,titulo,foto,status,estoque,tipo,produtos(custo_unitario,embalagem,aliquota_impostos,frete_unitario)")
       .eq("conta_canal_id", contaId)
   );
   return linhas.map((l) => ({
@@ -342,5 +366,6 @@ async function lerAnunciosDaConta(contaId: string): Promise<AnuncioLeve[]> {
     status: l.status,
     estoque: l.estoque,
     tipo: l.tipo,
+    custos: custosDoProduto(Array.isArray(l.produtos) ? l.produtos[0] ?? null : l.produtos),
   }));
 }

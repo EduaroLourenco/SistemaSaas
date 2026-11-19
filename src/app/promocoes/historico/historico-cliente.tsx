@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { FerramentasPromocoes } from "@/components/promocoes/ferramentas";
 import { Panel, Button, Badge } from "@/components/ui/primitives";

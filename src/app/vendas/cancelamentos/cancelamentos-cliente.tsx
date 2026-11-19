@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import decisaoCss from "@/components/analise/decision-workspace.module.css";
 import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
@@ -756,7 +758,7 @@ function PedidosCancelados({ recorte, aoFechar }: { recorte: Recorte; aoFechar: 
   React.useEffect(() => {
     let vivo = true;
     const qs = new URLSearchParams({ conta: recorte.contaId, ...(recorte.mes ? { mes: recorte.mes } : {}) });
-    fetch(`/api/cancelamentos/pedidos?${qs}`)
+    gerizoFetch(`/api/cancelamentos/pedidos?${qs}`)
       .then(async (r) => {
         const j = await r.json();
         if (!vivo) return;

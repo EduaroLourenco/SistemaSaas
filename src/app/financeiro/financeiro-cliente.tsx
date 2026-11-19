@@ -4,7 +4,7 @@ import { SelectRecorte } from "@/components/ui/select-recorte";
 import type { GrupoRecorte } from "@/lib/recorte";
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select } from "@/components/ui/controls";

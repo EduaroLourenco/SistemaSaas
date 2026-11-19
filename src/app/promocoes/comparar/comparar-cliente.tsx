@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import * as React from "react";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
@@ -58,7 +60,7 @@ export default function Comparar({ dados, buscaInicial = "" }: { dados: DadosCom
     setErro(null);
     try {
       const q = campanha !== "todas" ? `?campanha=${campanha}` : "";
-      const r = await fetch(`/api/exportar/recusadas${q}`);
+      const r = await gerizoFetch(`/api/exportar/recusadas${q}`);
       if (!r.ok) {
         const corpo = await r.json().catch(() => ({}));
         setErro(corpo.erro ?? `Falha ao gerar (HTTP ${r.status})`);

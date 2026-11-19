@@ -1,11 +1,13 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import decisaoCss from "@/components/analise/decision-workspace.module.css";
 import { HeroMetric, MetricStrip } from "@/components/ui/workspace";
 
 import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { DemoLink as Link } from "@/lib/demo/runtime";
+import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Badge, EmptyState } from "@/components/ui/primitives";
 import { Tabs, Segmented, Input, Field, Select } from "@/components/ui/controls";
@@ -316,7 +318,7 @@ function CampoFrete({ ctx, linha }: { ctx: Contexto; linha: Linha }) {
     setEstado({ carregando: true });
     try {
       const q = new URLSearchParams({ conta: ctx.dados.contaMeli!, item: linha.p.mlbMeli! });
-      const r = await fetch(`/api/precificacao/frete?${q}`);
+      const r = await gerizoFetch(`/api/precificacao/frete?${q}`);
       const j = await r.json();
       if (r.ok && j.frete != null) { setValor(String(j.frete)); setEstado({}); }
       else setEstado({ erro: j.erro ?? "o Meli não devolveu custo" });
@@ -343,7 +345,7 @@ function CampoFrete({ ctx, linha }: { ctx: Contexto; linha: Linha }) {
     const v = ler(valor);
     if (v == null) return;
     setEstado({ salvando: true });
-    const r = await fetch("/api/custos", {
+    const r = await gerizoFetch("/api/custos", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ edicoes: [{ produtoId: linha.p.id, freteUnitario: v }] }),
@@ -615,7 +617,7 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
       ...(ajuste("mercado_livre").comprador ? { gratis: "0" } : {}),
     });
     try {
-      const r = await fetch(`/api/precificacao/frete?${q}`);
+      const r = await gerizoFetch(`/api/precificacao/frete?${q}`);
       const j = await r.json();
       setApi(r.ok ? { valor: j.frete, chave: chaveApi, erro: j.frete == null ? "o Meli não devolveu custo" : undefined } : { valor: null, erro: j.erro });
     } catch {

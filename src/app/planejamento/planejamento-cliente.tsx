@@ -1,4 +1,7 @@
 "use client";
+import { gerizoReload } from "@/lib/demo/runtime";
+import { gerizoFetch, DemoAnchor } from "@/lib/demo/runtime";
+
 import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
@@ -191,7 +194,7 @@ export default function Planejamento({
     setOcupado(true);
     setErro("");
     try {
-      const resposta = await fetch("/api/planejamento", {
+      const resposta = await gerizoFetch("/api/planejamento", {
         method: excluir ? "DELETE" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entidade, registro, operacao: dados.operacao }),
@@ -822,14 +825,14 @@ export default function Planejamento({
                   <p>{o.ideia}</p>
                   <small>{o.regra} · Referência consultada em 05/10/2026</small>
                   <div className="pl-between">
-                    <a
+                    <DemoAnchor
                       href={o.fonte}
                       target="_blank"
                       rel="noreferrer"
                       className="pl-link"
                     >
                       Consultar fonte <ArrowUpRight size={13} />
-                    </a>
+                    </DemoAnchor>
                     <button className="pl-btn" onClick={() => planejar(o)}>
                       Planejar esta data
                     </button>
@@ -1032,9 +1035,9 @@ export default function Planejamento({
               .map((p) => (
                 <ResumoPromocao key={p.id} promocao={p} dados={dados} />
               ))}
-            <a className="pl-link" href="/promocoes/campanhas">
+            <DemoAnchor className="pl-link" href="/promocoes/campanhas">
               Abrir Central de Promoções <ArrowUpRight size={14} />
-            </a>
+            </DemoAnchor>
           </div>
         </Painel>
       )}
@@ -1047,7 +1050,7 @@ export default function Planejamento({
           <button
             className="pl-btn"
             onClick={() => {
-              window.location.reload();
+              gerizoReload();
             }}
           >
             Verificar novamente

@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch, emDemo, useDemoMode } from "@/lib/demo/runtime";
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -35,20 +37,21 @@ import { cn } from "@/lib/utils";
 /* ── O mapa, buscado uma vez por aba ──
    Módulo e não contexto: nenhuma tela precisa passar provider, e as
    dezoito compartilham a mesma promessa. */
-let promessa: Promise<Record<string, string>> | null = null;
-let mapa: Record<string, string> = {};
-const ouvintes = new Set<() => void>();
+const novoCache = () => ({ promessa: null as Promise<Record<string, string>> | null, mapa: {} as Record<string, string>, ouvintes: new Set<() => void>() });
+const cacheOperacao = novoCache();
+const cacheDemo = novoCache();
 
 function carregar() {
-  promessa ??= fetch("/api/anuncios/fotos")
+  const cache = emDemo() ? cacheDemo : cacheOperacao;
+  cache.promessa ??= gerizoFetch("/api/anuncios/fotos")
     .then(async (r) => {
       if (!r.ok) throw new Error(String(r.status));
       const j = (await r.json()) as { fotos?: Record<string, string> };
       return j.fotos ?? {};
     })
     .then((f) => {
-      mapa = f;
-      for (const o of ouvintes) o();
+      cache.mapa = f;
+      for (const o of cache.ouvintes) o();
       return f;
     })
     .catch(() => {
@@ -66,22 +69,24 @@ function carregar() {
        * foto sincronizada) e continua valendo, senão cada linha da tabela
        * pediria de novo.
        */
-      promessa = null;
+      cache.promessa = null;
       return {};
     });
-  return promessa;
+  return cache.promessa;
 }
 
 function usarFoto(mlb: string | null | undefined): string | null {
+  const demo = useDemoMode();
+  const cache = demo ? cacheDemo : cacheOperacao;
   const chave = mlb?.trim().toUpperCase();
   const [, redesenhar] = React.useReducer((n: number) => n + 1, 0);
   React.useEffect(() => {
     if (!chave) return;
-    ouvintes.add(redesenhar);
+    cache.ouvintes.add(redesenhar);
     void carregar();
-    return () => void ouvintes.delete(redesenhar);
-  }, [chave, redesenhar]);
-  return chave ? (mapa[chave] ?? null) : null;
+    return () => void cache.ouvintes.delete(redesenhar);
+  }, [chave, redesenhar, cache]);
+  return chave ? (cache.mapa[chave] ?? null) : null;
 }
 
 export function FotoAnuncio({

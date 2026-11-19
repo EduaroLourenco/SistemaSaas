@@ -1,4 +1,6 @@
 "use client";
+import { gerizoFetch } from "@/lib/demo/runtime";
+
 
 import "@/components/analise/analytic-refinement.css";
 
@@ -8,7 +10,7 @@ import { MetricStrip } from "@/components/ui/workspace";
 import { SelectRecorte } from "@/components/ui/select-recorte";
 import * as React from "react";
 import { useNavegacaoSuave, BarraCarregando } from "@/components/ui/navegacao-suave";
-import Link from "next/link";
+import { DemoLink as Link } from "@/lib/demo/runtime";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
 import { Panel, Button, Badge } from "@/components/ui/primitives";
 import { Tabs, Input, Select, Segmented } from "@/components/ui/controls";
@@ -178,7 +180,7 @@ export default function AnaliseSkuCliente({ dados }: { dados: DadosAnaliseSku })
       const q = new URLSearchParams({ de: periodo.inicio, ate: periodo.fim });
       if (dados.canalId) q.set("canal", dados.canalId);
 
-      const r = await fetch(`/api/exportar/skus?${q}`);
+      const r = await gerizoFetch(`/api/exportar/skus?${q}`);
       if (!r.ok) {
         const corpo = await r.json().catch(() => ({}));
         setErro(corpo.erro ?? `Falha ao gerar (HTTP ${r.status})`);
