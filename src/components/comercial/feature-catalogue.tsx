@@ -39,7 +39,7 @@ export function FeatureCatalogue({ initialId, initialCategory }: { initialId?: s
           {visiveis.map((f) => (
             <button type="button" key={f.id} className="gz-linha-func" style={{ "--c": COR_CATEGORIA[f.categoria] } as React.CSSProperties} onClick={() => abrir(f.id)}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/site/telas/${f.id}.webp`} alt="" loading="lazy" width={96} height={128} />
+              <img src={f.video?.poster ?? `/site/telas/${f.id}.webp`} alt="" loading="lazy" width={96} height={128} />
               <span>
                 <small>{f.categoria}</small>
                 <b>{f.pergunta}</b>

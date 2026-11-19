@@ -18,12 +18,12 @@ export type Funcionalidade = {
 export const CATEGORIAS_FUNCIONALIDADES: CategoriaFuncionalidade[] = ["Vendas", "Mercado Livre", "Promoções", "Operação", "Dinheiro"];
 const demo = "/demonstracao/sistema";
 
-/** Roteiros completos em output/motions/ROTEIROS_MOTIONS_GERIZO.txt. O vídeo entra em `video` quando existir. */
-export const FUNCIONALIDADES: Funcionalidade[] = [
-  { id: "v01", titulo: "Do dia ao ano", categoria: "Vendas", duracaoSugerida: 42, rotaDemo: `${demo}/vendas/dia`,
+/** Vídeos gravados no sistema de exemplo (Atlas Casa), com legenda na própria imagem. */
+const LISTA: Omit<Funcionalidade, "video">[] = [
+  { id: "v01", titulo: "Do dia à semana", categoria: "Vendas", duracaoSugerida: 42, rotaDemo: `${demo}/vendas/dia`,
     pergunta: "Foi só hoje?", gancho: "Um dia ruim não conta a história sozinho.",
-    descricao: "Veja o dia, a semana e o ano em três toques, com a meta sempre à vista.",
-    narracao: "Saia do susto do dia para o tamanho real da história.", cenas: ["Hoje", "Semanal", "Anual"] },
+    descricao: "Veja o dia, compare com os anteriores e encontre o ritmo da semana, com a meta sempre à vista.",
+    narracao: "Saia do susto do dia para o tamanho real da história.", cenas: ["Hoje", "Calendário", "Semanal"] },
   { id: "v02", titulo: "O que voltou da venda", categoria: "Vendas", duracaoSugerida: 32, rotaDemo: `${demo}/vendas/cancelamentos`,
     pergunta: "Vendeu. Mas ficou tudo?", gancho: "Cancelamento também tem produto e data.",
     descricao: "Descubra quanto foi cancelado, em quais produtos e desde quando.",
@@ -32,9 +32,9 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
     pergunta: "Caiu. Por onde começar?", gancho: "Três produtos, três motivos diferentes.",
     descricao: "Cada produto chega com a pista mais forte: estoque, preço, visitas ou conversão.",
     narracao: "Menos palpite. Mais pista.", cenas: ["Queda", "Visitas", "Preço", "Estoque"] },
-  { id: "v12", titulo: "A vida de um SKU", categoria: "Vendas", duracaoSugerida: 44, rotaDemo: `${demo}/vendas/skus`,
-    pergunta: "O preço subiu. E a venda?", gancho: "Todo produto deixa pistas.",
-    descricao: "Acompanhe preço, visitas, conversão e unidades no histórico de cada produto.",
+  { id: "v12", titulo: "Quem segura a receita", categoria: "Vendas", duracaoSugerida: 44, rotaDemo: `${demo}/vendas/skus`,
+    pergunta: "Quem segura a receita?", gancho: "Todo produto deixa pistas.",
+    descricao: "Veja quais produtos fazem a receita, troque a medida para unidades e ache qualquer SKU.",
     narracao: "A história do produto em uma linha do tempo.", cenas: ["Busca", "Evolução", "Comparação"] },
   { id: "v10", titulo: "Anúncio contra anúncio", categoria: "Mercado Livre", duracaoSugerida: 42, rotaDemo: `${demo}/anuncios/analise`,
     pergunta: "Mesmo produto. Quem vende mais?", gancho: "Compare antes de mexer.",
@@ -69,5 +69,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
     descricao: "Simule o preço no Mercado Livre e em outros canais, com frete, taxa e margem.",
     narracao: "Simule antes de mudar o preço.", cenas: ["Preço", "Canais", "Frete", "Comparação"] },
 ];
+
+export const FUNCIONALIDADES: Funcionalidade[] = LISTA.map((f) => ({ ...f, video: { src: `/site/videos/${f.id}.mp4`, poster: `/site/videos/${f.id}.webp` } }));
 
 export const funcionalidadePorId = (id: string) => FUNCIONALIDADES.find(item => item.id === id);

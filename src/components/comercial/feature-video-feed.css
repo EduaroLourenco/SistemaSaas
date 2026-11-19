@@ -45,6 +45,8 @@
 .gz-feed-cta:hover { background:#5a33b6; }
 .gz-feed-acoes { position:absolute; left:calc(40px + 12px); bottom:52px; z-index:3; display:flex; gap:8px; }
 .gz-feed-acoes .gz-feed-icone { background:#ffffff2e; color:#fff; backdrop-filter:blur(6px); }
+.gz-feed-acoes .gz-feed-som { display:inline-flex; align-items:center; white-space:nowrap; width:auto; gap:8px; padding:0 16px 0 13px; border-radius:999px; background:#6d45cf; font-size:14px; font-weight:600; }
+.gz-feed-acoes .gz-feed-som:hover { background:#5a33b6; }
 .gz-feed-nav { position:absolute; right:18px; top:50%; z-index:5; display:grid; gap:8px; translate:0 -50%; }
 .gz-feed-nav button { display:grid; place-items:center; width:44px; height:44px; border:1px solid var(--line); border-radius:50%; background:#fff; cursor:pointer; }
 .gz-feed-nav button:disabled { opacity:.35; cursor:default; }
@@ -69,6 +71,14 @@
   .gz-feed-info h3 { font-size:28px; }
   .gz-feed-info p { margin-top:8px; font-size:15px; color:#ffffffd6; }
   .gz-feed-cta { width:100%; justify-content:center; margin-top:16px; }
-  .gz-feed-acoes { left:auto; right:14px; bottom:auto; top:40%; flex-direction:column; }
+  .gz-feed-acoes { left:auto; right:14px; bottom:auto; top:40%; flex-direction:column; align-items:flex-end; }
+  /* Com vídeo, a faixa fica baixa: a legenda do vídeo mora logo acima dela. */
+  /* O vídeo aparece inteiro, logo abaixo da barra de progresso, sem cortar as laterais. */
+  .gz-feed-slide.tem-video .gz-feed-palco { inset:calc(52px + env(safe-area-inset-top)) 0 0; }
+  .gz-feed-slide.tem-video .gz-feed-palco video { object-fit:contain; object-position:top; }
+  .gz-feed-slide.tem-video .gz-feed-info { padding-top:36px; background:linear-gradient(transparent,#000000b8 40%); }
+  .gz-feed-slide.tem-video .gz-feed-info p { display:none; }
+  .gz-feed-slide.tem-video .gz-feed-info h3 { margin-top:4px; font-size:22px; }
+  .gz-feed-slide.tem-video .gz-feed-cta { width:auto; min-height:44px; margin-top:10px; }
 }
 @media(prefers-reduced-motion:reduce) { .gz-feed[open],.gz-feed-historia strong { animation:none!important; } .gz-feed-rolo { scroll-behavior:auto; } }

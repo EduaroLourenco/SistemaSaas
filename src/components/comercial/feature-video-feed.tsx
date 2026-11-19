@@ -126,7 +126,7 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
               const selecionado = i === ativo;
               const temVideo = Boolean(item.video?.src) && !falhas[item.id];
               return (
-                <article key={item.id} className="gz-feed-slide" data-indice={i} ref={(el) => { paginas.current[i] = el; }} aria-hidden={!selecionado} inert={!selecionado} style={{ "--c": COR[item.categoria] } as React.CSSProperties}>
+                <article key={item.id} className={`gz-feed-slide${temVideo ? " tem-video" : ""}`} data-indice={i} ref={(el) => { paginas.current[i] = el; }} aria-hidden={!selecionado} inert={!selecionado} style={{ "--c": COR[item.categoria] } as React.CSSProperties}>
                   <div className="gz-feed-palco">
                     {temVideo ? (
                       <video ref={(el) => { videos.current[i] = el; }} src={item.video!.src} poster={item.video?.poster} muted={mudo} playsInline loop
@@ -154,7 +154,7 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
                   {temVideo && selecionado && (
                     <div className="gz-feed-acoes">
                       <button type="button" className="gz-feed-icone" onClick={() => { const v = videos.current[i]; if (v) { if (v.paused) void v.play(); else v.pause(); } }} aria-label={tocando ? "Pausar" : "Reproduzir"}>{tocando ? <Pause size={20} aria-hidden /> : <Play size={20} aria-hidden />}</button>
-                      <button type="button" className="gz-feed-icone" onClick={() => setMudo((m) => !m)} aria-label={mudo ? "Ativar som" : "Tirar som"}>{mudo ? <VolumeX size={20} aria-hidden /> : <Volume2 size={20} aria-hidden />}</button>
+                      <button type="button" className={`gz-feed-icone${mudo ? " gz-feed-som" : ""}`} onClick={() => setMudo((m) => !m)} aria-label={mudo ? "Ativar som" : "Tirar som"}>{mudo ? <><VolumeX size={20} aria-hidden /><span aria-hidden>Ativar som</span></> : <Volume2 size={20} aria-hidden />}</button>
                       {item.video?.legendas && <button type="button" className="gz-feed-icone" onClick={() => setLegendas((l) => !l)} aria-pressed={legendas} aria-label="Legendas"><Captions size={20} aria-hidden /></button>}
                     </div>
                   )}

@@ -168,7 +168,7 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Tudo, menos estático e imagem — eles não têm sessão para renovar.
-    "/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Tudo, menos estático, imagem e vídeo — eles não têm sessão para renovar.
+    "/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|mp4)$).*)",
   ],
 };
