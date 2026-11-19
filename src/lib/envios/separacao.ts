@@ -16,6 +16,8 @@ export type PedidoSeparacao = {
   conta: string;
   dias: number | null;
   situacao: string;
+  /** Envios do Meli deste pedido: é com eles que a etiqueta é gerada. */
+  envios: number[];
   itens: { chave: string; sku: string | null; titulo: string; quantidade: number }[];
 };
 
@@ -58,7 +60,8 @@ export function montarSeparacao(envios: EnvioMeli[]): Separacao {
   for (const e of envios) {
     const venda = e.venda ?? e.pedido;
     const id = `${e.contaId ?? e.conta}:${venda}`;
-    const p = porVenda.get(id) ?? { id, venda, conta: e.conta, dias: e.dias, situacao: e.situacao, itens: [] };
+    const p = porVenda.get(id) ?? { id, venda, conta: e.conta, dias: e.dias, situacao: e.situacao, envios: [], itens: [] };
+    if (e.envio && !p.envios.includes(e.envio)) p.envios.push(e.envio);
     if (urgencia(e.dias) < urgencia(p.dias)) p.dias = e.dias;
     for (const i of e.itens) {
       const chave = chaveDoItem(i.sku, i.titulo);

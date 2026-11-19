@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, PackageCheck, Printer, RotateCcw } from "lucide-react";
+import { Check, PackageCheck, Printer, RotateCcw, Tag } from "lucide-react";
 import { Badge, Button } from "@/components/ui/primitives";
 import { count } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ function Marca({ feito }: { feito: boolean }) {
   return <span className={cn("sep-check", feito && "is-done")} aria-hidden="true">{feito && <Check size={18} strokeWidth={3} />}</span>;
 }
 
-export function Separador({ envios, chaveLocal }: { envios: EnvioMeli[]; chaveLocal: string }) {
+export function Separador({ envios, chaveLocal, aoGerarEtiquetas }: { envios: EnvioMeli[]; chaveLocal: string; aoGerarEtiquetas?: (envios: number[]) => void }) {
   const [escolhido, setRecorte] = React.useState<RecorteSeparacao | null>(null);
   const [etapa, setEtapa] = React.useState<"pegar" | "montar">("pegar");
   const [feitos, setFeitos] = React.useState<Set<string>>(new Set());
@@ -60,6 +60,7 @@ export function Separador({ envios, chaveLocal }: { envios: EnvioMeli[]; chaveLo
   const marcaPedido = (id: string, grupo: string) => `montar:${id}:${grupo}`;
   const pegos = s.produtos.filter((p) => feitos.has(marcaProduto(p))).length;
   const montados = s.grupos.reduce((t, g) => t + g.pedidos.filter((p) => feitos.has(marcaPedido(p.id, g.chave))).length, 0);
+  const enviosMontados = [...new Set(s.grupos.flatMap((g) => g.pedidos.filter((p) => feitos.has(marcaPedido(p.id, g.chave))).flatMap((p) => p.envios)))];
   const feito = etapa === "pegar" ? pegos : montados;
   const total = etapa === "pegar" ? s.produtos.length : s.pedidos;
 
@@ -88,6 +89,7 @@ export function Separador({ envios, chaveLocal }: { envios: EnvioMeli[]; chaveLo
               <button type="button" aria-pressed={etapa === "montar"} onClick={() => setEtapa("montar")}>2. Montar <span className="num">{montados}/{s.pedidos}</span></button>
             </div>
             <div className="sep-tools">
+              {etapa === "montar" && montados > 0 && aoGerarEtiquetas && <Button variant="primary" disabled={!enviosMontados.length} onClick={() => aoGerarEtiquetas(enviosMontados)}><Tag size={16} aria-hidden="true" />Etiquetas dos montados <span className="num">({montados})</span></Button>}
               <Button className="hidden md:inline-flex" onClick={() => window.print()}><Printer size={16} aria-hidden="true" />Imprimir</Button>
               {feitos.size > 0 && <Button variant="ghost" onClick={() => gravar(new Set())}><RotateCcw size={16} aria-hidden="true" />Limpar</Button>}
             </div>

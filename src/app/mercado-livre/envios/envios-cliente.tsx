@@ -182,6 +182,31 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
     arquivoAtual.current = null;
   }
 
+  /* Do Separador: os montados vão direto para a revisão de etiquetas da Fila. */
+  function etiquetasDosMontados(ids: number[]) {
+    const pedidos = dados.envios.filter((e) => e.envio && ids.includes(e.envio) && (!conta || e.conta === conta));
+    const liberados = pedidos.filter(temEtiqueta);
+    const porConta = new Map<string, EnvioMeli[]>();
+    for (const e of liberados) porConta.set(e.contaId!, [...(porConta.get(e.contaId!) ?? []), e]);
+    const lote = [...porConta.values()].sort((a, b) => b.length - a.length)[0] ?? [];
+    const loteIds = [...new Set(lote.map((e) => e.envio!))].slice(0, 100);
+    const semEtiqueta = pedidos.filter((e) => !temEtiqueta(e));
+    const outrasContas = liberados.length - lote.length;
+    const avisos = [
+      semEtiqueta.length ? `${semEtiqueta.length} ${semEtiqueta.length === 1 ? "montado ainda não tem" : "montados ainda não têm"} etiqueta liberada: ${semEtiqueta.map((e) => `${e.pedido} (${e.situacao})`).join(" · ")}` : "",
+      outrasContas ? `${outrasContas} de outra conta ficam para o próximo lote.` : "",
+      lote.length > 100 ? "O limite é de 100 envios por lote." : "",
+    ].filter(Boolean);
+    mudarAba("fila");
+    setPrazo("");
+    setBusca("");
+    setArquivo(null);
+    setMarcados(new Set(loteIds));
+    setAviso(avisos.length ? { tom: "warn", texto: avisos.join(" ") } : null);
+    setRevisando(loteIds.length > 0);
+    if (!loteIds.length) setAviso({ tom: "warn", texto: avisos.join(" ") || "Nenhum montado tem etiqueta liberada agora." });
+  }
+
   async function imprimir() {
     if (imprimindo || !selecionados.length || selecionadosIds.size > 100 || new Set(selecionados.map(e => e.contaId)).size !== 1) return;
     setImprimindo(true);
@@ -321,7 +346,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
           </div>
         ))}
 
-        {aba === "separador" ? <Separador envios={todos} chaveLocal={`gerizo:separador:${dados.hoje}:${dados.contas.join("|")}`} /> : <>
+        {aba === "separador" ? <Separador envios={todos} chaveLocal={`gerizo:separador:${dados.hoje}:${dados.contas.join("|")}`} aoGerarEtiquetas={etiquetasDosMontados} /> : <>
         <section aria-label="Resumo de envios" className="grid min-w-0 gap-5 border-b border-line pb-6 lg:grid-cols-[minmax(160px,1fr)_minmax(0,3fr)] lg:items-end lg:gap-8">
           <div>
             <p className="mb-2 text-[14px] font-medium text-ink-2">{consultaIncompleta ? "Pendentes nas contas consultadas" : "Envios pendentes"}</p>
@@ -439,7 +464,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
             <dl><div><dt>Envios</dt><dd>{count(selecionadosIds.size)}</dd></div><div><dt>Pedidos</dt><dd>{count(selecionados.length)}</dd></div><div><dt>Unidades</dt><dd>{count(unidadesSelecionadas)}</dd></div></dl>
           </section>
           <div className="shipping-review-notice"><AlertCircle size={18} aria-hidden="true" /><div><strong>O status muda no Mercado Livre</strong><p>Ao confirmar, os envios liberados serão marcados como impressos. O arquivo reúne a etiqueta, o DANFE com SKU quando disponível e a lista de separação em 10 × 15 cm.</p><p>Se o canal não fornecer DANFE, o PDF inclui uma folha com os itens. Isso não emite uma nota fiscal.</p></div></div>
-          {aviso?.tom === "down" && <p role="alert" className="text-down">{aviso.texto}</p>}
+          {aviso && aviso.tom !== "up" && <p role={aviso.tom === "down" ? "alert" : "status"} className={aviso.tom === "down" ? "text-down" : "text-warn"}>{aviso.texto}</p>}
           <section aria-label="Pedidos selecionados"><h3 className="shipping-review-title">Pedidos no lote</h3><ol className="shipping-review-orders">{selecionados.map(e => <li key={`${e.conta}-${e.pedido}`}><div className="shipping-review-order-heading"><strong>Pedido <span className="num">{e.pedido}</span></strong><span>{e.situacao}</span></div><Produtos envio={e} /></li>)}</ol></section>
         </div>
       </Sheet>}

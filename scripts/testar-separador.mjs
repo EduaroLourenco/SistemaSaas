@@ -21,8 +21,8 @@ const s = montarSeparacao([
   envio(1, 1, "A", 1, 0),
   envio(2, 2, "A", 1, -1),
   envio(3, 3, "a ", 2, 0),
-  envio(4, 9, "A", 1, 1),
-  envio(5, 9, "B", 1, 0),
+  envio(4, 9, "A", 1, 1, { envio: 40 }),
+  envio(5, 9, "B", 1, 0, { envio: 41 }),
 ]);
 
 assert.equal(s.unidades, 6);
@@ -31,6 +31,7 @@ assert.deepEqual(s.produtos.map((p) => [p.sku, p.unidades]), [["A", 5], ["B", 1]
 assert.equal(s.grupos[0].pedidos.length, 2, "pedidos iguais ficam juntos");
 assert.equal(s.grupos[0].pedidos[0].venda, 2, "o atrasado vem primeiro");
 assert.equal(s.grupos.find((g) => g.itens.length === 2).pedidos[0].dias, 0, "o pacote assume o prazo mais curto");
+assert.deepEqual(s.grupos.find((g) => g.itens.length === 2).pedidos[0].envios, [40, 41], "o pacote leva os envios para a etiqueta");
 
 assert.equal(entraNaSeparacao(envio(6, 6, "A", 1, 0), "hoje"), true);
 assert.equal(entraNaSeparacao(envio(7, 7, "A", 1, 1), "hoje"), false);
