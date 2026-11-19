@@ -530,7 +530,9 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
     return () => { vivo = false; };
   }, [promocao.contaId, promocao.codigo, promocao.tipo]);
 
-  const nossoPreco = NOSSO_PRECO.has(promocao.tipo);
+  /* Na relâmpago nós informamos o preço, partindo do que o canal sugeriu. */
+  const relampago = promocao.tipo === "LIGHTNING";
+  const nossoPreco = NOSSO_PRECO.has(promocao.tipo) || relampago;
 
   /*
    * Piso e faixa saíram para `lib/planilhas/piso-promocao.ts`: a fila de
@@ -555,6 +557,10 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
   const nossaOferta = React.useCallback(
     (i: ItemAutomacao) => {
       if (!nossoPreco || i.status !== "candidate") return null;
+      if (relampago) {
+        const sugerido = i.precoCanal ?? i.sugerido;
+        return sugerido == null ? null : { valor: sugerido };
+      }
       const ps = pisoDe(i);
       if (ps == null) return null;
       let v = ps * (1 - folga / 100);
@@ -563,7 +569,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
       if (v > teto + 0.01) return { bloqueado: true as const };
       return { valor: Math.round(v * 100) / 100 };
     },
-    [nossoPreco, pisoDe, folga]
+    [nossoPreco, relampago, pisoDe, folga]
   );
 
   const situacaoDe = React.useCallback(
@@ -571,7 +577,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
       if (i.status === "started") return "dentro";
       if (i.status === "pending") return "agendado";
       const ps = pisoDe(i);
-      if (nossoPreco) {
+      if (nossoPreco && !relampago) {
         if (ps == null) return "conferir";
         return nossaOferta(i)?.valor != null ? "cabe" : "nao";
       }
@@ -582,7 +588,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
       const r = resultadoEstimado(i, p);
       return r == null ? "conferir" : r >= 0 ? "cabe" : "nao";
     },
-    [nossoPreco, nossaOferta, pisoDe, folga]
+    [nossoPreco, relampago, nossaOferta, pisoDe, folga]
   );
 
   /* Quantas janelas cada anúncio tem nesta promoção: é o que avisa que a
@@ -907,7 +913,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
         <Revisao
           conta={promocao.contaId}
           itens={revisao}
-          porMlb={new Map(dados.itens.map((i) => [i.mlb, i]))}
+          porOferta={new Map(dados.itens.map((i) => [chaveDe(i), i]))}
           aoFechar={() => setRevisao(null)}
         />
       )}
@@ -918,10 +924,11 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
 /* ══ A revisão antes de enviar ════════════════════════════════
    Mostra o corpo exato que iria para o canal, item a item, montado
    pelas mesmas regras do envio de verdade. Nenhuma chamada sai daqui. */
-function Revisao({ conta, itens, porMlb, aoFechar }: {
+function Revisao({ conta, itens, porOferta, aoFechar }: {
   conta: string;
   itens: PedidoRevisao[];
-  porMlb: Map<string, ItemAutomacao>;
+  /* O mesmo anúncio pode ter mais de uma janela na promoção. */
+  porOferta: Map<string, ItemAutomacao>;
   aoFechar: () => void;
 }) {
   const [r, setR] = React.useState<RespostaRevisao | null>(null);
@@ -933,7 +940,7 @@ function Revisao({ conta, itens, porMlb, aoFechar }: {
   async function enviar() {
     setEnviando(true);
     try {
-      const vao = itens.filter((i) => r?.linhas.find((l) => l.mlb === i.mlb)?.vai);
+      const vao = itens.filter((_, k) => r?.linhas[k]?.vai);
       const res = await gerizoFetch("/api/automacoes/enviar", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -985,11 +992,11 @@ function Revisao({ conta, itens, porMlb, aoFechar }: {
           )}
 
           <div className="space-y-3">
-            {r.linhas.map((l) => {
-              const i = porMlb.get(l.mlb);
-              const pedido = itens.find((item) => item.mlb === l.mlb);
+            {r.linhas.map((l, k) => {
+              const pedido = itens[k];
+              const i = porOferta.get(pedido.oferta ?? pedido.mlb);
               return (
-                <div key={l.mlb} className="rounded-r1 border border-line p-3">
+                <div key={pedido.oferta ?? pedido.mlb} className="rounded-r1 border border-line p-3">
                   <div className="flex items-start gap-2">
                     <Badge tone={l.vai ? "up" : "down"}>{l.vai ? "vai" : "fica"}</Badge>
                     <div className="min-w-0 flex-1">

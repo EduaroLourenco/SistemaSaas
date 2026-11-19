@@ -65,6 +65,13 @@ assert.match(erro(corpoDoAceite({ mlb: "MLB1", promocao: "P", tipo: "SMART" })),
   assert.equal(c.deal_price, undefined);
 }
 assert.match(erro(corpoDoAceite({ mlb: "MLB1", promocao: "P", tipo: "LIGHTNING", oferta: "C-1" })), /quantidade/);
+/* A LIGHTNING recusa aceite sem preço: FINAL_PRICE_LOWER_THAN_ZERO. */
+assert.match(erro(corpoDoAceite({ mlb: "MLB1", promocao: "P", tipo: "LIGHTNING", oferta: "C-1", estoque: 5 })), /preço/);
+assert.match(erro(corpoDoAceite({ mlb: "MLB1", promocao: "P", tipo: "LIGHTNING", oferta: "C-1", estoque: 5, preco: 120, tetoDoCanal: 111.75 })), /sugeriu/);
+{
+  const c = ok(corpoDoAceite({ mlb: "MLB1", promocao: "LGH-MLB1000", tipo: "LIGHTNING", oferta: "C-1", estoque: 5, preco: 111.75, tetoDoCanal: 111.75 }));
+  assert.deepEqual(c, { promotion_type: "LIGHTNING", promotion_id: "LGH-MLB1000", deal_price: 111.75, offer_id: "C-1", stock: 5 });
+}
 assert.match(erro(corpoDoAceite({ mlb: "MLB1", promocao: "P", tipo: "DOD", estoque: 2 })), /offer_id/);
 
 /* ── Tipo desconhecido não vira chamada ── */

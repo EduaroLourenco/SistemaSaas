@@ -74,6 +74,14 @@ export function corpoDoAceite(p: PedidoDeAceite): { corpo: Record<string, unknow
   if (familia === "aceite_com_estoque") {
     if (!p.oferta) return { erro: "relâmpago exige o offer_id do candidato" };
     if (p.estoque == null || !(p.estoque > 0)) return { erro: "relâmpago exige a quantidade de unidades" };
+    /* Na LIGHTNING o preço é nosso: sem `deal_price` o canal entende zero. */
+    if (p.tipo.toUpperCase() === "LIGHTNING") {
+      if (p.preco == null || !(p.preco > 0)) return { erro: "oferta relâmpago exige o preço" };
+      if (p.tetoDoCanal != null && p.preco > p.tetoDoCanal + 0.01) {
+        return { erro: `o canal sugeriu ${p.tetoDoCanal.toFixed(2)} e o nosso preço é ${p.preco.toFixed(2)}` };
+      }
+      base.deal_price = Math.round(p.preco * 100) / 100;
+    }
     base.offer_id = p.oferta;
     base.stock = Math.trunc(p.estoque);
     return { corpo: base };
