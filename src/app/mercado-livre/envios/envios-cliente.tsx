@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { ArrowDown, ArrowUp, AlertCircle, CheckCircle2, FileText, List, Printer, RefreshCw, Table2 } from "lucide-react";
 import { count } from "@/lib/format";
 import type { DadosEnvios, EnvioMeli } from "@/lib/dados/envios-meli";
+import { Separador } from "./separador";
 import "./envios.css";
 
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -138,6 +139,15 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
     leituraPedida.current = ultimaLeitura;
     router.refresh();
   }, [ultimaLeitura, dados.geradoEm, router]);
+  const [aba, setAba] = React.useState<"fila" | "separador">("fila");
+  /* Na URL: recarregar não tira da tela quem está separando. */
+  React.useEffect(() => { if (new URLSearchParams(window.location.search).get("aba") === "separador") setAba("separador"); }, []);
+  function mudarAba(nova: "fila" | "separador") {
+    setAba(nova);
+    const url = new URL(window.location.href);
+    if (nova === "separador") url.searchParams.set("aba", nova); else url.searchParams.delete("aba");
+    window.history.replaceState(window.history.state, "", url);
+  }
   const [conta, setConta] = React.useState("");
   const [prazo, setPrazo] = React.useState<keyof typeof PRAZOS | "Enviados" | "">("");
   const [busca, setBusca] = React.useState("");
@@ -272,6 +282,10 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
         </Button>}
       />
       <PageBody>
+        <div className="shipping-tabs" role="group" aria-label="Tela de envios">
+          <button type="button" aria-pressed={aba === "fila"} onClick={() => mudarAba("fila")}>Fila de envios</button>
+          <button type="button" aria-pressed={aba === "separador"} onClick={() => mudarAba("separador")}>Separador</button>
+        </div>
         {atualizacao.erro && <p role="alert" className="text-[14px] text-down">{atualizacao.erro}</p>}
         {/* Uma faixa de filtro acima de tudo que ela recorta */}
         <div className="flex min-w-0 flex-wrap gap-2" role="group" aria-label="Filtrar envios por conta">
@@ -307,6 +321,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
           </div>
         ))}
 
+        {aba === "separador" ? <Separador envios={todos} chaveLocal={`gerizo:separador:${dados.hoje}:${dados.contas.join("|")}`} /> : <>
         <section aria-label="Resumo de envios" className="grid min-w-0 gap-5 border-b border-line pb-6 lg:grid-cols-[minmax(160px,1fr)_minmax(0,3fr)] lg:items-end lg:gap-8">
           <div>
             <p className="mb-2 text-[14px] font-medium text-ink-2">{consultaIncompleta ? "Pendentes nas contas consultadas" : "Envios pendentes"}</p>
@@ -412,6 +427,7 @@ export default function EnviosCliente({ dados }: { dados: DadosEnvios }) {
             </div>
           </Panel>
         )}
+        </>}
       </PageBody>
       {revisando && selecionados.length > 0 && <Sheet title="Revisar documentos" subtitle="Confira a conta e os pedidos antes de gerar o arquivo." onClose={() => { if (!imprimindo) setRevisando(false); }} width="600px" footer={<div className="shipping-review-actions">
         <Button disabled={imprimindo} onClick={() => setRevisando(false)}>Voltar à seleção</Button>

@@ -15,7 +15,7 @@ export type Column<T> = {
   /** Valor para ordenação. Omitir torna a coluna não-ordenável. */
   sortValue?: (row: T) => number | string | null;
   /** Papel no cartão do mobile: título, métrica em destaque, ou oculto. */
-  mobile?: "title" | "subtitle" | "metric" | "hidden";
+  mobile?: "title" | "subtitle" | "metric" | "hidden" | "select";
   width?: string;
   /** Fixa a coluna à esquerda no scroll horizontal. */
   sticky?: boolean;
@@ -55,9 +55,10 @@ export function DataTable<T>({
   const [view, setView] = React.useState<"list" | "table">("list");
   const shown = columns.filter((c, index) => index === 0 || !hidden.includes(c.key));
   const title = shown.find((c) => c.mobile === "title") ?? shown[0];
+  const select = shown.find((c) => c.mobile === "select");
   const primary = shown.filter((c) => c !== title && (c.mobile === "metric" || c.mobile === "subtitle")).slice(0, 3);
-  const summary = primary.length ? primary : shown.filter((c) => c !== title && c.mobile !== "hidden").slice(0, 2);
-  const secondary = shown.filter((c) => c !== title && !summary.includes(c));
+  const summary = primary.length ? primary : shown.filter((c) => c !== title && c !== select && c.mobile !== "hidden").slice(0, 2);
+  const secondary = shown.filter((c) => c !== title && c !== select && !summary.includes(c));
   const cards = mobile && view === "list";
 
   const sorted = React.useMemo(() => {
@@ -110,7 +111,10 @@ export function DataTable<T>({
       {/* ── Desktop: tabela densa ─────────────────────────────── */}
       {cards ? <div className="gerizo-mobile-records">
         {visible.map((row) => <article key={rowKey(row)} className="gerizo-mobile-record">
-          <div className="gerizo-record-title">{title?.cell(row)}</div>
+          <div className="gerizo-record-head">
+            {select && <label className="gerizo-record-select">{select.cell(row)}</label>}
+            <div className="gerizo-record-title">{title?.cell(row)}</div>
+          </div>
           <dl>{summary.map((c) => <div key={c.key}><dt>{c.header}</dt><dd>{c.cell(row)}</dd></div>)}</dl>
           {secondary.length > 0 && <details><summary>Mais dados <span>{secondary.length}</span></summary><dl>{secondary.map((c) => <div key={c.key}><dt>{c.header}</dt><dd>{c.cell(row)}</dd></div>)}</dl></details>}
           {onRowClick && <button className="gerizo-record-open" type="button" onClick={() => onRowClick(row)}>Abrir detalhes →</button>}

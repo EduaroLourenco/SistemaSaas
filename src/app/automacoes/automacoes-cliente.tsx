@@ -642,7 +642,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
 
   const colunas: Column<ItemAutomacao>[] = [
     {
-      key: "sel", header: "", sticky: true, width: "44px", mobile: "hidden",
+      key: "sel", header: "", sticky: true, width: "44px", mobile: "select",
       cell: (i) => (
         <input
           type="checkbox" className="h-[17px] w-[17px] accent-brand"
@@ -685,7 +685,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
     { key: "pede", header: "O Meli pede", align: "right", mobile: "metric",
       sortValue: (i) => precoDecide(i) ?? 0,
       cell: (i) => (precoDecide(i) == null ? vazio(i.status === "candidate" ? "ele não propôs" : undefined) : money(precoDecide(i)!)) },
-    { key: "faixa", header: "Faixa que sobra", align: "right", mobile: "metric",
+    { key: "faixa", header: "Faixa que sobra", align: "right", mobile: "hidden",
       sortValue: (i) => faixaDe(i, nossaOferta(i)?.valor ?? precoDecide(i)) ?? -1,
       cell: (i) => {
         if (!i.precos.length) return vazio("sem tabela");
