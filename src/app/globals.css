@@ -289,10 +289,10 @@ html:has(.gerizo-search[open]) { overflow: hidden; }
 .gerizo-sheet:not([open]) { display: none; }
 .gerizo-sheet-footer { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 html:has(.gerizo-sheet[open]) { overflow: hidden; }
-/* No celular a lista sobe como cartão: do tamanho dela, até 86% da tela. */
+/* No celular a lista sobe quase na tela inteira: tabela curta não vira janela espremida. */
 @media (max-width: 767px) {
-  .gerizo-sheet.cartao[open] { display: flex; inset: auto 0 0; height: auto; max-height: 86dvh; border-radius: 18px 18px 0 0; }
-  .gerizo-sheet.cartao > div { flex: 1 1 auto; width: 100%; height: auto; padding-bottom: env(safe-area-inset-bottom); }
+  .gerizo-sheet.cartao[open] { display: flex; inset: auto 0 0; height: 94dvh; max-height: 94dvh; border-radius: 18px 18px 0 0; }
+  .gerizo-sheet.cartao > div { flex: 1 1 auto; width: 100%; height: 100%; padding-bottom: env(safe-area-inset-bottom); }
   .gerizo-sheet.cartao header { padding: 16px !important; }
   .gerizo-sheet.cartao h2 { font-size: 17px; }
 }

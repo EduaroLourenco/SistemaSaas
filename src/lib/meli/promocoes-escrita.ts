@@ -95,13 +95,15 @@ export async function aceitarEmLote(
   pedidos: PedidoDeAceite[],
   aoAndar?: (feitos: number, total: number) => void
 ): Promise<ResultadoAceite[]> {
-  const fila = [...pedidos];
-  const saida: ResultadoAceite[] = [];
+  /* A saída segue a ordem do pedido: o mesmo anúncio pode vir em duas janelas. */
+  const saida = new Array<ResultadoAceite>(pedidos.length);
+  let proximo = 0;
+  let feitos = 0;
   const trabalhar = async (): Promise<void> => {
-    const p = fila.shift();
-    if (!p) return;
-    saida.push(await aceitarItem(conta, p));
-    aoAndar?.(saida.length, pedidos.length);
+    const indice = proximo++;
+    if (indice >= pedidos.length) return;
+    saida[indice] = await aceitarItem(conta, pedidos[indice]);
+    aoAndar?.(++feitos, pedidos.length);
     return trabalhar();
   };
   await Promise.all(Array.from({ length: Math.min(4, pedidos.length) }, trabalhar));

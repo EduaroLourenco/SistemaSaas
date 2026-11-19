@@ -23,8 +23,9 @@ import { FilaAprovacao } from "@/components/automacoes/fila";
 import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
 import { paraRegra, type ItemDaTela } from "@/lib/planilhas/item-para-regra";
 import { pisoDoItem, faixaDoPreco, precoComFolga, resultadoEstimado } from "@/lib/planilhas/piso-promocao";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Check, RefreshCw } from "lucide-react";
 import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
+import { resumoDoAceite } from "@/lib/dados/aceites-promocao";
 import "./automacoes.css";
 
 /**
@@ -393,6 +394,7 @@ type LinhaRevisao = {
 type RespostaEnvio = {
   conta: string; entraram: number; recusados: number;
   resultados: { mlb: string; ok: boolean; preco?: number | null; erro?: string }[];
+  historicoIncompleto?: boolean;
 };
 type RespostaRevisao = {
   conta: string; escritaConectada: boolean; vao: number; ficam: number; linhas: LinhaRevisao[];
@@ -514,6 +516,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
   const [porRegra, setPorRegra] = React.useState<Map<string, Resultado>>(new Map());
   /* Preço que a pessoa digitou, por MLB. Vazio = vale o que a folga propôs. */
   const [precos, setPrecos] = React.useState<Map<string, number>>(new Map());
+  const [versao, setVersao] = React.useState(0);
 
   React.useEffect(() => {
     let vivo = true;
@@ -528,7 +531,7 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
       })
       .catch((e) => vivo && setErro(String(e)));
     return () => { vivo = false; };
-  }, [promocao.contaId, promocao.codigo, promocao.tipo]);
+  }, [promocao.contaId, promocao.codigo, promocao.tipo, versao]);
 
   /* Na relâmpago nós informamos o preço, partindo do que o canal sugeriu. */
   const relampago = promocao.tipo === "LIGHTNING";
@@ -914,7 +917,11 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
           conta={promocao.contaId}
           itens={revisao}
           porOferta={new Map(dados.itens.map((i) => [chaveDe(i), i]))}
-          aoFechar={() => setRevisao(null)}
+          inicioPromocao={promocao.inicio}
+          aoFechar={(mudou) => {
+            setRevisao(null);
+            if (mudou) { setMarcados(new Set()); setVersao((v) => v + 1); }
+          }}
         />
       )}
     </Panel>
@@ -924,23 +931,85 @@ function Detalhe({ promocao, irmas, onTrocarConta, folga, onMudarFolga, regras }
 /* ══ A revisão antes de enviar ════════════════════════════════
    Mostra o corpo exato que iria para o canal, item a item, montado
    pelas mesmas regras do envio de verdade. Nenhuma chamada sai daqui. */
-function Revisao({ conta, itens, porOferta, aoFechar }: {
+const CONFETES = Array.from({ length: 18 }, (_, i) => ({
+  "--x": `${(((i * 47) % 100) - 50) * 3}px`,
+  "--r": `${(i * 83) % 360}deg`,
+  "--d": `${(i % 6) * 55}ms`,
+  "--c": ["var(--brand)", "var(--up)", "var(--s3)", "var(--s2)"][i % 4],
+})) as React.CSSProperties[];
+
+function ResultadoAceite({ envio, enviados, porOferta, inicioPromocao, aoConcluir }: {
+  envio: RespostaEnvio;
+  enviados: PedidoRevisao[];
+  porOferta: Map<string, ItemAutomacao>;
+  inicioPromocao: string | null;
+  aoConcluir: () => void;
+}) {
+  const linhas = envio.resultados.map((resultado, k) => {
+    const pedido = enviados[k];
+    const item = pedido ? porOferta.get(pedido.oferta ?? pedido.mlb) : undefined;
+    return { resultado, pedido, item };
+  });
+  const aceitas = linhas.filter((l) => l.resultado.ok);
+  const recusadas = linhas.filter((l) => !l.resultado.ok);
+  const resumo = resumoDoAceite({
+    entraram: envio.entraram,
+    recusados: envio.recusados,
+    inicios: aceitas.map((l) => l.item?.inicio ?? inicioPromocao),
+    agora: Date.now(),
+  });
+  const textos = {
+    agendada: ["Deu certo!", "Parabéns, sua promoção já está agendada.", `Começa em ${dia(resumo.inicio)}`],
+    aceita: ["Deu certo!", "Parabéns, sua promoção foi aceita.", "O Mercado Livre confirmou. Agora é acompanhar as vendas."],
+    parcial: ["Quase lá!", `${count(envio.entraram)} entraram na promoção.`, `${count(envio.recusados)} ficaram de fora.`],
+    recusada: ["Essa não entrou", "O Mercado Livre recusou o aceite.", "Veja o motivo abaixo."],
+  }[resumo.tipo];
+  const festa = resumo.tipo !== "recusada";
+
+  return (
+    <div className={`aceite-resultado ${festa ? "is-festa" : "is-recusa"}`} role="status">
+      {festa && <div className="aceite-confetes" aria-hidden="true">{CONFETES.map((estilo, i) => <i key={i} style={estilo} />)}</div>}
+      <div className="aceite-selo" aria-hidden="true">{festa ? <Check size={38} strokeWidth={3} /> : <AlertTriangle size={32} />}</div>
+      <p className="aceite-chamada">{textos[0]}</p>
+      <h3>{textos[1]}</h3>
+      <p className="aceite-apoio">{textos[2]}</p>
+      {aceitas.length > 0 && <ul className="aceite-lista">
+        {aceitas.slice(0, 3).map(({ resultado, pedido, item }, i) => {
+          const preco = resultado.preco ?? pedido?.preco ?? item?.precoCanal;
+          return <li key={i}><span>{item?.titulo ?? resultado.mlb}</span>{preco != null && <b className="num">{money(preco)}</b>}</li>;
+        })}
+        {aceitas.length > 3 && <li><span>e mais {count(aceitas.length - 3)}</span></li>}
+      </ul>}
+      {recusadas.length > 0 && <ul className="aceite-recusas">
+        {recusadas.map(({ resultado, item }, i) => <li key={i}><b>{item?.titulo ?? resultado.mlb}</b><span>{resultado.erro ?? "recusado pelo canal"}</span></li>)}
+      </ul>}
+      {envio.historicoIncompleto && <p className="aceite-aviso">O resultado não foi salvo por completo no histórico.</p>}
+      <Button variant="primary" onClick={aoConcluir}>Concluir</Button>
+    </div>
+  );
+}
+
+function Revisao({ conta, itens, porOferta, inicioPromocao, aoFechar }: {
   conta: string;
   itens: PedidoRevisao[];
   /* O mesmo anúncio pode ter mais de uma janela na promoção. */
   porOferta: Map<string, ItemAutomacao>;
-  aoFechar: () => void;
+  inicioPromocao: string | null;
+  aoFechar: (mudou: boolean) => void;
 }) {
   const [r, setR] = React.useState<RespostaRevisao | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [enviando, setEnviando] = React.useState(false);
   const [envio, setEnvio] = React.useState<RespostaEnvio | null>(null);
+  const [enviados, setEnviados] = React.useState<PedidoRevisao[]>([]);
+  const fechar = () => aoFechar(Boolean(envio?.entraram));
 
   /* Só vai o que a revisão disse que vai: item recusado aqui nem sai. */
   async function enviar() {
     setEnviando(true);
     try {
       const vao = itens.filter((_, k) => r?.linhas[k]?.vai);
+      setEnviados(vao);
       const res = await gerizoFetch("/api/automacoes/enviar", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -973,10 +1042,11 @@ function Revisao({ conta, itens, porOferta, aoFechar }: {
   }, [conta, itens]);
 
   return (
-    <Sheet onClose={aoFechar} title={`Revisar envio · ${count(itens.length)} itens`} width="640px">
-      {erro && <EmptyState title="Não consegui montar a revisão" description={erro} />}
+    <Sheet onClose={fechar} title={envio ? "Resultado" : `Revisar envio · ${count(itens.length)} itens`} width="640px">
+      {erro && <EmptyState title={enviados.length ? "Não consegui concluir o aceite" : "Não consegui montar a revisão"} description={erro} />}
       {!erro && !r && <Skeleton className="h-40 w-full" />}
-      {r && (
+      {envio && <ResultadoAceite envio={envio} enviados={enviados} porOferta={porOferta} inicioPromocao={inicioPromocao} aoConcluir={fechar} />}
+      {r && !envio && !erro && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-[14px]">
             <Badge tone="up">{count(r.vao)} vão</Badge>
@@ -1026,23 +1096,6 @@ function Revisao({ conta, itens, porOferta, aoFechar }: {
             })}
           </div>
 
-          {envio ? (
-            <div className="rounded-r1 border border-line p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="up">{count(envio.entraram)} entraram</Badge>
-                {envio.recusados > 0 && <Badge tone="down">{count(envio.recusados)} recusados</Badge>}
-              </div>
-              {/* O canal recusa linha por linha, com motivo próprio.
-                  Mostrar só o total esconderia qual produto ficou fora. */}
-              <ul className="mt-2 space-y-1">
-                {envio.resultados.filter((x) => !x.ok).map((x) => (
-                  <li key={x.mlb} className="text-[12px] text-down">
-                    <span className="font-mono">{x.mlb}</span> — {x.erro}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-[12px] text-ink-3">Nada foi enviado ainda.</p>
               <Button
@@ -1053,7 +1106,6 @@ function Revisao({ conta, itens, porOferta, aoFechar }: {
                 {enviando ? "Enviando…" : "Enviar " + count(r.vao) + " ao Mercado Livre"}
               </Button>
             </div>
-          )}
         </div>
       )}
     </Sheet>

@@ -3,7 +3,7 @@ import { createHmac } from "node:crypto";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 
 export const BUCKET_INTERESSES = "gerizo-interesses";
-export type Interesse = { nome: string; telefone: string; criadoEm: string; origem: "site-comercial" };
+export type Interesse = { nome: string; telefone: string; empresa?: string; modulos?: string[]; criadoEm: string; origem: "site-comercial" };
 
 /** Contatos ficam em um bucket privado separado, sem empresa ou pedido fictício. */
 export async function prepararCaptacao() {
@@ -21,11 +21,11 @@ export async function prepararCaptacao() {
   return sb;
 }
 
-export async function registrarInteresse(nome: string, telefone: string) {
+export async function registrarInteresse(nome: string, telefone: string, extra: { empresa?: string; modulos?: string[] } = {}) {
   const sb = await prepararCaptacao();
   const chave = createHmac("sha256", process.env.SUPABASE_SERVICE_ROLE_KEY!).update(`gerizo-interesse:${telefone}`).digest("hex");
-  const contato: Interesse = { nome, telefone, criadoEm: new Date().toISOString(), origem: "site-comercial" };
-  const { error } = await sb.storage.from(BUCKET_INTERESSES).upload(`${chave}.json`, Buffer.from(JSON.stringify(contato)), { contentType: "application/json", upsert: false });
+  const contato: Interesse = { nome, telefone, ...extra, criadoEm: new Date().toISOString(), origem: "site-comercial" };
+  const { error } = await sb.storage.from(BUCKET_INTERESSES).upload(`${chave}.json`, Buffer.from(JSON.stringify(contato)), { contentType: "application/json", upsert: Boolean(extra.modulos?.length) });
   // Reenviar o mesmo telefone não cria uma lista duplicada de contatos.
   if (error && !["409", "400"].includes(String(error.statusCode))) throw error;
   if (error && String(error.statusCode) === "400" && !/already exists|duplicate/i.test(error.message)) throw error;
@@ -40,7 +40,7 @@ export async function listarInteresses(): Promise<Interesse[]> {
     const { data: arquivo, error } = await sb.storage.from(BUCKET_INTERESSES).download(f.name);
     if (error || !arquivo) throw error ?? new Error("Contato indisponível.");
     const item = JSON.parse(await arquivo.text()) as Interesse;
-    return { nome: item.nome, telefone: item.telefone, criadoEm: item.criadoEm, origem: "site-comercial" as const };
+    return { nome: item.nome, telefone: item.telefone, empresa: item.empresa, modulos: item.modulos, criadoEm: item.criadoEm, origem: "site-comercial" as const };
   }));
   return contatos.sort((a,b) => b.criadoEm.localeCompare(a.criadoEm));
 }

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { aceitarComHistorico } from "@/lib/dados/aceites-promocao";
 import { carregarCanais } from "@/lib/dados/canais";
+import { operacaoPadrao } from "@/lib/dados/operacao";
 import { aceitarEmLote } from "@/lib/meli/promocoes-escrita";
+import { clienteServidor } from "@/lib/supabase/servidor";
 import type { PedidoDeAceite } from "@/lib/planilhas/corpo-promocao";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +53,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const [sb, op] = await Promise.all([clienteServidor(), operacaoPadrao()]);
+  if (!op) return NextResponse.json({ erro: "Sem operação." }, { status: 403 });
+  const [{ data: sessao }, { data: podeEditar, error: erroPermissao }] = await Promise.all([
+    sb.auth.getUser(),
+    sb.rpc("pode_editar_operacao", { op: op.id }),
+  ]);
+  if (erroPermissao || podeEditar !== true || !sessao.user) {
+    return NextResponse.json({ erro: "Seu perfil não pode aceitar promoções." }, { status: 403 });
+  }
+
   const { contas } = await carregarCanais();
   const minha = contas.find((c) => c.id === conta && c.canalCodigo === "mercado_livre");
   if (!minha) return NextResponse.json({ erro: "conta não encontrada" }, { status: 404 });
@@ -60,12 +73,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const resultados = await aceitarEmLote(conta, itens);
+  const envio = await aceitarComHistorico({
+    sb,
+    operacaoId: op.id,
+    contaId: conta,
+    usuarioId: sessao.user.id,
+    itens,
+    enviar: (pedidos) => aceitarEmLote(conta, pedidos),
+  });
+  if ("erro" in envio) return NextResponse.json(envio, { status: 503 });
+
+  const { resultados, historicoIncompleto } = envio;
   const entraram = resultados.filter((r) => r.ok).length;
   return NextResponse.json({
     conta: minha.nome,
     entraram,
     recusados: resultados.length - entraram,
     resultados,
+    historicoIncompleto,
   });
 }

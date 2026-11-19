@@ -1,30 +1,122 @@
-import Link from "next/link";
-import { Play, Check, ChevronDown } from "lucide-react";
-import { Brand } from "@/components/ui/brand";
-import { InterestForm } from "./interest-form";
-import { ProductShowcase } from "./product-showcase";
-import "./commercial.css";
-import "./marketing.css";
+"use client";
 
-const demo = "/demonstracao/sistema";
-function ProductImage({ nome, alt }: { nome: string; alt: string }) {
-  const rota = nome === "sistema-queda" ? "/vendas/queda" : nome === "sistema-planejamento" ? "/planejamento" : "/automacoes";
-  return <Link className="site-product-image site-live-preview" href={demo+rota} aria-label={alt+" — abrir demonstração"}><iframe title={alt} src={demo+rota+"?apresentacao=1"} loading="lazy" tabIndex={-1} aria-hidden /></Link>;
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { Hand, Play } from "lucide-react";
+import { FUNCIONALIDADES, type CategoriaFuncionalidade } from "@/lib/comercial/funcionalidades";
+import { TelaAnotada, type Marca } from "./anotacao";
+import { FeatureVideoFeed } from "./feature-video-feed";
+import { fontesSite } from "./fontes";
+import { MontadorModulos } from "./montador-modulos";
+import { SiteRodape, SiteTopo } from "./site-comum";
+import "./site.css";
+
+export const COR_CATEGORIA: Record<CategoriaFuncionalidade, string> = {
+  Vendas: "var(--gz-c1)", "Mercado Livre": "var(--gz-c2)", Promoções: "var(--gz-c5)", Operação: "var(--gz-c4)", Dinheiro: "var(--gz-c7)",
+};
+
+const PERGUNTAS: { id: string; titulo: string; texto: string; tela: string; alt: string; nota: string; rota: string; marcas: Marca[] }[] = [
+  { id: "v03", titulo: "Caiu? A pista já vem pronta.", texto: "O Gerizo separa a queda por produto e mostra se foi estoque, preço, visitas ou conversão.",
+    tela: "/site/queda.webp", alt: "Tela Por que caiu, com a queda da receita e o motivo de cada produto", nota: "sem estoque, não é falta de cliente", rota: "/demonstracao/sistema/vendas/queda",
+    marcas: [{ tipo: "marca-texto", x: 17.6, y: 22.5, w: 22.4, h: 6 }, { tipo: "circulo", x: 88.6, y: 70.8, w: 9.8, h: 6.6 }] },
+  { id: "v07", titulo: "Essa promoção cabe no seu preço?", texto: "Veja o que o Mercado Livre pede ao lado do seu preço mínimo e aceite só o que faz sentido, com revisão antes.",
+    tela: "/site/promocoes.webp", alt: "Tela de promoções abertas comparando o preço pedido pelo Mercado Livre com o piso de cada produto", nota: "pede R$ 367, o piso é R$ 471", rota: "/demonstracao/sistema/automacoes",
+    marcas: [{ tipo: "circulo", x: 58.6, y: 84.6, w: 6.6, h: 6 }, { tipo: "circulo", x: 78.2, y: 84.6, w: 6.6, h: 6 }] },
+  { id: "v04", titulo: "O que sai hoje, sem correria.", texto: "O Separador junta os pedidos do dia. Você pega tudo numa volta só e monta os pacotes em sequência.",
+    tela: "/site/separador.webp", alt: "Separador de envios com a lista de produtos para pegar no dia", nota: "uma volta pelo estoque e pronto", rota: "/demonstracao/sistema/mercado-livre/envios?aba=separador",
+    marcas: [{ tipo: "marca-texto", x: 17.8, y: 42, w: 8.4, h: 5.6 }, { tipo: "check", x: 18.6, y: 61.6, w: 2.8, h: 4.6 }] },
+  { id: "v08", titulo: "Faturou. E quanto ficou?", texto: "Frete, comissão e Ads entram sozinhos na conta. Você vê o resultado e onde ele foi parar.",
+    tela: "/site/financeiro.webp", alt: "Demonstrativo financeiro com receita, custos da venda, custos da operação e resultado", nota: "isso é o que sobrou", rota: "/demonstracao/sistema/financeiro",
+    marcas: [{ tipo: "marca-texto", x: 19.6, y: 31.4, w: 21.6, h: 6.2 }, { tipo: "circulo", x: 33.4, y: 73.2, w: 8.4, h: 6.4 }] },
+];
+
+/** O sistema de exemplo dentro de um celular. Só carrega quando aparece na tela. */
+function CelularAoVivo() {
+  const caixa = useRef<HTMLDivElement>(null);
+  const [carregar, setCarregar] = useState(false);
+  const [mexer, setMexer] = useState(false);
+  useEffect(() => {
+    const el = caixa.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setCarregar(true); obs.disconnect(); } }, { rootMargin: "300px" });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return (
+    <div className="gz-celular" ref={caixa}>
+      <div className="gz-celular-tela">
+        {carregar && <iframe src="/demonstracao/sistema/vendas/dia" title="Sistema Gerizo de exemplo" loading="lazy" tabIndex={mexer ? 0 : -1} />}
+        {!mexer && <button type="button" className="gz-celular-toque" onClick={() => setMexer(true)}><span><Hand size={17} aria-hidden />Tocar para mexer</span></button>}
+      </div>
+    </div>
+  );
 }
 
 export function MarketingPage() {
-  return <main className="gerizo-site" id="inicio">
-    <a className="site-skip" href="#produto">Ir para o conteúdo</a>
-    <header className="site-header site-container"><Link href="/conheca" aria-label="Gerizo — início"><Brand/></Link><nav aria-label="Navegação do site"><a href="#produto">O produto</a><a href="#na-pratica">Na prática</a><a href="#videos">Aprenda</a></nav><div className="site-header-actions"><Link className="site-login" href="/entrar">Entrar</Link><a className="site-button site-button-small" href="#interesse">Quero conhecer</a></div></header>
-    <section className="site-hero site-container" id="produto"><div className="site-hero-heading"><p className="site-eyebrow">Inteligência e operação para e-commerce</p><h1>Venda com<br/><em>visão de negócio.</em></h1></div><div className="site-hero-intro"><p>Vendas, anúncios, promoções e custos conectados à sua rotina. Do resultado do dia ao detalhe de cada produto.</p><div className="site-hero-actions"><Link className="site-button" href={`${demo}/vendas/dia?tour=1`}>Explorar o Gerizo</Link><span>Sem cadastro.<br/>No seu ritmo.</span></div></div></section>
-    <section className="site-showcase site-container" aria-label="Conheça as telas do Gerizo"><ProductShowcase/></section>
-    <section className="site-sources site-container" aria-label="Fontes da operação"><p>Os dados mudam de origem.<br/><strong>A sua visão continua inteira.</strong></p><div><span>Mercado Livre</span><span>Bling</span><span>Google Analytics</span><span>Planilhas</span></div></section>
-    <section className="site-story site-container" id="na-pratica"><div className="site-story-copy"><p className="site-eyebrow">Enxergue além do total vendido</p><h2>O número chama atenção.<br/><em>O detalhe explica.</em></h2><p>Uma queda nas vendas pode começar no tráfego, na conversão ou no estoque. Investigue o produto, compare os períodos e veja as evidências juntas.</p><div className="site-story-links"><Link href={`${demo}/vendas/queda`}>Investigar uma queda</Link><Link href={`${demo}/anuncios/trafego-pago`}>Entender o investimento em mídia</Link><Link href={`${demo}/vendas/skus`}>Acompanhar produtos e SKUs</Link></div></div><div className="site-story-visual site-visual-lavender"><div className="site-visual-label"><span>Por que caiu</span><span>Tela do Gerizo · dados fictícios</span></div><ProductImage nome="sistema-queda" alt="Análise de queda do Gerizo, com causas e evolução por produto no cenário de demonstração"/></div></section>
-    <section className="site-story site-story-reverse site-container"><div className="site-story-copy"><p className="site-eyebrow">Da proposta à decisão</p><h2>Desconto na oferta.<br/><em>Critério na aprovação.</em></h2><p>Compare propostas, confira o piso e trabalhe com regras de promoção. Custos por SKU, frete e comissão dão contexto ao preço antes de aprovar.</p><ul className="site-check-list"><li><Check size={17}/>Promoções e automações do Mercado Livre</li><li><Check size={17}/>Importação e acompanhamento de planilhas</li><li><Check size={17}/>Custos e demonstrativo financeiro</li></ul><Link className="site-button site-button-outline" href={`${demo}/automacoes?tour=1`}>Experimentar uma promoção</Link></div><div className="site-story-visual site-visual-neutral"><div className="site-visual-label"><span>Promoções abertas</span><span>Propostas, regras e revisão</span></div><ProductImage nome="sistema-promocoes" alt="Tela de promoções do Gerizo com as oportunidades da conta demonstrativa e suas condições"/></div></section>
-    <section className="site-planning site-container"><div className="site-planning-heading"><div><p className="site-eyebrow">O próximo passo também tem lugar</p><h2>Planeje a campanha.<br/><em>Acompanhe a operação.</em></h2></div><div><p>Calendário, quadro e mapa para organizar campanhas e ações. Resultados e envios para acompanhar o que acontece depois.</p><Link className="site-button site-button-outline" href={`${demo}/planejamento?tour=1`}>Abrir o planejamento</Link></div></div><div className="site-planning-visual"><ProductImage nome="sistema-planejamento" alt="Planejamento comercial do Gerizo com campanhas e ações do cenário fictício"/></div><div className="site-planning-footer"><span>Uma rotina conectada, da análise à execução.</span><Link href={`${demo}/mercado-livre/envios`}>Conhecer a expedição</Link><Link href={`${demo}/conversa`}>Conversar sobre os dados</Link></div></section>
-    <section className="site-learn site-container" id="videos"><div className="site-learn-tour"><p className="site-eyebrow">Conheça por dentro</p><h2>Abra o sistema.<br/><em>O guia vai com você.</em></h2><p>Explore as telas do Gerizo com dados fictícios e orientações em cada etapa. Troque os filtros, teste um custo e acompanhe uma promoção.</p><Link className="site-button" href={`${demo}/vendas/dia?tour=1`}><Play size={15} fill="currentColor"/>Começar o tour guiado</Link></div><div className="site-video-library"><div className="site-library-heading"><h3>Em vídeo, em breve.</h3><p>Estamos preparando uma biblioteca para ajudar você a tirar mais do Gerizo.</p></div>{["Vendas, metas e diagnóstico","Promoções, custos e margem","Campanhas e rotina de operação"].map(titulo=><div className="site-video-row" key={titulo}><span>{titulo}</span><small>Em preparação</small></div>)}<details className="site-about-demo"><summary>Como funciona a demonstração<ChevronDown size={16}/></summary><p>Você utiliza as telas do Gerizo em uma operação fictícia. As alterações ficam apenas na demonstração; nenhuma ação é enviada aos canais e nenhum dado de cliente é consultado.</p></details></div></section>
-    <section className="site-contact" id="interesse"><div className="site-contact-inner site-container"><div className="site-contact-copy"><p className="site-eyebrow">Agora, pense na sua operação</p><h2>Mais visão para decidir.<br/><em>Mais espaço para crescer.</em></h2><p>Deixe seu contato para conversar sobre o Gerizo e conhecer as possibilidades para o seu negócio.</p><div className="site-contact-brand"><Brand/><span>Inteligência que acompanha<br/>o ritmo da operação.</span></div></div><InterestForm/></div></section>
-    <footer className="site-footer site-container"><span>Gerizo · Inteligência de mercado</span><div><Link href="/privacidade">Privacidade</Link><Link href="/termos">Termos</Link><Link href="/entrar">Entrar no sistema</Link></div><a href="#inicio">Voltar ao início</a></footer>
-  </main>;
+  const [video, setVideo] = useState<string | null>(null);
+  const montador = useRef<HTMLElement>(null);
+  const pedir = () => montador.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+
+  return (
+    <main className={`gz ${fontesSite}`} id="inicio">
+      <a className="gz-skip" href="#conteudo">Ir para o conteúdo</a>
+      <SiteTopo aoPedir={pedir} />
+
+      <section className="gz-abre gz-wrap" id="conteudo">
+        <h1>Você vende. O Gerizo mostra o que aconteceu.</h1>
+        <div className="gz-abre-linha">
+          <p>Vendas, anúncios do Mercado Livre, promoções, envios e custos lidos juntos, com o próximo passo à vista.</p>
+          <div className="gz-abre-acoes">
+            <button type="button" className="gz-btn gz-btn-primary" onClick={() => setVideo(FUNCIONALIDADES[0].id)}><Play size={18} fill="currentColor" aria-hidden />Ver funcionalidades</button>
+            <button type="button" className="gz-link" onClick={pedir}>Pedir demonstração</button>
+          </div>
+        </div>
+        <div className="gz-abre-tela">
+          <TelaAnotada prioridade src="/site/hoje.webp" alt="Tela Hoje do Gerizo com a receita do dia, a meta e os últimos dias" nota="caiu 39% hoje. por quê?"
+            marcas={[{ tipo: "circulo", x: 86.4, y: 39.6, w: 11.2, h: 6.4 }, { tipo: "circulo", x: 52.6, y: 26.6, w: 6.8, h: 5.4 }]} />
+        </div>
+      </section>
+
+      <section className="gz-perguntas gz-wrap" aria-labelledby="perguntas">
+        <h2 className="gz-titulo-secao" id="perguntas">As perguntas da semana, respondidas na tela.</h2>
+        {PERGUNTAS.map((p) => (
+          <article className="gz-pergunta" key={p.id}>
+            <div className="gz-pergunta-texto">
+              <h3>{p.titulo}</h3>
+              <p>{p.texto}</p>
+              <div className="gz-pergunta-acoes">
+                <button type="button" className="gz-btn gz-btn-line gz-btn-small" onClick={() => setVideo(p.id)}><Play size={15} fill="currentColor" aria-hidden />Assistir</button>
+                <Link className="gz-link" href={p.rota}>Abrir no sistema de exemplo</Link>
+              </div>
+            </div>
+            <TelaAnotada src={p.tela} alt={p.alt} nota={p.nota} marcas={p.marcas} />
+          </article>
+        ))}
+      </section>
+
+      <section className="gz-vivo" aria-labelledby="vivo">
+        <div className="gz-wrap">
+          <div>
+            <h2 className="gz-titulo-secao" id="vivo">Ainda na dúvida? Mexa você mesmo.</h2>
+            <p>Uma loja de exemplo, com as mesmas telas que nossos clientes usam. Nada da sua conta, nada é enviado.</p>
+            <Link href="/demonstracao/sistema/vendas/dia?tour=1" className="gz-btn gz-btn-primary">Abrir o sistema de exemplo</Link>
+          </div>
+          <CelularAoVivo />
+        </div>
+      </section>
+
+      <section className="gz-monte gz-wrap" id="monte" ref={montador} aria-labelledby="monte-titulo" tabIndex={-1}>
+        <div className="gz-monte-cab">
+          <h2 className="gz-titulo-secao" id="monte-titulo">Monte seu pacote.</h2>
+          <p>Marque o que faz sentido para sua loja. A gente mostra funcionando e passa o preço na conversa.</p>
+        </div>
+        <MontadorModulos />
+      </section>
+
+      <SiteRodape />
+      {video && <FeatureVideoFeed items={FUNCIONALIDADES} initialId={video} onClose={() => setVideo(null)} />}
+    </main>
+  );
 }
+
 export default MarketingPage;

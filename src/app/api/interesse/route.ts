@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { registrarInteresse, listarInteresses } from "@/lib/interesses";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { idsValidos } from "@/lib/comercial/modulos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +32,9 @@ export async function POST(req: Request) {
   const nome = typeof corpo.nome === "string" ? corpo.nome.trim().replace(/\s+/g," ") : "";
   const telefone = typeof corpo.telefone === "string" ? corpo.telefone.replace(/\D/g,"") : "";
   if (nome.length < 2 || nome.length > 100 || telefone.length < 10 || telefone.length > 15 || /^(\d)\1+$/.test(telefone)) return NextResponse.json({ erro: "Informe seu nome e um telefone com DDD." }, { status: 400 });
-  try { await registrarInteresse(nome, telefone); return NextResponse.json({ ok: true }, { headers: { "cache-control": "no-store" } }); }
+  const empresa = typeof corpo.empresa === "string" ? corpo.empresa.trim().replace(/\s+/g, " ").slice(0, 80) : "";
+  const modulos = idsValidos(corpo.modulos);
+  try { await registrarInteresse(nome, telefone, { ...(empresa ? { empresa } : {}), ...(modulos.length ? { modulos } : {}) }); return NextResponse.json({ ok: true }, { headers: { "cache-control": "no-store" } }); }
   catch { return NextResponse.json({ erro: "Não foi possível registrar agora. Seus dados continuam no formulário; tente novamente em instantes." }, { status: 503 }); }
 }
 
