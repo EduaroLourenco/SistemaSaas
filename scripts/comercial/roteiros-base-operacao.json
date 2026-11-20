@@ -1,0 +1,56 @@
+{
+  "versao": 1,
+  "nota": "Demonstração local Atlas Casa: uma conta do Mercado Livre e seis SKUs. Dados fictícios de 05/10 a 18/11/2026. O dia 18/11 permanece parcial quando indicado na interface. Conversar usa respostas guiadas locais nesta demonstração. Sugestões de promoção e planilhas exigem conferência humana; os vídeos não mostram envio ao canal.",
+  "voz": "pt-BR-FranciscaNeural",
+  "videos": [
+    {
+      "id": "v04",
+      "titulo": "Do produto à etiqueta",
+      "rota": "/mercado-livre/envios",
+      "fonte": "Separador real: prazos Até hoje/Até amanhã/Todos; Pegar agrupa quantidades por produto; Montar reúne pedidos de composição igual; Etiquetas dos montados seleciona os envios marcados para revisão do lote. Marcação local no aparelho e no dia. Nenhuma etiqueta real é gerada nesta demonstração.",
+      "cenas": [
+        { "captura": "envios-prazo", "nuvem": "Qual caixa sai primeiro?", "legenda": "Comece pelo prazo. Até hoje, amanhã ou todos.", "fala": "Qual caixa sai primeiro? No Separador, escolha o prazo e veja o que precisa sair.", "humor": "curioso" },
+        { "captura": "envios-pegar", "nuvem": "Uma ida, quantas unidades?", "legenda": "Pegar reúne as quantidades de cada produto.", "fala": "Em Pegar, as quantidades ficam juntas por produto. Confira o SKU e marque o que pegou.", "humor": "feliz" },
+        { "captura": "envios-montar", "nuvem": "Agora cada pedido ganha forma", "legenda": "Montar agrupa pedidos com os mesmos itens.", "fala": "Agora, Montar. Pedidos com os mesmos itens aparecem juntos. Confira cada um e marque os montados.", "humor": "curioso" },
+        { "captura": "envios-etiquetas", "nuvem": "Etiqueta no pedido certo", "legenda": "Revise os montados antes de gerar as etiquetas.", "fala": "Os montados seguem para as etiquetas. Revise o lote antes de gerar. A conferência fecha o caminho.", "humor": "feliz" }
+      ]
+    },
+    {
+      "id": "v05",
+      "titulo": "A campanha ganha um caminho",
+      "rota": "/planejamento",
+      "fonte": "Planejamento local Atlas Casa: Semana da Casa em andamento, ações de preço, convites de promoção, Product Ads e vitrine; quadro por andamento, mapa conectado, ficha com responsável/prazo/checklist; resultados da Relâmpago Organização encerrada em 10/11/2026. O resultado observado não prova efeito isolado da promoção.",
+      "cenas": [
+        { "captura": "plano-quadro", "nuvem": "Estava tudo só na cabeça?", "legenda": "Quadro: cada ação tem seu lugar e andamento.", "fala": "No quadro, cada ação ganha um lugar. A Semana da Casa deixa de morar só na cabeça.", "humor": "curioso" },
+        { "captura": "plano-mapa", "nuvem": "As peças começam a conversar", "legenda": "Mapa: veja como as ações se conectam.", "fala": "No mapa, você enxerga como as peças se conectam. Preço, promoção e mídia na mesma campanha.", "humor": "feliz" },
+        { "captura": "plano-ficha", "nuvem": "Quem faz o quê, e quando?", "legenda": "Ficha: responsável, prazo e checklist juntos.", "fala": "Abra a ficha. Responsável, prazo e checklist mostram quem faz o quê, sem depender da memória.", "humor": "curioso" },
+        { "captura": "plano-resultado", "nuvem": "E o que essa ação ensinou?", "legenda": "Resultados: compare o período e registre o aprendizado.", "fala": "Depois, confira o resultado da ação. Comparar o período ajuda a escolher o próximo passo.", "humor": "feliz" }
+      ]
+    },
+    {
+      "id": "v07",
+      "titulo": "Promoção com a conta à vista",
+      "rota": "/automacoes",
+      "fonte": "Promoções locais Atlas Casa: Semana da Casa, seis SKUs. Convites e propostas em Automações; preço, piso, faixa de comissão e resultado estimado; regras sugerem decisões para revisão. Processar planilha aceita origem por tabela, margem pelos custos ou ambas, alvo/piso e conferência item a item antes da exportação. Não promete publicação autônoma nem aumento de margem.",
+      "cenas": [
+        { "captura": "promo-convites", "nuvem": "Desconto bom para quem?", "legenda": "Comece pelos convites, prazos e itens da campanha.", "fala": "O desconto cabe? Confira os convites, prazos e itens da campanha.", "humor": "curioso" },
+        { "captura": "promo-proposta", "nuvem": "O preço ainda fecha?", "legenda": "Compare proposta, piso e resultado estimado.", "fala": "Abra a proposta. Compare preço, piso e resultado estimado antes de aceitar o desconto.", "humor": "curioso" },
+        { "captura": "promo-planilha", "nuvem": "A planilha também entra na conta", "legenda": "Use tabela de preço, margem pelos custos ou ambas.", "fala": "Veio por planilha? Use tabela de preço, margem pelos custos ou ambas como referência.", "humor": "feliz" },
+        { "captura": "promo-piso", "nuvem": "Seu limite precisa aparecer", "legenda": "Defina a referência como alvo ou piso e confira.", "fala": "Essa referência será alvo ou piso? Custos atualizados ajudam a enxergar seu limite.", "humor": "curioso" },
+        { "captura": "promo-revisao", "nuvem": "Sugestão pronta. Você confere.", "legenda": "As regras ajudam. A revisão continua com você.", "fala": "As regras sugerem decisões. Você revisa os itens antes de confirmar ou exportar a planilha.", "humor": "feliz" }
+      ]
+    },
+    {
+      "id": "v09",
+      "titulo": "Três perguntas para a rotina",
+      "rota": "/conversa",
+      "fonte": "Conversar no modo de demonstração usa três respostas guiadas locais: produto perdendo vendas, Ads consumindo margem e pedidos para despachar hoje. Os textos apontam dados e telas da Atlas Casa e não consultam IA nem dados reais. São pistas para investigação; não são ordens de alteração automática.",
+      "cenas": [
+        { "captura": "conversa-perguntas", "nuvem": "Por onde começo hoje?", "legenda": "Três perguntas guiadas na demonstração local.", "fala": "Por onde começo hoje? Na demonstração, três perguntas guiadas apresentam leituras úteis para a rotina.", "humor": "curioso" },
+        { "captura": "conversa-vendas", "nuvem": "Quem está perdendo vendas?", "legenda": "Vendas: encontre o sinal e abra a investigação.", "fala": "Qual produto está perdendo vendas? A resposta compara receita e visitas, e aponta onde investigar o sinal.", "humor": "curioso" },
+        { "captura": "conversa-ads", "nuvem": "E a mídia, quanto está pesando?", "legenda": "Ads: confira o peso da mídia junto dos custos.", "fala": "Onde os Ads consomem margem? Veja o peso da mídia e confira os custos antes de decidir.", "humor": "curioso" },
+        { "captura": "conversa-envios", "nuvem": "Qual pedido pede atenção?", "legenda": "Envios: veja os prazos e continue a conferência.", "fala": "Que pedidos preciso despachar hoje? A resposta destaca prazos e pendências. Abra Envios e siga a conferência.", "humor": "feliz" }
+      ]
+    }
+  ]
+}

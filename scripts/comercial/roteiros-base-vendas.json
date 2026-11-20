@@ -1,0 +1,59 @@
+{
+  "versao": 1,
+  "nota": "Atlas Casa, cenário fictício com um canal e seis SKUs entre 05/10 e 18/11/2026. As telas registram sinais e comparações, sem comprovar causas. O dia 18/11 e a semana 16–22/11 estão em andamento. Quadros próprios são identificados como leitura do exemplo e derivados das mesmas fontes.",
+  "voz": "pt-BR-FranciscaNeural",
+  "videos": [
+    {
+      "id": "v01",
+      "titulo": "O dia conta a história toda?",
+      "rota": "/vendas/dia?data=2026-11-18 → /vendas/semanal",
+      "fonte": "fixtures-base.ts e fixtures-vendas.ts: 18/11/2026, receita líquida R$ 6.778,96; semana16–22/11 parcial, receita R$ 22.527,92 até18/11. semanal-cliente.tsx calcula média somente entre semanas fechadas com dados. Captura limpa public/site/telas/v01.webp e novas capturas da visão semanal.",
+      "cenas": [
+        { "captura": "hoje-visao", "nuvem": "Um dia conta tudo?", "legenda": "O número do dia pede contexto.", "fala": "Hoje entrou quase sete mil reais. Dá para decidir a semana olhando só esse número?", "humor": "curioso" },
+        { "captura": "hoje-valor", "nuvem": "Ainda tem dia pela frente", "legenda": "18/11 · R$ 6.778,96 líquidos", "fala": "Aqui estão seis mil, setecentos e setenta e oito reais. E o dia ainda está em andamento.", "humor": "curioso" },
+        { "captura": "v01-semanal-resumo", "nuvem": "Vamos abrir o contexto", "legenda": "Semana atual: R$ 22.527,92 · em curso", "fala": "Na visão semanal, já são vinte e dois mil e quinhentos reais. A semana também está em curso.", "humor": "curioso" },
+        { "captura": "v01-semanal-fechadas", "nuvem": "Esta comparação tem cuidado", "legenda": "A média usa semanas fechadas com dados.", "fala": "Olha o cuidado: a média considera somente semanas fechadas com dados.", "humor": "feliz" },
+        { "captura": "quadro-hoje-semana", "nuvem": "Agora o número tem história", "legenda": "Veja o dia. Abra a semana. Investigue.", "fala": "Veja o dia, abra a semana e escolha o que investigar. O número ganhou contexto.", "humor": "feliz" }
+      ]
+    },
+    {
+      "id": "v02",
+      "titulo": "Cancelou pouco. Quanto voltou?",
+      "rota": "/vendas/cancelamentos",
+      "fonte": "fixtures-cancelamentos.ts e fixtures-base.ts: 05/10–18/11/2026, três pedidos cancelados, R$ 1.988,79 sobre R$ 434.495,73 brutos; taxa de valor 0,4577%, exibida 0,5%. Puff AT-PUFF-03: dois itens em um pedido, R$ 979,80 cancelados. Sheet de pedidos acessível pelo valor cancelado na aba Por canal.",
+      "cenas": [
+        { "captura": "cancelamentos-valor", "nuvem": "Cancelou só um pouquinho?", "legenda": "Uma taxa pequena também vira dinheiro.", "fala": "Cancelou só um pouquinho? Em dinheiro, esse pouquinho merece uma olhada.", "humor": "curioso" },
+        { "captura": "quadro-cancelamentos", "nuvem": "Três pedidos, quase dois mil", "legenda": "3 pedidos · R$ 1.988,79 cancelados", "fala": "Neste exemplo, três pedidos cancelados somam quase dois mil reais, entre outubro e novembro.", "humor": "curioso" },
+        { "captura": "cancelamentos-taxa", "nuvem": "Qual é a medida?", "legenda": "0,5% sobre o valor vendido", "fala": "A taxa geral é meio por cento sobre o valor. Dinheiro e quantidade são leituras diferentes.", "humor": "curioso" },
+        { "captura": "v02-skus", "nuvem": "O Puff entrou na conversa", "legenda": "Puff Linho: R$ 979,80 cancelados", "fala": "Por SKU, o Puff aparece com quase novecentos e oitenta reais cancelados.", "humor": "curioso" },
+        { "captura": "v02-pedidos", "nuvem": "Agora tem por onde começar", "legenda": "Abra os pedidos. Confira o que aconteceu.", "fala": "Abra os pedidos e confira o que aconteceu. A tela mostra o rastro; o motivo pede investigação.", "humor": "feliz" }
+      ]
+    },
+    {
+      "id": "v03",
+      "titulo": "Caiu. E agora, mexer em quê?",
+      "rota": "/vendas/queda?de=2026-11-12&ate=2026-11-18",
+      "fonte": "fixtures-vendas.ts dadosQuedaDemo: 12–18/11 versus05–11/11/2026, receitaR$68.619,20→R$53.087,85 (-22,6%). Mesa AT-MESA-01: visitas833→518, conversão2,04%→2,51%. Puff AT-PUFF-03: cinco dos sete dias sem estoque; saldo atual12. Os sinais não provam causalidade; detalhe orienta conferir exposição, oferta e disponibilidade.",
+      "cenas": [
+        { "captura": "queda-geral", "nuvem": "Baixar todos os preços?", "legenda": "Receita caiu 22,6%. Qual é a pista?", "fala": "A receita caiu quase vinte e três por cento. Vamos baixar todos os preços? Segura a etiqueta.", "humor": "curioso" },
+        { "captura": "v03-mesa", "nuvem": "A Mesa perdeu visitas", "legenda": "Mesa Aurora: 833 → 518 visitas", "fala": "Na Mesa Aurora, as visitas foram de oitocentas e trinta e três para quinhentas e dezoito.", "humor": "curioso" },
+        { "captura": "quadro-mesa-conversao", "nuvem": "Mas esta melhorou!", "legenda": "Conversão: 2,04% → 2,51%", "fala": "A conversão melhorou. Esse sinal pede conferir a exposição do anúncio antes de mexer no preço.", "humor": "feliz" },
+        { "captura": "v03-puff", "nuvem": "O Puff tem outra pista", "legenda": "Puff Linho: 5 de 7 dias sem saldo", "fala": "Já o Puff ficou cinco de sete dias sem estoque. Aqui, vale conferir a disponibilidade.", "humor": "curioso" },
+        { "captura": "quadro-investigacao", "nuvem": "Uma queda, várias perguntas", "legenda": "Sinais orientam a investigação.", "fala": "Sinais ajudam a investigar. Eles não provam a causa.", "humor": "feliz" }
+      ]
+    },
+    {
+      "id": "v12",
+      "titulo": "Unidade e receita contam o quê?",
+      "rota": "/vendas/skus?de=2026-10-05&ate=2026-11-18",
+      "fonte": "fixtures-vendas.ts dadosSkusDemo e fixtures-base.ts, AT-LUZ-02 em05/10–18/11/2026:122unidades eR$28.802,56 de receita. analise-sku-cliente.tsx permite trocar Receita/Unidades/Preço/Comissão preservando as linhas e sua ordem; busca filtra os SKUs. Preço praticado é receita/unidades, e não vitrine. As janelas mensais são parciais e não usadas para inferir desempenho.",
+      "cenas": [
+        { "captura": "v12-luz-receita", "nuvem": "Este produto vendeu bem?", "legenda": "Primeiro, escolha o que quer medir.", "fala": "Esta luminária vendeu bem? Primeiro, escolha o que você quer medir: unidades ou receita.", "humor": "curioso" },
+        { "captura": "v12-luz-unidades", "nuvem": "Quantas saíram?", "legenda": "Luminária Arco: 122 unidades", "fala": "Olhando unidades, foram cento e vinte e duas luminárias, no histórico deste exemplo.", "humor": "feliz" },
+        { "captura": "v12-luz-receita", "nuvem": "E quanto entrou?", "legenda": "O mesmo SKU: R$ 28.802,56", "fala": "Mude para receita: vinte e oito mil e oitocentos reais. Mesmo produto, outra pergunta.", "humor": "curioso" },
+        { "captura": "quadro-sku-medidas", "nuvem": "Sem perder o recorte", "legenda": "05/10 a 18/11 · mesmo SKU e período", "fala": "A tabela troca a medida e mantém o recorte. Assim, a comparação continua falando do mesmo produto.", "humor": "feliz" },
+        { "captura": "quadro-sku-decisao", "nuvem": "Qual decisão você quer tomar?", "legenda": "Reposição e receita pedem leituras próprias.", "fala": "Quer repor? Confira as unidades. Quer acompanhar o faturamento? Olhe a receita.", "humor": "feliz" }
+      ]
+    }
+  ]
+}

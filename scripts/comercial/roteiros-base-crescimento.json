@@ -1,0 +1,179 @@
+{
+  "versao": 1,
+  "voz": "pt-BR-FranciscaNeural",
+  "nota": "Interface real com o cenário fictício Atlas Casa: uma conta Mercado Livre, seis SKUs e histórico iniciado em 05/10/2026. Capturas antigas de abertura só ilustram a área, sem sustentar os valores das cenas seguintes. Shopee e TikTok são simulações identificadas. Comparações observadas não comprovam causalidade nem preveem vendas. O dia 18/11 é parcial.",
+  "videos": [
+    {
+      "id": "v06",
+      "titulo": "ROAS bonito. E a sobra?",
+      "rota": "/demonstracao/sistema/anuncios/trafego-pago?apresentacao=1&de=2026-11-01&ate=2026-11-18",
+      "fonte": "fixtures-vendas.ts/dadosTrafegoDemo e fixtures-base.ts. A leitura cruza investimento, atribuição do canal, margem de contribuição e sobra após mídia, sem automatizar pausa. As abas de diagnóstico exigem conferir custos, janela, atribuição e situação de catálogo.",
+      "cenas": [
+        {
+          "captura": "v06-inicial",
+          "nuvem": "ROAS bonito. Cadê a sobra?",
+          "legenda": "O anúncio vendeu. A mídia se pagou?",
+          "fala": "ROAS bonito. E o dinheiro, ficou bonito também? Vamos conferir a conta.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "trafego-anuncios",
+          "nuvem": "Primeiro, quanto entrou em Ads?",
+          "legenda": "Investimento e receita atribuída: duas partes da investigação.",
+          "fala": "Veja investimento e receita atribuída pelo canal. Só que atribuição ainda não é lucro.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "v06-inicial",
+          "nuvem": "Agora, depois dos custos",
+          "legenda": "Margem depois da mídia usa os custos apurados e desconta Ads.",
+          "fala": "A margem depois da mídia desconta os Ads, usando os custos apurados.",
+          "humor": "feliz"
+        },
+        {
+          "captura": "trafego-anuncios",
+          "nuvem": "Cada SKU tem seu ritmo",
+          "legenda": "Compare investimento, receita e sobra por anúncio.",
+          "fala": "Compare por anúncio: investimento, receita e sobra. Cada SKU tem seu ritmo.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "trafego-diagnostico",
+          "nuvem": "A tesoura pode esperar",
+          "legenda": "Confira período, atribuição e custos antes de decidir pela pausa.",
+          "fala": "Sem retorno? Confira período, atribuição e custos antes de pausar. Nada de tesoura automática.",
+          "humor": "feliz"
+        }
+      ]
+    },
+    {
+      "id": "v08",
+      "titulo": "Faturou. E o resultado?",
+      "rota": "/demonstracao/sistema/financeiro?apresentacao=1&inicio=2026-11-01&fim=2026-11-18",
+      "fonte": "fixtures-financeiro.ts/dadosCustosDemo e dadosFinanceiroDemo. AT-MESA-01: mercadoria 295, embalagem 12 e imposto 6%. Comissão e frete praticados são apurados dos movimentos. O demonstrativo separa contribuição, Ads e despesas fixas/variáveis antes do resultado, condicionado à cobertura de custos.",
+      "cenas": [
+        {
+          "captura": "v08-inicial",
+          "nuvem": "Faturamento paga tudo?",
+          "legenda": "Receita ainda precisa pagar a conta.",
+          "fala": "Faturou bem? A calculadora pede um café: receita ainda precisa pagar a conta.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "financeiro-dre",
+          "nuvem": "Frete e comissão já chegaram",
+          "legenda": "Frete e comissão praticados entram na apuração.",
+          "fala": "Frete e comissão vêm do praticado no canal. A origem dos custos fica conferível.",
+          "humor": "feliz"
+        },
+        {
+          "captura": "financeiro-custo-sku",
+          "nuvem": "Agora, o custo do produto",
+          "legenda": "AT-MESA-01 · mercadoria R$ 295,00 · embalagem R$ 12,00",
+          "fala": "No SKU, entram mercadoria, embalagem e imposto. A Mesa tem custo cadastrado.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "financeiro-dre",
+          "nuvem": "Cada despesa no seu lugar",
+          "legenda": "Custos da venda → contribuição → Ads e despesas da operação.",
+          "fala": "O demonstrativo separa custos da venda, Ads e despesas da operação.",
+          "humor": "feliz"
+        },
+        {
+          "captura": "financeiro-dre",
+          "nuvem": "A conta ganhou chegada",
+          "legenda": "O resultado depende da cobertura completa dos custos.",
+          "fala": "Resultado calculado com cobertura completa. Agora sim, o faturamento ganhou uma conta de chegada.",
+          "humor": "feliz"
+        }
+      ]
+    },
+    {
+      "id": "v10",
+      "titulo": "Anúncios lado a lado",
+      "rota": "/demonstracao/sistema/anuncios/analise?apresentacao=1&de=2026-10-05&ate=2026-11-18&vs=nenhum",
+      "fonte": "fixtures-base.ts e dados de análise dos seis anúncios Mercado Livre. Comparação AT-PUFF-03 versus AT-ORG-06; histórico de preço do Kit. A captura existente da conversão da Mesa ilustra a troca de métrica sem repetir a investigação específica de v14. Produtos e períodos distintos não são tratados como experimento causal.",
+      "cenas": [
+        {
+          "captura": "v10-inicial",
+          "nuvem": "Quem merece atenção?",
+          "legenda": "Investigue o anúncio além do faturamento.",
+          "fala": "Qual anúncio merece atenção? Sem campeonato de faturamento: põe os dois lado a lado.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "anuncios-comparacao",
+          "nuvem": "Cabe mais de um na conversa",
+          "legenda": "Compare até quatro anúncios: receita, visitas e conversão.",
+          "fala": "Escolha até quatro anúncios. Receita, visitas e conversão entram na mesma comparação.",
+          "humor": "feliz"
+        },
+        {
+          "captura": "anuncios-comparacao",
+          "nuvem": "Puff e kit têm outra história",
+          "legenda": "Preço, estoque e contexto acompanham os números.",
+          "fala": "Puff e kit têm preços e usos diferentes. O contexto acompanha os números.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "anuncios-kit-precos",
+          "nuvem": "A vitrine mudou quando?",
+          "legenda": "O histórico separa preço pago e preço da vitrine.",
+          "fala": "Abra o histórico: preço pago e vitrine. Veja quando cada leitura mudou.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "mesa-conversao",
+          "nuvem": "Uma pista, outra pergunta",
+          "legenda": "Confira a conversão. Movimento junto não comprova causa.",
+          "fala": "Depois confira a conversão. Movimentos juntos levantam perguntas, sem provar a causa da venda.",
+          "humor": "feliz"
+        }
+      ]
+    },
+    {
+      "id": "v11",
+      "titulo": "Um preço para cada conta",
+      "rota": "/demonstracao/sistema/produtos/precificacao?apresentacao=1",
+      "fonte": "fixtures-financeiro.ts/precificacaoDemo e interface real de Precificação. Só Mercado Livre possui vendas no cenário. Shopee e TikTok Shop permanecem explicitamente rotulados como simulação. A cotação usa custo/peso/medidas do SKU e o retorno fictício da API de demonstração. Teste de preço é conta matemática, não previsão de volume ou recomendação garantida.",
+      "cenas": [
+        {
+          "captura": "v11-inicial",
+          "nuvem": "Um preço para todo canal?",
+          "legenda": "Cada canal muda a conta do preço.",
+          "fala": "Um preço para todo canal? A calculadora já levantou a sobrancelha.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "precificacao-cotacao-ml",
+          "nuvem": "O frete também faz a conta",
+          "legenda": "Mercado Livre: custo, embalagem e frete entram no cálculo.",
+          "fala": "No Mercado Livre, custo, embalagem e frete entram juntos na conta.",
+          "humor": "feliz"
+        },
+        {
+          "captura": "precificacao-cotacao-ml",
+          "nuvem": "Peso e medidas dão contexto",
+          "legenda": "Cotação de frete no cenário fictício. Confira a origem.",
+          "fala": "Na cotação, peso e medidas ajudam a buscar o frete. Aqui é cenário fictício.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "precificacao-multicanais",
+          "nuvem": "Outro canal, outra simulação",
+          "legenda": "Shopee e TikTok: simulações, sem vendas conectadas neste exemplo.",
+          "fala": "Shopee e TikTok aparecem como simulação. Compare taxas, recebimento e margem.",
+          "humor": "curioso"
+        },
+        {
+          "captura": "precificacao-multicanais",
+          "nuvem": "Mexeu no preço. E na margem?",
+          "legenda": "Teste um preço e veja a margem simulada. Sem previsão de vendas.",
+          "fala": "Teste outro preço e veja a conta mudar. É simulação, sem previsão de vendas.",
+          "humor": "feliz"
+        }
+      ]
+    }
+  ]
+}
