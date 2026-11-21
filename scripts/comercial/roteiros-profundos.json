@@ -6,10 +6,10 @@
     {
       "id": "v13",
       "titulo": "O preço mudou. E as vendas?",
-      "rota": "/anuncios/analise?de=2026-11-05&ate=2026-11-18&vs=nenhum&anuncio=MLB900000000002",
+      "rota": "/vendas/queda?de=2026-11-12&ate=2026-11-18",
       "fonte": "AT-LUZ-02; antes 05–11/11, depois 12–18/11/2026. Preço 239,90→259,09; unidades 19→11; visitas 952→952; conversão 2,00%→1,16%; contribuição após Ads 1.577,17→1.029,34.",
       "cenas": [
-        { "captura": "luz-preco", "nuvem": "Preço subiu. Deu bom?", "legenda": "Preço maior pode esconder um resultado menor.", "fala": "O preço da luminária subiu oito por cento. Boa notícia? Vamos espiar.", "humor": "curioso" },
+        { "captura": "luz-queda-pista", "nuvem": "Por que a luminária caiu?", "legenda": "Receita −37,5% · sinal: preço subiu", "fala": "Por que a luminária caiu? Apareceu uma pista: o preço subiu. Vamos investigar.", "humor": "curioso" },
         { "captura": "luz-preco", "nuvem": "Olha a mudança aqui", "legenda": "R$ 239,90 → R$ 259,09 · a partir de 12/11", "fala": "De quase duzentos e quarenta para duzentos e cinquenta e nove reais. A mudança aparece aqui.", "humor": "curioso" },
         { "captura": "luz-volume", "nuvem": "E o volume?", "legenda": "19 → 11 unidades · as visitas ficaram iguais", "fala": "Só que o volume foi de dezenove para onze unidades. E as visitas ficaram iguais.", "humor": "curioso" },
         { "captura": "luz-volume", "nuvem": "A pista apareceu", "legenda": "Conversão: 2,00% → 1,16%", "fala": "A conversão caiu de dois para um vírgula dezesseis por cento. A pista ficou mais clara.", "humor": "feliz" },

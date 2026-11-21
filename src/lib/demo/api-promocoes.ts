@@ -2,6 +2,7 @@ import { demoJson, corpoDemo } from "./http";
 import { getDemoState, updateDemoState, type DemoState } from "./store";
 import { automacoesDemo, regrasDemo, filaDemo, itensPromocaoDemo, contagemPromocaoDemo, formulaBaseDemo, planilhaPromocaoDemoLinhas } from "./fixtures-promocoes";
 import { contasDemo, produtosDemo, mlbDemo, DEMO_HOJE, moedaDemo } from "./fixtures-base";
+import { dadosCustosDemo } from "./fixtures-financeiro";
 import { avaliarItem, type Regra } from "@/lib/planilhas/avaliar-regras";
 import { paraRegra } from "@/lib/planilhas/item-para-regra";
 import { corpoDoAceite, type PedidoDeAceite } from "@/lib/planilhas/corpo-promocao";
@@ -219,7 +220,15 @@ export async function apiPromocoesDemo(req: Request): Promise<Response | null> {
     if (path === "/api/automacoes/contagem" && req.method === "GET") return demoJson(contagemPromocaoDemo);
     if (path === "/api/automacoes/itens" && req.method === "GET") {
       if (!contaValida(url.searchParams.get("conta"))) return erro("Conta fictícia não encontrada.", 404);
-      return demoJson(itensPromocaoDemo);
+      // A proposta recebe o mesmo cadastro de custos exibido em Financeiro,
+      // incluindo as alterações locais e os campos que foram apagados.
+      const custos = new Map(dadosCustosDemo(new URLSearchParams(), getDemoState().custos).linhas.map(l => [l.sku, l]));
+      return demoJson({ ...itensPromocaoDemo, itens: itensPromocaoDemo.itens.map(i => {
+        const c = i.sku ? custos.get(i.sku) : undefined;
+        return { ...i, custos: c && c.custoMercadoria != null && c.embalagem != null && c.aliquotaImpostos != null && c.frete.valor != null
+          ? { custo: c.custoMercadoria, embalagem: c.embalagem, impostoPct: c.aliquotaImpostos, frete: c.frete.valor }
+          : null };
+      }) });
     }
     const corpo = await corpoDemo(req);
     if (path === "/api/automacoes/folga") {

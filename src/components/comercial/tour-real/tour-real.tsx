@@ -3,8 +3,9 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { BookOpen, LocateFixed, Minus, X } from "lucide-react";
-import { TOUR_REAL, capituloDaRotaTourReal, caminhoTourReal, type AlvoTourReal } from "@/lib/demo/tour";
+import { TOUR_REAL, capituloDaRotaTourReal, caminhoTourReal, correspondeRotaTourReal, type AlvoTourReal } from "@/lib/demo/tour";
 import { passoVisual } from "@/lib/demo/tour-curto";
+import { EVENTO_INVESTIGAR_QUEDA } from "@/lib/demo/runtime";
 import "./tour-real.css";
 
 const CHAVE = "gerizo:demo:tour-real:v1";
@@ -91,6 +92,7 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
   const capituloIndice = TOUR_REAL.indexOf(capitulo);
   const original = capitulo.passos[Math.min(estado.passo, capitulo.passos.length - 1)];
   const passo = React.useMemo(()=>passoVisual(original),[original]);
+  const naRotaDoPasso = correspondeRotaTourReal(pathname, passo.rota);
   const quantidadePassos = TOUR_REAL.reduce((s, c) => s + c.passos.length, 0);
   const numeroPasso = TOUR_REAL.slice(0, capituloIndice).reduce((s, c) => s + c.passos.length, 0) + estado.passo + 1;
 
@@ -130,16 +132,28 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
   }, [caminho]);
 
   React.useEffect(() => {
+    if (estado.ativo && !estado.compacto && caminhoTourReal(passo.rota) === caminho && !naRotaDoPasso) navegar(passo.rota);
+  }, [estado.ativo, estado.compacto, passo.rota, caminho, naRotaDoPasso, navegar]);
+
+  React.useEffect(() => {
     setTemAlvo(false);
     alvoAtual.current = null;
-    if (!estado.ativo || estado.compacto || !passo.alvo || caminhoTourReal(passo.rota) !== caminho) return;
+    if (!estado.ativo || estado.compacto || !passo.alvo || !naRotaDoPasso) return;
     const doc = documentoAlvo ?? document;
     let marcado: HTMLElement | null = null;
     let encerrado = false;
     let frame = 0;
     const realizadas = new Set<number>();
+    let investigacaoAplicada = false;
     const buscar = () => {
       if (encerrado) return;
+      if (passo.investigarQueda && !investigacaoAplicada) {
+        if (!doc.querySelector('[data-gerizo-tour="queda-investigacao"][data-gerizo-tour-pronto="true"]')) return;
+        investigacaoAplicada = true;
+        doc.defaultView?.dispatchEvent(new CustomEvent(EVENTO_INVESTIGAR_QUEDA, { detail: passo.investigarQueda }));
+        requestAnimationFrame(buscar);
+        return;
+      }
       for(const [indice,acao] of (passo.demonstrar??[]).entries()){
         if(realizadas.has(indice))continue;
         const controle=localizarAlvo(doc,acao);
@@ -166,17 +180,21 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
     };
     buscar();
     const observador = new MutationObserver(agendar);
-    observador.observe(doc.body, { childList: true, subtree: true, attributes:true, attributeFilter:["open","hidden","aria-expanded","aria-selected"] });
-    doc.defaultView?.addEventListener("resize", agendar);
+    observador.observe(doc.body, { childList: true, subtree: true, attributes:true, attributeFilter:["open","hidden","aria-expanded","aria-selected","data-gerizo-tour-pronto"] });
+    const redimensionar = () => {
+      agendar();
+      requestAnimationFrame(() => { if (!encerrado && alvoAtual.current) mostrarAlvo(alvoAtual.current); });
+    };
+    doc.defaultView?.addEventListener("resize", redimensionar);
     return () => {
       encerrado = true;
       if (frame) cancelAnimationFrame(frame);
       observador.disconnect();
-      doc.defaultView?.removeEventListener("resize", agendar);
+      doc.defaultView?.removeEventListener("resize", redimensionar);
       marcado?.removeAttribute("data-gerizo-tour-alvo");
       alvoAtual.current = null;
     };
-  }, [estado.ativo, estado.compacto, passo, caminho, documentoAlvo]);
+  }, [estado.ativo, estado.compacto, passo, naRotaDoPasso, documentoAlvo]);
 
   const ir = React.useCallback((indice: number, etapa: number) => {
     const aberto=[...document.querySelectorAll<HTMLDialogElement>("dialog[open]")].at(-1);
@@ -189,8 +207,8 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
     const c = TOUR_REAL[indice];
     const p = c.passos[etapa];
     setEstado({ capitulo: c.id, passo: etapa, ativo: true, compacto: false, terminou: false });
-    if (caminhoTourReal(p.rota) !== caminho) navegar(p.rota);
-  }, [caminho, navegar]);
+    if (!correspondeRotaTourReal(pathname, p.rota)) navegar(p.rota);
+  }, [pathname, navegar]);
   const anterior = React.useCallback(() => {
     if (estado.passo > 0) ir(capituloIndice, estado.passo - 1);
     else if (capituloIndice > 0) ir(capituloIndice - 1, TOUR_REAL[capituloIndice - 1].passos.length - 1);
@@ -220,7 +238,7 @@ export function TourReal({ pathname, navegar, iniciar = false, onActiveChange, d
   const retomar = () => {
     const c = capituloDaRotaTourReal(caminho);
     if (c && c.id !== estado.capitulo) ir(TOUR_REAL.indexOf(c), Math.max(0, c.passos.findIndex(p => caminhoTourReal(p.rota) === caminho)));
-    else if (caminhoTourReal(passo.rota) !== caminho) ir(capituloIndice, estado.passo);
+    else if (!naRotaDoPasso) ir(capituloIndice, estado.passo);
     else setEstado(e => ({ ...e, ativo: true, compacto: false, terminou: false }));
   };
   const localizar = () => {

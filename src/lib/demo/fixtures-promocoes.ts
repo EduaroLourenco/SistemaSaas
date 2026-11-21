@@ -6,6 +6,7 @@ import type { DadosPromocoes } from "@/lib/dados/promocoes";
 import type { DadosComparacao, Oferta } from "@/lib/dados/comparar-ofertas";
 import type { FormulaBaseData } from "@/lib/planilhas/motor-promocoes";
 import type { DadosPrecoIdeal } from "@/lib/dados/preco-ideal";
+import { pisoDoItem } from "@/lib/planilhas/piso-promocao";
 import { DEMO_HOJE, DEMO_INICIO, DEMO_SINCRONIZADO, produtosDemo, canaisDemo, contasDemo, movimentosDemo, mlbDemo, moedaDemo, somarDemo, precoAtualProdutoDemo, RELAMPAGO_HISTORICA_DEMO } from "./fixtures-base";
 
 export const PROMO_DEMO_ID = "d5000000-0000-4000-8000-000000000001";
@@ -32,7 +33,7 @@ export const regrasDemo: Regra[] = [
   { id: "d5100000-0000-4000-8000-000000000002", nome: "Aceitar oferta com faixa suficiente", ativa: true, ordem: 1, contaCanalId: null, condicoes: [{ campo: "preco.faixaQueSobra", operador: "maior_ou_igual", valor: 8 }], acao: { tipo: "aceitar" }, quandoNaoSei: "conferir" },
   { id: "d5100000-0000-4000-8000-000000000003", nome: "Revisar as demais propostas", ativa: true, ordem: 2, contaCanalId: null, condicoes: [], acao: { tipo: "conferir" }, quandoNaoSei: "conferir" },
 ];
-export const filaDemo: Fila = { faltaMigracao: null, linhas: produtosDemo.slice(0, 4).map((p, i) => ({ id: `d5200000-0000-4000-8000-00000000000${i + 1}`, contaCanalId: contasDemo[0].id, promocao: PROMO_DEMO_CODIGO, tipoPromocao: "DEAL", mlb: mlbDemo(i), titulo: p.titulo, sku: p.sku, decisao: i === 0 ? "aceitar" : i === 1 ? "conferir" : i === 2 ? "nao_entrar" : "reescrever", precoProposto: moedaDemo(p.preco * (i === 2 ? .75 : .94)), precoCanal: moedaDemo(p.preco * .94), pisoNaHora: moedaDemo(p.preco * .9), folgaUsada: 3, faixaResultante: i === 2 ? .02 : .115, motivo: i === 2 ? "Estoque abaixo do mínimo da regra" : i === 1 ? "Proposta requer revisão de preço" : "Oferta dentro dos limites do cenário", regraNome: regrasDemo[i === 2 ? 0 : i === 1 ? 2 : 1].nome, prazo: "2026-11-22T23:59:59-03:00", criadaEm: DEMO_SINCRONIZADO })) };
+export const filaDemo: Fila = { faltaMigracao: null, linhas: produtosDemo.slice(0, 4).map((p, i) => ({ id: `d5200000-0000-4000-8000-00000000000${i + 1}`, contaCanalId: contasDemo[0].id, promocao: PROMO_DEMO_CODIGO, tipoPromocao: "DEAL", mlb: mlbDemo(i), titulo: p.titulo, sku: p.sku, decisao: i === 0 ? "aceitar" : i === 1 ? "conferir" : i === 2 ? "nao_entrar" : "reescrever", precoProposto: moedaDemo(p.preco * (i === 2 ? .75 : .94)), precoCanal: moedaDemo(p.preco * .94), pisoNaHora: pisoDoItem(itensPromocaoDemo.itens[i], itensPromocaoDemo.bandas), folgaUsada: 3, faixaResultante: i === 2 ? .02 : .115, motivo: i === 2 ? "Estoque abaixo do mínimo da regra" : i === 1 ? "Proposta requer revisão de preço" : "Oferta dentro dos limites do cenário", regraNome: regrasDemo[i === 2 ? 0 : i === 1 ? 2 : 1].nome, prazo: "2026-11-22T23:59:59-03:00", criadaEm: DEMO_SINCRONIZADO })) };
 export const promocoesDemo: DadosPromocoes = { vazio: false, campanhas: [
   { id: PROMO_DEMO_ID, nome: "Semana da Casa", temReducao: true, ativa: true, inicio: "2026-11-16", fim: "2026-11-25", itens: 6, participam: 4, fora: 2, ultimoProcessamento: DEMO_HOJE },
   { id: "d5000000-0000-4000-8000-000000000002", nome: "Casa em foco · outubro", temReducao: false, ativa: false, inicio: "2026-10-19", fim: "2026-11-01", itens: 6, participam: 3, fora: 3, ultimoProcessamento: "2026-10-19" },

@@ -22,8 +22,8 @@
       "fonte": "Planejamento local Atlas Casa: Semana da Casa em andamento, ações de preço, convites de promoção, Product Ads e vitrine; quadro por andamento, mapa conectado, ficha com responsável/prazo/checklist; resultados da Relâmpago Organização encerrada em 10/11/2026. O resultado observado não prova efeito isolado da promoção.",
       "cenas": [
         { "captura": "plano-quadro", "nuvem": "Estava tudo só na cabeça?", "legenda": "Quadro: cada ação tem seu lugar e andamento.", "fala": "No quadro, cada ação ganha um lugar. A Semana da Casa deixa de morar só na cabeça.", "humor": "curioso" },
-        { "captura": "plano-mapa", "nuvem": "As peças começam a conversar", "legenda": "Mapa: veja como as ações se conectam.", "fala": "No mapa, você enxerga como as peças se conectam. Preço, promoção e mídia na mesma campanha.", "humor": "feliz" },
-        { "captura": "plano-ficha", "nuvem": "Quem faz o quê, e quando?", "legenda": "Ficha: responsável, prazo e checklist juntos.", "fala": "Abra a ficha. Responsável, prazo e checklist mostram quem faz o quê, sem depender da memória.", "humor": "curioso" },
+        { "captura": "plano-mapa", "nuvem": "O plano ganha um ponto de partida", "legenda": "Mapa: veja a campanha e explore suas ações.", "fala": "No mapa, a campanha vira ponto de partida. Veja os produtos e explore as ações do plano.", "humor": "feliz" },
+        { "captura": "plano-ficha", "nuvem": "Quem faz o quê?", "legenda": "Ficha: responsável, etapa e checklist juntos.", "fala": "Abra a ficha. Responsável, etapa e checklist mostram quem faz o quê, sem depender da memória.", "humor": "curioso" },
         { "captura": "plano-resultado", "nuvem": "E o que essa ação ensinou?", "legenda": "Resultados: compare o período e registre o aprendizado.", "fala": "Depois, confira o resultado da ação. Comparar o período ajuda a escolher o próximo passo.", "humor": "feliz" }
       ]
     },
@@ -35,9 +35,9 @@
       "cenas": [
         { "captura": "promo-convites", "nuvem": "Desconto bom para quem?", "legenda": "Comece pelos convites, prazos e itens da campanha.", "fala": "O desconto cabe? Confira os convites, prazos e itens da campanha.", "humor": "curioso" },
         { "captura": "promo-proposta", "nuvem": "O preço ainda fecha?", "legenda": "Compare proposta, piso e resultado estimado.", "fala": "Abra a proposta. Compare preço, piso e resultado estimado antes de aceitar o desconto.", "humor": "curioso" },
-        { "captura": "promo-planilha", "nuvem": "A planilha também entra na conta", "legenda": "Use tabela de preço, margem pelos custos ou ambas.", "fala": "Veio por planilha? Use tabela de preço, margem pelos custos ou ambas como referência.", "humor": "feliz" },
-        { "captura": "promo-piso", "nuvem": "Seu limite precisa aparecer", "legenda": "Defina a referência como alvo ou piso e confira.", "fala": "Essa referência será alvo ou piso? Custos atualizados ajudam a enxergar seu limite.", "humor": "curioso" },
-        { "captura": "promo-revisao", "nuvem": "Sugestão pronta. Você confere.", "legenda": "As regras ajudam. A revisão continua com você.", "fala": "As regras sugerem decisões. Você revisa os itens antes de confirmar ou exportar a planilha.", "humor": "feliz" }
+        { "captura": "promo-planilha", "nuvem": "A planilha também entra na conta", "legenda": "Importe a planilha e confira os itens da campanha.", "fala": "Veio por planilha? Importe o arquivo da Central de Promoções para conferir os itens.", "humor": "feliz" },
+        { "captura": "promo-piso", "nuvem": "Seu limite precisa aparecer", "legenda": "Referência, piso e tolerância: confira a regra.", "fala": "Tabela, custos ou ambos? Confira referência, piso e tolerância antes de salvar a regra.", "humor": "curioso" },
+        { "captura": "promo-revisao", "nuvem": "Sugestão pronta. Você confere.", "legenda": "Fila: revise cada item antes de confirmar.", "fala": "As regras sugerem decisões. A fila reúne os itens para você revisar antes de confirmar.", "humor": "feliz" }
       ]
     },
     {

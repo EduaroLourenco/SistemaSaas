@@ -4,6 +4,7 @@ import { resolve, join } from 'node:path';
 const raiz=resolve(process.argv[2]??'output/comercial-motion');
 const roteiros=JSON.parse(await readFile('scripts/comercial/roteiros-profundos.json','utf8'));
 const recortes={
+ 'luz-queda-pista':{x:16,y:400,w:356,h:127},
  'luz-preco':{x:16,y:110,w:358,h:310},
  'luz-volume':{x:16,y:56,w:358,h:449},
  'luz-conversao':{x:16,y:162,w:358,h:343},
@@ -17,6 +18,7 @@ const recortes={
  'relampago-custos':{x:16,y:122,w:358,h:175},
 };
 const alvos={
+ 'luz-queda-pista':{x:8,y:9,w:340,h:106},
  'luz-preco':{x:58,y:95,w:270,h:193},
  'luz-volume':{x:8,y:118,w:328,h:116},
  'luz-conversao':{x:8,y:8,w:328,h:115},
@@ -34,7 +36,7 @@ for(const video of roteiros.videos){
  const cenas=video.cenas.map((cena,i)=>{
   const nome=cena.captura==='relampago-resultado'?'relampago-comparacao':cena.captura;
   const alvo=video.id==='v13'&&i===4?{x:8,y:7,w:328,h:94}:video.id==='v13'&&i===3?{x:227,y:118,w:106,h:116}:video.id==='v15'&&i===3?{x:112,y:61,w:220,h:62}:alvos[nome];
-  return{imagem:`../capturas/${nome}.png`,voz:`voz/cena-${String(i+1).padStart(2,'0')}.wav`,nuvem:cena.nuvem,legenda:cena.legenda,duracao:5,humor:cena.humor,recorte:recortes[nome],alvo};
+  return{imagem:nome==='luz-queda-pista'?`../capturas-base/${nome}.png`:`../capturas/${nome}.png`,voz:`voz/cena-${String(i+1).padStart(2,'0')}.wav`,nuvem:cena.nuvem,legenda:cena.legenda,duracao:5,humor:cena.humor,recorte:recortes[nome],alvo};
  });
  await writeFile(join(dir,'manifesto.json'),JSON.stringify({id:video.id,titulo:video.titulo,fontes:video.fonte,nota:roteiros.nota,cenas},null,2)+'\n');
  console.log(video.id,': cenas prontas');

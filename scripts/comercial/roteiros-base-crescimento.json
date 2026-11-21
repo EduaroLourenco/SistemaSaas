@@ -19,29 +19,22 @@
         {
           "captura": "trafego-anuncios",
           "nuvem": "Primeiro, quanto entrou em Ads?",
-          "legenda": "Investimento e receita atribuída: duas partes da investigação.",
-          "fala": "Veja investimento e receita atribuída pelo canal. Só que atribuição ainda não é lucro.",
+          "legenda": "Kit organizador: R$ 597,00 investidos no período.",
+          "fala": "No kit, foram quinhentos e noventa e sete reais investidos na janela.",
           "humor": "curioso"
         },
         {
-          "captura": "v06-inicial",
-          "nuvem": "Agora, depois dos custos",
-          "legenda": "Margem depois da mídia usa os custos apurados e desconta Ads.",
-          "fala": "A margem depois da mídia desconta os Ads, usando os custos apurados.",
-          "humor": "feliz"
-        },
-        {
           "captura": "trafego-anuncios",
-          "nuvem": "Cada SKU tem seu ritmo",
-          "legenda": "Compare investimento, receita e sobra por anúncio.",
-          "fala": "Compare por anúncio: investimento, receita e sobra. Cada SKU tem seu ritmo.",
+          "nuvem": "A sobra já descontou Ads",
+          "legenda": "Kit: R$ 1,8 mil após Ads. Antes das despesas da operação.",
+          "fala": "A sobra já desconta os Ads, usando os custos apurados. Despesas da operação vêm depois.",
           "humor": "curioso"
         },
         {
           "captura": "trafego-diagnostico",
           "nuvem": "A tesoura pode esperar",
-          "legenda": "Confira período, atribuição e custos antes de decidir pela pausa.",
-          "fala": "Sem retorno? Confira período, atribuição e custos antes de pausar. Nada de tesoura automática.",
+          "legenda": "Três sinais para conferir. Neste recorte, nenhum caso apontado.",
+          "fala": "Confira esses sinais antes de pausar. Neste exemplo, os três aparecem zerados.",
           "humor": "feliz"
         }
       ]
@@ -112,7 +105,7 @@
         {
           "captura": "anuncios-comparacao",
           "nuvem": "Puff e kit têm outra história",
-          "legenda": "Preço, estoque e contexto acompanham os números.",
+          "legenda": "Puff: 112 unidades · kit: 119. Compare também preço e estoque.",
           "fala": "Puff e kit têm preços e usos diferentes. O contexto acompanha os números.",
           "humor": "curioso"
         },
@@ -120,13 +113,13 @@
           "captura": "anuncios-kit-precos",
           "nuvem": "A vitrine mudou quando?",
           "legenda": "O histórico separa preço pago e preço da vitrine.",
-          "fala": "Abra o histórico: preço pago e vitrine. Veja quando cada leitura mudou.",
+          "fala": "No gráfico, preço pago e vitrine têm linhas próprias. Compare as mudanças no período.",
           "humor": "curioso"
         },
         {
           "captura": "mesa-conversao",
           "nuvem": "Uma pista, outra pergunta",
-          "legenda": "Confira a conversão. Movimento junto não comprova causa.",
+          "legenda": "Outro anúncio: Mesa Aurora. Confira a conversão, sem atribuir causa.",
           "fala": "Depois confira a conversão. Movimentos juntos levantam perguntas, sem provar a causa da venda.",
           "humor": "feliz"
         }
@@ -162,15 +155,15 @@
         {
           "captura": "precificacao-multicanais",
           "nuvem": "Outro canal, outra simulação",
-          "legenda": "Shopee e TikTok: simulações, sem vendas conectadas neste exemplo.",
-          "fala": "Shopee e TikTok aparecem como simulação. Compare taxas, recebimento e margem.",
+          "legenda": "Shopee: simulação com as taxas do cenário. Recebimento e margem para conferir.",
+          "fala": "Na Shopee, a etiqueta já avisa: simulação. Compare taxas, recebimento e margem.",
           "humor": "curioso"
         },
         {
           "captura": "precificacao-multicanais",
-          "nuvem": "Mexeu no preço. E na margem?",
-          "legenda": "Teste um preço e veja a margem simulada. Sem previsão de vendas.",
-          "fala": "Teste outro preço e veja a conta mudar. É simulação, sem previsão de vendas.",
+          "nuvem": "Mudou o canal. Mudou a conta.",
+          "legenda": "TikTok Shop · simulação. Teste R$ 749,90: margem simulada de 44,8%.",
+          "fala": "No TikTok, outro canal, outra conta. Teste o preço, sem prever vendas.",
           "humor": "feliz"
         }
       ]

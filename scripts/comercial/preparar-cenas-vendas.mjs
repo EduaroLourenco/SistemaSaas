@@ -23,11 +23,18 @@ const quadros={
 for(const [nome,svg] of Object.entries(quadros))await writeFile(join(pastaQuadros,nome+'.svg'),svg);
 
 const existentes={
- 'hoje-visao':{imagem:'../../../public/site/telas/v01.webp',recorte:{x:16,y:100,w:568,h:580},alvo:{x:8,y:275,w:550,h:230}},
+ 'hoje-visao':{imagem:'../../../public/site/telas/v01.webp',recorte:{x:16,y:100,w:568,h:580},alvo:{x:8,y:275,w:550,h:267}},
  'hoje-valor':{imagem:'../../../public/site/telas/v01.webp',recorte:{x:16,y:684,w:568,h:280},alvo:{x:8,y:85,w:440,h:120}},
  'cancelamentos-valor':{imagem:'../../../public/site/telas/v02.webp',recorte:{x:16,y:314,w:568,h:286},alvo:{x:8,y:110,w:505,h:110}},
  'cancelamentos-taxa':{imagem:'../../../public/site/telas/v02.webp',recorte:{x:16,y:610,w:568,h:182},alvo:{x:8,y:10,w:538,h:155}},
  'queda-geral':{imagem:'../../../public/site/telas/v03.webp',recorte:{x:16,y:320,w:568,h:435},alvo:{x:8,y:90,w:540,h:115}},
+ 'v01-semanal-resumo':{imagem:'../capturas-base/v01-semanal-resumo.png',recorte:{x:16,y:82,w:356,h:191},alvo:{x:0,y:66,w:315,h:75}},
+ 'v01-semanal-fechadas':{imagem:'../capturas-base/v01-semanal-fechadas.png',recorte:{x:16,y:54,w:356,h:450},alvo:{x:0,y:0,w:350,h:68}},
+ 'v02-skus':{imagem:'../capturas-base/v02-skus.png',recorte:{x:32,y:256,w:323,h:219},alvo:{x:8,y:122,w:270,h:51}},
+ 'v03-mesa':{imagem:'../capturas/mesa-visitas.png',recorte:{x:16,y:56,w:358,h:260},alvo:{x:120,y:120,w:101,h:115}},
+ 'v03-puff':{imagem:'../capturas-base/v03-puff.png',recorte:{x:32,y:194,w:323,h:183},alvo:{x:168,y:112,w:151,h:67}},
+ 'v12-luz-receita':{imagem:'../capturas-base/v12-luz-receita.png',recorte:{x:16,y:128,w:356,h:423},alvo:{x:156,y:350,w:115,h:49}},
+ 'v12-luz-unidades':{imagem:'../capturas-base/v12-luz-unidades.png',recorte:{x:16,y:128,w:356,h:423},alvo:{x:156,y:350,w:115,h:49}},
 };
 // Cada entrada local pode receber recorte/alvo depois da conferência visual.
 let enquadramentos={};try{enquadramentos=JSON.parse(await readFile(join(raiz,'enquadramentos-vendas.json'),'utf8'));}catch{}
@@ -38,7 +45,7 @@ for(const video of roteiros.videos){
   let fonte=existentes[chave]??(quadros[chave]?{imagem:`../quadros/${chave}.svg`}:{imagem:`../capturas/${chave}.png`});
   fonte={...fonte,...enquadramentos[chave]};
   if(chave==='v02-pedidos'&&!existsSync(join(raiz,'capturas','v02-pedidos.png'))&&!enquadramentos[chave])fonte={imagem:'../quadros/quadro-pedidos.svg'};
-  if(chave==='v01-semanal-fechadas'&&!existsSync(join(raiz,'capturas','v01-semanal-fechadas.png'))&&!enquadramentos[chave])fonte={imagem:'../capturas/v01-semanal-resumo.png'};
+  if(video.id==='v12'&&i===2&&!enquadramentos[chave])fonte={...fonte,recorte:{x:16,y:415,w:356,h:136},alvo:{x:156,y:63,w:115,h:49}};
   return{...fonte,voz:`voz/cena-${String(i+1).padStart(2,'0')}.wav`,nuvem:cena.nuvem,legenda:cena.legenda,duracao:5,humor:cena.humor};
  });
  await writeFile(join(dir,'manifesto.json'),JSON.stringify({id:video.id,titulo:video.titulo,fontes:video.fonte,nota:roteiros.nota,cenas},null,2)+'\n');

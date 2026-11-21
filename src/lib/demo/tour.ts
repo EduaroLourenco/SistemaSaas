@@ -14,6 +14,8 @@ export type CapituloTourReal = {
   passos: readonly PassoTourReal[];
 };
 
+const ROTA_QUEDA_CASOS = "/vendas/queda?de=2026-11-12&ate=2026-11-18";
+
 export const TOUR_REAL: readonly CapituloTourReal[] = [
   { id: "dia", nome: "Hoje e histórico", passos: [
     { id: "resultado-dia", rota: "/vendas/dia", titulo: "Comece pelo resultado do dia", descricao: "Receita, meta e pedidos mostram o movimento da operação. A data identifica exatamente o dia que você está lendo.", experimentar: "Escolha um dos dias recentes e compare o resultado.", alvo: { seletor: '#conteudo [aria-label="Últimos dias"]' } },
@@ -27,9 +29,12 @@ export const TOUR_REAL: readonly CapituloTourReal[] = [
     { id: "buscar-produto", rota: "/vendas/skus", titulo: "Encontre o resultado de um produto", descricao: "O SKU conecta as vendas do mesmo produto em contas e canais diferentes. A busca permite chegar ao item sem percorrer toda a tabela.", experimentar: "Busque um SKU ou parte do nome de um produto.", alvo: { seletor: '#conteudo [aria-label="Buscar SKU ou título"]' } },
     { id: "produto-recortes", rota: "/vendas/skus", titulo: "Mude a pergunta, mantenha o produto", descricao: "As visões por período e canal ajudam a localizar onde houve mudança. Receita, unidades e outras métricas continuam disponíveis no mesmo contexto.", experimentar: "Alterne a visão dos produtos e a métrica da tabela.", alvo: { seletor: '#conteudo [aria-label="Tabela de produtos, com rolagem horizontal"]' } },
   ] },
-  { id: "queda", nome: "Por que o produto caiu", passos: [
-    { id: "sinais-queda", rota: "/vendas/queda", titulo: "Saiba por onde começar a investigação", descricao: "Os sinais separam mudanças de visitas, conversão, preço e estoque. Eles orientam a análise; a evidência do produto mostra o que aconteceu.", experimentar: "Escolha um sinal e abra um produto da lista.", alvo: { seletor: "#conteudo .decision-cause-strip, #conteudo .decision-signals, #conteudo li > button[aria-expanded]" } },
-    { id: "evidencia-queda", rota: "/vendas/queda", titulo: "Confira a evidência antes de decidir", descricao: "O detalhe reúne o histórico e as leituras disponíveis do produto. Gráficos separados permitem comparar preço, receita, visitas e estoque.", experimentar: "No produto aberto, escolha Evolução e confira os dados por dia.", alvo: { seletor: "#conteudo button", texto: "Evolução" } },
+  { id: "queda", nome: "Por que caiu?", passos: [
+    { id: "sinais-queda", rota: ROTA_QUEDA_CASOS, titulo: "Por que a luminária caiu?", descricao: "As vendas caíram. O preço subiu: vamos investigar essa pista.", experimentar: "Caso 1 · Luminária Arco", alvo: { seletor: '#conteudo [data-queda-sku="AT-LUZ-02"] > button' } },
+    { id: "evidencia-queda", rota: ROTA_QUEDA_CASOS, titulo: "Quando o preço mudou?", descricao: "O gráfico mostra a mudança de preço a partir de 12/11.", experimentar: "Toque nos pontos para comparar os dias.", alvo: { seletor: '#conteudo [data-queda-detalhe="AT-LUZ-02"] [data-gerizo-tour="queda-grafico-preco"]' } },
+    { id: "conversao-preco-queda", rota: ROTA_QUEDA_CASOS, titulo: "As visitas continuaram. E as vendas?", descricao: "Com as mesmas visitas, a conversão caiu de 2% para 1,16%.", experimentar: "É uma pista para investigar a oferta, não uma prova de causa.", alvo: { seletor: '#conteudo [data-queda-detalhe="AT-LUZ-02"] [data-gerizo-tour="queda-conversao"]' } },
+    { id: "estoque-queda", rota: ROTA_QUEDA_CASOS, titulo: "E se faltou produto?", descricao: "O puff tem estoque agora, mas ficou cinco dias sem saldo.", experimentar: "Caso 2 · Puff Linho", alvo: { seletor: '#conteudo [data-queda-detalhe="AT-PUFF-03"] [data-gerizo-tour="queda-estoque"]' } },
+    { id: "historico-estoque-queda", rota: ROTA_QUEDA_CASOS, titulo: "Veja quando o estoque zerou", descricao: "O histórico separa os dias sem saldo da retomada do produto.", experimentar: "Compare as datas antes de mexer no preço.", alvo: { seletor: '#conteudo [data-queda-detalhe="AT-PUFF-03"] [data-gerizo-tour="queda-grafico-estoque"]' } },
   ] },
   { id: "anuncios", nome: "Anúncios", passos: [
     { id: "anuncios-resultado", rota: "/anuncios/analise", titulo: "Chegue ao detalhe de cada anúncio", descricao: "A lista coloca desempenho, preço e situação no contexto da conta e do período. O detalhe mantém a relação com o produto e o estoque.", experimentar: "Busque um anúncio e abra seu detalhe.", alvo: { seletor: "#conteudo .ads-workbench, #conteudo .ads-list, #conteudo .ads-results" } },
@@ -97,6 +102,12 @@ export const TOUR_REAL: readonly CapituloTourReal[] = [
 export function caminhoTourReal(pathname: string) {
   const caminho = pathname.split(/[?#]/, 1)[0].replace(/\/+$/, "");
   return caminho || "/";
+}
+export function correspondeRotaTourReal(atual: string, destino: string) {
+  if (caminhoTourReal(atual) !== caminhoTourReal(destino)) return false;
+  const exigidos = new URLSearchParams(destino.split("?")[1]?.split("#")[0] ?? "");
+  const consulta = new URLSearchParams(atual.split("?")[1]?.split("#")[0] ?? "");
+  return [...exigidos].every(([chave, valor]) => consulta.get(chave) === valor);
 }
 export function capituloDaRotaTourReal(pathname: string) {
   const caminho = caminhoTourReal(pathname);

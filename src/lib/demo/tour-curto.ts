@@ -1,5 +1,6 @@
 import type { AlvoTourReal, PassoTourReal } from "./tour";
-export type PassoVisual = PassoTourReal & { demonstrar?: AlvoTourReal[] };
+import type { FocoQuedaDemo } from "./runtime";
+export type PassoVisual = PassoTourReal & { demonstrar?: AlvoTourReal[]; investigarQueda?: FocoQuedaDemo };
 type Ajuste = Partial<PassoVisual>;
 const botao = (texto:string):AlvoTourReal => ({seletor:"#conteudo button",texto});
 const abaAutomacoes = (texto:string):AlvoTourReal => ({seletor:'#conteudo [data-gerizo-tour="abas-automacoes"] button',texto});
@@ -10,8 +11,11 @@ const ajustes:Record<string,Ajuste> = {
  "semanas-comparar":{titulo:"Compare as semanas",descricao:"Receita, pedidos e visitas ajudam a entender o que mudou.",experimentar:"Abra uma semana para ver o detalhe.",demonstrar:[botao("Semana a semana")],alvo:{seletor:"dialog[open] table, dialog[open] [role=region]"}},
  "buscar-produto":{titulo:"Ache um produto",descricao:"Busque pelo nome ou pelo SKU.",experimentar:"Experimente buscar Mesa."},
  "produto-recortes":{titulo:"Acompanhe o mesmo SKU",descricao:"Preço, vendas e conversão mostram como o produto mudou.",experimentar:"Troque a métrica ou o período."},
- "sinais-queda":{titulo:"Por onde começar?",descricao:"Os sinais separam queda de visitas, preço e falta de estoque.",experimentar:"Abra um produto para investigar."},
- "evidencia-queda":{titulo:"Veja o que mudou",descricao:"Compare preço, visitas e estoque antes de decidir.",experimentar:"Toque nos gráficos para ver os valores.",demonstrar:[{seletor:"#conteudo li > button[aria-expanded=false]"},botao("Evolução")],alvo:{seletor:"#conteudo .recharts-wrapper"}},
+ "sinais-queda":{investigarQueda:{sku:"AT-LUZ-02",aba:"resumo"}},
+ "evidencia-queda":{investigarQueda:{sku:"AT-LUZ-02",aba:"evolucao"}},
+ "conversao-preco-queda":{investigarQueda:{sku:"AT-LUZ-02",aba:"resumo"}},
+ "estoque-queda":{investigarQueda:{sku:"AT-PUFF-03",aba:"resumo"}},
+ "historico-estoque-queda":{investigarQueda:{sku:"AT-PUFF-03",aba:"evolucao"}},
  "anuncios-resultado":{titulo:"O resultado de cada anúncio",descricao:"Visitas mostram interesse. Conversão mostra quanto virou venda.",experimentar:"No detalhe, compare Desempenho e Preços.",alvo:{seletor:'#conteudo .ads-inspector:has(.ads-identity), #conteudo .ads-list'}},
  "anuncios-comparar":{titulo:"Clássico ou Premium?",descricao:"Compare o mesmo produto nos dois formatos.",experimentar:"Confira visitas, conversão e tarifa."},
  "midia-margem":{titulo:"Quanto sobra depois da mídia?",descricao:"O investimento em anúncios entra na leitura da margem.",experimentar:"Confira o período e os custos apurados."},

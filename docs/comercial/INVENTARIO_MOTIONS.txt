@@ -1,0 +1,110 @@
+GERIZO — INVENTÁRIO DOS 15 MOTIONS
+Atualização: 21/11/2026
+
+ESTADO DA ENTREGA LOCAL
+
+O catálogo de src/lib/comercial/funcionalidades.ts referencia os quinze pares
+v01-motion a v15-motion. Os nomes dos vídeos e pôsteres abaixo substituem os
+endereços antigos v01.mp4 a v12.mp4 no catálogo.
+
+As quinze peças têm arquivo final conferido. V07 foi substituído após a revisão
+das cenas de promoções e da demonstração; o tempo abaixo pertence à versão final.
+Este registro descreve arquivos locais; a publicação na hospedagem é outra etapa.
+
+Os tempos foram medidos nos MP4 com FFprobe. O campo duracaoSegundos do catálogo
+registra a medição da mídia final; ele substitui as antigas durações editoriais
+sugeridas. O tempo fica ausente quando a mídia ainda não está finalizada.
+
+ID  | Título                                | Duração final (s) | Estado
+v01 | O dia conta a história toda?           | 32,334           | Final local
+v02 | Cancelou pouco. Quanto voltou?         | 32,625           | Final local
+v03 | Caiu. E agora, mexer em quê?            | 33,083           | Final local
+v04 | Do produto à etiqueta                  | 28,958333        | Final local
+v05 | A campanha ganha um caminho            | 27,432           | Final local
+v06 | ROAS bonito. E a sobra?                | 25,128           | Final local
+v07 | Promoção com a conta à vista           | 33,333333        | Final local
+v08 | Faturou. E o resultado?                | 32,670           | Final local
+v09 | Três perguntas para a rotina           | 31,083333        | Final local
+v10 | Anúncios lado a lado                   | 33,462           | Final local
+v11 | Um preço para cada conta               | 30,630           | Final local
+v12 | Unidade e receita contam o quê?        | 34,250           | Final local
+v13 | O preço mudou. E as vendas?            | 41,052           | Final local
+v14 | Caiu. Foi mesmo o preço?               | 36,125           | Final local
+v15 | Relâmpago: vendeu e sobrou?             | 41,508           | Final local
+
+ARQUIVOS DO CATÁLOGO
+
+v01: /site/videos/v01-motion.mp4 | /site/videos/v01-motion.webp
+v02: /site/videos/v02-motion.mp4 | /site/videos/v02-motion.webp
+v03: /site/videos/v03-motion.mp4 | /site/videos/v03-motion.webp
+v04: /site/videos/v04-motion.mp4 | /site/videos/v04-motion.webp
+v05: /site/videos/v05-motion.mp4 | /site/videos/v05-motion.webp
+v06: /site/videos/v06-motion.mp4 | /site/videos/v06-motion.webp
+v07: /site/videos/v07-motion.mp4 | /site/videos/v07-motion.webp
+v08: /site/videos/v08-motion.mp4 | /site/videos/v08-motion.webp
+v09: /site/videos/v09-motion.mp4 | /site/videos/v09-motion.webp
+v10: /site/videos/v10-motion.mp4 | /site/videos/v10-motion.webp
+v11: /site/videos/v11-motion.mp4 | /site/videos/v11-motion.webp
+v12: /site/videos/v12-motion.mp4 | /site/videos/v12-motion.webp
+v13: /site/videos/v13-motion.mp4 | /site/videos/v13-motion.webp
+v14: /site/videos/v14-motion.mp4 | /site/videos/v14-motion.webp
+v15: /site/videos/v15-motion.mp4 | /site/videos/v15-motion.webp
+
+Cada URL corresponde ao arquivo de mesmo nome em public/site/videos/.
+Os quinze finais foram conferidos como 1080 × 1920, 24 fps, H.264 e áudio AAC.
+Capturas reais e quadros próprios identificados como leitura do exemplo ficam
+acima da faixa de explicação; pergunta, legenda e personagem de caixa ficam fora
+da interface. A voz é pt-BR-FranciscaNeural, sintetizada diretamente com +3%,
+sem microfone nem captura do som do computador.
+
+V13 — DA QUEDA PARA A INVESTIGAÇÃO DO PREÇO
+
+Entrada da demonstração:
+/demonstracao/sistema/vendas/queda?de=2026-11-12&ate=2026-11-18
+
+A primeira cena mostra a linha real da Luminária Arco, AT-LUZ-02, em Por que caiu:
+tag “preço subiu” e receita R$ 4.558,10 → R$ 2.849,99. O preço é um sinal para
+investigar, sem comprovar que causou a queda. Depois, a peça aprofunda a leitura
+do mesmo produto por preço, volume, visitas e conversão.
+
+Sequência final de seis cenas, derivada dos WAVs e do manifesto:
+00,000–06,654: Por que caiu — sinal de preço subiu.
+06,654–13,620: preço R$ 239,90 → R$ 259,09 a partir de 12/11.
+13,620–20,322: unidades 19 → 11; visitas permanecem em 952.
+20,322–27,072: conversão 2,00% → 1,16%.
+27,072–34,182: receita R$ 4.558,10 → R$ 2.849,99.
+34,182–41,052: preço, volume e visitas para orientar a próxima pergunta.
+
+Somente a primeira fala foi regravada no ajuste de abertura. As falas 2–6 e a
+configuração de V14/V15 foram preservadas. O pôster de V13 foi conferido com o
+card correto da queda, sem filtros ou navegação cobrindo os dados.
+
+FONTES EDITORIAIS
+
+GUIA NA TELA — POR QUE CAIU?
+
+O guia abre cinco passos manuais, com rolagem e destaque do dado real:
+1. Seleciona a Luminária Arco e mostra a queda com o sinal de preço.
+2. Abre a evolução para localizar a mudança de preço em 12/11.
+3. Retorna ao resumo para comparar conversão e visitas.
+4. Seleciona o Puff Linho e mostra os cinco dias sem estoque.
+5. Abre o gráfico de estoque diário para localizar a falta e a retomada.
+
+Os exemplos usam 12–18/11 contra 05–11/11/2026. A seleção altera somente a
+visualização da empresa fictícia; não salva custos, aprova ofertas ou muda estoque.
+O gráfico de estoque também fica disponível na análise normal quando há histórico.
+O guia foi conferido em celular (390 × 844) e notebook (1366 × 768).
+
+FONTES DOS ROTEIROS
+
+scripts/comercial/roteiros-base-vendas.json — v01, v02, v03 e v12.
+scripts/comercial/roteiros-base-operacao.json — v04, v05, v07 e v09.
+scripts/comercial/roteiros-base-crescimento.json — v06, v08, v10 e v11.
+scripts/comercial/roteiros-profundos.json — v13, v14 e v15.
+CENARIOS_VIDEO_DECISOES.txt — números e limites das três histórias aprofundadas.
+REVISAO_VIDEOS_2026-11-19.txt — registro histórico da correção de enquadramento.
+
+O cenário Atlas Casa usa um canal Mercado Livre, seis SKUs e histórico fictício
+de 05/10 a 18/11/2026. O dia 18/11 e as janelas em curso são parciais. Quantidade
+de pedidos, quantidade de unidades, receita e contribuição têm leituras próprias;
+os vídeos não afirmam causalidade a partir de uma comparação observada.

@@ -1,5 +1,13 @@
 REVISÃO DOS VÍDEOS DO GERIZO — 19/11/2026
 
+REGISTRO HISTÓRICO — ATUALIZAÇÃO EM 21/11/2026
+As constatações abaixo descrevem a revisão de 19/11. A substituição dos doze
+vídeos antigos avançou desde então. O catálogo agora referencia quinze arquivos
+com sufixo -motion; os quinze finais estão conferidos, incluindo a revisão de V07.
+Os títulos, caminhos e tempos medidos atuais estão em INVENTARIO_MOTIONS.txt.
+V13 passou a abrir em Por que caiu, com o sinal de preço subiu da luminária,
+antes de aprofundar preço, volume, visitas e conversão. Sua duração é 41,052 s.
+
 Escopo: leitura dos roteiros, dos scripts de captura/montagem, dos metadados de produção e da interface do player. A narração não foi ouvida nesta revisão. Não se conclui aqui se a interpretação da voz é natural ou expressiva.
 
 O QUE EXISTE

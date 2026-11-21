@@ -695,12 +695,10 @@ export function PageHeader({ title, breadcrumb, description, help, badge, action
 export function PageBody({
   children,
   className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+  ...props
+}: React.ComponentProps<"div">) {
   return (
-    <div className={cn("gerizo-page-body min-w-0 px-4 md:px-6 py-5 md:py-6 space-y-5", className)}>
+    <div {...props} className={cn("gerizo-page-body min-w-0 px-4 md:px-6 py-5 md:py-6 space-y-5", className)}>
       {children}
     </div>
   );

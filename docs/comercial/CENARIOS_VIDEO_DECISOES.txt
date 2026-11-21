@@ -2,6 +2,10 @@ GERIZO — TRÊS HISTÓRIAS DE DECISÃO NAS TELAS REAIS
 Base editorial para os vídeos v13, v14 e v15
 Empresa fictícia: Atlas Casa · Mercado Livre · referência em 18/11/2026
 
+Inventário atualizado em 21/11/2026: INVENTARIO_MOTIONS.txt. V13 começa em
+Por que caiu, com o card da luminária e o sinal de preço subiu, e segue para
+o histórico de preço, volume, visitas e conversão. Duração final: 41,052 s.
+
 COMO USAR ESTE ARQUIVO
 
 Os valores abaixo foram somados dos movimentos do cenário local, não de uma loja real. O histórico vai de 05/10 a 18/11/2026, com referência em 18/11 às 10h30; esse último dia ainda está em andamento. Não há vendas futuras. A oferta encerrada em 10/11 foi adicionada ao mesmo conjunto que alimenta Vendas, Anúncios, Custos, Tráfego e Planejamento.
@@ -66,20 +70,21 @@ Buscar AT-LUZ-02 e tocar na linha. O detalhe abre o gráfico de unidades por dia
 e depois o mesmo caminho com de=2026-11-12&ate=2026-11-18.
 Localizar a Luminária e destacar investimento, margem e sobra após mídia. Evitar colocar a DRE inteira no vídeo.
 
-SEQUÊNCIA SUGERIDA, 35–45 SEGUNDOS
+SEQUÊNCIA FINAL, 41,052 SEGUNDOS
 
-0–4s: preço de R$ 239,90 muda para R$ 259,09 sobre a própria linha do produto.
-Voz: “Aumentou o preço. Mas será que ganhou mais?”
-4–11s: abrir o produto e destacar 19 → 11 unidades, com as duas datas.
-Voz: “A luminária ficou oito por cento mais cara. Na comparação, vendeu menos.”
-11–18s: tocar Visitas, depois Conversão; destacar 952 dos dois lados e 2,00% → 1,16%.
-Voz: “As visitas ficaram iguais. A conversão caiu. Aqui tem uma pista para investigar.”
-18–28s: abrir o gráfico por faixa de preço. Destacar unidades/dia, sem movimentar todas as barras.
-Voz: “Veja como o mesmo produto se comportou em cada preço.”
-28–37s: mostrar margem percentual maior e contribuição após Ads menor.
-Voz: “A margem por venda melhorou. O total que sobrou depois da mídia, não.”
-37–43s: voltar ao produto, manter a tela utilizável e encerrar.
-Voz: “Antes de baixar de novo, confira o contexto e escolha o próximo teste.”
+0–6,654s: começar em Por que caiu, no card da Luminária Arco. Mostrar receita
+R$ 4.558,10 → R$ 2.849,99 e o sinal “preço subiu”.
+Voz: “Por que a luminária caiu? Apareceu uma pista: o preço subiu. Vamos investigar.”
+6,654–13,620s: abrir o histórico de preço, de R$ 239,90 para R$ 259,09 em 12/11.
+13,620–20,322s: mostrar unidades 19 → 11 e visitas iguais, 952 nos dois recortes.
+20,322–27,072s: destacar conversão 2,00% → 1,16%.
+27,072–34,182s: comparar a receita, de R$ 4.558,10 para R$ 2.849,99.
+34,182–41,052s: reunir preço, volume e visitas na investigação. O histórico é
+uma pista para conferir; não comprova causalidade nem prevê vendas.
+
+As cenas 2–6 e suas falas foram preservadas no ajuste da abertura. O caminho
+mais amplo acima continua disponível para aprofundamento na demonstração;
+o MP4 final usa as seis cenas registradas no roteiro e no manifesto.
 
 
 V14 — CAIU A VENDA. FOI PREÇO OU EXPOSIÇÃO?

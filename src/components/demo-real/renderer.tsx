@@ -116,7 +116,7 @@ export function DemoRealRenderer({ iniciarTour = false }: { iniciarTour?: boolea
   }
   return <div className="gerizo-demo-real" onClickCapture={protegerLink}>
     {!apresentacao && <div className="gerizo-demo-ribbon"><span><strong>Loja de exemplo</strong><span>Dados fictícios</span></span><div>{["/promocoes/processar","/financeiro/custos"].includes(pathname)&&<button type="button" onClick={baixarExemplo}>Planilha de exemplo</button>}<button type="button" onClick={reiniciar}><RefreshCw size={14} aria-hidden />Reiniciar</button><a href="/funcionalidades" data-demo-exit>Ver vídeos</a><a href="/conheca?demonstracao=1" data-demo-exit>Pedir acesso</a></div></div>}
-    {!apresentacao && <TourReal key={reinicio} pathname={pathname} navegar={navegarDemo} iniciar={iniciarTour || reinicio > 0} />}
+    {!apresentacao && <TourReal key={reinicio} pathname={pathname + (url.includes("?") ? url.slice(url.indexOf("?")) : "")} navegar={navegarDemo} iniciar={iniciarTour || reinicio > 0} />}
     {aviso && <div className="gerizo-demo-notice" role="status"><p>{aviso}</p><button type="button" onClick={() => setAviso("")} aria-label="Fechar aviso"><X size={17} /></button></div>}
     <TelaSegura key={pathname + ":" + versao}>{anunciosExtra ? <AnunciosExtraDemo pathname={pathname} query={new URLSearchParams(url.split("?")[1] ?? "")} estado={getDemoState()} /> : gestaoFinanceira ? <GestaoFinanceiraDemo pathname={pathname} /> : Tela ? <Tela {...props} /> : <div className="gerizo-demo-loading"><h1>Fora deste tour</h1><p>Use o menu para explorar as principais áreas do Gerizo.</p></div>}</TelaSegura>
   </div>;

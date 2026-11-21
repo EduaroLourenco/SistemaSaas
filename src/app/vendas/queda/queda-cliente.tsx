@@ -1,5 +1,5 @@
 "use client";
-import { gerizoFetch } from "@/lib/demo/runtime";
+import { emDemo, gerizoFetch, EVENTO_INVESTIGAR_QUEDA, type FocoQuedaDemo } from "@/lib/demo/runtime";
 
 
 import "@/components/analise/analytic-refinement.css";
@@ -113,6 +113,27 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
   const [colunas, setColunas] = React.useState({ coluna: "delta" as ColunaQueda, crescente: true, minimo: "", maximo: "", texto: "", presenca: "todos" });
   const [aberta, setAberta] = React.useState<string | null>(dados.skuFiltro ? dados.linhas[0]?.chave ?? null : null);
   const [todasCausas, setTodasCausas] = React.useState(false);
+  const [focoGuia, setFocoGuia] = React.useState<FocoQuedaDemo | null>(null);
+  const [guiaPronto, setGuiaPronto] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!emDemo()) return;
+    const investigar = (event: Event) => {
+      const foco = (event as CustomEvent<FocoQuedaDemo>).detail;
+      if (!foco || typeof foco.sku !== "string" || !["resumo", "evolucao", "estoques"].includes(foco.aba)) return;
+      const linha = dados.linhas.find(l => l.sku === foco.sku);
+      if (!linha) return;
+      setBusca(foco.sku);
+      setMostrar("todos");
+      setCausa("");
+      setColunas({ coluna: "delta", crescente: true, minimo: "", maximo: "", texto: "", presenca: "todos" });
+      setAberta(linha.chave);
+      setFocoGuia(foco);
+    };
+    window.addEventListener(EVENTO_INVESTIGAR_QUEDA, investigar);
+    setGuiaPronto(true);
+    return () => window.removeEventListener(EVENTO_INVESTIGAR_QUEDA, investigar);
+  }, [dados.linhas]);
 
   const navegar = (mudar: Partial<{ de: string; ate: string; deAnt: string; ateAnt: string; nivel: Nivel; canais: string[] }>) => {
     const q = new URLSearchParams();
@@ -337,7 +358,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
         }
       />
       <BarraCarregando ativo={atualizando} />
-      <PageBody className={[decisaoCss.workspace, "analysis-refined queda-workspace"].join(" ")}>
+      <PageBody data-gerizo-tour="queda-investigacao" data-gerizo-tour-pronto={guiaPronto || undefined} className={[decisaoCss.workspace, "analysis-refined queda-workspace"].join(" ")}>
         {dados.vazio ? (
           <Panel>
             <EmptyState
@@ -462,6 +483,7 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
                       aberta={aberta === l.chave}
                       alternar={() => setAberta(aberta === l.chave ? null : l.chave)}
                       dados={dados}
+                      focoGuia={focoGuia?.sku === l.sku ? focoGuia : undefined}
                     />
                   ))}
                 </ul>
@@ -482,11 +504,13 @@ function Linha({
   aberta,
   alternar,
   dados,
+  focoGuia,
 }: {
   l: LinhaQueda;
   aberta: boolean;
   alternar: () => void;
   dados: DadosQueda;
+  focoGuia?: FocoQuedaDemo;
 }) {
   const vitrine = l.antes.precoVitrine != null && l.agora.precoVitrine != null;
   const precoAntes = vitrine ? l.antes.precoVitrine : l.antes.precoVendido;
@@ -494,7 +518,7 @@ function Linha({
   const Seta = aberta ? ChevronDown : ChevronRight;
 
   return (
-    <li>
+    <li data-queda-sku={l.sku}>
       <button
         type="button"
         onClick={alternar}
@@ -564,7 +588,7 @@ function Linha({
         </span>
       </button>
 
-      {aberta && <Detalhe l={l} dados={dados} />}
+      {aberta && <Detalhe l={l} dados={dados} focoGuia={focoGuia} />}
     </li>
   );
 }
@@ -596,8 +620,9 @@ function Coluna({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 
 /* ══ O detalhe: a frase, a conta e o dia a dia ═══════════════ */
 
-export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
+export function Detalhe({ l, dados, focoGuia }: { l: LinhaQueda; dados: DadosQueda; focoGuia?: FocoQuedaDemo }) {
   const [aba, setAba] = React.useState("resumo");
+  React.useEffect(() => { if (focoGuia) setAba(focoGuia.aba); }, [focoGuia]);
   const [anuncios, setAnuncios] = React.useState<LinhaQueda[] | null>(null);
   const [anuncioAberto, setAnuncioAberto] = React.useState<string | null>(null);
   const [serie, setSerie] = React.useState<DiaQueda[] | null>(null);
@@ -633,9 +658,10 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
 
   const temVitrine = serie?.some((d) => d.precoVitrine != null);
   const temVisita = serie?.some((d) => d.visitas != null);
+  const temEstoque = serie?.some((d) => d.estoque != null);
 
   return (
-    <div className="flex flex-col gap-4 bg-panel-2 px-4 pb-4 pt-1 md:pl-10">
+    <div data-queda-detalhe={l.sku} className="flex flex-col gap-4 bg-panel-2 px-4 pb-4 pt-1 md:pl-10">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
         <div className="flex flex-wrap gap-1" role="group" aria-label={`Análise de ${l.codigo}`}>
           {[{ id: "resumo", nome: "Resumo" }, ...(l.nivel === "produto" ? [{ id: "anuncios", nome: `Canais e anúncios${anuncios ? ` (${anuncios.length})` : ""}` }] : []), { id: "evolucao", nome: "Evolução" }, { id: "estoques", nome: "Estoques" }].map((a) => <button key={a.id} type="button" aria-pressed={aba === a.id} onClick={() => setAba(a.id)} className={cn("min-h-11 rounded-lg px-3 py-2 text-xs font-medium", aba === a.id ? "bg-brand text-white" : "text-ink-2 hover:bg-panel-3")}>{a.nome}</button>)}
@@ -651,7 +677,7 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
         <Numero rotulo="Receita" antes={money(l.antes.receita)} agora={money(l.agora.receita)} />
         <Numero rotulo="Unidades" antes={count(l.antes.unidades)} agora={count(l.agora.unidades)} />
         <Numero rotulo="Unidades por dia" antes={(l.antes.unidades/dados.diasAnterior).toLocaleString("pt-BR", { maximumFractionDigits:2 })} agora={(l.agora.unidades/dados.dias).toLocaleString("pt-BR", { maximumFractionDigits:2 })} />
-        <Numero rotulo="Conversão (unidades / visitas)" antes={l.antes.conversao == null ? "sem medição" : pct(l.antes.conversao,2)} agora={l.agora.conversao == null ? "sem medição" : pct(l.agora.conversao,2)} extra={`Base: ${pct(l.agora.cobertura * 100,0)} das unidades com visitas no dia`} />
+        <Numero tour="queda-conversao" rotulo="Conversão (unidades / visitas)" antes={l.antes.conversao == null ? "sem medição" : pct(l.antes.conversao,2)} agora={l.agora.conversao == null ? "sem medição" : pct(l.agora.conversao,2)} extra={`Base: ${pct(l.agora.cobertura * 100,0)} das unidades com visitas no dia`} />
         <Numero
           rotulo="Visitas"
           antes={l.antes.visitas != null ? count(l.antes.visitas) : "—"}
@@ -661,6 +687,7 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
         {/* Preço: o anunciado existe mesmo sem venda; o vendido, só com venda. */}
         <Numero
           rotulo="Preço anunciado (médio)"
+          tour="queda-preco"
           antes={l.antes.precoVitrine != null ? money(l.antes.precoVitrine) : "sem registro"}
           agora={l.agora.precoVitrine != null ? money(l.agora.precoVitrine) : "sem registro"}
           extra={l.precoAtual != null ? `${l.precoAtualOrigem === "cadastro" ? "Cadastro (cheio)" : "Última oferta"}: ${money(l.precoAtual)}${l.precoAtualData ? ` · ${dataBr(l.precoAtualData)}` : ""}` : undefined}
@@ -683,6 +710,7 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
             do período em vez de um "antes" que não existe. */}
         <Numero
           rotulo="Disponível no anúncio"
+          tour="queda-estoque"
           agora={
             l.estoqueAtual != null
                 ? count(l.estoqueAtual)
@@ -743,10 +771,11 @@ export function Detalhe({ l, dados }: { l: LinhaQueda; dados: DadosQueda }) {
         ) : (
           <div className="grid min-w-0 gap-4 lg:grid-cols-2">
             {[
-              { titulo: "Receita por dia", moeda: true, barras: true, series: [{chave:"receita",nome:"Receita",cor:"var(--brand)"}] },
-              { titulo: "Preço anunciado e vendido", moeda: true, barras: false, series: [...(temVitrine ? [{chave:"precoVitrine",nome:"Anunciado",cor:"var(--warn)"}] : []),{chave:"precoVendido",nome:"Vendido",cor:"var(--brand)"}] },
+              { titulo: "Receita por dia", tour: "queda-grafico-receita", moeda: true, barras: true, series: [{chave:"receita",nome:"Receita",cor:"var(--brand)"}] },
+              { titulo: "Preço anunciado e vendido", tour: "queda-grafico-preco", moeda: true, barras: false, series: [...(temVitrine ? [{chave:"precoVitrine",nome:"Anunciado",cor:"var(--warn)"}] : []),{chave:"precoVendido",nome:"Vendido",cor:"var(--brand)"}] },
               ...(temVisita ? [{ titulo:"Visitas por dia", moeda:false, barras:false, series:[{chave:"visitas",nome:"Visitas",cor:"var(--info)"}] }] : []),
-            ].map((grafico) => <section key={grafico.titulo} className="min-w-0 rounded-r2 border border-line bg-panel p-4">
+              ...(temEstoque ? [{ titulo: "Estoque no anúncio por dia", tour: "queda-grafico-estoque", moeda: false, barras: true, series: [{chave:"estoque",nome:"Disponível",cor:"var(--info)"}] }] : []),
+            ].map((grafico) => <section key={grafico.titulo} data-gerizo-tour={"tour" in grafico ? grafico.tour : undefined} className="min-w-0 rounded-r2 border border-line bg-panel p-4">
               <h4 className="text-[14px] font-medium text-ink">{grafico.titulo}</h4>
               <div className="mt-3 h-[200px] min-w-0" aria-label={grafico.titulo}>
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -782,17 +811,19 @@ function Numero({
   antes,
   agora,
   extra,
+  tour,
   rotuloAntes = "antes ",
 }: {
   rotulo: string;
   antes: string;
   agora: string;
   extra?: string;
+  tour?: string;
   /** "" para a segunda linha que não é comparação com o período anterior. */
   rotuloAntes?: string;
 }) {
   return (
-    <div className="min-w-0 rounded-r1 border border-line bg-panel px-3 py-2">
+    <div data-gerizo-tour={tour} className="min-w-0 rounded-r1 border border-line bg-panel px-3 py-2">
       <p className="text-[11px] text-ink-3">{rotulo}</p>
       <p className="num break-words text-[13px] font-semibold text-ink">{agora}</p>
       <p className="num break-words text-[11px] text-ink-3" title={antes}>

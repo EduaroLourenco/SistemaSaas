@@ -8,6 +8,8 @@ export { DEMO_PREFIX, ROTAS_DEMO, caminhoDemo, caminhoLogico } from "./rotas";
 
 const EVENTO_URL = "gerizo:demo-url";
 export const EVENTO_REFRESH = "gerizo:demo-refresh";
+export const EVENTO_INVESTIGAR_QUEDA = "gerizo:demo:investigar-queda";
+export type FocoQuedaDemo = { sku: string; aba: "resumo" | "evolucao" | "estoques" };
 
 export function emDemo() { return typeof window !== "undefined" && caminhoDemo(window.location.pathname); }
 export function avisarDemo(mensagem: string) { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("gerizo:demo-aviso", { detail: mensagem })); }
