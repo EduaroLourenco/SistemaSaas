@@ -27,7 +27,7 @@ import type { DadosApresentacao } from "@/lib/dados/apresentacao";
 
 /** Recortes prontos. "Personalizada" abre o calendário. */
 const FORMATOS: { value: FormatoDeck; label: string; descricao: string }[] = [
-  { value: "diaria", label: "Diária", descricao: "O último dia com movimento, contra o dia anterior." },
+  { value: "diaria", label: "Diária", descricao: "O último dia com movimento, contra o mesmo dia da semana anterior." },
   { value: "semanal", label: "Semanal", descricao: "Os últimos 7 dias, contra os 7 anteriores." },
   { value: "personalizada", label: "Personalizada", descricao: "Escolha o intervalo — a comparação é com o período de mesmo tamanho logo antes." },
 ];

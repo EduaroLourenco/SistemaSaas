@@ -70,4 +70,25 @@ assert.deepEqual(ids(avaliarGatilhos(base({ midia: [midia(0.47)] }))), []);
 assert.deepEqual(ids(avaliarGatilhos(base({ midia: [midia(36.76)] }))), ["G16"]);
 assert.deepEqual(ids(avaliarGatilhos(base({ saude: [{ id: "custo", pergunta: "Tem custo?", estado: "atencao", resposta: "124 sem custo" }] }))), []);
 
+// Reputação: nível que cai ou taxa que sobe 50% e passa de 1%.
+const rep = (o) => ({ nivel: "5_green", reclamacoes: 0.005, cancelamentos: 0.004, atrasos: 0.02, ...o });
+assert.deepEqual(ids(avaliarGatilhos(base({ reputacao: [{ conta: "SP", antes: rep({}), agora: rep({ nivel: "4_light_green" }) }] }))), ["G24"]);
+assert.deepEqual(ids(avaliarGatilhos(base({ reputacao: [{ conta: "SP", antes: rep({}), agora: rep({ atrasos: 0.035 }) }] }))), ["G24"]);
+assert.deepEqual(ids(avaliarGatilhos(base({ reputacao: [{ conta: "SP", antes: rep({}), agora: rep({ reclamacoes: 0.009 }) }] }))), [], "subiu, mas abaixo de 1%");
+
+// Cancelamento: 1% → 4% acende; 1% → 1,5% não.
+const canc = (r, c) => ({ receita: r, cancelado: c, pedidos: 10, pedidosCancelados: 1 });
+assert.deepEqual(ids(avaliarGatilhos(base({ cancelamentos: { antes: canc(9900, 100), agora: canc(9600, 400) } }))), ["G25"]);
+assert.deepEqual(ids(avaliarGatilhos(base({ cancelamentos: { antes: canc(9900, 100), agora: canc(9850, 150) } }))), []);
+
+// Margem: com 70% de custo conhecido liga; com 30% não.
+const ml = (r, ap, mg) => ({ receita: r, receitaApurada: ap, margem: mg, comissao: 0 });
+g = avaliarGatilhos(base({ margem: { antes: ml(1000, 900, 300), agora: ml(1200, 1000, 250), porSku: [{ sku: "A", titulo: "A", antes: ml(1000, 900, 300), agora: ml(1200, 1000, 200) }] } }));
+assert.deepEqual(ids(g).sort(), ["G23", "G30"]);
+assert.deepEqual(ids(avaliarGatilhos(base({ margem: { antes: ml(1000, 300, 100), agora: ml(1000, 300, 100), porSku: [] } }))), []);
+
+// PA62652 (Probel, 15–21/11): os anúncios que vendiam zeraram e pausaram; os "sem controle" não vendem.
+g = avaliarGatilhos(base({ linhas: [linha({ sku: "PA62652", antes: lado({ receita: 5050, unidades: 2, pedidos: 2, visitas: 300 }), agora: lado({ receita: 0, visitas: 42 }), delta: -5050, causa: "parou de vender" })], parados: { PA62652: [{ mlb: "MLB5298254542", status: "pausado", estoque: 0, unidadesAntes: 2 }] } }));
+assert.deepEqual(ids(g), ["G31"], "vira 'anúncio que vendia parou', não 'parou de vender'");
+
 console.log("gatilhos: ok");

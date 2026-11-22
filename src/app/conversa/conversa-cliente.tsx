@@ -47,6 +47,11 @@ export default function Conversa() {
   const sugestoes = demo ? ["Qual produto está perdendo vendas?", "Onde os Ads consomem margem?", "Que pedidos preciso despachar hoje?"] : SUGESTOES;
   const [mensagens, setMensagens] = React.useState<Mensagem[]>([]);
   const [entrada, setEntrada] = React.useState("");
+  // Pergunta pronta vinda de outra tela (ex.: a apresentação): preenche, não envia — a pessoa revisa.
+  React.useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("pergunta");
+    if (p) setEntrada(p.slice(0, 1000));
+  }, []);
   const [pensando, setPensando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [aguardando, setAguardando] = React.useState<string | null>(null);

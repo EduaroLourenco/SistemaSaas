@@ -22,7 +22,7 @@
  * regras de verdade contra casos já vistos.
  */
 
-export type Slide = "S0" | "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S13";
+export type Slide = "S0" | "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11" | "S13";
 
 export type Gatilho = {
   id: string;
@@ -30,7 +30,7 @@ export type Gatilho = {
   slide: Slide;
   /** Para ordenar: R$ em jogo (positivo), já em módulo. */
   impacto: number;
-  item?: { codigo: string; sku: string; titulo: string; curva?: "A" | "B" | "C" };
+  item?: { codigo: string; sku: string; titulo: string; curva?: "A" | "B" | "C"; familia?: string | null };
   /** Uma linha, só com números. */
   texto: string;
   numeros: Record<string, number | string | null>;
@@ -98,6 +98,16 @@ export type PromoQ = {
   veredito: string;
 };
 export type ConviteQ = { sku: string; mlb: string; promocao: string; tipo: string; preco: number; fim: string | null };
+/** Taxas da conta como o canal informa (fração: 0,012 = 1,2%). */
+export type ReputacaoQ = { nivel: string | null; reclamacoes: number | null; cancelamentos: number | null; atrasos: number | null };
+export type ContaReputacaoQ = { conta: string; antes: ReputacaoQ | null; agora: ReputacaoQ | null };
+export type CancelamentoQ = { receita: number; cancelado: number; pedidos: number; pedidosCancelados: number };
+export type MargemLadoQ = { receita: number; receitaApurada: number; margem: number | null; comissao: number };
+export type MargemQ = {
+  antes: MargemLadoQ;
+  agora: MargemLadoQ;
+  porSku: { sku: string; titulo: string; antes: MargemLadoQ; agora: MargemLadoQ }[];
+};
 export type AcaoQ = { id: string; titulo: string; fim: string; veredito: string; efeito: number | null };
 
 export type EntradaGatilhos = {
@@ -113,6 +123,18 @@ export type EntradaGatilhos = {
   promocoes: PromoQ[];
   convites: ConviteQ[];
   acoes: AcaoQ[];
+  /** Opcionais: o módulo só liga quando a empresa tem o dado. */
+  cancelamentos?: { antes: CancelamentoQ; agora: CancelamentoQ };
+  reputacao?: ContaReputacaoQ[];
+  margem?: MargemQ | null;
+  /** SKU → nome da família no Meli (o grupo de tamanhos). */
+  familias?: Record<string, string>;
+  /**
+   * SKU → anúncios que VENDIAM no período anterior e hoje estão pausados ou
+   * zerados. O produto soma anúncios "sem controle" (40 mil) que não vendem,
+   * e a ruptura do anúncio que vendia some na soma — vira "parou de vender".
+   */
+  parados?: Record<string, { mlb: string; status: string | null; estoque: number | null; unidadesAntes: number }[]>;
 };
 
 /* ── Cortes: um lugar só ── */
@@ -134,7 +156,12 @@ export const CORTES = {
   /** Ruptura com perda estimada abaixo disto (R$) não é pauta. */
   perdaMinima: 50,
   /** Promoção com menos que isto de receita antes não dá veredito: base pequena demais. */
-  basePromocao: 300,
+  basePromocao: 1000,
+  /** Lucro só com pelo menos isto da receita com custo completo. */
+  coberturaMargem: 0.7,
+  /** Taxa da reputação que dobra (×) e passa deste piso (fração) acende. */
+  reputacaoAlta: 1.5,
+  reputacaoPiso: 0.01,
 };
 
 const pct = (agora: number, antes: number) => (antes > 0 ? ((agora - antes) / antes) * 100 : null);
@@ -212,8 +239,17 @@ export function avaliarGatilhos(e: EntradaGatilhos): Gatilho[] {
     const vVis = l.antes.visitas && l.agora.visitas != null ? pct(l.agora.visitas, l.antes.visitas) : null;
     const vConv = l.antes.conversao && l.agora.conversao != null ? pct(l.agora.conversao, l.antes.conversao) : null;
 
+    // O anúncio que vendia parou (pausado ou zerado): é isso, não "parou de vender".
+    const parados = e.parados?.[l.sku.toUpperCase()] ?? [];
+    if (l.delta < 0 && base && parados.length) {
+      g.push({
+        id: "G31", nome: "Anúncio que vendia parou", slide: "S7", impacto: -l.delta, ...doItem(l),
+        texto: parados.map((p) => `${p.mlb} ${p.status === "pausado" || p.status === "paused" ? "pausado" : "ativo"}, estoque ${p.estoque ?? "—"} · vendeu ${p.unidadesAntes} un. antes`).join(" · "),
+        numeros: { anuncios: parados.length, delta: r0(l.delta) }, destino: "/anuncios/analise",
+      });
+    }
     // Queda com causa
-    if (l.delta < 0 && base && l.causa !== "sem estoque" && CAUSA_PARA_GATILHO[l.causa]) {
+    else if (l.delta < 0 && base && l.causa !== "sem estoque" && CAUSA_PARA_GATILHO[l.causa]) {
       const [id, nome, destino] = CAUSA_PARA_GATILHO[l.causa];
       g.push({
         id, nome, slide: id === "G08" ? "S5" : "S3", impacto: -l.delta, ...doItem(l),
@@ -312,11 +348,67 @@ export function avaliarGatilhos(e: EntradaGatilhos): Gatilho[] {
     });
   }
 
+  /* S11 — reputação: nível que caiu, ou taxa que subiu 50% e passou de 1% */
+  const NIVEL: Record<string, string> = { "5_green": "verde", "4_light_green": "verde-claro", "3_yellow": "amarelo", "2_orange": "laranja", "1_red": "vermelho" };
+  const nivelNum = (n: string | null) => (n ? Number(n.split("_")[0]) || null : null);
+  for (const c of e.reputacao ?? []) {
+    if (!c.agora) continue;
+    const motivos: string[] = [];
+    const na = nivelNum(c.antes?.nivel ?? null), ng = nivelNum(c.agora.nivel);
+    if (na != null && ng != null && ng < na) motivos.push(`nível ${NIVEL[c.antes!.nivel!] ?? c.antes!.nivel} → ${NIVEL[c.agora.nivel!] ?? c.agora.nivel}`);
+    for (const [k, rot] of [["reclamacoes", "reclamações"], ["cancelamentos", "cancelamentos"], ["atrasos", "atrasos"]] as const) {
+      const a = c.antes?.[k] ?? null, b = c.agora[k];
+      if (b != null && b >= CORTES.reputacaoPiso && (a == null || a === 0 || b >= a * CORTES.reputacaoAlta)) {
+        motivos.push(`${rot} ${a == null ? "—" : (a * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + "%"} → ${(b * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`);
+      }
+    }
+    if (motivos.length) {
+      g.push({ id: "G24", nome: "Reputação em risco", slide: "S11", impacto: 5e6, texto: `${c.conta}: ${motivos.join(" · ")}`, numeros: { conta: c.conta }, destino: "/mercado-livre" });
+    }
+  }
+
+  /* S11 — cancelamento: taxa que dobrou e subiu pelo menos 1 p.p. */
+  if (e.cancelamentos) {
+    const tx = (c: CancelamentoQ) => (c.receita + c.cancelado > 0 ? c.cancelado / (c.receita + c.cancelado) : 0);
+    const a = tx(e.cancelamentos.antes), b = tx(e.cancelamentos.agora);
+    if (b >= 2 * a && b - a >= 0.01) {
+      g.push({
+        id: "G25", nome: "Cancelamento alto", slide: "S11", impacto: e.cancelamentos.agora.cancelado,
+        texto: `${(a * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% → ${(b * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% da receita · ${brl(e.cancelamentos.agora.cancelado)} em ${e.cancelamentos.agora.pedidosCancelados} pedidos`,
+        numeros: { antes: a, agora: b }, destino: "/vendas/cancelamentos",
+      });
+    }
+  }
+
+  /* S10 — lucro, só com cobertura de custo suficiente */
+  const m = e.margem;
+  const cobre = (l: MargemLadoQ) => l.receita > 0 && l.receitaApurada / l.receita >= CORTES.coberturaMargem;
+  if (m && cobre(m.agora) && m.agora.margem != null) {
+    g.push({
+      id: "G30", nome: "Margem do período", slide: "S10", impacto: Math.abs(m.agora.margem),
+      texto: `Contribuição ${brl(m.agora.margem)}${m.antes.margem != null && cobre(m.antes) ? ` (antes ${brl(m.antes.margem)})` : ""} · custo conhecido em ${Math.round((m.agora.receitaApurada / m.agora.receita) * 100)}% da receita`,
+      numeros: { margem: r0(m.agora.margem), margemAntes: m.antes.margem == null ? null : r0(m.antes.margem), cobertura: m.agora.receitaApurada / m.agora.receita },
+      destino: "/financeiro",
+    });
+    for (const p of m.porSku) {
+      if (!cobre(p.agora) || !cobre(p.antes) || p.agora.margem == null || p.antes.margem == null) continue;
+      if (p.agora.receita > p.antes.receita && p.antes.margem - p.agora.margem >= CORTES.perdaMinima) {
+        g.push({
+          id: "G23", nome: "Vendeu mais, sobrou menos", slide: "S10", impacto: p.antes.margem - p.agora.margem,
+          item: { codigo: p.sku, sku: p.sku, titulo: p.titulo },
+          texto: `Receita ${brl(p.antes.receita)} → ${brl(p.agora.receita)} · contribuição ${brl(p.antes.margem)} → ${brl(p.agora.margem)}`,
+          numeros: { margemAntes: r0(p.antes.margem), margem: r0(p.agora.margem) }, destino: "/produtos/precificacao",
+        });
+      }
+    }
+  }
+
   /* S13 — ações do Planejamento que terminaram no período */
   for (const a of e.acoes) {
     if (a.fim < e.de || a.fim > e.ate || a.veredito === "futura") continue;
     g.push({ id: "G26", nome: "Ação terminou", slide: "S13", impacto: 0, texto: `${a.titulo} · ${a.veredito}`, numeros: { efeito: a.efeito }, destino: "/planejamento/resultados" });
   }
 
+  if (e.familias) for (const x of g) if (x.item) x.item.familia = e.familias[x.item.sku.toUpperCase()] ?? null;
   return g.sort((a, b) => b.impacto - a.impacto);
 }

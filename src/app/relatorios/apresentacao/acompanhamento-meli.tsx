@@ -76,6 +76,9 @@ const destinoRotulo: Record<string, string> = {
   "/vendas/skus": "Abrir produtos",
   "/vendas/periodo": "Abrir período",
   "/vendas/dia": "Abrir o dia",
+  "/vendas/cancelamentos": "Abrir cancelamentos",
+  "/mercado-livre": "Abrir termômetro",
+  "/financeiro": "Abrir financeiro",
 };
 function Ir({ g }: { g: Pick<Gatilho, "destino"> }) {
   return (
@@ -98,6 +101,19 @@ function useLargura(): [React.RefObject<HTMLDivElement | null>, number] {
   }, []);
   return [ref, w];
 }
+
+/** Abre a conversa com a pergunta já escrita (a pessoa revisa e envia). */
+function PerguntarIA({ pergunta }: { pergunta: string }) {
+  return (
+    <a href={`/conversa?pergunta=${encodeURIComponent(pergunta)}`} className="inline-flex min-h-11 self-start items-center gap-1.5 rounded-r1 border border-line bg-panel px-3 text-[14px] font-semibold text-ink-2 hover:border-brand">
+      Perguntar à IA
+    </a>
+  );
+}
+
+const NIVEL: Record<string, string> = { "5_green": "verde", "4_light_green": "verde-claro", "3_yellow": "amarelo", "2_orange": "laranja", "1_red": "vermelho" };
+const nivel = (n: string | null | undefined) => (n ? NIVEL[n] ?? n : "—");
+const pctFrac = (v: number | null | undefined) => (v == null ? "—" : `${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`);
 
 /* ── Gráfico do período: a linha se desenha, a anterior entra em cinza, os dias com acontecimento acendem ── */
 function GraficoPeriodo({ d, passo }: { d: Dados; passo: number }) {
@@ -284,6 +300,7 @@ function Ranking({ itens, cor, passo, nDetalhe = 1 }: { itens: Gatilho[]; cor: s
             <span className="min-w-0 text-[15px] font-semibold text-ink">
               {g.item?.curva && <span className="mr-1.5 rounded-[4px] bg-panel-3 px-1.5 text-[12px] text-ink-2">{g.item.curva}</span>}
               {g.item?.titulo ?? g.nome}
+              {g.item?.familia && <span className="ml-2 text-[12px] font-normal text-ink-3">família {g.item.familia}</span>}
             </span>
             <span className="num shrink-0 text-[15px] font-bold" style={{ color: cor }}>{money(g.impacto)}</span>
           </div>
@@ -307,7 +324,8 @@ const ACAO: Record<string, string> = {
   G06: "Recuperar visitas", G07: "Rever oferta, frete e prazo", G08: "Testar o preço anterior", G09: "Descobrir por que parou",
   G10: "Repor estoque", G11: "Repor antes de acabar", G12: "Reativar o anúncio", G13: "Retomar o catálogo", G14: "Pôr verba",
   G16: "Cortar a mídia", G17: "Subir a verba", G18: "Avaliar o convite", G19: "Repetir a promoção", G20: "Não renovar a promoção",
-  G27: "Investigar a queda", G28: "Conferir descontos e mix",
+  G27: "Investigar a queda", G28: "Conferir descontos e mix", G31: "Reativar ou repor o anúncio que vendia",
+  G23: "Rever preço e custo", G24: "Cuidar da reputação", G25: "Ver os cancelamentos",
 };
 
 export function montarSlides(d: Dados): SlideDef[] {
@@ -335,10 +353,10 @@ export function montarSlides(d: Dados): SlideDef[] {
           <div className="mt-2 text-[18px]"><Delta v={vRec} /> <span className="text-ink-3">contra {money(recB)}</span></div>
         </div>
         <P n={1} passo={passo} className="flex flex-wrap gap-2">
-          {["S3", "S4", "S5", "S6", "S7", "S8", "S9"].map((s, i) => {
+          {["S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11"].map((s, i) => {
             const k = por(s).length;
             if (!k) return null;
-            const rot: Record<string, string> = { S3: "quedas", S4: "altas e potencial", S5: "preço", S6: "catálogo", S7: "estoque", S8: "promoções", S9: "mídia" };
+            const rot: Record<string, string> = { S3: "quedas", S4: "altas e potencial", S5: "preço", S6: "catálogo", S7: "estoque", S8: "promoções", S9: "mídia", S10: "lucro", S11: "operação" };
             return (
               <span key={s} className="rounded-full border border-line bg-panel px-3 py-1.5 text-[14px] text-ink-2 acm-pop" style={{ animationDelay: `${i * 0.08}s` }}>
                 <b className="num text-ink">{k}</b> {rot[s]}
@@ -427,6 +445,7 @@ export function montarSlides(d: Dados): SlideDef[] {
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap gap-2 text-[13px]">
               <span className="rounded-full bg-panel-3 px-2.5 py-1">{sku}</span>
+              {q.item!.familia && <span className="rounded-full bg-panel-3 px-2.5 py-1">família {q.item!.familia}</span>}
               {q.item!.curva && <span className="rounded-full bg-panel-3 px-2.5 py-1">curva {q.item!.curva}</span>}
               <span className="rounded-full bg-panel-3 px-2.5 py-1">visitas <Delta v={vis} /></span>
               <span className="rounded-full bg-panel-3 px-2.5 py-1">conversão <Delta v={conv} /></span>
@@ -440,9 +459,66 @@ export function montarSlides(d: Dados): SlideDef[] {
             <P n={2} passo={passo} className="rounded-r2 border border-line bg-panel-2 p-4">
               <div className="text-[15px] font-semibold text-ink">{q.nome}{q.hipotese ? " · hipótese" : ""}</div>
               <p className="mt-1 text-[14px] text-ink-2">{q.texto}</p>
-              <div className="mt-3"><Ir g={q} /></div>
+              <div className="mt-3 flex flex-wrap gap-2"><Ir g={q} /><PerguntarIA pergunta={`Por que as vendas de ${q.item!.titulo} (${sku}) caíram entre ${dataBr(d.de)} e ${dataBr(d.ate)}? O sinal foi: ${q.texto}`} /></div>
             </P>
           </div>
+        </div>
+      ),
+    });
+  }
+
+  /* Preço no canal: tabela, vitrine, vendido, onde vende mais e comissão */
+  if (d.precos.length) {
+    const comTabela = d.precos.filter((p) => p.tabela && p.vitrineHoje);
+    const fora = comTabela.filter((p) => Math.abs((p.vitrineHoje! - p.tabela!.preco) / p.tabela!.preco) > 0.02).length;
+    slides.push({
+      id: "preco-canal", kicker: `${n(slides.length)} · Preço no canal`, titulo: "O preço do Meli está igual à tabela? E a que preço vende mais?",
+      passos: [
+        comTabela.length ? `A tabela (Fórmula base) contra a vitrine de hoje no Meli: ${fora} de ${comTabela.length} fora da tabela.` : "Sem Fórmula base para estes produtos: só a vitrine do Meli.",
+        "O que o cliente pagou, antes e agora, e quantas unidades.",
+        "Onde vende mais: o preço com mais unidades nestes dias e na melhor semana da história. Ao lado, a comissão.",
+      ],
+      corpo: (passo) => (
+        <div className="grid gap-4 md:grid-cols-2">
+          {d.precos.slice(0, 6).map((p, i) => {
+            const difTab = p.tabela && p.vitrineHoje ? (p.vitrineHoje - p.tabela.preco) / p.tabela.preco : null;
+            const vals = [p.tabela?.preco, p.vitrineHoje, p.vendidoAgora, p.maisVendeu?.preco, p.pico?.preco].filter((v): v is number => v != null && v > 0);
+            const lo = Math.min(...vals) * 0.95, hi = Math.max(...vals) * 1.05;
+            const pos = (v: number) => `${((v - lo) / (hi - lo || 1)) * 100}%`;
+            const marca = (v: number | null | undefined, cor: string, n0: number, atraso: number) =>
+              v != null && passo >= n0 ? <span className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-panel acm-pop" style={{ left: pos(v), background: cor, animationDelay: `${atraso}s` }} /> : null;
+            const cel = (rotulo: string, valor: React.ReactNode, sub: React.ReactNode, n0: number) => (
+              <P n={n0} passo={passo} className="min-w-0">
+                <div className="label">{rotulo}</div>
+                <div className="num text-[17px] font-bold text-ink">{valor}</div>
+                <div className="text-[12px] text-ink-2">{sub}</div>
+              </P>
+            );
+            return (
+              <div key={p.sku} className="rounded-r2 border border-line bg-panel p-4 acm-sobe" style={{ animationDelay: `${i * 0.12}s` }}>
+                <div className="text-[15px] font-semibold text-ink">{p.titulo}</div>
+                <div className="relative my-3 h-5 rounded-full bg-panel-2">
+                  {marca(p.tabela?.preco, "var(--line-2)", 0, 0.2 + i * 0.1)}
+                  {marca(p.vitrineHoje, "var(--brand)", 0, 0.4 + i * 0.1)}
+                  {marca(p.vendidoAgora, "var(--ink)", 1, 0.1)}
+                  {marca(p.maisVendeu?.preco, "var(--up)", 2, 0.1)}
+                  {marca(p.pico?.preco, "var(--warn)", 2, 0.3)}
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                  {cel("Tabela", p.tabela ? money(p.tabela.preco) : "—", p.tabela ? `na comissão ${pctFrac(p.tabela.comissao)}${p.tabela.pela === "padrão" ? "" : p.tabela.pela === "praticada" ? " (praticada)" : " (menor da tabela)"}` : "sem Fórmula base", 0)}
+                  {cel("Vitrine hoje", p.vitrineHoje ? money(p.vitrineHoje) : "—",
+                    !p.vitrineHoje ? "sem leitura" : difTab == null ? "sem tabela para comparar" : Math.abs(difTab) <= 0.02 ? <span className="text-up">igual à tabela</span> : <span className={difTab > 0 ? "text-down" : "text-warn"}>{pctTxt(difTab * 100)} sobre a tabela</span>, 0)}
+                  {cel("Vendido", p.vendidoAgora ? money(p.vendidoAgora) : "—", `antes ${p.vendidoAntes ? money(p.vendidoAntes) : "—"} · ${p.unidadesAntes} → ${p.unidadesAgora} un.`, 1)}
+                  {cel("Vendeu mais a", p.maisVendeu ? money(p.maisVendeu.preco) : "—", p.maisVendeu ? `${p.maisVendeu.unidades} un. nestes dias` : "sem venda", 2)}
+                  {cel("Recorde", p.pico ? money(p.pico.preco) : "—", p.pico ? `${p.pico.unidades} un. · ${p.pico.rotulo.split(" · ")[1] ?? p.pico.rotulo}` : "sem histórico", 2)}
+                  {cel("Comissão", pctFrac(p.comissaoPraticada), p.comissaoPraticada == null ? "praticada: sem dado" : `praticada · tabela ${pctFrac(p.tabela?.comissao)}`, 2)}
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[12px] text-ink-3 md:col-span-2">
+            <span style={{ color: "var(--line-2)" }}>●</span> tabela · <span className="text-brand">●</span> vitrine hoje · <span className="text-ink">●</span> vendido · <span className="text-up">●</span> vendeu mais · <span className="text-warn">●</span> recorde
+          </p>
         </div>
       ),
     });
@@ -545,20 +621,20 @@ export function montarSlides(d: Dados): SlideDef[] {
   if (est.length) {
     slides.push({
       id: "estoque", kicker: `${n(slides.length)} · Estoque`, titulo: "Faltou produto, ou vai faltar?",
-      passos: ["Rupturas no período e o que deve acabar nos próximos 7 dias, no ritmo atual."],
+      passos: ["Rupturas no período, anúncios que vendiam e foram pausados ou zerados, e o que deve acabar nos próximos 7 dias."],
       corpo: () => (
         <div className="flex flex-col gap-4">
           {est.slice(0, 6).map((x, i) => {
             const cob = x.id === "G11" ? Number(x.numeros.coberturaDias) : 0;
             return (
               <div key={i} className="rounded-r2 border border-line bg-panel p-4 acm-sobe" style={{ animationDelay: `${i * 0.15}s` }}>
-                <div className="flex flex-wrap justify-between gap-2"><span className="text-[15px] font-semibold text-ink">{x.item?.titulo}</span><span className={`text-[13px] font-semibold ${x.id === "G10" ? "text-down" : "text-warn"}`}>{x.nome}</span></div>
-                <div className="mt-2 grid grid-cols-7 gap-1">
+                <div className="flex flex-wrap justify-between gap-2"><span className="text-[15px] font-semibold text-ink">{x.item?.titulo}</span><span className={`text-[13px] font-semibold ${x.id === "G11" ? "text-warn" : "text-down"}`}>{x.nome}</span></div>
+                {x.id !== "G31" && <div className="mt-2 grid grid-cols-7 gap-1">
                   {Array.from({ length: 7 }, (_, k) => {
                     const vazio = x.id === "G10" ? k < Number(x.numeros.diasSemEstoque) : k >= Math.floor(cob);
                     return <span key={k} className={`h-6 rounded-[4px] acm-pop ${vazio ? "bg-down-wash border border-down" : "bg-up-wash"}`} style={{ animationDelay: `${0.3 + k * 0.08 + i * 0.15}s` }} />;
                   })}
-                </div>
+                </div>}
                 <p className="mt-2 text-[13px] text-ink-2">{x.texto}</p>
               </div>
             );
@@ -583,6 +659,73 @@ export function montarSlides(d: Dados): SlideDef[] {
         <div className="flex flex-col gap-4">
           <Gantt d={d} passo={passo} />
           <P n={1} passo={passo}><Ir g={{ destino: "/planejamento/resultados" }} /></P>
+        </div>
+      ),
+    });
+  }
+
+  /* Lucro (só com custo conhecido em boa parte da receita) */
+  const lucro = por("S10");
+  const total = lucro.find((x) => x.id === "G30");
+  if (total) {
+    const vend = lucro.filter((x) => x.id === "G23");
+    slides.push({
+      id: "lucro", kicker: `${n(slides.length)} · Lucro`, titulo: "Vendeu. E quanto sobrou?",
+      passos: ["Contribuição: o que sobra depois de comissão, frete, impostos e custo da mercadoria.", vend.length ? "Produtos que venderam mais e sobraram menos." : "Nenhum produto vendeu mais sobrando menos."],
+      corpo: (passo) => (
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="acm-sobe">
+            <span className="label">Contribuição no período</span>
+            <div className="num text-[44px] font-bold leading-none text-ink"><Contador valor={Number(total.numeros.margem)} /></div>
+            <p className="mt-2 text-[14px] text-ink-2">{total.texto}</p>
+            <div className="mt-3"><Ir g={total} /></div>
+          </div>
+          <P n={1} passo={passo}>{vend.length ? <Ranking itens={vend.slice(0, 5)} cor="var(--down)" passo={9} /> : null}</P>
+        </div>
+      ),
+    });
+  }
+
+  /* Operação: reputação e cancelamentos */
+  const op11 = por("S11");
+  if (op11.length || d.reputacao.length) {
+    const canc = d.cancelamentos;
+    const tx = (c: { receita: number; cancelado: number }) => (c.receita + c.cancelado > 0 ? c.cancelado / (c.receita + c.cancelado) : null);
+    slides.push({
+      id: "operacao", kicker: `${n(slides.length)} · Operação`, titulo: op11.length ? "A operação está pondo a conta em risco?" : "A operação aguentou?",
+      passos: ["Reputação de cada conta: reclamações, cancelamentos e atrasos, antes e agora.", "Cancelamentos do período, em valor."],
+      corpo: (passo) => (
+        <div className="flex flex-col gap-4">
+          {d.reputacao.map((c, i) => (
+            <div key={c.conta} className="rounded-r2 border border-line bg-panel p-4 acm-sobe" style={{ animationDelay: `${i * 0.15}s` }}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[15px] font-semibold text-ink">{c.conta}</span>
+                <span className="text-[13px] text-ink-2">nível {nivel(c.agora?.nivel)}{c.antes?.nivel && c.antes.nivel !== c.agora?.nivel ? ` (antes ${nivel(c.antes.nivel)})` : ""}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-3">
+                {(["reclamacoes", "cancelamentos", "atrasos"] as const).map((k, j) => {
+                  const a = c.antes?.[k] ?? null, b = c.agora?.[k] ?? null;
+                  const pior = a != null && b != null && b > a * 1.2 && b >= 0.005;
+                  return (
+                    <div key={k} className="acm-pop" style={{ animationDelay: `${0.2 + i * 0.15 + j * 0.1}s` }}>
+                      <div className="label">{k === "reclamacoes" ? "reclamações" : k}</div>
+                      <div className={`num text-[18px] font-bold ${pior ? "text-down" : "text-ink"}`}>{pctFrac(b)}</div>
+                      <div className="text-[12px] text-ink-3">antes {pctFrac(a)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <P n={1} passo={passo} className="rounded-r2 border border-line bg-panel-2 p-4">
+            {canc ? (
+              <div className="text-[14px] text-ink">
+                Cancelado: <b className="num">{money(canc.agora.cancelado)}</b> em {canc.agora.pedidosCancelados} pedidos ({pctFrac(tx(canc.agora))} da receita) · antes {money(canc.antes.cancelado)} ({pctFrac(tx(canc.antes))})
+              </div>
+            ) : <span className="text-ink-3">sem dado de cancelamento</span>}
+            {op11.map((x, i) => <p key={i} className="mt-2 text-[13px] font-semibold text-down">{x.nome}: {x.texto}</p>)}
+            <div className="mt-3"><Ir g={{ destino: "/vendas/cancelamentos" }} /></div>
+          </P>
         </div>
       ),
     });
@@ -642,6 +785,7 @@ export function montarSlides(d: Dados): SlideDef[] {
             </li>
           ))}
           {feitas.map((x, i) => <li key={`f${i}`} className="text-[13px] text-ink-2 acm-sobe">Ação do planejamento: {x.texto}</li>)}
+          <li className="mt-2"><PerguntarIA pergunta={`Resuma o que mudou no Mercado Livre entre ${dataBr(d.de)} e ${dataBr(d.ate)} e o que devo fazer primeiro.`} /></li>
         </ol>
       ),
     });

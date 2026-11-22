@@ -99,7 +99,9 @@ export function montarRoteiro(
   ate: string,
   canal?: string
 ): Slide[] {
-  const ant = periodoAnterior(de, ate);
+  // Um dia só se compara com o mesmo dia da semana anterior: sábado não se parece com sexta.
+  const semanaAntes = new Date(Date.parse(`${de}T00:00:00Z`) - 7 * 86400000).toISOString().slice(0, 10);
+  const ant = de === ate ? { de: semanaAntes, ate: semanaAntes } : periodoAnterior(de, ate);
   /*
    * O recorte vira a lista de contas que ele cobre. As linhas são por
    * conta; o grupo "Mercado Livre" existe só no seletor. Comparar o id do
