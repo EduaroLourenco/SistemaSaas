@@ -464,3 +464,37 @@ Fase 3 — a apresentação animada (22/11/2026)
   - Fica para depois: dias soltos, "isto está errado", perguntar à IA sobre o
     slide, módulo de lucro, agrupamento por família, melhorias da
     apresentação de Resultado (seção 9).
+
+Rodada de 22/11/2026 (commit 1ba694a, publicado)
+  - Slide "Preço no canal", módulos de lucro, reputação e cancelamentos,
+    "anúncio que vendia parou", promoção repetida uma vez só, base mínima
+    de promoção, família, "Perguntar à IA", rota mais leve, Diária do
+    Resultado contra o mesmo dia da semana.
+
+======================================================================
+15. PENDÊNCIAS PARA OS PRÓXIMOS DIAS
+======================================================================
+
+Conferir
+  1. Abrir logado em produção e medir o tempo da rota (no script: 16–22 s,
+     sem o filtro por empresa; tráfego 5 s e resultados 4 s são os maiores).
+     Se passar de ~6 s logado: guardar a pauta do dia em cache.
+  2. Comissão por pedido: na Probel quase todo pedido vem sem comissão, e a
+     régua cai no "menor da tabela". Ver por que a sincronização não grava.
+  3. Fórmula base sem comissão padrão por SKU na Probel (formula_base_itens
+     vazio para os SKUs olhados).
+
+Fazer
+  4. Dias soltos no calendário (os motores só aceitam intervalo contínuo).
+  5. "Isto está errado" por item, com tabela no banco e revisão da regra
+     para todas as empresas (precisa de migração).
+  6. IA com a ferramenta gatilhos_do_periodo (hoje o botão só leva a
+     pergunta pronta para a conversa).
+  7. Agrupamento por família de verdade (hoje só o rótulo da família no
+     item; a pauta continua por SKU).
+  8. Relâmpago somando a família; G22.
+  9. Apresentação de Resultado: marcar acontecimentos no gráfico e
+     melhorar no celular.
+ 10. Testar um aceite real de promoção pelo Gerizo (com aprovação).
+ 11. Margem: liberar quando a cobertura de custo passar de 70% (Probel tem
+     8 de 735 produtos com custo; BdC 77 de 201).
