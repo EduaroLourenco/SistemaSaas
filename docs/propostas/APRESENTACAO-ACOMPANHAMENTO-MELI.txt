@@ -1,0 +1,466 @@
+GERIZO — APRESENTAÇÃO DE ACOMPANHAMENTO DO MERCADO LIVRE
+Proposta para aprovação · 22/11/2026
+
+======================================================================
+0. RESUMO EM 10 LINHAS
+======================================================================
+
+A aba Relatórios › Apresentação ganha um segundo roteiro: "Acompanhamento
+Mercado Livre". Você escolhe os dias (um dia, a semana, um intervalo ou
+dias soltos) e o sistema monta sozinho uma apresentação na mesma ordem da
+história dos vídeos do site: o que aconteceu → por que caiu ou subiu →
+onde olhar → o que as promoções e a mídia fizeram → quanto sobrou → o que
+fazer agora.
+
+Cada slide só aparece se um GATILHO disparou e se a empresa tem o dado
+(módulos). Empresa sem custo cadastrado não vê slide de lucro; dia sem
+promoção não ganha slide de promoção. Nada de slide vazio, nada de frase
+que o número não sustenta.
+
+A conversa com IA passa a receber os mesmos gatilhos, já calculados. Ela
+narra e responde sobre o que disparou; não inventa número novo.
+
+======================================================================
+1. O QUE EXISTE HOJE (CONFERIDO NO CÓDIGO E NO BANCO)
+======================================================================
+
+Apresentação atual (src/app/relatorios/apresentacao, src/lib/roteiro.ts)
+  - 7 slides fixos: faturamento, pedidos, ticket, canais, conversão, ads,
+    cancelado. Diária / Semanal / Personalizada; filtro de canal.
+  - Comentário derivado do número (bom), mas é só "subiu X%, caiu Y%".
+  - Não diz POR QUÊ, não diz ONDE, não diz O QUE FAZER. Não fala de
+    produto, anúncio, família, catálogo, estoque, promoção nem margem.
+
+Motores prontos que a apresentação nova vai reaproveitar (não reescrever):
+  - Queda / alta por SKU e anúncio, com a receita repartida em
+    visitas × conversão × preço sem resto (dados/queda.ts, queda-causa.ts).
+    Causas já decididas: sem estoque, pausado, preço subiu, parou de vender,
+    perdeu visitas, conversão caiu, vendeu menos, vendeu mais barato; com
+    prova do catálogo quando há.
+  - Curva ABC (coluna "curva" da queda).
+  - Acontecimentos da semana dia a dia: preço ≥10% por SKU, campanha que
+    começou/terminou, volta ao estoque (acontecimentos-semana.ts).
+  - Termômetro: semana contra a MESMA FATIA da semana anterior e dia contra
+    o mesmo dia da semana; reputação diária (termometro.ts).
+  - Catálogo semana contra semana, lido no último dia medido
+    (catalogo-semana.ts, disputa-catalogo.ts: preço para ganhar, alavancas).
+  - Família do anúncio (familia-anuncio.ts) — evita os 3 erros já vistos:
+    desligar MLB cujo irmão vende, "disputar" contra si mesmo, subestimar
+    relâmpago cuja venda saiu no tamanho irmão.
+  - Tráfego pago por anúncio com corte pela MEDIANA do próprio catálogo:
+    escalar, cortar, candidato a verba (trafego-oportunidades.ts).
+  - Resultado das promoções contra os anúncios que ficaram FORA dela, com
+    veredito "deu certo / neutra / não deu certo / sem base / cedo demais"
+    (planejamento-resultados.ts).
+  - Recorde histórico do SKU e preço no pico (recorde-sku.ts).
+  - Margem no item do pedido, com regra de cobertura de custo (margem.ts).
+  - Alertas com evidência + denominador mínimo (alertas.ts).
+  - Saúde dos dados: API parada, dia sem coleta, total que não bate
+    (saude.ts).
+  - Ferramentas da IA: contexto, vendas, produtos, anúncios, cancelamentos,
+    envios, promoções no ar (ia/ferramentas.ts).
+
+----------------------------------------------------------------------
+1.1 VERIFICAÇÃO PEDIDA: A PROMOÇÃO ACEITA ESTÁ CONTANDO?
+----------------------------------------------------------------------
+
+Resposta curta: só em parte. Contagem feita no banco hoje (somente leitura):
+
+  Fonte                                         Linhas     Entra no "deu certo?"
+  campanha_itens (planilha processada)          23.687     SIM
+    · decisão "participar"                       18.728
+  promocao_canal_itens (o que o Meli diz         19.366     NÃO
+    estar no ar, via API)
+    · started (aceita / no ar)                    8.960
+    · candidate (convite)                         9.210
+    · pending                                     1.196
+  decisoes_promocao (aceite feito pelo               0      NÃO
+    sistema, com histórico)
+
+O que isso quer dizer:
+  1. A medição do Planejamento só enxerga promoção que passou pela
+     PLANILHA. As 8.960 participações "started" que vêm da API — incluindo
+     SMART (28 promoções), relâmpago, cupom, DEAL, PRICE_MATCHING, que nunca
+     passam por planilha — não são medidas.
+  2. A data usada é a do processamento da planilha ("decidido_em"), não a
+     do início real da promoção. A API tem início e fim por item; a planilha
+     não. Cruzar dia a dia com a data errada desloca o efeito.
+  3. Aceite pelo sistema: a tabela de histórico existe, mas está vazia —
+     ou nada foi aceito pelo sistema ainda, ou o fluxo não grava. Precisa
+     de um teste de ponta a ponta (aceitar 1 item real, conferir a linha).
+  4. A sincronização faz "retrato": nenhum item aparece como "finished".
+     Item que saiu da promoção continua "started" com a data de fim. Para
+     cruzar dias, a regra tem que ser "estava no ar no dia D se
+     início ≤ D ≤ fim", nunca o status.
+
+Correção proposta (entra na fase 1, antes da apresentação):
+  - Uma função única "participacao_no_dia(anuncio, dia)" que une as três
+    fontes, com prioridade: API (datas reais) > aceite do sistema >
+    planilha. Cada participação guarda a origem: "Meli", "Gerizo",
+    "planilha". A apresentação mostra a origem num sufixo curto.
+  - planejamento-resultados.ts passa a usar essa função. Os vereditos
+    antigos podem mudar — vou listar os que mudarem antes de subir.
+
+======================================================================
+2. COMO O DONO USA (A ROTINA QUE A APRESENTAÇÃO SERVE)
+======================================================================
+
+Rotina registrada: dia, Envios, Tráfego, promoções do Meli, Anúncios,
+Financeiro. Visão geral não é usada. Trabalha andando, pelo celular.
+
+Então a apresentação é a PAUTA do dia ou da semana: abre, passa 8 a 12
+slides, sabe o que investigar e em que ordem. Cada slide termina com um
+botão que leva à tela onde se age (Anúncios, Tráfego, Promoções,
+Precificação, Envios). Ela não substitui as telas; ela diz qual abrir.
+
+======================================================================
+3. SELEÇÃO DE DIAS E COMPARAÇÃO
+======================================================================
+
+Faixa de filtro no topo (uma só, acima de tudo):
+
+  [ Ontem ] [ Hoje (parcial) ] [ Semana ] [ Intervalo ] [ Dias soltos ]
+  Conta: [ todas | BdC | Imprimil | ... ]     Agrupar por: [ Família | Anúncio | SKU ]
+
+  - Dias soltos: tocar nos dias no calendário (ex.: as três quartas-feiras
+    de novembro, ou só os dias de uma relâmpago).
+  - Comparação padrão: o mesmo número de dias, mesmos dias da semana,
+    imediatamente antes (régua do termômetro — quarta contra quarta).
+    Opção: "contra o recorde do SKU" e "contra a média de 4 semanas".
+  - Dia em andamento leva o rótulo "parcial" e NUNCA é comparado como se
+    estivesse fechado: compara-se até a mesma hora do dia de referência
+    quando houver dado por hora; senão o dia sai da comparação e diz isso.
+  - Agrupamento padrão = Família (o que o Meli trata como um produto).
+    Abrir a família mostra os anúncios dentro dela.
+
+======================================================================
+4. MÓDULOS (AS "CAIXINHAS")
+======================================================================
+
+Cada módulo liga sozinho quando a empresa tem o dado, e o usuário pode
+desligar. A tela de montagem mostra os módulos como caixinhas com o motivo
+de estar desligado em 3 palavras ("sem custo cadastrado", "sem Ads
+conectado", "coleta desde 30/09").
+
+  M1  Vendas e ritmo ............ sempre (pedidos)
+  M2  Quedas e altas ............ sempre (pedidos + visitas)
+  M3  Catálogo .................. se houver leitura de catálogo no recorte
+  M4  Estoque e ruptura ......... se houver estoque do anúncio
+  M5  Preço ..................... se houver vitrine diária (desde 30/09)
+  M6  Promoções ................. se houver promoção no ar no recorte
+  M7  Tráfego pago .............. se houver Ads conectado
+  M8  Lucratividade ............. se a cobertura de custo do recorte ≥ 70%
+                                  da receita (abaixo disso: módulo
+                                  desligado, com a cobertura escrita)
+  M9  Reputação e operação ...... se houver reputação diária
+  M10 Cancelamentos e devoluções  sempre
+  M11 Ações registradas ......... se houver item no Planejamento
+  M0  Confiança dos dados ....... sempre, mas só vira slide se algo falhou
+
+======================================================================
+5. O ROTEIRO (ORDEM DOS SLIDES, ESPELHANDO A HISTÓRIA DOS VÍDEOS)
+======================================================================
+
+Cada slide segue o padrão dos vídeos: PERGUNTA → EVIDÊNCIA → ONDE OLHAR →
+AÇÃO. Título é a pergunta; o número que decide é o maior da tela; uma
+linha de procedência no rodapé ("da API · leitura de 22/11"). Sem
+parágrafo.
+
+Limite por slide: 3 a 5 itens, ordenados por impacto em R$ (curva A
+primeiro). O resto fica em "ver todos" (tabela que ordena por qualquer
+coluna). Independe de a empresa ter 30 ou 3.000 anúncios.
+
+S0. "Dá para confiar nestes números?"   [M0 — só aparece se falhar]
+    API parada, dia sem coleta, dia parcial, total que não bate, conta sem
+    token. Diz o que fica de fora do resto da apresentação.
+
+S1. "Como foi o período?"   [M1 · vídeo v01]
+    Receita, pedidos, unidades, visitas, conversão em fila de cartões,
+    cada um com a comparação. Linha diária com o período anterior em cinza.
+    Marcadores no eixo para os acontecimentos (campanha começou, preço
+    mudou, ruptura) — o "a queda da quarta encosta no que aconteceu na
+    quarta".
+
+S2. "Unidade ou receita?"   [M1 · v12]
+    Só aparece quando unidades e receita andaram em direções diferentes
+    (G05). Mostra o mix: vendeu mais barato, ou vendeu o produto mais
+    barato?
+
+S3. "O que puxou para baixo?"   [M2 · v14 / v03]
+    Top quedas da curva A/B em R$. Para cada uma: barra repartida
+    visitas / conversão / preço (a conta sem resto que já existe), a causa
+    em 2–3 palavras e a prova (catálogo, estoque, pausado).
+    Botão: abrir o anúncio no Gerizo · abrir no Meli.
+
+S4. "O que puxou para cima?"   [M2]
+    Top altas e "potencial": quem converte acima da mediana com visita
+    abaixo da mediana (G14), quem bateu ou chegou a 80% do recorde.
+
+S5. "O preço mudou. E as vendas?"   [M5 · v13]
+    Dumbbell antes → depois por SKU (preço vitrine e conversão).
+    Sempre com o aviso de que coincidência de data é pista. Se houver
+    promoção ativa com preço menor para o mesmo anúncio, mostra ao lado
+    ("há convite a R$ X" — G18).
+
+S6. "Perdeu a vitrine?"   [M3]
+    Catálogo: ganhava → perdeu, com o preço para ganhar e as alavancas
+    fora de preço (Full, frete grátis, parcelamento). Respeita família:
+    não lista disputa contra anúncio da própria casa.
+
+S7. "Faltou produto?"   [M4 · parte de v03]
+    Dias sem estoque × venda que tinha antes = venda perdida estimada
+    (marcada como estimativa). Estoque > 40 mil = "sem controle", fora.
+    Também: estoque que vai acabar em < 7 dias no ritmo atual.
+
+S8. "As promoções funcionaram?"   [M6 · v07 / v05 / v15]
+    Faixa de dias no topo com as promoções no ar (Gantt simples por tipo:
+    SMART, relâmpago, DEAL, cupom, pré-acordo). Para cada promoção do
+    recorte: dentro × fora (o método que já existe), veredito, origem da
+    aceitação (Meli / Gerizo / planilha), unidades e receita incrementais.
+    Relâmpago: soma a família inteira, não só o MLB.
+    Convites abertos ("candidate") com preço ≤ piso e anúncio em queda por
+    preço = sugestão de aceitar (G18), mandando para Promoções.
+
+S9. "A mídia pagou?"   [M7 · v06]
+    Escalar / cortar / candidato a verba, pela mediana. Nunca sugerir
+    desligar um MLB cuja família vende (G16).
+
+S10. "Quanto sobrou?"   [M8 · v08 · só com custo]
+    Contribuição após Ads no período e por SKU da curva A; quem vendeu mais
+    e sobrou menos; promoção que trouxe volume e comeu margem. Mostra a
+    cobertura de custo no rodapé.
+
+S11. "A operação aguentou?"   [M9 + M10 · v02 / v04]
+    Reputação (reclamação, atraso, cancelamento) contra o limite da cor;
+    cancelados e devolvidos do período com o valor que voltou.
+    Aviso de risco quando faltar pouco para mudar de cor.
+
+S12. "O que fazer agora?"   [fecha sempre · v09]
+    Lista de 3 a 7 ações, cada uma ligada ao gatilho que a gerou, com
+    destino. Ex.:
+      · Repor Puff Linho — 4 dias sem estoque, R$ 1.240 de venda perdida
+      · Revisar preço da Luminária — +8% e conversão −42% (hipótese)
+      · Aceitar convite DEAL do Colchão Turim casal — R$ 1.899 ≥ piso
+      · Pôr verba no Kit organizador — conversão 2× a mediana, pouca visita
+    Botão "registrar no Planejamento" transforma a ação em item medido
+    depois (fecha o ciclo: a próxima apresentação diz se deu certo).
+
+S13. "E as ações que fizemos?"   [M11]
+    Vereditos das ações e promoções que venceram no período.
+
+======================================================================
+6. CATÁLOGO DE GATILHOS PADRÃO
+======================================================================
+
+Regras gerais (valem para todos):
+  - Denominador mínimo: nada dispara com < 30 visitas ou < 3 pedidos no
+    lado de comparação (o alerta de "−80%" em 3 visitas é ruído).
+  - Corte relativo onde o catálogo varia: mediana da própria empresa, não
+    número fixo.
+  - Ordem: impacto em R$ (curva A pesa mais). Empate: mais recente.
+  - Correlação é pista: gatilho de preço sempre sai como "hipótese".
+  - Cada gatilho tem um ID, guarda os números que o dispararam e o destino.
+
+ID   Nome                     Condição (resumo)                          Slide  Ação / destino
+G01  Dado incompleto          saude.ts com atenção/problema no recorte  S0     Integrações
+G02  Dia parcial              recorte inclui hoje                        S0/S1  só rótulo
+G03  Queda do total           receita −10% vs mesma fatia                S1     abre S3
+G04  Alta do total            receita +10%                               S1     abre S4
+G05  Unidade × receita        sinais opostos, |dif| ≥ 10 p.p.            S2     mix / preço
+G06  Queda por visita         causa "perdeu visitas"                     S3     Tráfego / catálogo
+G07  Queda por conversão      causa "conversão caiu"                     S3     preço, frete, prazo
+G08  Queda com preço subindo  preço ≥ +4% e venda/visita −10%            S3/S5  Precificação
+G09  Parou de vender          0 unidades com visitas                     S3     anúncio
+G10  Ruptura                  sem estoque ≥ 1 dia, curva A/B             S7     repor
+G11  Ruptura iminente         cobertura < 7 dias no ritmo atual          S7     repor
+G12  Pausado                  anúncio pausado que vendia                 S3     reativar
+G13  Perdeu catálogo          ganhando → perdendo                        S6     preço p/ ganhar / alavancas
+G14  Potencial escondido      conversão > mediana, visita < mediana      S4/S9  verba
+G15  Perto do recorde         semana ≥ 80% do recorde do SKU             S4     manter / estoque
+G16  Mídia sem retorno        ACoS > margem do anúncio, família sem venda S9    cortar (por família)
+G17  Mídia escalável          ROAS > mediana e margem ok                 S9     subir verba
+G18  Convite que resolve      queda por preço + convite ≤ piso           S5/S8  Promoções
+G19  Promoção deu certo       veredito "deu certo"                       S8     repetir
+G20  Promoção sem efeito      "neutra" / "não deu certo"                 S8     não renovar
+G21  Promoção comeu margem    volume ↑ e contribuição ↓ (com custo)      S8/S10 rever piso
+G22  Relâmpago na família     venda saiu em irmão                        S8     somar família
+G23  Vendeu mais, sobrou menos receita ↑ e contribuição ↓                S10    preço / custo
+G24  Reputação no limite      métrica a < 20% do corte da cor            S11    Envios / SAC
+G25  Cancelamento alto        cancelado > 2× a média de 4 semanas        S11    Cancelamentos
+G26  Ação vencida             item do Planejamento terminou no recorte   S13    resultado
+
+Os cortes acima são o ponto de partida; ficam num arquivo só
+(src/lib/acompanhamento/gatilhos.ts) com um teste que roda cada regra
+contra casos reais já vistos (Luminária de 05–18/11, conta SP perdendo
+catálogo em 13/10, relâmpago da Probel no tamanho irmão).
+
+======================================================================
+7. CONVERSA COM IA
+======================================================================
+
+  - Os gatilhos disparados viram um "pacote do período" (JSON curto: ID,
+    item, números, procedência, destino). A IA recebe esse pacote como
+    contexto — mesma ideia do pacote-analise.ts.
+  - Em cada slide: botão "Perguntar sobre isto" abre a conversa já com o
+    slide como contexto ("por que a Luminária caiu?").
+  - Regra para a IA: só cita número que está no pacote ou que pediu por
+    ferramenta; diz "não sei" quando o gatilho não cobre. Gatilho de preço
+    sempre como hipótese.
+  - Nova ferramenta para a IA: "gatilhos_do_periodo(de, até, conta)".
+  - Opcional (fase 4): a IA escreve a fala do apresentador por slide, em
+    2 frases, a partir dos números — lida em voz alta no modo reunião.
+
+======================================================================
+8. "E SE A INFORMAÇÃO ESTIVER ERRADA?"
+======================================================================
+
+  - Todo item tem um botão discreto "isto está errado". Pede um motivo de
+    uma lista (pausado, dado atrasado, família errada, custo errado,
+    outro) e grava com o ID do gatilho e os números do momento.
+  - Itens marcados somem da apresentação daquele período e entram numa
+    fila de revisão. Quando o mesmo gatilho é marcado errado em empresas
+    diferentes, a regra é revisada para todos — é assim que o critério
+    melhora com o uso, sem ajuste à mão em cada cliente.
+  - O slide S0 protege o resto: se a API parou, os slides que dependem
+    dela saem com o motivo, em vez de mostrar queda falsa.
+
+======================================================================
+9. A APRESENTAÇÃO DE RESULTADO ATUAL (APERFEIÇOAR)
+======================================================================
+
+  - Mesma faixa de dias da nova (dias soltos, parcial, mesma fatia).
+  - Marcadores de acontecimento no gráfico (já existe o motor).
+  - Comparação "mesmo dia da semana" no lugar de "dia anterior" no modo
+    diário (sábado não se compara com sexta).
+  - Slide de canais com conta separada (multiempresa) e a cor seguindo o
+    canal, não a posição.
+  - Fala do slide: o comentário vira uma linha, com o motivo do vazio na
+    própria célula quando não há base.
+  - Exportar a apresentação (PDF) e link de leitura para quem não tem
+    acesso (já existe /relatorio/[chave]).
+  - Layout 390px primeiro: no celular, um slide por tela, deslizar.
+
+======================================================================
+10. VISUAL
+======================================================================
+
+  - Mesma identidade dos vídeos e do produto: branco, neutros, roxo como
+    acento; número herói ≥ 48px; uma série em cor e o resto em cinza.
+  - Celular: um slide por tela, gesto de deslizar, botões ≥ 44px, nada de
+    hover. Notebook: slide 16:9 em tela cheia, setas do teclado.
+  - Proibido (docs/agents/telas.md): dois eixos, número em todo ponto,
+    coluna só de "—", parágrafo explicativo, tooltip como único caminho.
+  - Antes do código: página solta com dado real (BdC e Imprimil), print
+    em 1280 e 390, comparar, só então o app.
+
+======================================================================
+11. FASES
+======================================================================
+
+Fase 1 — Base que conta certo (antes de qualquer tela)
+  - participacao_no_dia() unindo API + aceite do sistema + planilha, com
+    datas reais; planejamento-resultados.ts passa a usar.
+  - Teste de ponta a ponta do aceite pelo sistema (1 item real, com sua
+    aprovação antes de enviar ao Meli).
+  - Lista de vereditos que mudaram.
+
+Fase 2 — Gatilhos
+  - gatilhos.ts + teste com os casos reais. Rota que devolve os gatilhos
+    de um recorte. Sem tela ainda: você vê a lista em TXT e aprova os
+    cortes.
+
+Fase 3 — Apresentação
+  - Seletor de dias, módulos, slides S0–S13, modo reunião, "isto está
+    errado". Página solta → prints → app. Melhorias da apresentação de
+    resultado.
+
+Fase 4 — IA
+  - Ferramenta gatilhos_do_periodo, botão "perguntar sobre isto", fala do
+    apresentador.
+
+======================================================================
+12. O QUE NÃO VAI FAZER
+======================================================================
+
+  - Não aceita promoção, não muda preço nem verba sozinha: sugere e leva
+    à tela onde você confirma.
+  - Não afirma causa a partir de coincidência de datas.
+  - Não mostra lucro com custo abaixo de 70% de cobertura.
+  - Não mostra venda de concorrente (a API não dá; só preço de catálogo).
+  - Não mistura outros canais: este roteiro é só Mercado Livre.
+
+======================================================================
+13. PRECISO QUE VOCÊ DECIDA
+======================================================================
+
+  1. Agrupamento padrão: Família (proposto) ou SKU?
+  2. Cobertura mínima de custo para ligar Lucratividade: 70% está bom?
+  3. Fase 1 muda vereditos antigos do Planejamento. Pode?
+  4. "Isto está errado" revisado para todas as empresas: ok compartilhar
+     o padrão (sem dado do cliente) entre empresas?
+  5. Começo pela fase 1 + 2 e te mostro a lista de gatilhos de uma semana
+     real da BdC antes de desenhar a tela?
+
+======================================================================
+14. ANDAMENTO — FASES 1 E 2 (22/11/2026)
+======================================================================
+
+Fase 1 — promoções aceitas passam a contar
+  - src/lib/promocoes/participacao.ts: "no ar no dia D" pelas datas (não
+    pelo status) e medição com janela própria por anúncio (cada um a partir
+    do dia em que entrou), controle nas mesmas datas.
+  - planejamento-resultados.ts lê também promocoes_canal (API do Meli):
+    +40 promoções medidas (26 Probel, 10 BdC, 4 Imprimil). Relâmpago fica
+    de fora (dura horas; tem leitura própria). Entradas dos últimos 120 dias.
+  - Controle = convites não aceitos da mesma promoção; com menos de 30,
+    o resto do Mercado Livre (18 convites contra 735 entradas dava −150 p.p.;
+    com o resto do Meli, +36 p.p., coerente com os +40 da planilha).
+  - Os 56 vereditos antigos (planilha) NÃO mudaram. As linhas da planilha
+    continuam ao lado das da API, sem fundir: a planilha não traz o código
+    da campanha, e ligar por sobreposição casou campanhas erradas.
+  - Aceite pelo Gerizo: o código grava o histórico antes de enviar
+    (decisoes_promocao); a tabela está vazia porque nunca foi usado (depende
+    de "Permitir alterações" na conta). Quando houver, aparece como
+    "N pelo Gerizo" na linha da promoção. Teste real de envio: só com seu ok.
+  - Tela Resultados: rótulo "no Meli desde dd/mm · TIPO · convites não
+    aceitos" nas linhas da API. Não conferida logada.
+  - Conferência: node scripts/conferir-resultados-promocoes.mjs depois
+    (compara com output/promocoes-resultados/antes.json).
+
+Fase 2 — gatilhos
+  - src/lib/acompanhamento/gatilhos.ts (regras, sem banco) +
+    src/lib/dados/acompanhamento.ts (junta queda, saúde, mídia, promoções,
+    convites) + GET /api/acompanhamento?de=&ate=.
+  - Implementados: G01 G02 G03 G04 G05 G06 G07 G08 G09 G10 G11 G12 G13 G14
+    G16 G17 G18 G19 G20 G26, e G27 "vendeu menos", G28 "vendeu mais barato",
+    G29 "puxou para cima".
+  - Ficam para a fase 3: G15 recorde, G21/G23 margem (módulo M8), G22
+    relâmpago na família, G24 reputação, G25 cancelamento, agrupamento por
+    família (hoje por SKU).
+  - Cortes ajustados com dado real: catálogo só com ≥ 3 dias medidos; mídia
+    sem retorno ≥ R$ 20; convite ≥ 3% abaixo do preço; ruptura ≥ R$ 50;
+    promoção com receita anterior ≥ R$ 300; saúde só "problema" vira pauta.
+  - Teste: node scripts/testar-gatilhos.mjs
+  - Pauta real: node scripts/conferir-gatilhos.mjs bdc 2026-11-15 2026-11-21
+    → output/acompanhamento/gatilhos-<empresa>-<de>_<ate>.txt
+
+Fase 3 — a apresentação animada (22/11/2026)
+  - Relatórios › Apresentação › "Acompanhamento Meli"
+    (/relatorios/apresentacao?roteiro=meli). Recortes: Ontem (contra o mesmo
+    dia da semana anterior), Semana (7 dias fechados contra os 7 antes) e
+    Intervalo.
+  - Animação em CSS/SVG nativos, sem biblioteca nova; com "reduzir
+    movimento" tudo aparece já no estado final. Cada slide anda em passos
+    (clique, seta, espaço ou deslizar no telefone), e a faixa de baixo
+    explica o passo em uma linha, no lugar da narração.
+  - Slides: capa, confiança, período (a linha se desenha, a semana anterior
+    entra em cinza, os dias com acontecimento acendem), quedas, "por que
+    caiu" para cada um dos 3 maiores (cascata visitas/conversão/preço,
+    histórico diário, preço anunciado, sinal principal), altas e potencial,
+    preço e convites, catálogo, estoque, linha do tempo das promoções com
+    veredito, mídia, "o que fazer agora".
+  - Prévia conferida com o dado real da Probel e da BdC em 1280 e 390.
+    NÃO conferida logada no app (a rota real precisa de sessão).
+  - Fica para depois: dias soltos, "isto está errado", perguntar à IA sobre o
+    slide, módulo de lucro, agrupamento por família, melhorias da
+    apresentação de Resultado (seção 9).

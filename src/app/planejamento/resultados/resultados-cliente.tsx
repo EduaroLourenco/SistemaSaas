@@ -561,7 +561,11 @@ function LinhaPromo({ p }: { p: LinhaPromocao }) {
         aberta={aberta}
         alternar={() => setAberta((v) => !v)}
         titulo={p.nome}
-        sub={`processada em ${dataBr(p.processadaEm)}${p.comReducao ? " · com redução de tarifa" : ""} · ${p.participam} entraram, ${p.fora} de fora`}
+        sub={
+          p.origem === "Meli"
+            ? `no Meli desde ${dataBr(p.processadaEm)} · ${p.tipo ?? "API"}${p.peloGerizo ? ` · ${p.peloGerizo} pelo Gerizo` : ""} · ${p.participam} entraram, ${p.fora} convites não aceitos`
+            : `planilha de ${dataBr(p.processadaEm)}${p.comReducao ? " · com redução de tarifa" : ""} · ${p.participam} entraram, ${p.fora} de fora`
+        }
         colunas={[
           {
             rotulo: "Quem entrou",
@@ -579,7 +583,9 @@ function LinhaPromo({ p }: { p: LinhaPromocao }) {
             <Badge tone={TOM[p.veredito]}>{p.veredito}</Badge> <span className="ml-1">{p.leitura}</span>
           </p>
           <section>
-            <h3 className="label mb-2">Comparação · {p.dias} dias antes e depois do processamento</h3>
+            <h3 className="label mb-2">
+              Comparação · {p.dias} dias antes e depois {p.origem === "Meli" ? "da entrada de cada anúncio" : "do processamento"}
+            </h3>
             <div className="overflow-x-auto rounded-r1 border border-line bg-panel">
               <table className="w-full text-[14px]">
                 <thead>
@@ -593,7 +599,7 @@ function LinhaPromo({ p }: { p: LinhaPromocao }) {
                 <tbody className="num">
                   <Linha3 rotulo={`Entraram (${p.participam})`} antes={p.receitaParticipantes.antes} agora={p.receitaParticipantes.agora} dinheiro />
                   <Linha3
-                    rotulo={p.controle === "fora da campanha" ? `Ficaram de fora (${p.fora})` : "Resto do Mercado Livre (controle)"}
+                    rotulo={p.controle === "fora da campanha" ? (p.origem === "Meli" ? `Convites não aceitos (${p.fora})` : `Ficaram de fora (${p.fora})`) : "Resto do Mercado Livre (controle)"}
                     antes={p.receitaFora.antes}
                     agora={p.receitaFora.agora}
                     dinheiro

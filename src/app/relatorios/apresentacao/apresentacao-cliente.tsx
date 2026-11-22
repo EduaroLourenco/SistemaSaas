@@ -20,6 +20,7 @@ import {
 import { Play, ChevronLeft, ChevronRight, X, Presentation } from "lucide-react";
 
 import { SeletorCanal } from "@/components/ui/seletor-canal";
+import { TrocaRoteiro } from "./troca-roteiro";
 import { montarRoteiro, type Slide } from "@/lib/roteiro";
 import type { DadosApresentacao } from "@/lib/dados/apresentacao";
 
@@ -118,7 +119,7 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
         breadcrumb="Relatórios"
         help="Roteiro de reunião em tela cheia, recalculado a cada abertura"
         actions={
-          <Button
+          <div className="flex flex-wrap items-center gap-2"><TrocaRoteiro atual="resultado" /><Button
             size="sm"
             variant="primary"
             disabled={roteiro.length === 0}
@@ -127,7 +128,7 @@ export default function Apresentacao({ dados }: { dados: DadosApresentacao }) {
             <Play className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Iniciar apresentação</span>
             <span className="sm:hidden">Iniciar</span>
-          </Button>
+          </Button></div>
         }
         filters={
           <Segmented<FormatoDeck>

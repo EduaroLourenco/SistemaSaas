@@ -13,6 +13,7 @@ import {
   type LinhaVenda,
   type ResumoVendas,
 } from "@/lib/planejamento/resultados";
+import { diaSP, medirEntradas, type Entrada } from "@/lib/promocoes/participacao";
 
 /**
  * Deu certo? As ações do planejamento e as promoções do Mercado Livre.
@@ -118,6 +119,16 @@ export type LinhaPromocao = {
   veredito: Veredito;
   leitura: string;
   anuncios: AnuncioPromo[];
+  /**
+   * De onde veio a participação. "planilha": só a Central de Promoções
+   * processada aqui, medida da data do processamento. "Meli": o que a API
+   * diz estar no ar, medido da entrada real de cada anúncio.
+   */
+  origem?: "planilha" | "Meli";
+  /** Participações aceitas pelo próprio Gerizo (decisoes_promocao enviadas). */
+  peloGerizo?: number;
+  /** Tipo do canal: SMART, DEAL, SELLER_CAMPAIGN… */
+  tipo?: string;
 };
 
 export type DadosResultados = {
@@ -135,6 +146,15 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 const LIMIAR_PP = 10;
 /** Janela de medição das promoções do Meli, em dias depois do processamento. */
 const JANELA_PROMO = 14;
+/** Entradas da API mais antigas que isto ficam de fora: o "deu certo?" é do presente. */
+const DIAS_API = 120;
+/**
+ * Relâmpago dura horas: uma janela de 14 dias diluiria o efeito no resto da
+ * semana. Tem leitura própria (vendeu e sobrou?), não entra aqui.
+ */
+const TIPOS_FORA = new Set(["LIGHTNING", "SMART_LIGHTNING"]);
+/** Menos convites não aceitos que isto não serve de controle (ver promoções da API). */
+const CONTROLE_MINIMO = 30;
 
 function veredito(efeito: number | null, crescimento: number | null): Veredito {
   const v = efeito ?? crescimento;
@@ -148,7 +168,7 @@ export async function carregarResultadosPlanejamento(): Promise<DadosResultados>
   const sb = await clienteServidor();
   const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
-  const [itensR, campanhas, campItens, anuncios, produtos, contas] = await Promise.all([
+  const [itensR, campanhas, campItens, anuncios, produtos, contas, promosApi, itensApi, aceitesGerizo] = await Promise.all([
     sb.from("planejamento_itens").select("*").eq("operacao_id", op.id).neq("status", "Cancelada").order("inicio", { ascending: false }).limit(300),
     paginar(() => sb.from("campanhas").select("id,nome,tem_reducao_tarifa").eq("operacao_id", op.id).order("id")).catch(() => []),
     paginar(() =>
@@ -161,6 +181,17 @@ export async function carregarResultadosPlanejamento(): Promise<DadosResultados>
     paginar(() => sb.from("anuncios").select("id,codigo_externo,titulo,sku_canal").eq("operacao_id", op.id).order("id")),
     paginar(() => sb.from("produtos").select("sku,titulo").eq("operacao_id", op.id).order("id")),
     paginar(() => sb.from("contas_canal").select("id,nome,canal_id,canais(nome)").eq("operacao_id", op.id).order("id")),
+    /* O que o Meli diz estar no ar — inclui o que nunca passa por planilha. */
+    paginar(() => sb.from("promocoes_canal").select("id,codigo,tipo,nome,inicio,fim").eq("operacao_id", op.id).order("id")).catch(() => []),
+    paginar(() =>
+      sb
+        .from("promocao_canal_itens")
+        .select("promocao_id,anuncio_id,codigo_externo,status,inicio,fim,preco_original,preco_promocional")
+        .eq("operacao_id", op.id)
+        .in("status", ["started", "candidate"])
+        .order("id")
+    ).catch(() => []),
+    paginar(() => sb.from("decisoes_promocao").select("mlb,promocao").eq("operacao_id", op.id).eq("estado", "enviada").order("id")).catch(() => []),
   ]);
   if (itensR.error) return { linhas: [], promocoes: [], aviso: "O planejamento não está disponível." };
 
@@ -200,10 +231,47 @@ export async function carregarResultadosPlanejamento(): Promise<DadosResultados>
     })
     .filter((p) => p.lista.length && p.inicio && p.inicio >= umAno);
 
+  /*
+   * Promoções da API, agrupadas pelo código do canal: a mesma "Black Friday
+   * 2026" aparece uma vez por conta, e é uma campanha só.
+   */
+  type PA = { id: string; codigo: string; tipo: string; nome: string | null; inicio: string | null; fim: string | null };
+  type IA = { promocao_id: string; anuncio_id: string | null; codigo_externo: string; status: string; inicio: string | null; fim: string | null; preco_original: number | null; preco_promocional: number | null };
+  const desdeApi = somarDias(hoje, -DIAS_API);
+  const aceitosGerizo = new Set((aceitesGerizo as { mlb: string; promocao: string }[]).map((a) => `${a.promocao}|${a.mlb.toUpperCase()}`));
+  const promoPorId = new Map((promosApi as PA[]).map((p) => [p.id, p]));
+  const apiPorCodigo = new Map<string, { p: PA; entradas: (Entrada & { item: IA })[]; convites: Set<string>; todos: Set<string>; gerizo: number }>();
+  for (const it of itensApi as IA[]) {
+    const p = promoPorId.get(it.promocao_id);
+    if (!p || TIPOS_FORA.has(p.tipo) || !it.anuncio_id) continue;
+    const g = apiPorCodigo.get(p.codigo) ?? { p, entradas: [], convites: new Set<string>(), todos: new Set<string>(), gerizo: 0 };
+    g.todos.add(it.anuncio_id);
+    if (it.status === "candidate") g.convites.add(it.anuncio_id);
+    else {
+      // Sem data no item, vale a da promoção; sem nenhuma, não há o que medir.
+      const inicio = diaSP(it.inicio) ?? diaSP(p.inicio);
+      if (inicio && inicio >= desdeApi && inicio <= hoje) {
+        g.entradas.push({ anuncioId: it.anuncio_id, inicio, fim: diaSP(it.fim) ?? diaSP(p.fim), item: it });
+        if (aceitosGerizo.has(`${p.codigo}|${it.codigo_externo.toUpperCase()}`)) g.gerizo++;
+      }
+    }
+    apiPorCodigo.set(p.codigo, g);
+  }
+  for (const g of apiPorCodigo.values()) {
+    // Um anúncio que entrou não é controle, mesmo que tenha sobrado convite em outra conta.
+    for (const e of g.entradas) g.convites.delete(e.anuncioId);
+    // Um anúncio, uma entrada: vale a mais antiga (duas contas, mesma campanha).
+    const vistos = new Map<string, (typeof g.entradas)[number]>();
+    for (const e of g.entradas) if (!vistos.has(e.anuncioId) || e.inicio < vistos.get(e.anuncioId)!.inicio) vistos.set(e.anuncioId, e);
+    g.entradas = [...vistos.values()];
+  }
+  const gruposApi = [...apiPorCodigo.values()].filter((g) => g.entradas.length);
+
   // Uma leitura de vendas para tudo: do começo mais antigo até hoje.
   const inicios = [
     ...itens.map((i) => periodosDoResultado(i, hoje)?.anteriorInicio).filter((x): x is string => !!x && x >= umAno),
     ...promos.map((p) => somarDias(p.inicio!, -JANELA_PROMO)),
+    ...gruposApi.flatMap((g) => g.entradas.map((e) => somarDias(e.inicio, -JANELA_PROMO))),
   ].sort();
   let vendas: LinhaVenda[] = [];
   let exclusoes: Awaited<ReturnType<typeof carregarVendasPlanejamento>>["exclusoes"] = [];
@@ -580,7 +648,98 @@ export async function carregarResultadosPlanejamento(): Promise<DadosResultados>
         anuncios: anunciosLista,
       };
     })
-    .sort((a, b) => b.processadaEm.localeCompare(a.processadaEm));
+    .map((l) => ({ ...l, origem: "planilha" as const }));
 
-  return { linhas, promocoes, aviso };
+  /*
+   * ── Promoções da API: cada anúncio medido a partir da própria entrada ──
+   *
+   * Ficam AO LADO das da planilha, sem fundir. A planilha não traz o código
+   * da campanha, e sobreposição de anúncios não prova que é a mesma: na
+   * Probel quase todo o catálogo está em todas as promoções, e a tentativa
+   * de ligar por sobreposição casou "Black Friday" com "Principal Outubro".
+   * A planilha responde "a decisão daquela planilha deu certo?"; a da API,
+   * "entrar nesta promoção do Meli deu certo?".
+   */
+  const somente = (ids: string[], de: string, ate: string) => somar(ids, de, ate).receita;
+  const doCanal: LinhaPromocao[] = gruposApi.map((g) => {
+    let controleIds = [...g.convites];
+    let controle: LinhaPromocao["controle"] = "fora da campanha";
+    let med = medirEntradas({ entradas: g.entradas, controle: controleIds, somar: somente, hoje, janela: JANELA_PROMO });
+    // Controle de poucos anúncios mede esses anúncios, não a campanha (18 convites contra 735 entradas deu −150 p.p.): abaixo de 30, vale o resto do Meli.
+    if (!(med.controle.antes > 0) || controleIds.length < CONTROLE_MINIMO) {
+      controleIds = [...vendaPorAnuncio.keys()].filter(
+        (id) => !g.todos.has(id) && (anuncioPorId.get(id)?.codigo_externo ?? "").toUpperCase().startsWith("MLB")
+      );
+      controle = "resto do Mercado Livre";
+      med = medirEntradas({ entradas: g.entradas, controle: controleIds, somar: somente, hoje, janela: JANELA_PROMO });
+    }
+
+
+    const nomeControle = controle === "fora da campanha" ? `os ${g.convites.size} convites não aceitos` : "o resto do Mercado Livre";
+    let v: Veredito;
+    let leitura: string;
+    if (!med.medidas) {
+      v = "cedo demais";
+      leitura = `${g.entradas.length} anúncio(s) entraram há menos de 7 dias completos. O resultado aparece com 7 dias.`;
+    } else if (med.crescimento == null) {
+      v = "sem base";
+      leitura = "Os anúncios que entraram não venderam nos dias antes de entrar: não há base de comparação.";
+    } else if (med.efeito == null) {
+      v = "sem base";
+      leitura = `Os ${med.medidas} anúncios que entraram foram ${fmt(med.crescimento)}, sem controle para separar a promoção do movimento da semana.`;
+    } else {
+      v = veredito(med.efeito, med.crescimento);
+      leitura =
+        `Cada anúncio medido nos até ${JANELA_PROMO} dias depois de entrar: os ${med.medidas} que entraram foram ${fmt(med.crescimento)}; ` +
+        `${nomeControle}, nas mesmas datas, ${fmt(med.crescimentoControle!)}. ` +
+        (v === "deu certo" ? `Entrar rendeu ${pp(med.efeito)} a mais.` : v === "não deu certo" ? `Quem entrou ficou ${pp(med.efeito)} atrás.` : "Entrar ou não entrar deu praticamente no mesmo.");
+    }
+    if (med.cedo && med.medidas) leitura += ` ${med.cedo} entrada(s) recente(s) ainda fora da conta.`;
+
+    const entradaPorId = new Map(g.entradas.map((e) => [e.anuncioId, e]));
+    const anunciosLista: AnuncioPromo[] = med.janelas
+      .map((j) => {
+        const a = anuncioPorId.get(j.anuncioId);
+        const it = entradaPorId.get(j.anuncioId)!.item;
+        const ag = somar([j.anuncioId], j.ini, j.fim);
+        return {
+          codigo: a?.codigo_externo ?? it.codigo_externo,
+          titulo: a?.titulo ?? "",
+          precoOferta: it.preco_promocional != null ? Number(it.preco_promocional) : null,
+          precoTabela: it.preco_original != null ? Number(it.preco_original) : null,
+          antes: somar([j.anuncioId], j.antesIni, j.antesFim).receita,
+          agora: ag.receita,
+          unidadesAgora: ag.unidades,
+        };
+      })
+      .sort((a, b) => b.agora + b.antes - (a.agora + a.antes))
+      .slice(0, 25);
+
+    return {
+      id: `api:${g.p.codigo}`,
+      nome: g.p.nome?.trim() || g.p.codigo,
+      processadaEm: med.desde ?? g.entradas.map((e) => e.inicio).sort()[0],
+      comReducao: false,
+      dias: med.dias,
+      participam: med.medidas || g.entradas.length,
+      fora: controle === "fora da campanha" ? g.convites.size : 0,
+      controle,
+      receitaParticipantes: med.participantes,
+      receitaFora: med.controle,
+      crescimento: med.crescimento,
+      crescimentoFora: med.crescimentoControle,
+      efeito: v === "cedo demais" ? null : med.efeito,
+      veredito: v,
+      leitura,
+      anuncios: anunciosLista,
+      origem: "Meli",
+      peloGerizo: g.gerizo,
+      tipo: g.p.tipo,
+    };
+  });
+
+  const todas = [...doCanal, ...promocoes].sort((a, b) =>
+    b.processadaEm.localeCompare(a.processadaEm)
+  );
+  return { linhas, promocoes: todas, aviso };
 }
