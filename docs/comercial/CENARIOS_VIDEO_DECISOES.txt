@@ -70,21 +70,22 @@ Buscar AT-LUZ-02 e tocar na linha. O detalhe abre o gráfico de unidades por dia
 e depois o mesmo caminho com de=2026-11-12&ate=2026-11-18.
 Localizar a Luminária e destacar investimento, margem e sobra após mídia. Evitar colocar a DRE inteira no vídeo.
 
-SEQUÊNCIA FINAL, 41,052 SEGUNDOS
+SEQUÊNCIA FINAL — SETE CENAS, 49,674 SEGUNDOS
 
-0–6,654s: começar em Por que caiu, no card da Luminária Arco. Mostrar receita
-R$ 4.558,10 → R$ 2.849,99 e o sinal “preço subiu”.
-Voz: “Por que a luminária caiu? Apareceu uma pista: o preço subiu. Vamos investigar.”
-6,654–13,620s: abrir o histórico de preço, de R$ 239,90 para R$ 259,09 em 12/11.
-13,620–20,322s: mostrar unidades 19 → 11 e visitas iguais, 952 nos dois recortes.
-20,322–27,072s: destacar conversão 2,00% → 1,16%.
-27,072–34,182s: comparar a receita, de R$ 4.558,10 para R$ 2.849,99.
-34,182–41,052s: reunir preço, volume e visitas na investigação. O histórico é
-uma pista para conferir; não comprova causalidade nem prevê vendas.
+1. Começar em Por que caiu, no card da Luminária Arco. Receita
+R$ 4.558,10 → R$ 2.849,99 e o sinal “preço subiu” abrem a pergunta.
+2. Abrir o histórico: preço R$ 239,90 → R$ 259,09 em 12/11.
+3. Comparar unidades 19 → 11 e visitas iguais, 952 nos dois recortes.
+4. Destacar conversão 2,00% → 1,16%.
+5. Comparar a receita e perguntar quanto sobrou.
+6. Contribuição após Ads por unidade: R$ 83,01 → R$ 93,58.
+No total: R$ 1.577,17 → R$ 1.029,34. Melhor por peça, menor no período.
+7. Lembrar que contribuição ainda paga despesas fixas e puxar a próxima
+pergunta: será que toda queda é preço? O capítulo seguinte investiga visitas.
 
-As cenas 2–6 e suas falas foram preservadas no ajuste da abertura. O caminho
-mais amplo acima continua disponível para aprofundamento na demonstração;
-o MP4 final usa as seis cenas registradas no roteiro e no manifesto.
+As cenas boas foram reaproveitadas e o cartão de rentabilidade foi acrescentado.
+As sete falas finais usam o perfil do Gê, registrado em narracao-historia.json.
+O histórico é uma pista de investigação, sem comprovar causalidade ou prever vendas.
 
 
 V14 — CAIU A VENDA. FOI PREÇO OU EXPOSIÇÃO?

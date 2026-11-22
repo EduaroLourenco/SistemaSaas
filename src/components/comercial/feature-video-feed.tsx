@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Captions, ChevronDown, ChevronUp, Pause, Play, Volume2, VolumeX, X } from "lucide-react";
-import type { CategoriaFuncionalidade, Funcionalidade } from "@/lib/comercial/funcionalidades";
+import { contextoHistoria, type CategoriaFuncionalidade, type Funcionalidade } from "@/lib/comercial/funcionalidades";
 import "./feature-video-feed.css";
 
 type Props = { items: Funcionalidade[]; initialId: string; onClose: () => void };
@@ -25,6 +25,7 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
   const [pronto, setPronto] = useState(false);
   const [mudo, setMudo] = useState(true);
   const [tocando, setTocando] = useState(false);
+  const [terminou, setTerminou] = useState(false);
   const [legendas, setLegendas] = useState(true);
   const [progresso, setProgresso] = useState(0);
   const [falhas, setFalhas] = useState<Record<string, boolean>>({});
@@ -73,7 +74,7 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
   },[pronto]);
 
   useEffect(() => {
-    setTocando(false); setProgresso(0); setCarregando(false);
+    setTocando(false); setTerminou(false); setProgresso(0); setCarregando(false);
     videos.current.forEach((v, i) => { if (v && i !== ativo) v.pause(); });
     const v = videos.current[ativo];
     if (!v || !pronto) return;
@@ -112,11 +113,11 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
         if (["ArrowUp", "PageUp"].includes(e.key)) { e.preventDefault(); ir(ativo - 1); }
       }}>
       <div className="gz-feed-shell">
-        <aside className="gz-feed-lista" aria-label="Funcionalidades">
-          <h2 id={titulo}>Funcionalidades</h2>
+        <aside className="gz-feed-lista" aria-label="Capítulos da história">
+          <h2 id={titulo}>A história da loja</h2>
           <ol>{items.map((item, i) => (
             <li key={item.id}><button type="button" aria-current={i === ativo ? "true" : undefined} onClick={() => ir(i)} style={{ "--c": COR[item.categoria] } as React.CSSProperties}>
-              <span>{item.categoria}</span><b>{item.titulo}</b>
+              <span>{String(contextoHistoria(item.id).numero).padStart(2, "0")} · {contextoHistoria(item.id).etapa?.titulo ?? item.categoria}</span><b>{item.pergunta}</b>
             </button></li>
           ))}</ol>
         </aside>
@@ -132,13 +133,16 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
             {items.map((item, i) => {
               const selecionado = i === ativo;
               const temVideo = Boolean(item.video?.src) && !falhas[item.id];
+              const contexto = contextoHistoria(item.id);
+              const seguinte = items[i + 1];
               return (
                 <article key={item.id} className={`gz-feed-slide${temVideo ? " tem-video" : ""}`} data-indice={i} ref={(el) => { paginas.current[i] = el; }} aria-hidden={!selecionado} inert={!selecionado} style={{ "--c": COR[item.categoria] } as React.CSSProperties}>
                   <div className="gz-feed-palco">
                     {temVideo ? (
-                      <video ref={(el) => { videos.current[i] = el; }} src={item.video!.src} poster={item.video?.poster} muted={mudo} playsInline loop
+                      <video ref={(el) => { videos.current[i] = el; }} src={item.video!.src} poster={item.video?.poster} muted={mudo} playsInline
                         preload={selecionado || i === ativo + 1 ? "metadata" : "none"} aria-label={`Vídeo: ${item.titulo}`} onClick={() => { const v = videos.current[i]; if (v) { if (v.paused) void v.play(); else v.pause(); } }}
-                        onPlay={() => { if (i === indiceAtivo.current) setTocando(true); }} onPause={() => { if (i === indiceAtivo.current) setTocando(false); }}
+                        onPlay={() => { if (i === indiceAtivo.current) { setTocando(true); setTerminou(false); } }} onPause={() => { if (i === indiceAtivo.current) setTocando(false); }}
+                        onEnded={() => { if (i === indiceAtivo.current) { setTocando(false); setTerminou(true); } }}
                         onWaiting={()=>{if(i===indiceAtivo.current)setCarregando(true);}} onPlaying={()=>{if(i===indiceAtivo.current)setCarregando(false);}}
                         onTimeUpdate={(e) => { if (i === indiceAtivo.current && e.currentTarget.duration) setProgresso(e.currentTarget.currentTime / e.currentTarget.duration); }}
                         onError={() => {setCarregando(false);setFalhas((f) => ({ ...f, [item.id]: true }));}}>
@@ -155,17 +159,18 @@ export function FeatureVideoFeed({ items, initialId, onClose }: Props) {
                   </div>
                   {selecionado&&carregando&&<span className="gz-feed-loading" role="status">Carregando vídeo…</span>}
                   <div className="gz-feed-info">
-                    <span className="gz-feed-cat">{item.categoria}</span>
-                    <h3>{item.titulo}</h3>
-                    <p>{item.descricao}</p>
+                    <span className="gz-feed-cat gz-feed-capitulo">Capítulo {String(contexto.numero).padStart(2, "0")} · {contexto.etapa?.titulo ?? item.categoria}</span>
+                    <h3>{item.pergunta}</h3>
+                    <p>{contexto.ligacao ?? item.descricao}</p>
                     <Link className="gz-feed-cta" href={linkDemo(item.rotaDemo)} onClick={() => fechar.current()}>Experimentar esta tela <ArrowUpRight size={17} aria-hidden /></Link>
+                    {seguinte ? <button type="button" className={`gz-feed-proximo${selecionado && terminou ? " is-pronto" : ""}`} onClick={() => ir(i + 1)} aria-label={`Próximo capítulo: ${seguinte.pergunta}`}><span>{selecionado && terminou ? "Continuar a história" : "A seguir"}</span><b>{seguinte.pergunta}</b><ChevronDown size={19} aria-hidden /></button> : <button type="button" className={`gz-feed-proximo${selecionado && terminou ? " is-pronto" : ""}`} onClick={() => ir(0)}><span>Você chegou ao fim</span><b>Voltar ao começo</b><ChevronUp size={19} aria-hidden /></button>}
                   </div>
                   {temVideo && selecionado && (
                     <div className="gz-feed-acoes">
                       <button type="button" className="gz-feed-icone" onClick={() => { const v = videos.current[i]; if (v) { if (v.paused) void v.play(); else v.pause(); } }} aria-label={tocando ? "Pausar" : "Reproduzir"}>{tocando ? <Pause size={20} aria-hidden /> : <Play size={20} aria-hidden />}</button>
                       <button type="button" className={`gz-feed-icone${mudo ? " gz-feed-som" : ""}`} onClick={() => setMudo((m) => !m)} aria-label={mudo ? "Ativar som" : "Tirar som"}>{mudo ? <><VolumeX size={20} aria-hidden /><span aria-hidden>Ativar som</span></> : <Volume2 size={20} aria-hidden />}</button>
                       {item.video?.legendas && <button type="button" className="gz-feed-icone" onClick={() => setLegendas((l) => !l)} aria-pressed={legendas} aria-label="Legendas"><Captions size={20} aria-hidden /></button>}
-                      <span className="gz-feed-gesture">{i===items.length-1?"Explore a tela acima":"Deslize para ver mais"}</span>
+                      <span className="gz-feed-gesture">{i===items.length-1?"Explore a tela acima":"Deslize para continuar"}</span>
                       <button type="button" className="gz-feed-icone gz-feed-step" onClick={()=>ir(ativo-1)} disabled={ativo===0} aria-label="Vídeo anterior"><ChevronUp size={20} aria-hidden/></button>
                       <button type="button" className="gz-feed-icone gz-feed-step" onClick={()=>ir(ativo+1)} disabled={ativo===items.length-1} aria-label="Próximo vídeo"><ChevronDown size={20} aria-hidden/></button>
                     </div>

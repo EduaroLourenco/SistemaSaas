@@ -1,12 +1,12 @@
 ﻿GERIZO — ESTRUTURA DOS VÍDEOS EM MOTION
 Plano editorial e base para o roteiro técnico
-Referência editorial: 18/11/2026 · atualização do inventário: 21/11/2026
+Referência editorial: 18/11/2026 · atualização do inventário: 22/11/2026
 
 FINALIDADE
 
-Este arquivo organiza 19 temas possíveis para os vídeos da página de funcionalidades. Define o que cada tema precisa explicar, o caminho nas telas, as cenas e uma locução de referência. É um plano editorial, não a lista de arquivos publicados. O catálogo atual referencia quinze motions: doze apresentações das telas e três histórias aprofundadas sobre preço, anúncios e uma oferta relâmpago. Os arquivos, títulos, tempos medidos e o estado de finalização estão em INVENTARIO_MOTIONS.txt. Não há resultados de teste de audiência.
+Este arquivo organiza 19 temas possíveis para os vídeos da página de funcionalidades. Define o que cada tema precisa explicar, o caminho nas telas, as cenas e uma locução de referência. É um plano editorial, não a lista de arquivos publicados. O catálogo atual tem dezesseis capítulos: uma abertura de contexto e quinze vídeos conectados por perguntas, da mudança nas vendas à investigação, contribuição, ações e rotina. Os arquivos, títulos e tempos medidos estão em INVENTARIO_MOTIONS.txt. Não há resultados de teste de audiência.
 
-Os quinze roteiros técnicos estão em scripts/comercial/roteiros-*.json. Novos temas ainda exigem confrontar cada cena com a empresa modelo e produzir fontes de captura, locução e edição. Não inventar dados que ainda não apareçam no cenário.
+Os roteiros visuais estão em scripts/comercial/roteiros-*.json. A ordem e as 79 falas finais do guia Gê estão em scripts/comercial/narracao-historia.json. Novos temas ainda exigem confrontar cada cena com a empresa modelo e produzir fontes de captura, locução e edição. Não inventar dados que ainda não apareçam no cenário.
 
 A EXPERIÊNCIA DO VISITANTE
 

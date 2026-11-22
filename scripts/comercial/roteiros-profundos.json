@@ -7,14 +7,15 @@
       "id": "v13",
       "titulo": "O preço mudou. E as vendas?",
       "rota": "/vendas/queda?de=2026-11-12&ate=2026-11-18",
-      "fonte": "AT-LUZ-02; antes 05–11/11, depois 12–18/11/2026. Preço 239,90→259,09; unidades 19→11; visitas 952→952; conversão 2,00%→1,16%; contribuição após Ads 1.577,17→1.029,34.",
+      "fonte": "AT-LUZ-02; antes 05–11/11, depois 12–18/11/2026. Preço 239,90→259,09; unidades 19→11; visitas 952→952; conversão 2,00%→1,16%; contribuição após Ads 1.577,17→1.029,34 no total e 83,01→93,58 por unidade, antes das despesas fixas. O dia 18/11 é parcial.",
       "cenas": [
-        { "captura": "luz-queda-pista", "nuvem": "Por que a luminária caiu?", "legenda": "Receita −37,5% · sinal: preço subiu", "fala": "Por que a luminária caiu? Apareceu uma pista: o preço subiu. Vamos investigar.", "humor": "curioso" },
-        { "captura": "luz-preco", "nuvem": "Olha a mudança aqui", "legenda": "R$ 239,90 → R$ 259,09 · a partir de 12/11", "fala": "De quase duzentos e quarenta para duzentos e cinquenta e nove reais. A mudança aparece aqui.", "humor": "curioso" },
-        { "captura": "luz-volume", "nuvem": "E o volume?", "legenda": "19 → 11 unidades · as visitas ficaram iguais", "fala": "Só que o volume foi de dezenove para onze unidades. E as visitas ficaram iguais.", "humor": "curioso" },
-        { "captura": "luz-volume", "nuvem": "A pista apareceu", "legenda": "Conversão: 2,00% → 1,16%", "fala": "A conversão caiu de dois para um vírgula dezesseis por cento. A pista ficou mais clara.", "humor": "feliz" },
-        { "captura": "luz-volume", "nuvem": "Mais caro. Entrou mais?", "legenda": "Receita: R$ 4.558,10 → R$ 2.849,99", "fala": "O faturamento caiu trinta e sete e meio por cento. Preço maior, receita menor nesse exemplo.", "humor": "curioso" },
-        { "captura": "luz-conversao", "nuvem": "Compare antes de mexer", "legenda": "Preço + volume + visitas, na mesma investigação.", "fala": "Preço, volume e visitas, juntos. É uma pista para investigar, não uma promessa de venda.", "humor": "feliz" }
+        { "captura": "luz-queda-pista", "nuvem": "Por que a luminária caiu?", "legenda": "Receita −37,5% · sinal: preço subiu", "fala": "A luminária vendeu menos. Por quê? Aqui apareceu uma pista: o preço subiu. Vamos abrir.", "humor": "curioso" },
+        { "captura": "luz-preco", "nuvem": "Olha a mudança aqui", "legenda": "R$ 239,90 → R$ 259,09 · a partir de 12/11", "fala": "Olha aqui: de duzentos e quarenta para duzentos e cinquenta e nove reais, a partir do dia doze.", "humor": "curioso" },
+        { "captura": "luz-volume", "nuvem": "E o volume?", "legenda": "19 → 11 unidades · as visitas ficaram iguais", "fala": "Mas o volume foi de dezenove para onze. As visitas? As mesmas.", "humor": "curioso" },
+        { "captura": "luz-volume", "nuvem": "A pista ficou mais clara", "legenda": "Conversão: 2,00% → 1,16%", "fala": "Com a mesma quantidade de visitas, a conversão caiu. Vale investigar a oferta.", "humor": "curioso" },
+        { "captura": "luz-volume", "nuvem": "E a sobra, melhorou?", "legenda": "Receita: R$ 4.558,10 → R$ 2.849,99", "fala": "Entrou menos receita. Então... pelo menos sobrou mais dinheiro?", "humor": "curioso" },
+        { "captura": "luz-rentabilidade", "nuvem": "Mais por unidade. Menos no total.", "legenda": "Contribuição após Ads · antes das despesas fixas", "fala": "Por unidade, sim. No total... não. Depois dos Ads, sobraram quase quinhentos e cinquenta reais a menos.", "humor": "curioso" },
+        { "captura": "luz-conversao", "nuvem": "Mas toda queda é preço?", "legenda": "Próximo anúncio: visitas e conversão.", "fala": "Essa sobra ainda paga as despesas fixas. Mas... será que toda queda é preço?", "humor": "curioso" }
       ]
     },
     {

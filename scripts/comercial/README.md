@@ -38,7 +38,19 @@ O caminho de FFmpeg pode vir de `GERIZO_FFMPEG`; o executável não faz parte do
 
 Os roteiros usados estão em `roteiros-profundos.json`. `preparar-voz-direta.mjs` gera a voz a partir desses textos com uma instalação isolada de Edge TTS, sem microfone ou captura do áudio do computador. `preparar-cenas.mjs` cria os três manifestos a partir das capturas locais de `output/comercial-motion/capturas`; eles usam recortes e contornos conferidos nas imagens desta produção. Refaça o enquadramento se a interface mudar. Capturas, vozes intermediárias e saídas de revisão ficam em `output/`, fora do histórico do Git.
 
-As saídas são `v13-motion.mp4` e `v13-motion.webp`. Os doze vídeos publicados permanecem intactos. Publicar as novas versões e trocar o catálogo são etapas separadas, depois da revisão das cenas e dos dados.
+As saídas usam `v00-motion.mp4` a `v15-motion.mp4` e pôsteres WebP. O catálogo organiza as dezesseis peças como uma história. Cada capítulo termina puxando a pergunta seguinte.
+
+## História e voz do Gê
+
+`narracao-historia.json` registra as 79 falas e a ordem final. `perfil-voz-ge.json` define a voz Thalita e a intenção de cada cena. Perguntas, pausas e frases curtas fazem parte da entrega; o serviço atual não oferece rótulos expressivos SSML pelo cliente usado.
+
+`preparar-voz-historia.mjs` mantém um cache separado, distinguindo texto, voz, entrega e conversão WAV. `aplicar-narracao-historia.mjs` reaproveita os vídeos: copia a imagem quando a nova fala cabe e ajusta o tempo das cenas existentes quando precisa. A fala não é acelerada ou cortada. As saídas intermediárias ficam em `output/comercial-voz/historia/finais`.
+
+`preparar-contexto-historia.mjs` monta a abertura V00, o V13 com rentabilidade e as quatro aberturas cujos valores precisaram de atualização. `render-motion-rapido.mjs` preserva o desenho original e reutiliza o fundo depois da entrada da cena, redesenhando somente o personagem. Assim não é preciso rasterizar a captura completa a cada quadro.
+
+`preparar-rentabilidade-v13.mjs` deriva o cartão de contribuição das mesmas fontes do cenário. O cartão é identificado como leitura do exemplo; contribuição após Ads não é apresentada como lucro líquido.
+
+`finalizar-historia.mjs` mede todas as mídias, verifica formato e áudio, copia as versões finais locais e atualiza os tempos do catálogo e o inventário. O Git e a Vercel continuam sendo a etapa de publicação.
 
 ## Limite das fontes antigas
 

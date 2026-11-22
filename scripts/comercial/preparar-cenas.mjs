@@ -2,12 +2,14 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 const raiz=resolve(process.argv[2]??'output/comercial-motion');
+const escolhido=process.argv[3];
 const roteiros=JSON.parse(await readFile('scripts/comercial/roteiros-profundos.json','utf8'));
 const recortes={
  'luz-queda-pista':{x:16,y:400,w:356,h:127},
  'luz-preco':{x:16,y:110,w:358,h:310},
  'luz-volume':{x:16,y:56,w:358,h:449},
  'luz-conversao':{x:16,y:162,w:358,h:343},
+ 'luz-rentabilidade':{x:0,y:0,w:600,h:700},
  'mesa-visitas':{x:16,y:56,w:358,h:449},
  'mesa-conversao':{x:16,y:162,w:358,h:343},
  'mesa-preco':{x:16,y:64,w:358,h:308},
@@ -22,6 +24,7 @@ const alvos={
  'luz-preco':{x:58,y:95,w:270,h:193},
  'luz-volume':{x:8,y:118,w:328,h:116},
  'luz-conversao':{x:8,y:8,w:328,h:115},
+ 'luz-rentabilidade':{x:28,y:374,w:544,h:149},
  'mesa-visitas':{x:116,y:115,w:104,h:116},
  'mesa-conversao':{x:232,y:8,w:106,h:111},
  'mesa-preco':{x:165,y:95,w:165,h:190},
@@ -31,12 +34,12 @@ const alvos={
  'relampago-grafico':{x:176,y:45,w:54,h:159},
  'relampago-custos':{x:179,y:93,w:150,h:48},
 };
-for(const video of roteiros.videos){
+for(const video of roteiros.videos.filter(v=>!escolhido||v.id===escolhido)){
  const dir=join(raiz,video.id);await mkdir(dir,{recursive:true});
  const cenas=video.cenas.map((cena,i)=>{
   const nome=cena.captura==='relampago-resultado'?'relampago-comparacao':cena.captura;
   const alvo=video.id==='v13'&&i===4?{x:8,y:7,w:328,h:94}:video.id==='v13'&&i===3?{x:227,y:118,w:106,h:116}:video.id==='v15'&&i===3?{x:112,y:61,w:220,h:62}:alvos[nome];
-  return{imagem:nome==='luz-queda-pista'?`../capturas-base/${nome}.png`:`../capturas/${nome}.png`,voz:`voz/cena-${String(i+1).padStart(2,'0')}.wav`,nuvem:cena.nuvem,legenda:cena.legenda,duracao:5,humor:cena.humor,recorte:recortes[nome],alvo};
+  return{imagem:nome==='luz-rentabilidade'?`../quadros/${nome}.png`:nome==='luz-queda-pista'?`../capturas-base/${nome}.png`:`../capturas/${nome}.png`,voz:`voz/cena-${String(i+1).padStart(2,'0')}.wav`,nuvem:cena.nuvem,legenda:cena.legenda,duracao:5,humor:cena.humor,recorte:recortes[nome],alvo};
  });
  await writeFile(join(dir,'manifesto.json'),JSON.stringify({id:video.id,titulo:video.titulo,fontes:video.fonte,nota:roteiros.nota,cenas},null,2)+'\n');
  console.log(video.id,': cenas prontas');

@@ -1,110 +1,63 @@
-GERIZO — INVENTÁRIO DOS 15 MOTIONS
-Atualização: 21/11/2026
+GERIZO — HISTÓRIA GUIADA EM 16 CAPÍTULOS
+Atualização: 22/11/2026
 
-ESTADO DA ENTREGA LOCAL
+Uma pergunta leva à próxima tela. A abertura apresenta o Gerizo e o guia Gê.
+A sequência parte das vendas, investiga os sinais, confere contribuição e resultado,
+passa à precificação e às promoções e termina na rotina da loja.
 
-O catálogo de src/lib/comercial/funcionalidades.ts referencia os quinze pares
-v01-motion a v15-motion. Os nomes dos vídeos e pôsteres abaixo substituem os
-endereços antigos v01.mp4 a v12.mp4 no catálogo.
+ORDEM E MÍDIAS FINAIS
 
-As quinze peças têm arquivo final conferido. V07 foi substituído após a revisão
-das cenas de promoções e da demonstração; o tempo abaixo pertence à versão final.
-Este registro descreve arquivos locais; a publicação na hospedagem é outra etapa.
+01. v00 | Sua operação, por dentro | 23.58s | /site/videos/v00-motion.mp4
+02. v01 | O dia conta a história toda? | 34.00s | /site/videos/v01-motion.mp4
+03. v12 | Unidade e receita contam o quê? | 34.80s | /site/videos/v12-motion.mp4
+04. v13 | O preço mudou. E as vendas? | 49.67s | /site/videos/v13-motion.mp4
+05. v14 | Caiu. Foi mesmo o preço? | 40.90s | /site/videos/v14-motion.mp4
+06. v03 | Caiu. E agora, mexer em quê? | 34.60s | /site/videos/v03-motion.mp4
+07. v10 | Anúncios lado a lado | 35.80s | /site/videos/v10-motion.mp4
+08. v08 | Faturou. E o resultado? | 36.90s | /site/videos/v08-motion.mp4
+09. v06 | ROAS bonito. E a sobra? | 28.80s | /site/videos/v06-motion.mp4
+10. v11 | Um preço para cada conta | 38.20s | /site/videos/v11-motion.mp4
+11. v07 | Promoção com a conta à vista | 35.90s | /site/videos/v07-motion.mp4
+12. v05 | A campanha ganha um caminho | 26.30s | /site/videos/v05-motion.mp4
+13. v15 | Relâmpago: vendeu e sobrou? | 40.60s | /site/videos/v15-motion.mp4
+14. v02 | Cancelou pouco. Quanto voltou? | 31.40s | /site/videos/v02-motion.mp4
+15. v04 | Do produto à etiqueta | 30.00s | /site/videos/v04-motion.mp4
+16. v09 | Três perguntas para a rotina | 31.10s | /site/videos/v09-motion.mp4
 
-Os tempos foram medidos nos MP4 com FFprobe. O campo duracaoSegundos do catálogo
-registra a medição da mídia final; ele substitui as antigas durações editoriais
-sugeridas. O tempo fica ausente quando a mídia ainda não está finalizada.
+GÊ — PERFIL DA NARRAÇÃO
 
-ID  | Título                                | Duração final (s) | Estado
-v01 | O dia conta a história toda?           | 32,334           | Final local
-v02 | Cancelou pouco. Quanto voltou?         | 32,625           | Final local
-v03 | Caiu. E agora, mexer em quê?            | 33,083           | Final local
-v04 | Do produto à etiqueta                  | 28,958333        | Final local
-v05 | A campanha ganha um caminho            | 27,432           | Final local
-v06 | ROAS bonito. E a sobra?                | 25,128           | Final local
-v07 | Promoção com a conta à vista           | 33,333333        | Final local
-v08 | Faturou. E o resultado?                | 32,670           | Final local
-v09 | Três perguntas para a rotina           | 31,083333        | Final local
-v10 | Anúncios lado a lado                   | 33,462           | Final local
-v11 | Um preço para cada conta               | 30,630           | Final local
-v12 | Unidade e receita contam o quê?        | 34,250           | Final local
-v13 | O preço mudou. E as vendas?            | 41,052           | Final local
-v14 | Caiu. Foi mesmo o preço?               | 36,125           | Final local
-v15 | Relâmpago: vendeu e sobrou?             | 41,508           | Final local
+Voz pt-BR-ThalitaMultilingualNeural. Texto conversado, perguntas e pausas naturais.
+As 79 falas têm identidade de texto/voz/perfil no cache. O áudio é sintetizado
+diretamente, sem microfone ou gravação do som do computador.
+O provedor atual não aplica estilos expressivos SSML: a intenção vem da voz,
+do texto, da pontuação e de pequenas variações de entrega.
 
-ARQUIVOS DO CATÁLOGO
+REAPROVEITAMENTO
 
-v01: /site/videos/v01-motion.mp4 | /site/videos/v01-motion.webp
-v02: /site/videos/v02-motion.mp4 | /site/videos/v02-motion.webp
-v03: /site/videos/v03-motion.mp4 | /site/videos/v03-motion.webp
-v04: /site/videos/v04-motion.mp4 | /site/videos/v04-motion.webp
-v05: /site/videos/v05-motion.mp4 | /site/videos/v05-motion.webp
-v06: /site/videos/v06-motion.mp4 | /site/videos/v06-motion.webp
-v07: /site/videos/v07-motion.mp4 | /site/videos/v07-motion.webp
-v08: /site/videos/v08-motion.mp4 | /site/videos/v08-motion.webp
-v09: /site/videos/v09-motion.mp4 | /site/videos/v09-motion.webp
-v10: /site/videos/v10-motion.mp4 | /site/videos/v10-motion.webp
-v11: /site/videos/v11-motion.mp4 | /site/videos/v11-motion.webp
-v12: /site/videos/v12-motion.mp4 | /site/videos/v12-motion.webp
-v13: /site/videos/v13-motion.mp4 | /site/videos/v13-motion.webp
-v14: /site/videos/v14-motion.mp4 | /site/videos/v14-motion.webp
-v15: /site/videos/v15-motion.mp4 | /site/videos/v15-motion.webp
+Foram mantidas as cenas boas. Os 14 vídeos existentes receberam nova narração:
+a imagem foi copiada quando coube na janela; as demais cenas foram retimadas
+sem acelerar a fala. Quatro aberturas tiveram quadros antigos substituídos.
+V00 é a abertura de contexto. V13 acrescenta uma cena de rentabilidade.
 
-Cada URL corresponde ao arquivo de mesmo nome em public/site/videos/.
-Os quinze finais foram conferidos como 1080 × 1920, 24 fps, H.264 e áudio AAC.
-Capturas reais e quadros próprios identificados como leitura do exemplo ficam
-acima da faixa de explicação; pergunta, legenda e personagem de caixa ficam fora
-da interface. A voz é pt-BR-FranciscaNeural, sintetizada diretamente com +3%,
-sem microfone nem captura do som do computador.
+PREÇO, VOLUME E RENTABILIDADE
 
-V13 — DA QUEDA PARA A INVESTIGAÇÃO DO PREÇO
+Luminária, 05–11/11 contra 12–18/11/2026: preço 239,90 → 259,09;
+unidades 19 → 11; visitas 952 → 952; conversão 2,00% → 1,16%.
+Contribuição após Ads por unidade 83,01 → 93,58; no total 1.577,17 → 1.029,34.
+Contribuição ainda paga despesas fixas. O dia 18/11 é parcial.
+O movimento observado é uma pista de investigação, sem provar causalidade.
 
-Entrada da demonstração:
-/demonstracao/sistema/vendas/queda?de=2026-11-12&ate=2026-11-18
+CENÁRIO E LIMITES
 
-A primeira cena mostra a linha real da Luminária Arco, AT-LUZ-02, em Por que caiu:
-tag “preço subiu” e receita R$ 4.558,10 → R$ 2.849,99. O preço é um sinal para
-investigar, sem comprovar que causou a queda. Depois, a peça aprofunda a leitura
-do mesmo produto por preço, volume, visitas e conversão.
+Atlas Casa: seis SKUs, um canal Mercado Livre, histórico 05/10–18/11/2026.
+Shopee e TikTok são simulações identificadas. Conversar tem respostas guiadas.
+Todas as 16 mídias foram conferidas como H.264 1080×1920, 24 fps e áudio AAC.
 
-Sequência final de seis cenas, derivada dos WAVs e do manifesto:
-00,000–06,654: Por que caiu — sinal de preço subiu.
-06,654–13,620: preço R$ 239,90 → R$ 259,09 a partir de 12/11.
-13,620–20,322: unidades 19 → 11; visitas permanecem em 952.
-20,322–27,072: conversão 2,00% → 1,16%.
-27,072–34,182: receita R$ 4.558,10 → R$ 2.849,99.
-34,182–41,052: preço, volume e visitas para orientar a próxima pergunta.
+ROTEIROS E PRODUÇÃO
 
-Somente a primeira fala foi regravada no ajuste de abertura. As falas 2–6 e a
-configuração de V14/V15 foram preservadas. O pôster de V13 foi conferido com o
-card correto da queda, sem filtros ou navegação cobrindo os dados.
-
-FONTES EDITORIAIS
-
-GUIA NA TELA — POR QUE CAIU?
-
-O guia abre cinco passos manuais, com rolagem e destaque do dado real:
-1. Seleciona a Luminária Arco e mostra a queda com o sinal de preço.
-2. Abre a evolução para localizar a mudança de preço em 12/11.
-3. Retorna ao resumo para comparar conversão e visitas.
-4. Seleciona o Puff Linho e mostra os cinco dias sem estoque.
-5. Abre o gráfico de estoque diário para localizar a falta e a retomada.
-
-Os exemplos usam 12–18/11 contra 05–11/11/2026. A seleção altera somente a
-visualização da empresa fictícia; não salva custos, aprova ofertas ou muda estoque.
-O gráfico de estoque também fica disponível na análise normal quando há histórico.
-O guia foi conferido em celular (390 × 844) e notebook (1366 × 768).
-
-FONTES DOS ROTEIROS
-
-scripts/comercial/roteiros-base-vendas.json — v01, v02, v03 e v12.
-scripts/comercial/roteiros-base-operacao.json — v04, v05, v07 e v09.
-scripts/comercial/roteiros-base-crescimento.json — v06, v08, v10 e v11.
-scripts/comercial/roteiros-profundos.json — v13, v14 e v15.
-CENARIOS_VIDEO_DECISOES.txt — números e limites das três histórias aprofundadas.
-REVISAO_VIDEOS_2026-11-19.txt — registro histórico da correção de enquadramento.
-
-O cenário Atlas Casa usa um canal Mercado Livre, seis SKUs e histórico fictício
-de 05/10 a 18/11/2026. O dia 18/11 e as janelas em curso são parciais. Quantidade
-de pedidos, quantidade de unidades, receita e contribuição têm leituras próprias;
-os vídeos não afirmam causalidade a partir de uma comparação observada.
+scripts/comercial/narracao-historia.json: falas e ordem finais.
+scripts/comercial/perfil-voz-ge.json: identidade do narrador.
+scripts/comercial/preparar-contexto-historia.mjs: abertura e quadros corrigidos.
+scripts/comercial/preparar-rentabilidade-v13.mjs: dados e cartão da contribuição.
+scripts/comercial/aplicar-narracao-historia.mjs: troca de trilha/retiming.
+scripts/comercial/finalizar-historia.mjs: medições e promoção local.

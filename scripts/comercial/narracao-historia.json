@@ -1,0 +1,120 @@
+{
+  "versao": 1,
+  "personagem": "Gê, guia do Gerizo",
+  "voz": "pt-BR-ThalitaMultilingualNeural",
+  "nota": "Uma investigação contínua na empresa fictícia Atlas Casa. A narração acompanha os dados e captions existentes; não trata correlação como causa. Contribuição depois dos Ads ainda paga despesas fixas. Shopee e TikTok são simulações identificadas; Conversar usa respostas guiadas nesta demonstração.",
+  "ordem": ["v00", "v01", "v12", "v13", "v14", "v03", "v10", "v08", "v06", "v11", "v07", "v05", "v15", "v02", "v04", "v09"],
+  "videos": [
+    { "id": "v00", "titulo": "Sua operação, por dentro", "cenas": [
+      { "fala": "Eu sou o Gê. No Gerizo, vendas, custos e decisões se encontram.", "humor": "convite" },
+      { "fala": "Comece aqui: dia, semana e produto. O que mudou nas vendas?", "humor": "curioso" },
+      { "fala": "Caiu? Abra o produto. Vamos conferir preço, visitas e estoque.", "humor": "curioso" },
+      { "fala": "Depois, veja o que sobrou e planeje a próxima ação. Vem comigo!", "humor": "feliz" }
+    ] },
+    { "id": "v01", "titulo": "O dia conta a história toda?", "cenas": [
+      { "fala": "Olha o dia de hoje. Quase sete mil reais! Mas será que um dia conta a história toda?", "humor": "curioso" },
+      { "fala": "Esse é o valor líquido do dia dezoito. E o dia ainda não terminou.", "humor": "atento" },
+      { "fala": "Vamos abrir a semana. Já são vinte e dois mil e quinhentos reais, com a semana em andamento.", "humor": "curioso" },
+      { "fala": "Olha esse cuidado: a média usa só as semanas fechadas. A comparação fica mais justa.", "humor": "feliz" },
+      { "fala": "O dia chamou atenção. A semana deu contexto. Mas qual produto puxou a mudança? Vamos procurar.", "humor": "convite" }
+    ] },
+    { "id": "v12", "titulo": "Unidade e receita contam o quê?", "cenas": [
+      { "fala": "Achei a luminária. Ela vendeu bem? Depende da pergunta: quantas saíram ou quanto entrou?", "humor": "curioso" },
+      { "fala": "Em unidades, saíram cento e vinte e duas luminárias no histórico deste exemplo.", "humor": "feliz" },
+      { "fala": "Trocou para receita? Agora são vinte e oito mil e oitocentos reais. Mesmo produto, outra leitura.", "humor": "curioso" },
+      { "fala": "O produto e o período continuam os mesmos. Só a medida mudou.", "humor": "atento" },
+      { "fala": "Unidades ajudam na reposição. Receita mostra o faturamento. Agora, por que a luminária caiu?", "humor": "convite" }
+    ] },
+    { "id": "v13", "titulo": "O preço mudou. E as vendas?", "cenas": [
+      { "fala": "A luminária vendeu menos. Por quê? Aqui apareceu uma pista: o preço subiu. Vamos abrir.", "humor": "curioso" },
+      { "fala": "Olha aqui: de duzentos e quarenta para duzentos e cinquenta e nove reais, a partir do dia doze.", "humor": "curioso" },
+      { "fala": "Mas o volume foi de dezenove para onze. As visitas? As mesmas.", "humor": "curioso" },
+      { "fala": "Com a mesma quantidade de visitas, a conversão caiu. Vale investigar a oferta.", "humor": "atento" },
+      { "fala": "Entrou menos receita. Então... pelo menos sobrou mais dinheiro?", "humor": "curioso" },
+      { "fala": "Por unidade, sim. No total, não: a contribuição depois dos Ads caiu de mil quinhentos e setenta e sete para mil e vinte e nove reais.", "humor": "atento" },
+      { "fala": "Essa sobra ainda paga as despesas fixas. Mas... será que toda queda é preço?", "humor": "convite" }
+    ] },
+    { "id": "v14", "titulo": "Caiu. Foi mesmo o preço?", "cenas": [
+      { "fala": "Na luminária, o preço virou uma pista. E nessa mesa? Vamos olhar as visitas primeiro.", "humor": "curioso" },
+      { "fala": "A Mesa Aurora recebeu quase trinta e oito por cento menos visitas. Entrou menos gente.", "humor": "atento" },
+      { "fala": "Mas olha só: a conversão melhorou! Uma parte maior das visitas virou venda.", "humor": "feliz" },
+      { "fala": "O desconto só chegou no fim do período. O gráfico ajuda a colocar cada mudança no tempo.", "humor": "atento" },
+      { "fala": "Já esse kit teve outro ritmo: nove unidades no dia da relâmpago. Vamos guardar esse caso.", "humor": "feliz" },
+      { "fala": "Preço e visitas contam histórias diferentes. E se o produto simplesmente ficou sem estoque?", "humor": "convite" }
+    ] },
+    { "id": "v03", "titulo": "Caiu. E agora, mexer em quê?", "cenas": [
+      { "fala": "A receita caiu. Mexer no preço de tudo? Espera: cada produto pode ter uma pista diferente.", "humor": "curioso" },
+      { "fala": "Na Mesa, entraram menos visitas. No Puff, a pista vai ser outra.", "humor": "atento" },
+      { "fala": "A conversão da Mesa até melhorou. Por isso, vale olhar a exposição antes de mudar a oferta.", "humor": "atento" },
+      { "fala": "Achei o Puff: cinco de sete dias sem saldo! Ter estoque agora não apaga o que aconteceu antes.", "humor": "curioso" },
+      { "fala": "Cada produto pede uma ação. Agora vamos abrir os anúncios e comparar de perto.", "humor": "convite" }
+    ] },
+    { "id": "v10", "titulo": "Anúncios lado a lado", "cenas": [
+      { "fala": "Qual anúncio merece atenção? Vamos colocar os dois lado a lado, além do faturamento.", "humor": "curioso" },
+      { "fala": "Dá para comparar até quatro anúncios. Receita, visitas e conversão, na mesma leitura.", "humor": "feliz" },
+      { "fala": "Puff e kit venderam quantidades parecidas. Mas preço, uso e estoque são diferentes. O contexto importa.", "humor": "atento" },
+      { "fala": "Aqui, preço pago e preço de vitrine têm linhas próprias. Quando cada um mudou?", "humor": "curioso" },
+      { "fala": "Essa é a conversão da Mesa. Já vimos a venda; agora falta conferir o que ficou de resultado.", "humor": "convite" }
+    ] },
+    { "id": "v08", "titulo": "Faturou. E o resultado?", "cenas": [
+      { "fala": "Faturamento bonito, né? Mas ele ainda precisa pagar a conta. Vamos seguir o caminho do dinheiro.", "humor": "curioso" },
+      { "fala": "Frete e comissão entram com o que foi praticado no canal. Dá para conferir a origem.", "humor": "feliz" },
+      { "fala": "No produto, entram mercadoria, embalagem e impostos. Aqui está o custo cadastrado da Mesa.", "humor": "atento" },
+      { "fala": "Primeiro, os custos da venda. Depois, os Ads e as despesas da operação. Cada parte no seu lugar.", "humor": "atento" },
+      { "fala": "Com os custos completos, aparece o resultado. E a mídia? Está ajudando nessa sobra?", "humor": "convite" }
+    ] },
+    { "id": "v06", "titulo": "ROAS bonito. E a sobra?", "cenas": [
+      { "fala": "O anúncio vendeu. Ótimo! Agora vem a pergunta boa: a mídia deixou dinheiro?", "humor": "curioso" },
+      { "fala": "No kit, foram quinhentos e noventa e sete reais investidos nesse período.", "humor": "atento" },
+      { "fala": "Essa sobra já descontou os Ads e os custos apurados. As despesas da operação ainda vêm depois.", "humor": "atento" },
+      { "fala": "Aqui, os três sinais estão zerados. Antes de pausar, confira o contexto. E se testássemos outro preço?", "humor": "convite" }
+    ] },
+    { "id": "v11", "titulo": "Um preço para cada conta", "cenas": [
+      { "fala": "Um preço para todo canal? Hum... cada canal muda a conta. Vamos simular antes.", "humor": "curioso" },
+      { "fala": "No Mercado Livre, entram custo, embalagem e frete. O preço precisa carregar essa conta.", "humor": "atento" },
+      { "fala": "Peso e medidas também contam na cotação do frete. Aqui, tudo usa os dados fictícios do exemplo.", "humor": "atento" },
+      { "fala": "Na Shopee, a tela avisa: simulação. Compare taxas, recebimento e margem para o mesmo produto.", "humor": "curioso" },
+      { "fala": "No TikTok, também é simulação. Outro canal, outra conta. E aquela promoção, será que cabe?", "humor": "convite" }
+    ] },
+    { "id": "v07", "titulo": "Promoção com a conta à vista", "cenas": [
+      { "fala": "Chegou um convite de promoção. Desconto bom para quem? Vamos conferir prazo e produtos.", "humor": "curioso" },
+      { "fala": "Abra a proposta. Preço, piso e resultado estimado ajudam a conferir se a oferta cabe.", "humor": "atento" },
+      { "fala": "Veio em planilha? Ela também entra aqui, com os itens da Central de Promoções.", "humor": "feliz" },
+      { "fala": "Sua regra pode usar tabela, margem pelos custos ou os dois critérios. Confira também a tolerância.", "humor": "atento" },
+      { "fala": "As regras sugerem; você confere. A proposta fez sentido? Agora ela precisa de um plano.", "humor": "convite" }
+    ] },
+    { "id": "v05", "titulo": "A campanha ganha um caminho", "cenas": [
+      { "fala": "A oferta virou uma ação. No quadro, dá para ver o que está sendo preparado.", "humor": "curioso" },
+      { "fala": "No mapa, a campanha é o ponto de partida. Produtos e ações ficam conectados.", "humor": "feliz" },
+      { "fala": "Quem faz o quê? Abra a ficha: responsável, etapa e checklist, juntos.", "humor": "curioso" },
+      { "fala": "Planejou, acompanhou. Agora vamos abrir uma oferta encerrada e conferir o resultado que ela deixou.", "humor": "convite" }
+    ] },
+    { "id": "v15", "titulo": "Relâmpago: vendeu e sobrou?", "cenas": [
+      { "fala": "Lembra daquele kit? A relâmpago vendeu mais. Mas ficou dinheiro ou só fez barulho?", "humor": "curioso" },
+      { "fala": "O preço ficou acima do piso: cento e dez reais e trinta e um centavos.", "humor": "atento" },
+      { "fala": "No dia anterior, duas unidades. No dia da oferta, nove! Agora, vamos olhar além do volume.", "humor": "feliz" },
+      { "fala": "Quase mil reais de receita. A pergunta é: depois dos custos, quanto ficou?", "humor": "curioso" },
+      { "fala": "Depois dos custos da venda e dos Ads, ficaram trezentos e setenta e um reais e quarenta e cinco centavos.", "humor": "feliz" },
+      { "fala": "Essa contribuição ainda paga despesas fixas. E se uma parte das vendas foi cancelada?", "humor": "convite" }
+    ] },
+    { "id": "v02", "titulo": "Cancelou pouco. Quanto voltou?", "cenas": [
+      { "fala": "Cancelou só um pouquinho? Vamos traduzir esse pouquinho para dinheiro.", "humor": "curioso" },
+      { "fala": "Três pedidos cancelados somam quase dois mil reais no histórico do exemplo.", "humor": "atento" },
+      { "fala": "Meio por cento sobre o valor. A taxa é pequena; o dinheiro continua pedindo atenção.", "humor": "atento" },
+      { "fala": "Por SKU, o Puff concentra quase novecentos e oitenta reais cancelados. Já temos onde olhar.", "humor": "curioso" },
+      { "fala": "Abra os pedidos e confira o que voltou. Agora vamos cuidar do que precisa sair hoje.", "humor": "convite" }
+    ] },
+    { "id": "v04", "titulo": "Do produto à etiqueta", "cenas": [
+      { "fala": "Qual caixa sai primeiro? Comece pelo prazo. O Separador mostra o que precisa sair.", "humor": "curioso" },
+      { "fala": "Em Pegar, as quantidades ficam juntas por produto. Uma ida à prateleira, com o SKU certo.", "humor": "feliz" },
+      { "fala": "Agora, Montar. Os pedidos com os mesmos itens ficam juntos para conferir e marcar.", "humor": "atento" },
+      { "fala": "Confira conta, pedidos e quantidades antes das etiquetas. A rotina ganhou caminho. Ainda ficou uma pergunta?", "humor": "convite" }
+    ] },
+    { "id": "v09", "titulo": "Três perguntas para a rotina", "cenas": [
+      { "fala": "Ficou uma pergunta? Aqui, três exemplos guiados mostram como a conversa ajuda na rotina.", "humor": "curioso" },
+      { "fala": "Qual produto perdeu vendas? A resposta compara os dados e aponta onde continuar a investigação.", "humor": "curioso" },
+      { "fala": "Onde os Ads pesam na margem? A conversa ajuda a chegar ao custo e à tela certa.", "humor": "curioso" },
+      { "fala": "O que sai hoje? A resposta aponta prazo e pendências. Você pergunta, confere o dado e continua.", "humor": "feliz" }
+    ] }
+  ]
+}

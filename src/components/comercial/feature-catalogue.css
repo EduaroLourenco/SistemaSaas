@@ -1,0 +1,39 @@
+.gz-historia-comecar { display:flex; align-items:center; flex-wrap:wrap; gap:12px 22px; margin-top:26px; }
+.gz-cat .gz-historia-comecar .gz-btn { margin-top:0; }
+.gz-historia-comecar > span { color:var(--gz-cinza); font-size:14px; }
+.gz-historia-busca { margin-top:20px; border-block:1px solid var(--gz-linha); }
+.gz-historia-busca summary { display:flex; align-items:center; justify-content:space-between; min-height:64px; padding-block:14px; color:var(--gz-cinza); font-size:15px; font-weight:550; cursor:pointer; list-style:none; }
+.gz-historia-busca summary::-webkit-details-marker { display:none; }
+.gz-historia-busca summary::after { content:"+"; margin-left:20px; color:var(--gz-roxo); font-size:24px; font-weight:400; }
+.gz-historia-busca[open] summary::after { content:"−"; }
+.gz-historia-busca > div { padding-bottom:16px; }
+.gz-historia-busca .gz-busca-func { margin-top:0; }
+.gz-historia-busca .gz-filtros { position:static; gap:20px; border-bottom:0; }
+.gz-historia-resultados { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-top:24px; font-size:14px; color:var(--gz-cinza); }
+.gz-historia-resultados button { min-height:44px; border:0; background:none; color:var(--gz-roxo); font:600 14px var(--gz-texto); cursor:pointer; }
+.gz-historia-etapa { margin-top:34px; }
+.gz-historia-etapa h2 { margin:0; padding-bottom:8px; color:var(--gz-cinza); font-size:15px; line-height:1.5; font-weight:600; }
+.gz-historia-etapa .gz-linha-func { grid-template-columns:72px minmax(0,1fr) 44px; gap:24px; padding-block:18px; }
+.gz-historia-etapa .gz-linha-func img { width:72px; height:96px; }
+.gz-historia-etapa .gz-linha-func small { color:var(--gz-cinza); font-size:12px; font-weight:500; }
+.gz-historia-etapa .gz-linha-func b { font-size:clamp(20px,2.2vw,27px); line-height:1.2; }
+.gz-historia-etapa .gz-linha-func .gz-desc { margin-top:6px; font-size:15px; line-height:1.45; }
+.gz-historia-etapa .gz-assistir { display:grid; width:44px; height:44px; place-items:center; border:1px solid var(--gz-linha); border-radius:50%; }
+.gz-historia-etapa .gz-linha-func:hover .gz-assistir { background:#f2eef8; border-color:#dcd5e8; }
+.gz-historia-busca summary:focus-visible { outline:2px solid var(--gz-roxo); outline-offset:3px; }
+@media(max-width:760px) {
+  .gz-cat { padding-top:42px; }
+  .gz-cat h1 { font-size:clamp(36px,10vw,52px); line-height:1.05; }
+  .gz-cat p { font-size:17px; line-height:1.5; }
+  .gz-historia-comecar { align-items:flex-start; flex-direction:column; gap:10px; margin-top:24px; }
+  .gz-historia-comecar .gz-btn { width:100%; }
+  .gz-historia-comecar > span { width:100%; text-align:center; font-size:13px; }
+  .gz-historia-busca { margin-top:8px; }
+  .gz-historia-busca summary { min-height:58px; font-size:14px; }
+  .gz-historia-etapa { margin-top:28px; }
+  .gz-historia-etapa .gz-linha-func { grid-template-columns:58px minmax(0,1fr); gap:16px; padding-block:16px; }
+  .gz-historia-etapa .gz-linha-func img { width:58px; height:82px; border-radius:8px; }
+  .gz-historia-etapa .gz-linha-func b { font-size:20px; }
+  .gz-historia-etapa .gz-linha-func .gz-desc { font-size:14px; }
+  .gz-historia-etapa .gz-assistir { display:none; }
+}
