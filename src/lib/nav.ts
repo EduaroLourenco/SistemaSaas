@@ -123,6 +123,7 @@ export const NAV: NavGroup[] = [
   { label: "Produtos e preços", icon: Package, items: [
     { label: "Produtos", href: "/produtos" },
     { label: "Precificação", href: "/produtos/precificacao" },
+    { label: "Tabela por faixa", href: "/produtos/faixas" },
   ] },
 ];
 

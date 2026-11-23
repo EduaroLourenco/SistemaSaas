@@ -1,4 +1,5 @@
 /* eslint-disable */
+import { faixaDaComissao } from "./faixa-comissao";
 
 // Util functions for math
 export function roundup(x: number, d: number = 0): number {
@@ -396,10 +397,7 @@ export function processItem(
     }
 
     const reduzida = saleFee / finalPrice;
-    const considerar = Math.max(
-      Math.round(((roundup((cheia - reduzida) * 100) + 0.5) / 100) * 10000) / 10000,
-      config.comissaoMinima
-    );
+    const considerar = faixaDaComissao(cheia - reduzida, config.comissaoMinima);
 
     const tabela = getPrecoTabela(data, sku, mlb, considerar);
     if (tabela === null) return { action: negativeAction, pendencia: `${semPreco(data)} para a comissão ${(considerar*100).toFixed(1)}%`, newPrice: null };
