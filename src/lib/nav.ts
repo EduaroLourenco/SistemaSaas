@@ -95,7 +95,7 @@ export const NAV: NavGroup[] = [
   {
     label: "Mercado Livre",
     icon: ShoppingBag,
-    items: [{ label: "Termômetro", href: "/mercado-livre" }, area(3)],
+    items: [{ label: "Termômetro", href: "/mercado-livre" }, area(3), { label: "Apresentação", href: "/relatorios/apresentacao?roteiro=meli", rotas: ["/relatorios/apresentacao"] }],
   },
   {
     label: "Financeiro",
