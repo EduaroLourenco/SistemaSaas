@@ -26,13 +26,15 @@ export function prepararAnuncios(anuncios: Anuncio[], semanas: string[]) {
 
 export function pertenceFila(a: AnuncioAnalisado, fila: FilaAnuncios): boolean {
   if (fila === "todos") return true;
-  if (fila === "estoque") return a.status === "ativo" && a.estoque === 0;
+  // O Meli pausa sozinho o anúncio que zera: exigir "ativo" deixava esta fila sempre vazia.
+  if (fila === "estoque") return (a.status === "ativo" || a.status === "pausado") && a.estoque === 0;
   if (fila === "sem_historico") return a.semanas.length === 0;
   if (fila === "sem_tabela") return !(a.precoReferencia || a.metricas.precoIdeal);
   return a.status === "ativo" && a.semanas.length > 0 && a.lentes.includes(fila);
 }
 
 export function sinalAnuncio(a: AnuncioAnalisado): { texto: string; tom: "down" | "warn" | "neutral" | "up" } {
+  if (a.status === "pausado" && a.estoque === 0) return { texto: "Sem estoque · pausado", tom: "down" };
   if (a.status !== "ativo") return { texto: a.status === "pausado" ? "Pausado" : "Finalizado", tom: "neutral" };
   if (a.estoque === 0) return { texto: "Sem estoque", tom: "down" };
   if (!a.semanas.length) return { texto: "Sem histórico", tom: "neutral" };
