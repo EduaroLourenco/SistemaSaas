@@ -57,6 +57,12 @@ function Contador({ valor, formato = "money" }: { valor: number; formato?: "mone
   return <>{formato === "money" ? money(v) : formato === "pct" ? pctTxt(v) : count(Math.round(v))}</>;
 }
 
+/** SKU pequeno ao lado do nome: o título sozinho não acha o produto no Meli nem na planilha. */
+function Sku({ v }: { v?: string | null }) {
+  return v && v !== "—" ? <span className="num ml-1.5 whitespace-nowrap text-[11px] font-normal text-ink-3">{v}</span> : null;
+}
+const skuDe = (it?: { sku: string; codigo: string } | null) => (it ? (it.sku && it.sku !== "—" ? it.sku : it.codigo) : null);
+
 function Delta({ v, inverso }: { v: number | null; inverso?: boolean }) {
   if (v == null) return <span className="text-ink-3">sem base</span>;
   const bom = inverso ? v < 0 : v > 0;
@@ -385,7 +391,7 @@ function Ponte({ d, passo }: { d: Dados; passo: number }) {
             <ul className="mt-1 flex flex-col gap-0.5">
               {p.top.map((t) => (
                 <li key={t.sku} className="flex items-baseline justify-between gap-3 text-[13px]">
-                  <span className="min-w-0 text-ink-2"><span className="text-ink-3">{t.sku}</span> {t.titulo}</span>
+                  <span className="min-w-0 text-ink-2">{t.titulo}<Sku v={t.sku} /></span>
                   <span className={`num shrink-0 ${t.valor < 0 ? "text-down" : "text-up"}`}>{sinalR(t.valor)}</span>
                 </li>
               ))}
@@ -407,7 +413,7 @@ function Ranking({ itens, cor, passo, nDetalhe = 1 }: { itens: Gatilho[]; cor: s
           <div className="flex items-baseline justify-between gap-3">
             <span className="min-w-0 text-[15px] font-semibold text-ink">
               {g.item?.curva && <span className="mr-1.5 rounded-[4px] bg-panel-3 px-1.5 text-[12px] text-ink-2">{g.item.curva}</span>}
-              {g.item?.titulo ?? g.nome}
+              {g.item?.titulo ?? g.nome}<Sku v={skuDe(g.item)} />
               {g.item?.familia && <span className="ml-2 text-[12px] font-normal text-ink-3">família {g.item.familia}</span>}
             </span>
             <span className="num shrink-0 text-[15px] font-bold" style={{ color: cor }}>{money(g.impacto)}</span>
@@ -653,7 +659,7 @@ export function montarSlides(d: Dados): SlideDef[] {
             );
             return (
               <div key={p.sku} className="rounded-r2 border border-line bg-panel p-4 acm-sobe" style={{ animationDelay: `${i * 0.12}s` }}>
-                <div className="text-[15px] font-semibold text-ink">{p.titulo}</div>
+                <div className="text-[15px] font-semibold text-ink">{p.titulo}<Sku v={p.sku} /></div>
                 <div className="relative my-3 h-5 rounded-full bg-panel-2">
                   {marca(p.tabela?.preco, "var(--line-2)", 0, 0.2 + i * 0.1)}
                   {marca(p.vitrineHoje, "var(--brand)", 0, 0.4 + i * 0.1)}
@@ -694,7 +700,7 @@ export function montarSlides(d: Dados): SlideDef[] {
           <P n={1} passo={passo} className="flex flex-col gap-3">
             {potencial.slice(0, 5).map((x, i) => (
               <div key={i} className="rounded-r1 border border-line bg-panel p-3 acm-sobe" style={{ animationDelay: `${i * 0.12}s` }}>
-                <div className="text-[14px] font-semibold text-ink">{x.item?.titulo}</div>
+                <div className="text-[14px] font-semibold text-ink">{x.item?.titulo}<Sku v={skuDe(x.item)} /></div>
                 <div className="text-[13px] text-ink-2">{x.texto}</div>
               </div>
             ))}
@@ -726,7 +732,7 @@ export function montarSlides(d: Dados): SlideDef[] {
             const vp = variacao(pg, pa);
             return (
               <div key={i} className="grid gap-1 md:grid-cols-[34%_1fr] md:items-center md:gap-4 acm-sobe" style={{ animationDelay: `${i * 0.15}s` }}>
-                <span className="text-[14px] font-semibold text-ink">{x.item?.titulo}</span>
+                <span className="text-[14px] font-semibold text-ink">{x.item?.titulo}<Sku v={skuDe(x.item)} /></span>
                 <div>
                   <div className="relative h-6 rounded-full bg-panel-2">
                     <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-line-2" style={{ left: p(pa) }} />
@@ -760,7 +766,7 @@ export function montarSlides(d: Dados): SlideDef[] {
             const a = Number(x.numeros.antes), b = Number(x.numeros.agora);
             return (
               <div key={i} className="acm-sobe" style={{ animationDelay: `${i * 0.12}s` }}>
-                <div className="flex justify-between gap-3 text-[14px]"><span className="font-semibold text-ink">{x.item?.titulo}</span><span className="num text-down">{Math.round(a * 100)}% → {Math.round(b * 100)}%</span></div>
+                <div className="flex justify-between gap-3 text-[14px]"><span className="font-semibold text-ink">{x.item?.titulo}<Sku v={skuDe(x.item)} /></span><span className="num text-down">{Math.round(a * 100)}% → {Math.round(b * 100)}%</span></div>
                 <div className="relative mt-1 h-3 rounded-full bg-panel-2">
                   <div className="absolute inset-y-0 left-0 rounded-full bg-brand acm-esvazia" style={{ width: `${a * 100}%`, ["--fica" as string]: String(a ? b / a : 0), animationDelay: `${0.3 + i * 0.12}s` } as React.CSSProperties} />
                 </div>
@@ -785,7 +791,7 @@ export function montarSlides(d: Dados): SlideDef[] {
             const cob = x.id === "G11" ? Number(x.numeros.coberturaDias) : 0;
             return (
               <div key={i} className="rounded-r2 border border-line bg-panel p-4 acm-sobe" style={{ animationDelay: `${i * 0.15}s` }}>
-                <div className="flex flex-wrap justify-between gap-2"><span className="text-[15px] font-semibold text-ink">{x.item?.titulo}</span><span className={`text-[13px] font-semibold ${x.id === "G11" ? "text-warn" : "text-down"}`}>{x.nome}</span></div>
+                <div className="flex flex-wrap justify-between gap-2"><span className="text-[15px] font-semibold text-ink">{x.item?.titulo}<Sku v={skuDe(x.item)} /></span><span className={`text-[13px] font-semibold ${x.id === "G11" ? "text-warn" : "text-down"}`}>{x.nome}</span></div>
                 {x.id !== "G31" && <div className="mt-2 grid grid-cols-7 gap-1">
                   {Array.from({ length: 7 }, (_, k) => {
                     const vazio = x.id === "G10" ? k < Number(x.numeros.diasSemEstoque) : k >= Math.floor(cob);
@@ -899,11 +905,11 @@ export function montarSlides(d: Dados): SlideDef[] {
         <div className="grid gap-6 md:grid-cols-2">
           <div className="flex flex-col gap-3">
             <span className="label text-up">Subir verba</span>
-            {subir.length ? subir.slice(0, 4).map((x, i) => <div key={i} className="rounded-r1 border border-line bg-panel p-3 acm-sobe" style={{ animationDelay: `${i * 0.12}s` }}><div className="text-[14px] font-semibold">{x.item?.titulo}</div><div className="text-[13px] text-ink-2">{x.texto}</div></div>) : <p className="text-[14px] text-ink-3">nenhum anúncio com folga clara</p>}
+            {subir.length ? subir.slice(0, 4).map((x, i) => <div key={i} className="rounded-r1 border border-line bg-panel p-3 acm-sobe" style={{ animationDelay: `${i * 0.12}s` }}><div className="text-[14px] font-semibold">{x.item?.titulo}<Sku v={skuDe(x.item)} /></div><div className="text-[13px] text-ink-2">{x.texto}</div></div>) : <p className="text-[14px] text-ink-3">nenhum anúncio com folga clara</p>}
           </div>
           <P n={1} passo={passo} className="flex flex-col gap-3">
             <span className="label text-down">Gastou sem vender</span>
-            {cortar.slice(0, 4).map((x, i) => <div key={i} className="rounded-r1 border border-line bg-panel p-3 acm-sobe" style={{ animationDelay: `${i * 0.12}s` }}><div className="text-[14px] font-semibold">{x.item?.titulo}</div><div className="text-[13px] text-ink-2">{x.texto}</div></div>)}
+            {cortar.slice(0, 4).map((x, i) => <div key={i} className="rounded-r1 border border-line bg-panel p-3 acm-sobe" style={{ animationDelay: `${i * 0.12}s` }}><div className="text-[14px] font-semibold">{x.item?.titulo}<Sku v={skuDe(x.item)} /></div><div className="text-[13px] text-ink-2">{x.texto}</div></div>)}
             <Ir g={midia[0]} />
           </P>
         </div>
@@ -935,7 +941,7 @@ export function montarSlides(d: Dados): SlideDef[] {
             <li key={i} className="grid grid-cols-[28px_1fr] items-start gap-3 rounded-r1 border border-line bg-panel p-3 acm-sobe md:grid-cols-[28px_1fr_auto] md:items-center" style={{ animationDelay: `${i * 0.18}s` }}>
               <span className="num flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[13px] font-bold text-brand-ink acm-pop" style={{ animationDelay: `${i * 0.18 + 0.1}s` }}>{i + 1}</span>
               <div className="min-w-0">
-                <div className="text-[15px] font-semibold text-ink">{ACAO[x.id]}{x.item ? ` · ${x.item.titulo}` : ""}</div>
+                <div className="text-[15px] font-semibold text-ink">{ACAO[x.id]}{x.item ? ` · ${x.item.titulo}` : ""}<Sku v={skuDe(x.item)} /></div>
                 <div className="text-[13px] text-ink-2">{x.texto}{x.hipotese ? " (hipótese)" : ""}</div>
               </div>
               <div className="col-start-2 md:col-start-auto"><Ir g={x} /></div>
