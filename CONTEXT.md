@@ -163,6 +163,26 @@ preço-alvo e negociação de tarifa consultam esta mesma tabela — duas
 respostas diferentes para a mesma pergunta seria o pior defeito possível
 aqui.
 
+### Fluxo e Antecipado (Probel)
+
+A Probel manda duas tabelas por faixa de comissão (20,5% a 4,5%), no arquivo
+`Tabela de preços - marketplaces.xlsx` do Drive (`02_Canais de Venda/01_Campanhas
+2026/#Formação de preço/Tabelas preços Marketplaces/`), abas `Probel (Fluxo)` e
+`Probel (Antecipado)`; Prodormir/Boa Forma têm as mesmas duas.
+
+- **Fluxo** = preço cartão × (0,75 + comissão). Preço cartão = MKP Atual × 0,90.
+  Linear: cada ponto de comissão soma 1% do preço cartão.
+- **Antecipado** = MKP Atual com taxa de antecipação, depois −10% de cartão,
+  depois a mesma escada. Sai uns 9% abaixo do Fluxo na mesma faixa.
+
+Comissão fora da tabela (11%, por exemplo) = meio entre as faixas vizinhas.
+
+> Armadilha medida em 23/11: o Antecipado a 19,5% fica a centavos do Fluxo a
+> 11%. Seis preços da Magalu pareciam Antecipado 19,5% e eram Fluxo 11%. Sem
+> o arquivo, não dá para separar as duas; abra as duas abas antes de concluir.
+> A `Probel-Formula-base-30-09.xlsx` em `output/` é o Antecipado, não o Fluxo.
+> A planilha "Probel × faixas de preço" é Fluxo.
+
 ---
 
 ## Margem
