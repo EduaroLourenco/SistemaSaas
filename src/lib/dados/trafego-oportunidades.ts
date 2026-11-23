@@ -106,7 +106,7 @@ export const ROTULO_ACAO: Record<AcaoAds, string> = {
   entrar: "Entrar no ads",
   rever_preco: "Rever preço ou lance",
   desligar: "Desligar",
-  midia_sobrou: "A mídia sobrou",
+  midia_sobrou: "Vende sem o ads",
   manter: "Manter",
 };
 
@@ -162,9 +162,13 @@ export function classificarOportunidades(entradas: EntradaOportunidade[]): {
       motivo = e.catalogo
         ? `${reais(e.investimento)} sem venda neste anúncio — é de catálogo (${e.catalogo}), confira o anúncio vencedor antes`
         : `${reais(e.investimento)} sem venda nenhuma`;
+    } else if (e.investimento > 0 && e.receitaAtribuida === 0 && e.receitaReal > 0 && e.unidades < UNIDADES_MINIMAS) {
+      /* Uma venda por fora não prova que o anúncio vende sozinho: o ads gastou e não trouxe nada. */
+      acao = "desligar";
+      motivo = `${reais(e.investimento)} de ads sem venda pelo ads; só ${e.unidades} un. por fora`;
     } else if (e.investimento > 0 && e.receitaAtribuida === 0 && e.receitaReal > 0) {
       acao = "midia_sobrou";
-      motivo = `vendeu ${reais(e.receitaReal)} sem a mídia creditar nada`;
+      motivo = `o ads gastou ${reais(e.investimento)} e não trouxe venda; as ${e.unidades} un. (${reais(e.receitaReal)}) vieram por fora: dá para pausar a verba`;
     } else if (e.investimento > 0 && acos != null && e.margemPct != null && acos > e.margemPct) {
       /* A mídia custa mais do que o anúncio deixa. Não é "ACOS alto" no
          abstrato: é ACOS acima da margem DESTE anúncio, que é o ponto em

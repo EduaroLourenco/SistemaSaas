@@ -69,7 +69,8 @@ const maisDias = (iso: string, n: number) =>
 
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
-export async function carregarRecordeSku(sku: string): Promise<RecordeSku> {
+/** `contas`: só os pedidos dessas contas (o recorde de um canal só). Sem ela, todos os canais. */
+export async function carregarRecordeSku(sku: string, contas?: string[]): Promise<RecordeSku> {
   const sb = await clienteServidor();
   const vazio: RecordeSku = { sku, recorde: null, ultima: null, semanasComVenda: 0, desde: null };
   if (!sku.trim()) return vazio;
@@ -79,13 +80,13 @@ export async function carregarRecordeSku(sku: string): Promise<RecordeSku> {
    * irmãos do mesmo produto entram na mesma semana. `sku` é citext, então
    * a comparação já ignora caixa.
    */
-  const linhas = (await paginar(() =>
-    sb
+  const linhas = (await paginar(() => {
+    const q = sb
       .from("pedido_itens")
-      .select("quantidade,preco_unitario,pedidos!inner(data,cancelado)")
-      .eq("sku", sku)
-      .order("id")
-  )) as unknown as LinhaItem[];
+      .select("quantidade,preco_unitario,pedidos!inner(data,cancelado,conta_canal_id)")
+      .eq("sku", sku);
+    return (contas?.length ? q.in("pedidos.conta_canal_id", contas) : q).order("id");
+  })) as unknown as LinhaItem[];
 
   const porSemana = new Map<string, { unidades: number; receita: number }>();
   let desde: string | null = null;

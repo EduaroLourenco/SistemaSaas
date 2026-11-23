@@ -12,6 +12,7 @@ import { carregarBaseMargem, agregar, type BaseMargem } from "./margem";
 import { carregarRecordeSku, type RecordeSku } from "./recorde-sku";
 import { temColunaFamilia } from "./coluna-familia";
 import { diaSP } from "@/lib/promocoes/participacao";
+import { montarPonte, type Ponte } from "@/lib/acompanhamento/ponte";
 import {
   avaliarGatilhos,
   type CancelamentoQ,
@@ -83,13 +84,15 @@ export type DadosAcompanhamento = {
   reputacao: ContaReputacaoQ[];
   cancelamentos: { antes: CancelamentoQ; agora: CancelamentoQ } | null;
   margem: MargemQ | null;
+  /** Para onde foi a diferença: estoque, visitas, conversão, preço. Soma = agora − antes. */
+  ponte: Ponte | null;
 };
 
 const ladoVazio = (): LadoQ => ({ receita: 0, unidades: 0, pedidos: 0, visitas: null, conversao: null, precoVendido: null, precoVitrine: null });
 const mais = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 const vazio = (de: string, ate: string, aviso: string): DadosAcompanhamento => ({
   de, ate, deAnterior: "", ateAnterior: "", janelaMidia: null, gatilhos: [], totais: { antes: ladoVazio(), agora: ladoVazio() },
-  serie: [], acontecimentos: [], historicos: {}, promocoes: [], precos: [], reputacao: [], cancelamentos: null, margem: null, aviso,
+  serie: [], acontecimentos: [], historicos: {}, promocoes: [], precos: [], reputacao: [], cancelamentos: null, margem: null, ponte: null, aviso,
 });
 const normal = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
@@ -119,7 +122,7 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
   const deAnterior = anterior?.de ?? mais(de, -dias);
   const ateAnterior = anterior?.ate ?? mais(de, -1);
 
-  const [queda, saude, resultados, convitesBrutos, midia, diarias, exclusoes, reputacaoBruta, baseMargem, familiasBrutas] = await Promise.all([
+  const [queda, saudeToda, resultados, convitesBrutos, midia, diarias, exclusoes, reputacaoBruta, baseMargem, familiasBrutas] = await Promise.all([
     carregarQueda({ de, ate, deAnt: deAnterior, ateAnt: ateAnterior, nivel: "produto", canais: meli.id }),
     carregarSaude().catch(() => []),
     carregarResultadosPlanejamento(),
@@ -163,6 +166,29 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
       )
       .catch(() => []),
   ]);
+
+  /*
+   * Tudo aqui é só Mercado Livre. A saúde olha todas as contas: fica só o
+   * que fala do Meli. Ação do Planejamento conta quando o Meli está nela.
+   */
+  const ehMeli = (nome: string) => /mercado livre/i.test(nome);
+  // Só o que impede ler o período: conta atrasada e pedidos × totais. Custo é do módulo de lucro;
+  // a leitura de preço de hoje só importa se o período chega até hoje.
+  const LER = new Set(["atualizacao", "consistencia", ...(ate >= hoje ? ["preco"] : [])]);
+  const saude = saudeToda
+    .filter((s) => LER.has(s.id))
+    .map((s) => {
+      if (!s.detalhes?.length) return s;
+      const det = s.detalhes.filter((d) => ehMeli(d.nome));
+      if (!det.length) return null;
+      const estado = det.some((d) => d.estado === "problema") ? "problema" : det.some((d) => d.estado === "atencao") ? "atencao" : "ok";
+      // A resposta original conta todas as contas: aqui ela fala só das do Meli.
+      const ruins = det.filter((d) => d.estado !== "ok");
+      const resposta = ruins.length ? ruins.map((d) => `${d.nome}: ${d.valor}`).join(" · ") : "Contas do Mercado Livre em dia.";
+      return { ...s, detalhes: det, estado, resposta } as typeof s;
+    })
+    .filter((s): s is NonNullable<typeof s> => !!s);
+  const acoesMeli = resultados.linhas.filter((l) => l.feito.canais.some(ehMeli));
 
   /* Totais do Meli: a soma dos produtos do recorte. */
   const totais = { antes: ladoVazio(), agora: ladoVazio() };
@@ -272,8 +298,9 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
     const itens = (await paginar(() =>
       sb
         .from("pedido_itens")
-        .select("anuncio_id,sku,quantidade,pedidos!inner(data,cancelado)")
+        .select("anuncio_id,sku,quantidade,pedidos!inner(data,cancelado,conta_canal_id)")
         .eq("operacao_id", op.id)
+        .in("pedidos.conta_canal_id", idsContas)
         .in("sku", caiu)
         .gte("pedidos.data", deAnterior)
         .lte("pedidos.data", `${ateAnterior}T23:59:59`)
@@ -309,7 +336,7 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
     midia: midia?.oportunidades ?? [],
     promocoes: promocoesUnicas,
     convites,
-    acoes: resultados.linhas.map((l) => ({ id: l.id, titulo: l.titulo, fim: l.fim, veredito: l.veredito, efeito: l.efeito })),
+    acoes: acoesMeli.map((l) => ({ id: l.id, titulo: l.titulo, fim: l.fim, veredito: l.veredito, efeito: l.efeito })),
     cancelamentos: canc,
     reputacao,
     margem,
@@ -338,7 +365,7 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
   const doPreco = gatilhos.filter((g) => g.item && g.lados && ["S3", "S4", "S5"].includes(g.slide));
   const skus = [...new Set(doPreco.map((g) => g.item!.sku))].slice(0, 6);
   const [acontecimentos, tabelaBruta, padraoBruto, recordes, ...series] = await Promise.all([
-    carregarAcontecimentos(sb, queda.deAnterior, queda.ate).catch(() => [] as Acontecimento[]),
+    carregarAcontecimentos(sb, queda.deAnterior, queda.ate, [], idsContas).catch(() => [] as Acontecimento[]),
     skus.length
       ? sb
           .from("formula_base_precos")
@@ -362,7 +389,7 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
           .limit(200)
           .then((r) => r.data ?? [], () => [])
       : [],
-    Promise.all(skus.map((s) => carregarRecordeSku(s).catch(() => null as RecordeSku | null))),
+    Promise.all(skus.map((s) => carregarRecordeSku(s, idsContas).catch(() => null as RecordeSku | null))),
     ...skus.map((sku) => serieDaQueda(`p:${sku}`, queda.deAnterior, queda.ate, meli.id).catch(() => [] as DiaQueda[])),
   ]);
   const historicos = Object.fromEntries(skus.map((sku, i) => [sku, series[i]]));
@@ -409,7 +436,7 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
   });
 
   const skusDaOperacao = new Set(queda.linhas.map((l) => l.sku.toUpperCase()));
-  const titulosDoPlano = resultados.linhas.map((l) => l.titulo);
+  const titulosDoPlano = acoesMeli.map((l) => l.titulo);
   const promocoes = promocoesUnicas
     .map((p) => ({ p, inicio: p.processadaEm.slice(0, 10), fim: mais(p.processadaEm.slice(0, 10), Math.max(0, p.dias - 1)) }))
     .filter(({ inicio, fim }) => inicio <= queda.ate && fim >= queda.deAnterior)
@@ -439,5 +466,6 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
     reputacao,
     cancelamentos: canc,
     margem,
+    ponte: montarPonte(queda.linhas, totais.antes.receita, totais.agora.receita, parados),
   };
 }

@@ -116,7 +116,7 @@ const nivel = (n: string | null | undefined) => (n ? NIVEL[n] ?? n : "—");
 const pctFrac = (v: number | null | undefined) => (v == null ? "—" : `${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`);
 
 /* ── Gráfico do período: a linha se desenha, a anterior entra em cinza, os dias com acontecimento acendem ── */
-function GraficoPeriodo({ d, passo }: { d: Dados; passo: number }) {
+function GraficoPeriodo({ d, passo, destaque }: { d: Dados; passo: number; destaque?: number }) {
   const [ref, W] = useLargura();
   const H = W < 500 ? 200 : 240, pl = 22, pr = 80, pt = 16, pb = 34;
   const s = d.serie;
@@ -136,6 +136,12 @@ function GraficoPeriodo({ d, passo }: { d: Dados; passo: number }) {
           {W < 500 ? p.dia.slice(8, 10) : `${diaSemana(p.dia)} ${p.dia.slice(8, 10)}`}
         </text>
       ))}
+      {passo >= 1 && destaque != null && s[destaque] && (
+        <g className="acm-pop" style={{ animationDelay: ".6s" }}>
+          <rect x={x(destaque) - 14} y={pt} width="28" height={H - pt - pb} rx="6" fill="var(--warn-wash)" />
+          <line x1={x(destaque)} x2={x(destaque)} y1={y(s[destaque].receita ?? 0)} y2={y(s[destaque].receitaAnterior ?? 0)} stroke="var(--down)" strokeWidth="3" strokeDasharray="4 3" />
+        </g>
+      )}
       {passo >= 1 && (
         <path key="ant" d={`M ${linha("receitaAnterior")}`} fill="none" stroke="var(--line-2)" strokeWidth="2.5" pathLength={1} className="acm-traco" />
       )}
@@ -213,7 +219,10 @@ function Historico({ dias, de, eventos }: { dias: NonNullable<Dados["historicos"
   const bw = W / dias.length;
   const precos = dias.map((x) => x.precoVitrine ?? x.precoVendido);
   const pv = precos.filter((p): p is number => p != null);
-  const pMin = Math.min(...pv), pMax = Math.max(...pv);
+  const pMin0 = Math.min(...pv), pMax0 = Math.max(...pv);
+  // Faixa mínima de 20% do preço: variação de 3% não pode parecer um tombo.
+  const folga = Math.max(0, pMax0 * 0.2 - (pMax0 - pMin0)) / 2;
+  const pMin = pMin0 - folga, pMax = pMax0 + folga;
   const yP = (p: number) => (pMax === pMin ? 30 : 8 + (1 - (p - pMin) / (pMax - pMin)) * 44);
   const iDiv = dias.findIndex((x) => x.data >= de);
   const pts = precos.map((p, i) => (p == null ? null : `${i * bw + bw / 2},${yP(p)}`)).filter(Boolean);
@@ -270,7 +279,7 @@ function Gantt({ d, passo }: { d: Dados; passo: number }) {
         return (
           <div key={`${p.nome}${p.inicio}${i}`} className="grid grid-cols-1 gap-1 md:grid-cols-[38%_1fr] md:items-center md:gap-3">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="min-w-0 text-[14px] font-semibold text-ink">{p.nome}</span>
+              <span className="min-w-0 text-[14px] font-semibold text-ink">{p.nome} <span className="font-normal text-ink-3">{shortDate(p.inicio)}</span></span>
               <span className="shrink-0 text-[12px] text-ink-3">{p.tipo ?? "planilha"} · {p.participam}</span>
             </div>
             <div className="relative h-8 rounded-[6px] bg-panel-2">
@@ -278,13 +287,60 @@ function Gantt({ d, passo }: { d: Dados; passo: number }) {
               <div className="absolute inset-y-1 rounded-[5px] bg-brand acm-cresce-x" style={{ left: `${a}%`, width: `${Math.max(b - a, 1.5)}%`, animationDelay: `${i * 0.15}s`, opacity: 0.85 }} />
               {passo >= 1 && (
                 <span className={`absolute right-1 top-1 rounded-[4px] px-1.5 py-0.5 text-[12px] font-semibold acm-pop ${tom(p.veredito)}`} style={{ animationDelay: `${i * 0.12}s` }}>
-                  {p.veredito}{p.efeito != null ? ` ${p.efeito > 0 ? "+" : ""}${Math.round(p.efeito)} p.p.` : ""}
+                  {p.veredito}{efeitoTxt(p.efeito)}
                 </span>
               )}
             </div>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* Efeito de promoção em palavras: p.p. sozinho não diz nada a ninguém. */
+const efeitoTxt = (e: number | null) =>
+  e == null ? "" : Math.abs(e) > 150 ? " · base pequena, não conclua" : ` · ${e > 0 ? "+" : "−"}${Math.abs(Math.round(e))} pts sobre quem ficou de fora`;
+
+type ChaveP = NonNullable<Dados["ponte"]>["partes"][number]["chave"];
+const ROTULO_P: Record<ChaveP, string> = { estoque: "Faltou produto ou anúncio parado", zerou: "Pararam de vender", novos: "Passaram a vender", visitas: "Visitas", conversao: "Conversão", unidades: "Unidades (sem dado de visita)", preco: "Preço" };
+const FRASE_P: Record<ChaveP, [string, string]> = {
+  estoque: ["faltou produto ou o anúncio que vendia parou", "produto voltou ao estoque"],
+  zerou: ["produtos que vendiam não venderam nada", "produtos que vendiam não venderam nada"],
+  novos: ["produtos que não vendiam passaram a vender", "produtos que não vendiam passaram a vender"],
+  visitas: ["menos gente viu os anúncios", "mais gente viu os anúncios"],
+  conversao: ["quem viu comprou menos", "quem viu comprou mais"],
+  unidades: ["vendeu menos unidades", "vendeu mais unidades"],
+  preco: ["vendeu mais barato", "vendeu mais caro"],
+};
+const fraseP = (p: { chave: ChaveP; valor: number }) => FRASE_P[p.chave][p.valor < 0 ? 0 : 1];
+
+/* ── Ponte: do total de antes ao de agora, parte por parte ── */
+function Ponte({ d, passo }: { d: Dados; passo: number }) {
+  const pt = d.ponte!;
+  let acc = pt.antes;
+  const passos = pt.partes.map((p) => { const de = acc; acc += p.valor; return { ...p, de, para: acc }; });
+  const vals = [pt.antes, pt.agora, ...passos.map((p) => p.para)];
+  const lo = Math.min(...vals) * 0.9, hi = Math.max(...vals);
+  const x = (v: number) => `${((v - lo) / (hi - lo || 1)) * 100}%`;
+  const linha = (rotulo: React.ReactNode, valor: React.ReactNode, a: number, b: number, cor: string, i: number, sub?: string) => (
+    <div className="grid grid-cols-[1fr_auto] items-end gap-x-3 gap-y-1 md:grid-cols-[34%_1fr_110px] md:items-center md:gap-3 acm-sobe" style={{ animationDelay: `${i * 0.18}s` }}>
+      <div className="min-w-0"><div className="text-[14px] font-semibold text-ink">{rotulo}</div>{sub && <div className="text-[12px] text-ink-3">{sub}</div>}</div>
+      <div className="relative order-3 col-span-2 h-6 rounded-[6px] bg-panel-2 md:order-none md:col-span-1 md:h-7">
+        <div className="absolute inset-y-1 rounded-[5px] acm-cresce-x" style={{ left: x(Math.min(a, b)), width: `max(3px, calc(${x(Math.max(a, b))} - ${x(Math.min(a, b))}))`, background: cor, animationDelay: `${0.15 + i * 0.18}s` }} />
+      </div>
+      <div className="num order-2 text-right text-[15px] font-bold md:order-none" style={{ color: cor === "var(--line-2)" ? "var(--ink)" : cor }}>{valor}</div>
+    </div>
+  );
+  return (
+    <div className="flex flex-col gap-2.5">
+      {linha("Antes", money(pt.antes), lo, pt.antes, "var(--line-2)", 0)}
+      {passos.map((p, i) => passo >= (i < 2 ? 0 : 1) ? (
+        <React.Fragment key={p.chave}>
+          {linha(ROTULO_P[p.chave], `${p.valor > 0 ? "+" : "−"}${moneyShort(Math.abs(p.valor))}`, p.de, p.para, p.valor < 0 ? "var(--down)" : "var(--up)", i + 1, `${["zerou", "novos", "estoque"].includes(p.chave) ? "" : `${fraseP(p)} · `}${p.produtos} produto${p.produtos === 1 ? "" : "s"}`)}
+        </React.Fragment>
+      ) : null)}
+      {passo >= 1 && linha("Agora", money(pt.agora), lo, pt.agora, "var(--brand)", passos.length + 1)}
     </div>
   );
 }
@@ -310,6 +366,8 @@ function Ranking({ itens, cor, passo, nDetalhe = 1 }: { itens: Gatilho[]; cor: s
           {passo >= nDetalhe && (
             <p className="mt-1 text-[13px] text-ink-2 acm-sobe">
               <span className="font-semibold text-ink">{g.nome}</span>{g.hipotese ? " (hipótese)" : ""} · {g.texto}
+              {g.lados && g.lados.agora.unidades > 0 && <span className="num"> · {g.lados.antes.unidades} → {g.lados.agora.unidades} un.</span>}
+              {g.lados && g.impacto > 0 && g.lados.antes.unidades <= 3 && g.lados.agora.unidades < g.lados.antes.unidades && <span className="ml-1 rounded-[4px] bg-panel-3 px-1.5 text-[12px] text-ink-3">poucas vendas: pode ser acaso</span>}
             </p>
           )}
         </li>
@@ -339,20 +397,50 @@ export function montarSlides(d: Dados): SlideDef[] {
   const periodo = `${dataBr(d.de)} a ${dataBr(d.ate)}`;
   const anterior = `${dataBr(d.deAnterior)} a ${dataBr(d.ateAnterior)}`;
   const n = (k: number) => String(k).padStart(2, "0");
+  const caiu = recA < recB;
+  const dif = recA - recB;
+
+  /*
+   * O dia que mais pesou: se um dia só faz 40% ou mais da diferença, é a
+   * primeira coisa a dizer (ex.: a semana anterior teve o 11.11).
+   */
+  const difs = d.serie.map((p) => (p.receita ?? 0) - (p.receitaAnterior ?? 0));
+  const difSerie = difs.reduce((a, b) => a + b, 0);
+  const iDia = difs.length ? difs.indexOf(caiu ? Math.min(...difs) : Math.max(...difs)) : -1;
+  const parteDia = iDia >= 0 && difSerie ? difs[iDia] / difSerie : 0;
+  const diaChave = iDia >= 0 && parteDia >= 0.4 && Math.abs(difSerie) > 0 ? d.serie[iDia] : null;
+  const semDia = diaChave
+    ? variacao(
+        d.serie.reduce((a, p) => a + (p.receita ?? 0), 0) - (diaChave.receita ?? 0),
+        d.serie.reduce((a, p) => a + (p.receitaAnterior ?? 0), 0) - (diaChave.receitaAnterior ?? 0)
+      )
+    : null;
+  const maiorParte = d.ponte?.partes.find((p) => (caiu ? p.valor < 0 : p.valor > 0)) ?? null;
 
   /* Capa */
   const pontos = g.filter((x) => x.slide !== "S0").length;
   slides.push({
     id: "capa", kicker: "Acompanhamento · Mercado Livre", titulo: periodo,
-    passos: [`Comparado com ${anterior}, os mesmos dias da semana.`, `${pontos} pontos para olhar, do maior impacto em R$ ao menor.`],
+    passos: [
+      `Comparado com ${anterior}, os mesmos dias da semana.`,
+      diaChave ? `${Math.round(parteDia * 100)}% da diferença está num dia só: ${diaSemana(diaChave.diaAnterior)} ${shortDate(diaChave.diaAnterior)} contra ${diaSemana(diaChave.dia)} ${shortDate(diaChave.dia)}.` : maiorParte ? `O que mais pesou: ${fraseP(maiorParte)}.` : `${pontos} pontos para olhar.`,
+      `${pontos} pontos para olhar, do maior impacto em R$ ao menor.`,
+    ],
     corpo: (passo) => (
       <div className="flex flex-col gap-8">
         <div className="acm-sobe">
           <span className="label">Receita no período</span>
           <div className="num text-[44px] font-bold leading-none text-ink md:text-[64px]"><Contador valor={recA} /></div>
-          <div className="mt-2 text-[18px]"><Delta v={vRec} /> <span className="text-ink-3">contra {money(recB)}</span></div>
+          <div className="mt-2 text-[18px]"><Delta v={vRec} /> <span className="text-ink-3">contra {money(recB)} · {dif < 0 ? "−" : "+"}{moneyShort(Math.abs(dif))}</span></div>
         </div>
-        <P n={1} passo={passo} className="flex flex-wrap gap-2">
+        <P n={1} passo={passo} className="max-w-[720px] text-[20px] font-semibold leading-snug text-ink md:text-[24px]">
+          {diaChave ? (
+            <>{Math.round(parteDia * 100)}% da {caiu ? "queda" : "alta"} está num dia só: {diaSemana(diaChave.diaAnterior)} {shortDate(diaChave.diaAnterior)} vendeu {moneyShort(diaChave.receitaAnterior ?? 0)}, {diaSemana(diaChave.dia)} {shortDate(diaChave.dia)} vendeu {moneyShort(diaChave.receita ?? 0)}.{semDia != null && <span className="text-ink-2"> Sem esse dia, o período ficou <Delta v={semDia} />.</span>}</>
+          ) : maiorParte ? (
+            <>O que mais pesou: {fraseP(maiorParte)} ({maiorParte.valor < 0 ? "−" : "+"}{moneyShort(Math.abs(maiorParte.valor))}).</>
+          ) : null}
+        </P>
+        <P n={2} passo={passo} className="flex flex-wrap gap-2">
           {["S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11"].map((s, i) => {
             const k = por(s).length;
             if (!k) return null;
@@ -388,13 +476,15 @@ export function montarSlides(d: Dados): SlideDef[] {
 
   /* Como foi o período */
   if (d.serie.length) {
-    const top = [...d.acontecimentos].sort((a, b) => (b.tipo === "campanha" ? 1 : 0) - (a.tipo === "campanha" ? 1 : 0) || Math.abs(b.pct ?? 0) - Math.abs(a.pct ?? 0)).filter((a) => a.data >= d.de).slice(0, 4);
+    const doDia = diaChave ? d.acontecimentos.filter((a) => a.data === diaChave.dia || a.data === diaChave.diaAnterior).slice(0, 4) : [];
+    const top = doDia.length ? doDia : [...d.acontecimentos].sort((a, b) => (b.tipo === "campanha" ? 1 : 0) - (a.tipo === "campanha" ? 1 : 0) || Math.abs(b.pct ?? 0) - Math.abs(a.pct ?? 0)).filter((a) => a.data >= d.de).slice(0, 4);
     slides.push({
-      id: "periodo", kicker: `${n(slides.length)} · O período`, titulo: vRec == null ? "Como foi o período?" : vRec < 0 ? `Caiu ${pctTxt(Math.abs(vRec), false)}. Em que dia?` : `Subiu ${pctTxt(vRec, false)}. Em que dia?`,
+      id: "periodo", kicker: `${n(slides.length)} · O período`,
+      titulo: diaChave ? `${diaSemana(diaChave.diaAnterior)} ${shortDate(diaChave.diaAnterior)} vendeu ${moneyShort(diaChave.receitaAnterior ?? 0)}; ${diaSemana(diaChave.dia)} ${shortDate(diaChave.dia)}, ${moneyShort(diaChave.receita ?? 0)}` : vRec == null ? "Como foi o período?" : vRec < 0 ? `Caiu ${pctTxt(Math.abs(vRec), false)}, espalhado pelos dias` : `Subiu ${pctTxt(vRec, false)}, espalhado pelos dias`,
       passos: [
         "A linha roxa é a receita de cada dia deste período.",
-        "A cinza é a semana anterior, no mesmo dia da semana.",
-        top.length ? "Os pontos amarelos marcam dias em que algo mudou: preço, campanha ou estoque." : "Nenhum acontecimento registrado nos dias do período.",
+        diaChave ? `A cinza é a semana anterior. Em ${shortDate(diaChave.diaAnterior)} ela vendeu ${moneyShort(diaChave.receitaAnterior ?? 0)}; em ${shortDate(diaChave.dia)}, ${moneyShort(diaChave.receita ?? 0)}.${semDia != null ? ` Sem esse dia, ${pctTxt(semDia)}.` : ""}` : "A cinza é a semana anterior, no mesmo dia da semana.",
+        top.length ? (doDia.length ? "O que aconteceu nesses dois dias." : "Os pontos amarelos marcam dias em que algo mudou: preço, campanha ou estoque.") : "Nenhum acontecimento registrado nos dias do período.",
       ],
       corpo: (passo) => (
         <div className="grid gap-6 md:grid-cols-[1fr_280px]">
@@ -403,7 +493,7 @@ export function montarSlides(d: Dados): SlideDef[] {
               <span><b className="num text-ink">{money(recA)}</b> <Delta v={vRec} /></span>
               <span className="text-ink-3">visitas <Delta v={variacao(visA, visB)} /></span>
             </div>
-            <GraficoPeriodo d={d} passo={passo} />
+            <GraficoPeriodo d={d} passo={passo} destaque={diaChave ? iDia : undefined} />
           </div>
           <P n={2} passo={passo} className="flex flex-col gap-2">
             {top.map((a, i) => (
@@ -417,11 +507,26 @@ export function montarSlides(d: Dados): SlideDef[] {
     });
   }
 
+  /* Para onde foi o dinheiro: a diferença inteira, repartida */
+  if (d.ponte && maiorParte) {
+    const pt = d.ponte;
+    const c = pt.concentracao;
+    slides.push({
+      id: "ponte", kicker: `${n(slides.length)} · ${caiu ? "Para onde foi" : "De onde veio"}`,
+      titulo: `${caiu ? "−" : "+"}${moneyShort(Math.abs(dif))}: ${fraseP(maiorParte)}`,
+      passos: [
+        "Cada barra é uma parte da diferença, em R$. Somadas, dão o total.",
+        c ? `${c.produtos} produto${c.produtos === 1 ? "" : "s"} faz${c.produtos === 1 ? "" : "em"} 80% da ${caiu ? "queda" : "alta"}, de ${c.de} que ${caiu ? "caíram" : "subiram"}. São os próximos slides.` : "Os produtos vêm a seguir.",
+      ],
+      corpo: (passo) => <Ponte d={d} passo={passo} />,
+    });
+  }
+
   /* O que puxou para baixo */
   const quedas = [...por("S3"), ...por("S5").filter((x) => x.id === "G08")].filter((x) => x.item).sort((a, b) => b.impacto - a.impacto);
   if (quedas.length) {
     slides.push({
-      id: "quedas", kicker: `${n(slides.length)} · Quedas`, titulo: "O que puxou para baixo?",
+      id: "quedas", kicker: `${n(slides.length)} · Quedas`, titulo: `Os ${Math.min(5, quedas.length)} que mais caíram tiraram ${moneyShort(quedas.slice(0, 5).reduce((a, x) => a + x.impacto, 0))}`,
       passos: ["Os produtos que mais perderam receita, em R$.", "O sinal principal de cada um, tirado dos números."],
       corpo: (passo) => <Ranking itens={quedas.slice(0, 5)} cor="var(--down)" passo={passo} />,
     });
@@ -472,7 +577,7 @@ export function montarSlides(d: Dados): SlideDef[] {
     const comTabela = d.precos.filter((p) => p.tabela && p.vitrineHoje);
     const fora = comTabela.filter((p) => Math.abs((p.vitrineHoje! - p.tabela!.preco) / p.tabela!.preco) > 0.02).length;
     slides.push({
-      id: "preco-canal", kicker: `${n(slides.length)} · Preço no canal`, titulo: "O preço do Meli está igual à tabela? E a que preço vende mais?",
+      id: "preco-canal", kicker: `${n(slides.length)} · Preço no canal`, titulo: comTabela.length ? (fora ? `${fora} de ${comTabela.length} produtos com preço fora da tabela` : "O preço do Meli está igual à tabela") : "A que preço vende mais?",
       passos: [
         comTabela.length ? `A tabela (Fórmula base) contra a vitrine de hoje no Meli: ${fora} de ${comTabela.length} fora da tabela.` : "Sem Fórmula base para estes produtos: só a vitrine do Meli.",
         "O que o cliente pagou, antes e agora, e quantas unidades.",
@@ -529,7 +634,7 @@ export function montarSlides(d: Dados): SlideDef[] {
   const potencial = por("S4").filter((x) => x.id === "G14");
   if (altas.length || potencial.length) {
     slides.push({
-      id: "altas", kicker: `${n(slides.length)} · O que funcionou`, titulo: "O que puxou para cima, e o que pode vender mais?",
+      id: "altas", kicker: `${n(slides.length)} · O que funcionou`, titulo: altas.length ? `${altas.length} produto${altas.length === 1 ? "" : "s"} somaram +${moneyShort(altas.reduce((a, x) => a + x.impacto, 0))}` : "Quem pode vender mais",
       passos: ["Os produtos que mais ganharam receita.", "Potencial escondido: convertem bem acima da mediana, mas recebem poucas visitas."],
       corpo: (passo) => (
         <div className="grid gap-6 md:grid-cols-2">
@@ -554,7 +659,7 @@ export function montarSlides(d: Dados): SlideDef[] {
   if (precos.length || convites.length) {
     const linhas = [...new Map([...precos, ...convites].filter((x) => x.lados).map((x) => [x.item!.sku, x])).values()].slice(0, 5);
     slides.push({
-      id: "preco", kicker: `${n(slides.length)} · Preço`, titulo: "O preço mudou. E as vendas?",
+      id: "preco", kicker: `${n(slides.length)} · Preço`, titulo: convites.length ? `${convites.length} convite${convites.length === 1 ? "" : "s"} de promoção abaixo do preço de hoje` : "Onde o preço mudou",
       passos: ["O ponto anda do preço anterior para o atual.", "A conversão no mesmo período, ao lado.", convites.length ? "Onde há convite de promoção abaixo do preço de hoje." : "Nenhum convite abaixo do preço de hoje."],
       corpo: (passo) => (
         <div className="flex flex-col gap-4">
@@ -620,7 +725,7 @@ export function montarSlides(d: Dados): SlideDef[] {
   const est = por("S7");
   if (est.length) {
     slides.push({
-      id: "estoque", kicker: `${n(slides.length)} · Estoque`, titulo: "Faltou produto, ou vai faltar?",
+      id: "estoque", kicker: `${n(slides.length)} · Estoque`, titulo: (() => { const v = [...est.filter((x) => x.id !== "G11").reduce((m, x) => m.set(x.item?.sku ?? x.texto, Math.max(m.get(x.item?.sku ?? x.texto) ?? 0, x.impacto)), new Map<string, number>()).values()].reduce((a, v) => a + v, 0); return v > 0 ? `Faltou produto: ${moneyShort(v)} em jogo` : "Produto que vai acabar"; })(),
       passos: ["Rupturas no período, anúncios que vendiam e foram pausados ou zerados, e o que deve acabar nos próximos 7 dias."],
       corpo: () => (
         <div className="flex flex-col gap-4">
@@ -650,7 +755,7 @@ export function montarSlides(d: Dados): SlideDef[] {
     const certo = d.promocoes.filter((p) => p.veredito === "deu certo").length;
     const errado = d.promocoes.filter((p) => p.veredito === "não deu certo").length;
     slides.push({
-      id: "promocoes", kicker: `${n(slides.length)} · Promoções`, titulo: "As promoções funcionaram?",
+      id: "promocoes", kicker: `${n(slides.length)} · Promoções`, titulo: certo + errado ? `${certo} promoç${certo === 1 ? "ão deu" : "ões deram"} certo, ${errado} não` : "Promoções no período",
       passos: [
         "Cada barra é o tempo medido de uma promoção. A linha marca o início deste período.",
         `Quem entrou contra quem ficou de fora, nas mesmas datas: ${certo} deram certo, ${errado} não.`,
@@ -736,7 +841,7 @@ export function montarSlides(d: Dados): SlideDef[] {
   if (midia.length) {
     const cortar = midia.filter((x) => x.id === "G16"), subir = midia.filter((x) => x.id === "G17");
     slides.push({
-      id: "midia", kicker: `${n(slides.length)} · Mídia`, titulo: "A mídia pagou?",
+      id: "midia", kicker: `${n(slides.length)} · Mídia`, titulo: subir.length && cortar.length ? `Dá para subir verba em ${subir.length}; ${cortar.length} gastaram sem vender` : subir.length ? `Dá para subir verba em ${subir.length} anúncio${subir.length === 1 ? "" : "s"}` : `${cortar.length} anúncio${cortar.length === 1 ? "" : "s"} gastaram sem vender`,
       passos: ["Onde a verba sobra depois da margem: dá para subir.", "Onde gastou sem vender: confira antes de cortar (catálogo e família vendem juntos)."],
       corpo: (passo) => (
         <div className="grid gap-6 md:grid-cols-2">
@@ -770,7 +875,7 @@ export function montarSlides(d: Dados): SlideDef[] {
   const feitas = por("S13");
   if (acoes.length || feitas.length) {
     slides.push({
-      id: "agora", kicker: `${n(slides.length)} · Próximos passos`, titulo: "O que fazer agora?",
+      id: "agora", kicker: `${n(slides.length)} · Próximos passos`, titulo: acoes.length ? `${acoes.length} coisa${acoes.length === 1 ? "" : "s"} para fazer, da maior para a menor` : "O que fazer agora",
       passos: ["Uma ação por produto, do maior valor em jogo ao menor. Cada uma abre a tela onde se resolve."],
       corpo: () => (
         <ol className="flex flex-col gap-2">

@@ -20,6 +20,7 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { cn } from "@/lib/utils";
 import { money, moneyShort, pct, count } from "@/lib/format";
+import { semControleDeEstoque } from "@/lib/estoque-sem-controle";
 import { TrendingDown } from "lucide-react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import type { DadosTrafegoPago, LinhaAnuncioAds, LinhaCampanha } from "@/lib/dados/trafego-pago";
@@ -472,7 +473,7 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
         l.estoque == null ? (
           <span className="text-[12px] text-ink-3">não lido</span>
         ) : (
-          <span className={cn("num", l.estoque === 0 && "text-down font-medium")}>{count(l.estoque)}</span>
+          semControleDeEstoque(l.estoque) ? <span className="text-[12px] text-ink-3">sob encomenda</span> : <span className={cn("num", l.estoque === 0 && "text-down font-medium")}>{count(l.estoque)}</span>
         ),
     },
   ];
@@ -645,10 +646,8 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
               {
                 value: "oportunidades" as const,
                 label: "O que fazer",
-                count:
-                  (referencias?.contagem.escalar ?? 0) +
-                  (referencias?.contagem.entrar ?? 0) +
-                  (referencias?.contagem.rever_preco ?? 0),
+                // O mesmo número da lista "Tudo": toda ação menos "manter".
+                count: oportunidades.filter((l) => l.acao !== "manter").length,
               },
               { value: "campanhas" as const, label: "Por campanha", count: campanhas.length },
               {
@@ -759,6 +758,11 @@ export default function TrafegoPagoCliente({ dados }: { dados: DadosTrafegoPago 
                     <span className="num text-ink-2">{count(referencias.comVisitaSuficiente)}</span> anúncios acima do piso
                   </span>
                 </div>
+              )}
+              {oportunidades.length > 0 && oportunidades.filter((l) => l.investimento > 0 && l.margemPct == null).length * 2 > oportunidades.filter((l) => l.investimento > 0).length && (
+                <p className="border-b border-line bg-warn-wash px-3 py-2 text-[13px] text-ink">
+                  A maioria dos anúncios com ads está sem custo cadastrado. Sem margem não dá para dizer onde pôr mais verba nem onde o ads dá prejuízo: aqui só aparecem gasto sem venda e venda por fora. Cadastre o custo em Financeiro › Custos.
+                </p>
               )}
               <DataTable
                 columns={colunasOportunidade}

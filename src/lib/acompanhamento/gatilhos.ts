@@ -157,6 +157,8 @@ export const CORTES = {
   perdaMinima: 50,
   /** Promoção com menos que isto de receita antes não dá veredito: base pequena demais. */
   basePromocao: 1000,
+  /** Efeito acima disto (p.p.) é base pequena, não resultado: não vira pauta. */
+  efeitoMaximo: 150,
   /** Lucro só com pelo menos isto da receita com custo completo. */
   coberturaMargem: 0.7,
   /** Taxa da reputação que dobra (×) e passa deste piso (fração) acende. */
@@ -253,7 +255,11 @@ export function avaliarGatilhos(e: EntradaGatilhos): Gatilho[] {
       const [id, nome, destino] = CAUSA_PARA_GATILHO[l.causa];
       g.push({
         id, nome, slide: id === "G08" ? "S5" : "S3", impacto: -l.delta, ...doItem(l),
-        texto: `${brl(l.antes.receita)} → ${brl(l.agora.receita)} · visitas ${p0(vVis)} · conversão ${p0(vConv)}` +
+        // Zerou: "conversão −100%" não diz nada; o que diz é se ainda tinha gente vendo.
+        texto: l.agora.unidades === 0
+          ? `vendia ${l.antes.unidades} un. (${brl(l.antes.receita)}), não vendeu nenhuma` + (l.agora.visitas ? ` · ${l.agora.visitas.toLocaleString("pt-BR")} visitas sem compra (${p0(vVis)})` : " · sem visitas registradas") +
+            (l.antes.precoVitrine && l.agora.precoVitrine ? ` · vitrine ${p0(pct(l.agora.precoVitrine, l.antes.precoVitrine))}` : "")
+          : `${brl(l.antes.receita)} → ${brl(l.agora.receita)} · visitas ${p0(vVis)} · conversão ${p0(vConv)}` +
           (l.antes.precoVitrine && l.agora.precoVitrine ? ` · vitrine ${p0(pct(l.agora.precoVitrine, l.antes.precoVitrine))}` : ""),
         numeros: { delta: r0(l.delta), varVisitas: vVis, varConversao: vConv, causa: l.causa },
         destino, hipotese: id === "G08" || undefined,
@@ -338,12 +344,13 @@ export function avaliarGatilhos(e: EntradaGatilhos): Gatilho[] {
     if (p.processadaEm.slice(0, 10) > e.ate || fimJanela < e.de) continue;
     if (!["deu certo", "neutra", "não deu certo"].includes(p.veredito)) continue;
     if (p.receitaParticipantes.antes < CORTES.basePromocao) continue;
+    if (p.efeito != null && Math.abs(p.efeito) > CORTES.efeitoMaximo) continue;
     const certo = p.veredito === "deu certo";
     g.push({
       id: certo ? "G19" : "G20", nome: certo ? "Promoção deu certo" : "Promoção sem efeito", slide: "S8",
       // O que se atribui à promoção: o efeito (p.p. acima ou abaixo do controle) sobre a receita de antes.
       impacto: Math.abs(((p.efeito ?? 0) / 100) * p.receitaParticipantes.antes),
-      texto: `${p.nome}${p.tipo ? ` (${p.tipo})` : ""} · ${p.participam} entraram · ${p.veredito}, efeito ${p.efeito == null ? "—" : `${p.efeito > 0 ? "+" : ""}${Math.round(p.efeito)} p.p.`} · origem ${p.origem ?? "planilha"}`,
+      texto: `${p.nome}${p.tipo ? ` (${p.tipo})` : ""} · ${p.participam} anúncios entraram · ${p.efeito == null ? p.veredito : `cresceram ${Math.abs(Math.round(p.efeito))} pontos ${p.efeito > 0 ? "acima" : "abaixo"} de quem ficou de fora`}`,
       numeros: { efeito: p.efeito, crescimento: p.crescimento, desde: p.processadaEm.slice(0, 10), dias: p.dias }, destino: "/planejamento/resultados",
     });
   }

@@ -471,6 +471,27 @@ Rodada de 22/11/2026 (commit 1ba694a, publicado)
     de promoção, família, "Perguntar à IA", rota mais leve, Diária do
     Resultado contra o mesmo dia da semana.
 
+Rodada de 23/11/2026 (o dono achou pouco útil)
+  - Só Mercado Livre de verdade: recorde de venda, acontecimentos (preço e
+    estoque), anúncio que parou, saúde e ações do Planejamento olhavam
+    todos os canais. Agora só as contas do Meli.
+  - Conclusão no título de cada slide, em R$. Capa diz o dia que mais
+    pesou (ex.: 90% da queda da Probel está no 11/11 da semana anterior;
+    sem esse dia, −4%).
+  - Slide novo "Para onde foi": a diferença inteira repartida em produtos
+    que zeraram, que passaram a vender, estoque/anúncio parado, visitas,
+    conversão e preço (ponte.ts, soma fechada, testado).
+  - Produto que zerou diz quantas unidades vendia e se ainda tinha visita;
+    "poucas vendas: pode ser acaso" quando eram até 3 unidades.
+  - Promoção: efeito em palavras; acima de 150 p.p. é base pequena e não
+    vira pauta. Data de início ao lado do nome.
+  - Saúde só com o que impede ler o período (custo saiu daqui).
+  - IA: ferramenta gatilhos_do_periodo.
+  - Tráfego pago: aba "O que fazer" contava 3 das 5 ações (dava 0);
+    "A mídia sobrou" virou "Vende sem o ads" e exige 2 unidades; estoque
+    sob encomenda (40 mil) aparece como tal; aviso quando falta custo
+    (sem custo não há "pôr verba" nem "rever preço").
+
 ======================================================================
 15. PENDÊNCIAS PARA OS PRÓXIMOS DIAS
 ======================================================================
@@ -488,8 +509,7 @@ Fazer
   4. Dias soltos no calendário (os motores só aceitam intervalo contínuo).
   5. "Isto está errado" por item, com tabela no banco e revisão da regra
      para todas as empresas (precisa de migração).
-  6. IA com a ferramenta gatilhos_do_periodo (hoje o botão só leva a
-     pergunta pronta para a conversa).
+  6. (feito em 23/11) IA com a ferramenta gatilhos_do_periodo.
   7. Agrupamento por família de verdade (hoje só o rótulo da família no
      item; a pauta continua por SKU).
   8. Relâmpago somando a família; G22.

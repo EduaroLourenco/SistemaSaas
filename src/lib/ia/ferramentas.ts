@@ -5,6 +5,7 @@ import { carregarExclusoes, aplicar } from "@/lib/dados/exclusoes";
 import { operacaoPadrao } from "@/lib/dados/operacao";
 import { carregarEnvios } from "@/lib/dados/envios-meli";
 import { carregarPromocoesNoCanal } from "@/lib/dados/promocoes-no-canal";
+import { carregarAcompanhamento } from "@/lib/dados/acompanhamento";
 
 /**
  * As ferramentas que o Claude usa para consultar a operação.
@@ -154,6 +155,23 @@ export const FERRAMENTAS: Ferramenta[] = [
       "pré-acordo do consultor e relâmpago por dia, com datas e número de anúncios.",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
+  {
+    name: "gatilhos_do_periodo",
+    description:
+      "A pauta do acompanhamento do Mercado Livre (só Meli) num período contra o anterior de mesmo tamanho: " +
+      "total antes e agora, para onde foi a diferença (produtos que zeraram, que passaram a vender, estoque, " +
+      "visitas, conversão, preço), o dia que mais pesou e os pontos de atenção por produto, do maior impacto em R$ " +
+      "ao menor. Use para 'por que caiu', 'o que mudou na semana' e 'o que fazer primeiro'. Hipótese é hipótese: diga.",
+    input_schema: {
+      type: "object",
+      properties: {
+        de: { type: "string", description: "Início, AAAA-MM-DD" },
+        ate: { type: "string", description: "Fim, AAAA-MM-DD (inclusive)" },
+      },
+      required: ["de", "ate"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 /* ══════════════════════════════════════════════════════════════
@@ -179,9 +197,31 @@ export async function executar(
       return enviosPendentes();
     case "promocoes_no_ar":
       return promocoesNoAr();
+    case "gatilhos_do_periodo":
+      return gatilhosDoPeriodo(entrada as never);
     default:
       return { erro: `Ferramenta desconhecida: ${nome}` };
   }
+}
+
+async function gatilhosDoPeriodo({ de, ate }: { de: string; ate: string }) {
+  const iso = /^d{4}-d{2}-d{2}$/;
+  if (!iso.test(de) || !iso.test(ate) || de > ate) return { erro: "Datas inválidas: use AAAA-MM-DD, início antes do fim." };
+  const d = await carregarAcompanhamento(de, ate);
+  const dias = d.serie.map((p) => ({ dia: p.dia, receita: p.receita, diaAnterior: p.diaAnterior, receitaAnterior: p.receitaAnterior }));
+  return {
+    periodo: { de: d.de, ate: d.ate }, comparadoCom: { de: d.deAnterior, ate: d.ateAnterior },
+    aviso: d.aviso,
+    receita: { antes: r2(d.totais.antes.receita), agora: r2(d.totais.agora.receita) },
+    paraOndeFoi: d.ponte?.partes ?? [],
+    produtosQueFazem80PorCento: d.ponte?.concentracao ?? null,
+    diaADia: dias,
+    // Os 25 primeiros bastam: a lista vem do maior impacto ao menor.
+    pontos: d.gatilhos.slice(0, 25).map((g) => ({
+      nome: g.nome, impactoReais: r2(g.impacto), produto: g.item ? `${g.item.sku} · ${g.item.titulo}` : null,
+      texto: g.texto, hipotese: !!g.hipotese, telaParaAgir: g.destino,
+    })),
+  };
 }
 
 async function enviosPendentes() {

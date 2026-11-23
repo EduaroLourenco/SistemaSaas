@@ -50,6 +50,8 @@ Quando não souber o que existe, comece por contexto_operacao.
 
 Uma pergunta quase nunca se responde com uma consulta só. "Por que caiu?" pede
 o que caiu, quando, e o que mudou junto. Cruze antes de concluir.
+Para o Mercado Livre, gatilhos_do_periodo já traz essa conta pronta (para onde foi
+a diferença, o dia que mais pesou e os pontos por produto): comece por ela.
 
 O QUE ESTES DADOS NÃO TÊM
 

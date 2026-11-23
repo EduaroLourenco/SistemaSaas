@@ -91,4 +91,21 @@ assert.deepEqual(ids(avaliarGatilhos(base({ margem: { antes: ml(1000, 300, 100),
 g = avaliarGatilhos(base({ linhas: [linha({ sku: "PA62652", antes: lado({ receita: 5050, unidades: 2, pedidos: 2, visitas: 300 }), agora: lado({ receita: 0, visitas: 42 }), delta: -5050, causa: "parou de vender" })], parados: { PA62652: [{ mlb: "MLB5298254542", status: "pausado", estoque: 0, unidadesAntes: 2 }] } }));
 assert.deepEqual(ids(g), ["G31"], "vira 'anúncio que vendia parou', não 'parou de vender'");
 
+// Ponte: cada produto numa parte só, e as partes somam a diferença.
+const { montarPonte } = await jiti.import(path.join(raiz, "src/lib/acompanhamento/ponte.ts"));
+const pl = (sku, a, b, o = {}) => ({ sku, delta: b - a, antes: { receita: a }, agora: { receita: b }, diasSemEstoque: 0, causa: "", efeito: { visitas: null, conversao: null, unidades: null, preco: 0 }, ...o });
+const pt = montarPonte([
+  pl("Z", 5000, 0),
+  pl("N", 0, 2000),
+  pl("E", 3000, 1000, { diasSemEstoque: 3 }),
+  pl("V", 1000, 800, { efeito: { visitas: -150, conversao: -30, unidades: null, preco: -20 } }),
+  pl("P", 500, 0, {}),
+], 9500, 3800, { P: [{}] });
+const parte = (k) => pt.partes.find((x) => x.chave === k)?.valor;
+assert.equal(parte("zerou"), -5000);
+assert.equal(parte("novos"), 2000);
+assert.equal(parte("estoque"), -2500, "sem estoque e anúncio parado vão inteiros para estoque");
+assert.equal(pt.partes.reduce((a, x) => a + x.valor, 0), 3800 - 9500, "as partes somam a diferença");
+assert.equal(pt.partes[0].chave, "zerou", "maior parte primeiro");
+
 console.log("gatilhos: ok");

@@ -3,6 +3,8 @@ import { carregarAcompanhamento } from "@/lib/dados/acompanhamento";
 import { clienteServidor } from "@/lib/supabase/servidor";
 
 export const runtime = "nodejs";
+// A montagem lê pedidos, tráfego e promoções: no script levou 16–22 s. Folga para não cortar no meio.
+export const maxDuration = 60;
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 

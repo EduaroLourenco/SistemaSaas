@@ -82,15 +82,18 @@ export async function carregarAcontecimentos(
   de: string,
   ate: string,
   noCanal: PromoCanal[] = [],
+  /** Só os anúncios destas contas (um canal só). Sem ela, todos. */
+  contas?: string[],
 ): Promise<Acontecimento[]> {
   const [diarias, plano] = await Promise.all([
-    paginar(() =>
-      sb
+    paginar(() => {
+      const q = sb
         .from("anuncio_estoque_diario")
-        .select("data,estoque,preco,anuncios(codigo_externo,sku_canal,titulo,status)")
+        .select(`data,estoque,preco,anuncios${contas?.length ? "!inner" : ""}(codigo_externo,sku_canal,titulo,status,conta_canal_id)`)
         .gte("data", de)
-        .lte("data", ate),
-    ) as unknown as Promise<LinhaDiaria[]>,
+        .lte("data", ate);
+      return contas?.length ? q.in("anuncios.conta_canal_id", contas) : q;
+    }) as unknown as Promise<LinhaDiaria[]>,
     paginar(() =>
       sb
         .from("planejamento_itens")
