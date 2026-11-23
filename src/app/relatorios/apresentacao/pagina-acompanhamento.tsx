@@ -42,7 +42,8 @@ export default function PaginaAcompanhamento() {
     setErro(null);
     fetch(`/api/acompanhamento?${new URLSearchParams(consulta as Record<string, string>)}`, { signal: ctl.signal })
       .then(async (r) => {
-        const j = await r.json();
+        // Estouro de tempo na Vercel volta em texto, não em JSON.
+        const j = await r.json().catch(() => ({ erro: r.status === 504 ? "A apresentação demorou demais para montar. Tente de novo ou um período menor." : undefined }));
         if (!r.ok) throw new Error(j.erro ?? "Não consegui montar a apresentação.");
         setDados(j);
       })

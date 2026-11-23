@@ -3,8 +3,9 @@ import { carregarAcompanhamento } from "@/lib/dados/acompanhamento";
 import { clienteServidor } from "@/lib/supabase/servidor";
 
 export const runtime = "nodejs";
-// A montagem lê pedidos, tráfego e promoções: no script levou 16–22 s. Folga para não cortar no meio.
-export const maxDuration = 60;
+// A montagem lê pedidos, tráfego e promoções: 15–26 s no script (chave de serviço), 36 s ou mais
+// na Vercel (com RLS), e passou de 60 s em "Ontem" (23/11). Mesmo teto das outras rotas pesadas.
+export const maxDuration = 300;
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
