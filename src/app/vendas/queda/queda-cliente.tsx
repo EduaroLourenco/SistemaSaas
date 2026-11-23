@@ -241,6 +241,11 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
   }, [dados.linhas]);
   const quedaTotal = porCausa.reduce((s, [, x]) => s + x.valor, 0);
   const variacao = dados.totalAgora - dados.totalAntes;
+  // O saldo é quem caiu + quem cresceu: sem a segunda parte, os dois números da tela não se explicam.
+  const subiram = dados.linhas.filter((l) => l.delta > 0);
+  const ganhoTotal = subiram.reduce((s, l) => s + l.delta, 0);
+  const nCaiu = porCausa.reduce((s, [, x]) => s + x.itens, 0);
+  const unid = dados.nivel === "produto" ? "produtos" : "anúncios";
 
   const causasPresentes = [...new Set(dados.linhas.map((l) => l.causa))];
 
@@ -373,13 +378,17 @@ export default function QuedaCliente({ dados }: { dados: DadosQueda }) {
             <div className="decision-comparison">
               <HeroMetric label="Variação de receita" value={`R$ ${variacao > 0 ? "+" : variacao < 0 ? "−" : ""}${money(Math.abs(variacao)).replace(/^R\$\s*/, "")}`} delta={dados.totalAntes > 0 ? (variacao / dados.totalAntes) * 100 : undefined} hint={`${dataBr(dados.de)} a ${dataBr(dados.ate)} contra ${dataBr(dados.deAnterior)} a ${dataBr(dados.ateAnterior)}`}>
                 <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4 text-[14px]"><div><dt className="text-ink-3">Antes</dt><dd className="mt-1 font-semibold text-ink tabular-nums">{money(dados.totalAntes)}</dd></div><div><dt className="text-ink-3">Agora</dt><dd className="mt-1 font-semibold text-ink tabular-nums">{money(dados.totalAgora)}</dd></div></dl>
+                <dl className="mt-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 border-t border-line pt-4 text-[14px] tabular-nums">
+                  <dt className="text-ink-2">{count(nCaiu)} {unid} caíram</dt><dd className="text-right font-semibold text-down">−{money(Math.abs(quedaTotal))}</dd>
+                  <dt className="text-ink-2">{count(subiram.length)} {unid} cresceram</dt><dd className="text-right font-semibold text-up">+{money(ganhoTotal)}</dd>
+                  <dt className="font-semibold text-ink">Saldo</dt><dd className="text-right font-bold text-ink">{variacao < 0 ? "−" : "+"}{money(Math.abs(variacao))}</dd>
+                </dl>
                 {dados.dias !== dados.diasAnterior && <p className="mt-3 text-[12px] text-warn">{dados.dias} dias contra {dados.diasAnterior}: compare por dia.</p>}
               </HeroMetric>
               <Panel className="p-5">
-                <p className="text-[14px] font-semibold text-ink">Principais sinais</p>
+                <p className="text-[14px] font-semibold text-ink">Por que os {unid} caíram</p>
                 <p className="num mt-1 text-[13px] text-ink-2">
-                  {money(Math.abs(quedaTotal))} de queda · {count(porCausa.reduce((s, [, x]) => s + x.itens, 0))}{" "}
-                  {dados.nivel === "produto" ? "produtos" : "anúncios"}
+                  −{money(Math.abs(quedaTotal))} · {count(nCaiu)} {unid} · sem os que cresceram
                 </p>
                 <ul className="mt-3 flex flex-col gap-1.5">
                   {(todasCausas ? porCausa : porCausa.slice(0, 3)).map(([c, x]) => (

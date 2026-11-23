@@ -96,6 +96,22 @@ const vazio = (de: string, ate: string, aviso: string): DadosAcompanhamento => (
 });
 const normal = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
+/*
+ * Saúde, Planejamento e tráfego pago não dependem do período: trocar
+ * Ontem/Semana/Intervalo não precisa reler. Juntos levavam ~12 s e
+ * disputavam o banco com as outras telas.
+ * ponytail: memória da instância, some a cada deploy ou instância nova; cache compartilhado se precisar.
+ */
+const memo = new Map<string, { t: number; v: Promise<unknown> }>();
+function lembrar<T>(chave: string, f: () => Promise<T>): Promise<T> {
+  const m = memo.get(chave);
+  if (m && Date.now() - m.t < 10 * 60e3) return m.v as Promise<T>;
+  const v = f();
+  memo.set(chave, { t: Date.now(), v });
+  v.catch(() => memo.delete(chave));
+  return v;
+}
+
 /**
  * `anterior` escolhe a base: sem ela, o período de mesmo tamanho logo antes.
  * Um dia só se compara com o mesmo dia da semana anterior (sábado não se
@@ -124,8 +140,8 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
 
   const [queda, saudeToda, resultados, convitesBrutos, midia, diarias, exclusoes, reputacaoBruta, baseMargem, familiasBrutas] = await Promise.all([
     carregarQueda({ de, ate, deAnt: deAnterior, ateAnt: ateAnterior, nivel: "produto", canais: meli.id }),
-    carregarSaude().catch(() => []),
-    carregarResultadosPlanejamento(),
+    lembrar(`saude:${op.id}`, carregarSaude).catch(() => []),
+    lembrar(`planej:${op.id}`, carregarResultadosPlanejamento),
     paginar(() =>
       sb
         .from("promocao_canal_itens")
@@ -136,7 +152,7 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
         .order("id")
     ).catch(() => []),
     // Uma chamada só: a janela mais recente do relatório (o canal manda por janela, não por dia).
-    carregarTrafegoPago(undefined, meli.id).catch(() => null),
+    lembrar(`trafego:${op.id}`, () => carregarTrafegoPago(undefined, meli.id)).catch(() => null),
     // Só os dias do período, das contas do Meli — não o histórico inteiro.
     paginar(() =>
       sb
@@ -200,6 +216,13 @@ export async function carregarAcompanhamento(de: string, ate: string, anterior?:
       t.pedidos += l[k].pedidos;
       if (l[k].visitas != null) t.visitas = (t.visitas ?? 0) + l[k].visitas!;
     }
+  }
+  // Conversão só entre produtos com visita registrada; preço é o médio pago (receita ÷ unidades).
+  for (const k of ["antes", "agora"] as const) {
+    const t = totais[k];
+    const unComVisita = queda.linhas.reduce((s, l) => s + (l[k].visitas != null ? l[k].unidades : 0), 0);
+    t.conversao = t.visitas ? (unComVisita * 100) / t.visitas : null;
+    t.precoVendido = t.unidades ? t.receita / t.unidades : null;
   }
 
   type CB = { codigo_externo: string; preco_promocional: number; fim: string | null; anuncios: { sku_canal: string | null } | null; promocoes_canal: { nome: string | null; tipo: string; fim: string | null } | null };

@@ -169,45 +169,85 @@ function GraficoPeriodo({ d, passo, destaque }: { d: Dados; passo: number; desta
 }
 
 /* ── Cascata: de onde veio a diferença (visitas × conversão × preço, a conta sem resto do queda.ts) ── */
-function Cascata({ g }: { g: Gatilho }) {
-  const a = g.lados!.antes.receita, b = g.lados!.agora.receita, e = g.efeito!;
-  const fatores = (
-    [
-      ["Visitas", e.visitas],
-      ["Conversão", e.conversao],
-      ["Unidades", e.visitas == null && e.conversao == null ? e.unidades : null],
-      ["Preço", e.preco],
-    ] as [string, number | null][]
-  ).filter((f): f is [string, number] => f[1] != null && Math.abs(f[1]) >= 0.5);
-  let corrente = a;
-  const linhas: { rotulo: string; de: number; ate: number; tipo: "base" | "up" | "down" | "fim" }[] = [{ rotulo: "Antes", de: 0, ate: a, tipo: "base" }];
-  for (const [rotulo, v] of fatores) {
-    linhas.push({ rotulo, de: corrente, ate: corrente + v, tipo: v < 0 ? "down" : "up" });
-    corrente += v;
-  }
-  linhas.push({ rotulo: "Agora", de: 0, ate: b, tipo: "fim" });
-  const max = Math.max(1, ...linhas.map((l) => Math.max(l.de, l.ate)));
-  const pior = fatores.length ? fatores.reduce((m, f) => (f[1] < m[1] ? f : m)) : null;
+const pct1 = (v: number | null) => (v == null ? "—" : `${v.toLocaleString("pt-BR", { minimumFractionDigits: v < 10 ? 2 : 1, maximumFractionDigits: v < 10 ? 2 : 1 })}%`);
+const sinalR = (v: number) => `${v > 0 ? "+" : "−"}${money(Math.abs(v))}`;
+
+/**
+ * Antes → agora de cada fator, e quanto ele mexeu na receita.
+ * A coluna da direita é a conta sem resto do queda.ts: somada, dá a diferença.
+ */
+type LadoF = { receita: number; unidades: number; visitas: number | null; conversao: number | null; precoVendido: number | null };
+function Fatores({ lados, efeito, rotuloReceita = "Receita", extras = [], total }: { lados: { antes: LadoF; agora: LadoF }; efeito: NonNullable<Gatilho["efeito"]>; rotuloReceita?: string; extras?: { rotulo: string; antes: number; agora: number; ef: number }[]; total?: { antes: number; agora: number } }) {
+  const { antes: A, agora: B } = lados;
+  const temVisita = A.visitas != null || B.visitas != null || efeito.visitas != null;
+  const linhas: { rotulo: string; a: string; b: string; v: number | null; ef: number | null }[] = [
+    ...(temVisita ? [
+      { rotulo: "Visitas", a: A.visitas == null ? "sem dado" : count(A.visitas), b: B.visitas == null ? "sem dado" : count(B.visitas), v: variacao(B.visitas, A.visitas), ef: efeito.visitas },
+      { rotulo: "Conversão", a: pct1(A.conversao), b: pct1(B.conversao), v: variacao(B.conversao, A.conversao), ef: efeito.conversao },
+    ] : []),
+    // Unidades e visitas × conversão são exclusivas por produto (queda-causa.ts): o efeito aqui é dos que não têm visita.
+    { rotulo: "Unidades", a: count(A.unidades), b: count(B.unidades), v: variacao(B.unidades, A.unidades), ef: efeito.unidades },
+    { rotulo: "Preço médio pago", a: A.precoVendido == null ? "—" : money(A.precoVendido), b: B.precoVendido == null ? "não vendeu" : money(B.precoVendido), v: variacao(B.precoVendido, A.precoVendido), ef: efeito.preco },
+  ];
+  const maxEf = Math.max(1, ...linhas.map((l) => Math.abs(l.ef ?? 0)));
+  const pior = linhas.reduce<(typeof linhas)[number] | null>((m, l) => (l.ef != null && l.ef < (m?.ef ?? 0) ? l : m), null);
+  const th = "pb-1 text-[12px] font-medium text-ink-3";
   return (
-    <div className="flex flex-col gap-2">
-      {linhas.map((l, i) => {
-        const esq = (Math.min(l.de, l.ate) / max) * 100, larg = (Math.abs(l.ate - l.de) / max) * 100;
-        const cor = l.tipo === "base" ? "var(--line-2)" : l.tipo === "fim" ? "var(--brand)" : l.tipo === "down" ? "var(--down)" : "var(--up)";
-        const destaque = pior && l.rotulo === pior[0];
-        return (
-          <div key={l.rotulo} className="grid grid-cols-[92px_1fr_auto] items-center gap-3 acm-sobe" style={{ animationDelay: `${i * 0.35}s` }}>
-            <span className={`text-[14px] ${destaque ? "font-bold text-ink" : "text-ink-2"}`}>{l.rotulo}</span>
-            <div className="relative h-7 rounded-[6px] bg-panel-2">
-              <div className="absolute inset-y-0 rounded-[6px] acm-cresce-x" style={{ left: `${esq}%`, width: `${Math.max(larg, 0.6)}%`, background: cor, animationDelay: `${i * 0.35 + 0.1}s`, outline: destaque ? "2px solid var(--ink)" : undefined, outlineOffset: 2 }} />
-            </div>
-            <span className={`num text-[14px] font-semibold ${l.tipo === "down" ? "text-down" : l.tipo === "up" ? "text-up" : "text-ink"}`}>
-              {l.tipo === "base" || l.tipo === "fim" ? money(l.ate) : `${l.ate - l.de > 0 ? "+" : "−"}${money(Math.abs(l.ate - l.de))}`}
-            </span>
-          </div>
-        );
-      })}
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[340px] border-collapse text-[14px]">
+        <thead>
+          <tr><th className={`${th} text-left`} /><th className={`${th} text-right`}>Antes</th><th className={`${th} text-right`}>Agora</th><th className={`${th} text-right`}>Var.</th><th className={`${th} text-right`}>Na receita</th></tr>
+        </thead>
+        <tbody>
+          <tr className="border-t border-line">
+            <td className="py-2 font-semibold text-ink">{rotuloReceita}</td>
+            <td className="num py-2 text-right text-ink-2">{money(A.receita)}</td>
+            <td className="num py-2 text-right font-semibold text-ink">{money(B.receita)}</td>
+            <td className="py-2 text-right"><Delta v={variacao(B.receita, A.receita)} /></td>
+            <td className={`num py-2 text-right font-bold ${B.receita < A.receita ? "text-down" : "text-up"}`}>{sinalR(B.receita - A.receita)}</td>
+          </tr>
+          {linhas.map((l, i) => (
+            <tr key={l.rotulo} className="border-t border-line acm-sobe" style={{ animationDelay: `${(i + 1) * 0.2}s` }}>
+              <td className={`py-2 pl-4 ${pior === l ? "font-bold text-ink" : "text-ink-2"}`}>{l.rotulo}</td>
+              <td className="num py-2 text-right text-ink-2">{l.a}</td>
+              <td className="num py-2 text-right font-semibold text-ink">{l.b}</td>
+              <td className="py-2 text-right">{l.v == null ? <span className="text-ink-3">—</span> : <Delta v={l.v} />}</td>
+              <td className="py-2 pl-2 text-right">
+                {l.ef == null || Math.abs(l.ef) < 0.5 ? <span className="text-ink-3">—</span> : (
+                  <span className="inline-flex items-center justify-end gap-2">
+                    <span className="hidden h-2 w-16 rounded-full bg-panel-2 sm:block"><span className="ml-auto block h-2 rounded-full" style={{ width: `${(Math.abs(l.ef) / maxEf) * 100}%`, background: l.ef < 0 ? "var(--down)" : "var(--up)" }} /></span>
+                    <span className={`num font-semibold ${l.ef < 0 ? "text-down" : "text-up"}`}>{sinalR(l.ef)}</span>
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+          {extras.map((x) => (
+            <tr key={x.rotulo} className="border-t border-line">
+              <td className="py-2 font-semibold text-ink">{x.rotulo}</td>
+              <td className="num py-2 text-right text-ink-2">{money(x.antes)}</td>
+              <td className="num py-2 text-right font-semibold text-ink">{money(x.agora)}</td>
+              <td className="py-2 text-right"><Delta v={variacao(x.agora, x.antes)} /></td>
+              <td className={`num py-2 text-right font-bold ${x.ef < 0 ? "text-down" : "text-up"}`}>{sinalR(x.ef)}</td>
+            </tr>
+          ))}
+          {total && (
+            <tr className="border-t-2 border-ink">
+              <td className="py-2 font-bold text-ink">Total Meli</td>
+              <td className="num py-2 text-right text-ink-2">{money(total.antes)}</td>
+              <td className="num py-2 text-right font-bold text-ink">{money(total.agora)}</td>
+              <td className="py-2 text-right"><Delta v={variacao(total.agora, total.antes)} /></td>
+              <td className={`num py-2 text-right font-bold ${total.agora < total.antes ? "text-down" : "text-up"}`}>{sinalR(total.agora - total.antes)}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
+}
+
+function Cascata({ g }: { g: Gatilho }) {
+  return <Fatores lados={g.lados!} efeito={g.efeito!} />;
 }
 
 /* ── Histórico do produto: barras por dia, o período atual na cor; o preço num gráfico próprio (nunca dois eixos) ── */
@@ -226,14 +266,24 @@ function Historico({ dias, de, eventos }: { dias: NonNullable<Dados["historicos"
   const yP = (p: number) => (pMax === pMin ? 30 : 8 + (1 - (p - pMin) / (pMax - pMin)) * 44);
   const iDiv = dias.findIndex((x) => x.data >= de);
   const pts = precos.map((p, i) => (p == null ? null : `${i * bw + bw / 2},${yP(p)}`)).filter(Boolean);
+  const soma = (f: (x: (typeof dias)[number]) => boolean) => dias.filter(f).reduce((s, x) => ({ r: s.r + x.receita, u: s.u + x.unidades }), { r: 0, u: 0 });
+  const sAnt = soma((x) => x.data < de), sAtu = soma((x) => x.data >= de);
+  const iP0 = precos.findIndex((p) => p != null);
+  const iP1 = precos.length - 1 - [...precos].reverse().findIndex((p) => p != null);
+  const rotuloUn = bw >= 18;
   return (
     <div ref={ref} className="flex flex-col gap-1">
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-[14px]">
+        <span className="text-ink-2">antes <b className="num text-ink">{money(sAnt.r)}</b> · <span className="num">{count(sAnt.u)} un.</span></span>
+        <span className="text-ink-2">agora <b className="num text-brand">{money(sAtu.r)}</b> · <span className="num">{count(sAtu.u)} un.</span></span>
+      </div>
       <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block max-w-full" role="img" aria-label="Receita do produto por dia">
         {dias.map((x, i) => {
-          const h = (x.receita / max) * (H - pb - 8);
+          const h = (x.receita / max) * (H - pb - 22);
           return (
             <g key={x.data}>
               <rect x={i * bw + 3} y={H - pb - h} width={bw - 6} height={Math.max(h, x.receita ? 2 : 0)} rx="3" fill={x.data >= de ? "var(--brand)" : "var(--line-2)"} className="acm-cresce-y" style={{ animationDelay: `${i * 0.06}s` }} />
+              {rotuloUn && x.unidades > 0 && <text x={i * bw + bw / 2} y={H - pb - h - 4} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--ink-2)">{x.unidades}</text>}
               {x.estoque === 0 && <circle cx={i * bw + bw / 2} cy={H - pb - 5} r="4" fill="var(--down)"><title>sem estoque</title></circle>}
               <text x={i * bw + bw / 2} y={H - 6} textAnchor="middle" fontSize="11" fill="var(--ink-3)">{x.data.slice(8, 10)}</text>
             </g>
@@ -241,10 +291,10 @@ function Historico({ dias, de, eventos }: { dias: NonNullable<Dados["historicos"
         })}
         {iDiv > 0 && <line x1={iDiv * bw} x2={iDiv * bw} y1="0" y2={H - pb} stroke="var(--ink-3)" strokeWidth="1" />}
       </svg>
-      {dias.some((x) => x.estoque === 0) && <span className="text-[12px] text-down">● dia sem estoque</span>}
+      <span className="text-[12px] text-ink-3">número em cima da barra = unidades{dias.some((x) => x.estoque === 0) && <span className="text-down"> · ● dia sem estoque</span>}</span>
       {pv.length > 1 && (
         <>
-          <span className="label">Preço anunciado · {money(pMin)} a {money(pMax)}</span>
+          <span className="label">Preço anunciado · {shortDate(dias[iP0].data)} {money(precos[iP0]!)} → {shortDate(dias[iP1].data)} {money(precos[iP1]!)} ({pctTxt(variacao(precos[iP1], precos[iP0]))})</span>
           <svg viewBox={`0 0 ${W} 60`} width={W} height={60} className="block max-w-full" role="img" aria-label="Preço anunciado por dia">
             <path d={`M ${pts.join(" L ")}`} fill="none" stroke="var(--ink-2)" strokeWidth="2.5" pathLength={1} className="acm-traco" style={{ animationDelay: ".6s" }} />
             {dias.map((x, i) => {
@@ -318,29 +368,31 @@ const fraseP = (p: { chave: ChaveP; valor: number }) => FRASE_P[p.chave][p.valor
 /* ── Ponte: do total de antes ao de agora, parte por parte ── */
 function Ponte({ d, passo }: { d: Dados; passo: number }) {
   const pt = d.ponte!;
-  let acc = pt.antes;
-  const passos = pt.partes.map((p) => { const de = acc; acc += p.valor; return { ...p, de, para: acc }; });
-  const vals = [pt.antes, pt.agora, ...passos.map((p) => p.para)];
-  const lo = Math.min(...vals) * 0.9, hi = Math.max(...vals);
-  const x = (v: number) => `${((v - lo) / (hi - lo || 1)) * 100}%`;
-  const linha = (rotulo: React.ReactNode, valor: React.ReactNode, a: number, b: number, cor: string, i: number, sub?: string) => (
-    <div className="grid grid-cols-[1fr_auto] items-end gap-x-3 gap-y-1 md:grid-cols-[34%_1fr_110px] md:items-center md:gap-3 acm-sobe" style={{ animationDelay: `${i * 0.18}s` }}>
-      <div className="min-w-0"><div className="text-[14px] font-semibold text-ink">{rotulo}</div>{sub && <div className="text-[12px] text-ink-3">{sub}</div>}</div>
-      <div className="relative order-3 col-span-2 h-6 rounded-[6px] bg-panel-2 md:order-none md:col-span-1 md:h-7">
-        <div className="absolute inset-y-1 rounded-[5px] acm-cresce-x" style={{ left: x(Math.min(a, b)), width: `max(3px, calc(${x(Math.max(a, b))} - ${x(Math.min(a, b))}))`, background: cor, animationDelay: `${0.15 + i * 0.18}s` }} />
-      </div>
-      <div className="num order-2 text-right text-[15px] font-bold md:order-none" style={{ color: cor === "var(--line-2)" ? "var(--ink)" : cor }}>{valor}</div>
-    </div>
-  );
+  const parte = (k: ChaveP) => pt.partes.find((p) => p.chave === k)?.valor ?? null;
+  const efeito = { visitas: parte("visitas"), conversao: parte("conversao"), unidades: parte("unidades"), preco: parte("preco") ?? 0 };
+  const extras = (["estoque", "zerou", "novos"] as const).flatMap((k) => (pt.grupos[k] && parte(k) ? [{ rotulo: ROTULO_P[k], ...pt.grupos[k]!, ef: parte(k)! }] : []));
+  const comTop = pt.partes.filter((p) => p.top.length);
   return (
-    <div className="flex flex-col gap-2.5">
-      {linha("Antes", money(pt.antes), lo, pt.antes, "var(--line-2)", 0)}
-      {passos.map((p, i) => passo >= (i < 2 ? 0 : 1) ? (
-        <React.Fragment key={p.chave}>
-          {linha(ROTULO_P[p.chave], `${p.valor > 0 ? "+" : "−"}${moneyShort(Math.abs(p.valor))}`, p.de, p.para, p.valor < 0 ? "var(--down)" : "var(--up)", i + 1, `${["zerou", "novos", "estoque"].includes(p.chave) ? "" : `${fraseP(p)} · `}${p.produtos} produto${p.produtos === 1 ? "" : "s"}`)}
-        </React.Fragment>
-      ) : null)}
-      {passo >= 1 && linha("Agora", money(pt.agora), lo, pt.agora, "var(--brand)", passos.length + 1)}
+    <div className="grid gap-6 md:grid-cols-[1.1fr_1fr]">
+      <Fatores lados={pt.seguiram} efeito={efeito} rotuloReceita={`Venderam nos dois (${pt.seguiram.produtos})`} extras={extras} total={{ antes: pt.antes, agora: pt.agora }} />
+      <P n={1} passo={passo} className="flex flex-col gap-4">
+        {comTop.map((p) => (
+          <div key={p.chave}>
+            <div className="flex items-baseline justify-between gap-3 border-b border-line pb-1">
+              <span className="text-[14px] font-semibold text-ink">{ROTULO_P[p.chave]}</span>
+              <span className={`num text-[14px] font-bold ${p.valor < 0 ? "text-down" : "text-up"}`}>{sinalR(p.valor)} · {p.produtos} prod.</span>
+            </div>
+            <ul className="mt-1 flex flex-col gap-0.5">
+              {p.top.map((t) => (
+                <li key={t.sku} className="flex items-baseline justify-between gap-3 text-[13px]">
+                  <span className="min-w-0 text-ink-2"><span className="text-ink-3">{t.sku}</span> {t.titulo}</span>
+                  <span className={`num shrink-0 ${t.valor < 0 ? "text-down" : "text-up"}`}>{sinalR(t.valor)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </P>
     </div>
   );
 }
@@ -515,7 +567,7 @@ export function montarSlides(d: Dados): SlideDef[] {
       id: "ponte", kicker: `${n(slides.length)} · ${caiu ? "Para onde foi" : "De onde veio"}`,
       titulo: `${caiu ? "−" : "+"}${moneyShort(Math.abs(dif))}: ${fraseP(maiorParte)}`,
       passos: [
-        "Cada barra é uma parte da diferença, em R$. Somadas, dão o total.",
+        "Antes e agora do Meli. A coluna da direita é quanto cada coisa mexeu na receita: somada, dá a diferença.",
         c ? `${c.produtos} produto${c.produtos === 1 ? "" : "s"} faz${c.produtos === 1 ? "" : "em"} 80% da ${caiu ? "queda" : "alta"}, de ${c.de} que ${caiu ? "caíram" : "subiram"}. São os próximos slides.` : "Os produtos vêm a seguir.",
       ],
       corpo: (passo) => <Ponte d={d} passo={passo} />,

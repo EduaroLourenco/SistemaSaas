@@ -107,5 +107,11 @@ assert.equal(parte("novos"), 2000);
 assert.equal(parte("estoque"), -2500, "sem estoque e anúncio parado vão inteiros para estoque");
 assert.equal(pt.partes.reduce((a, x) => a + x.valor, 0), 3800 - 9500, "as partes somam a diferença");
 assert.equal(pt.partes[0].chave, "zerou", "maior parte primeiro");
+// As bases da tela fecham com o total: os que seguiram + cada grupo.
+const bases = (k) => pt.seguiram[k].receita + Object.values(pt.grupos).reduce((a, g) => a + g[k], 0);
+assert.equal(bases("antes"), 9500);
+assert.equal(bases("agora"), 3800);
+assert.equal(pt.seguiram.produtos, 1, "só V vendeu nos dois períodos sem parar");
+assert.deepEqual(pt.partes.find((x) => x.chave === "visitas").top.map((t) => t.sku), ["V"]);
 
 console.log("gatilhos: ok");

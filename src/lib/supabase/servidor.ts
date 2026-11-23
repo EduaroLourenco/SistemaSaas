@@ -22,6 +22,7 @@
  */
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 /** O cookie que o seletor de empresa grava. */
 export const COOKIE_OPERACAO = "operacao";
@@ -38,9 +39,23 @@ export type OpcoesCliente = {
   todasOperacoes?: boolean;
 };
 
+/*
+ * Sem cookie (quem nunca trocou de empresa no seletor), o seletor já mostra
+ * a operação padrão — e o cabeçalho tem que ir com ela. Sem isso o RLS não
+ * estreitava e a tela somava as empresas: Mercado Livre, Loja própria e
+ * Shopee da Probel e da Boa Forma lado a lado, com o total dobrado.
+ * `cache` faz a consulta uma vez por requisição, não uma por cliente.
+ */
+const operacaoPadraoId = cache(async () => {
+  const { operacaoPadrao } = await import("@/lib/dados/operacao");
+  return (await operacaoPadrao())?.id ?? null;
+});
+
 export async function clienteServidor(opcoes: OpcoesCliente = {}) {
   const jar = await cookies();
-  const escolhida = opcoes.todasOperacoes ? null : jar.get(COOKIE_OPERACAO)?.value?.trim();
+  const escolhida = opcoes.todasOperacoes
+    ? null
+    : jar.get(COOKIE_OPERACAO)?.value?.trim() || (await operacaoPadraoId());
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
