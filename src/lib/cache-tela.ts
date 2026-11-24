@@ -19,8 +19,8 @@ import { COOKIE_VERSAO } from "@/lib/versao-dados";
  * Dentro do cache as consultas seguem com o token dele — o RLS continua
  * valendo, e uma pessoa nunca recebe o cache de outra.
  *
- * Invalidação: fim de sincronização limpa a empresa inteira
- * (`limparCacheDaEmpresa`); gravação do próprio usuário troca a versão; a
+ * Invalidação: fim de sincronização marca a empresa inteira para refazer em
+ * segundo plano (`limparCacheDaEmpresa`); gravação do próprio usuário troca a versão; a
  * gravação de outra pessoa da mesma empresa aparece em até 10 minutos.
  */
 
@@ -51,7 +51,14 @@ export async function emCache<T>(tela: string, filtros: unknown, carregar: () =>
   )();
 }
 
-/** Fim de sincronização: a próxima abertura de qualquer pessoa da empresa lê de novo. */
+/**
+ * Fim de sincronização: a próxima abertura mostra a versão anterior na hora
+ * e refaz em segundo plano; a seguinte já vem com o dado novo.
+ *
+ * Expirar na hora (`{ expire: 0 }`) fazia a pessoa esperar a remontagem, e
+ * isso caía justo no pico do banco depois da sincronização — a Queda levou
+ * 143 s em 24/11. O preço é uma abertura com o dado de uma hora antes.
+ */
 export function limparCacheDaEmpresa(operacaoId: string) {
-  revalidateTag(tagDaEmpresa(operacaoId), { expire: 0 });
+  revalidateTag(tagDaEmpresa(operacaoId), "max");
 }
