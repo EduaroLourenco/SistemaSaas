@@ -1,4 +1,5 @@
 import { carregarDia } from "@/lib/dados/dia";
+import { emCache } from "@/lib/cache-tela";
 import { Suspense } from "react";
 import { Carregando } from "@/components/ui/carregando";
 import DiaCliente from "./dia-cliente";
@@ -22,7 +23,7 @@ export default async function Pagina({
 }) {
   const { data, canal, mes } = await searchParams;
   // canal aceita lista ("a,conta:b"); mes ("AAAA-MM") é a navegação do calendário.
-  const dados = await carregarDia(data, canal || undefined, mes || undefined);
+  const dados = await emCache("dia", { data, canal, mes }, () => carregarDia(data, canal || undefined, mes || undefined));
   /* Olhando outro dia, a operação de agora só atrapalharia. */
   const operacao = !data && !mes ? <Suspense fallback={<Carregando compacto />}><OperacaoHoje /></Suspense> : null;
   return <DiaCliente dados={dados} operacao={operacao} />;

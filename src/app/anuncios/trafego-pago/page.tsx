@@ -1,4 +1,5 @@
 import { carregarTrafegoPago } from "@/lib/dados/trafego-pago";
+import { emCache } from "@/lib/cache-tela";
 import TrafegoPagoCliente from "./trafego-pago-cliente";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function Pagina({
   /* A janela vem da URL para o seletor sobreviver a recarga e a link
      compartilhado — e porque somar janelas sobrepostas inflava o gasto. */
   const { janela, canais, de, ate } = await searchParams;
-  const dados = await carregarTrafegoPago(janela, canais, { de, ate });
+  const dados = await emCache("trafego-pago", { janela, canais, de, ate }, () => carregarTrafegoPago(janela, canais, { de, ate }));
 
   return <TrafegoPagoCliente dados={dados} />;
 }

@@ -21,8 +21,10 @@
  * forjado restringe o resultado e nunca o amplia.
  */
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { cache } from "react";
+import { escopoCache } from "./escopo";
 
 /** O cookie que o seletor de empresa grava. */
 export const COOKIE_OPERACAO = "operacao";
@@ -52,11 +54,29 @@ const operacaoPadraoId = cache(async () => {
 });
 
 export async function clienteServidor(opcoes: OpcoesCliente = {}) {
+  /* Leitura em cache: sem cookie, com o token e a empresa de quem pediu. */
+  const escopo = escopoCache.getStore();
+  if (escopo) {
+    return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        headers: {
+          Authorization: `Bearer ${escopo.token}`,
+          ...(opcoes.todasOperacoes ? {} : { [HEADER_OPERACAO]: escopo.operacao.id }),
+        },
+      },
+    }) as unknown as ClienteSessao;
+  }
   const jar = await cookies();
   const escolhida = opcoes.todasOperacoes
     ? null
     : jar.get(COOKIE_OPERACAO)?.value?.trim() || (await operacaoPadraoId());
+  return clienteDeSessao(jar, escolhida);
+}
 
+type ClienteSessao = ReturnType<typeof clienteDeSessao>;
+
+function clienteDeSessao(jar: Awaited<ReturnType<typeof cookies>>, escolhida: string | null) {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -82,6 +102,7 @@ export async function clienteServidor(opcoes: OpcoesCliente = {}) {
 /** Usuário da sessão, ou null. */
 export async function usuarioAtual() {
   const sb = await clienteServidor();
-  const { data } = await sb.auth.getUser();
+  // Em cache o cliente não guarda sessão: o token vai explícito.
+  const { data } = await sb.auth.getUser(escopoCache.getStore()?.token);
   return data.user ?? null;
 }

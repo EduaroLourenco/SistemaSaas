@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { clienteServidor, COOKIE_OPERACAO } from "@/lib/supabase/servidor";
+import { escopoCache } from "@/lib/supabase/escopo";
 
 /**
  * Qual operação a requisição está usando.
@@ -84,6 +85,9 @@ export async function listarOperacoes(): Promise<Operacao[]> {
 
 /** A escolhida no cookie; sem escolha válida, a de mais canais. */
 export async function operacaoPadrao(): Promise<Operacao | null> {
+  /* Em cache, a empresa já foi resolvida (e conferida) antes de entrar. */
+  const escopo = escopoCache.getStore();
+  if (escopo) return escopo.operacao;
   const todas = await listarOperacoes();
   if (!todas.length) return null;
 

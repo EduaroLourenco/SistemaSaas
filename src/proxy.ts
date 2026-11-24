@@ -10,6 +10,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { paginaComercial } from "@/lib/rotas-publicas";
 import { caminhoDemo } from "@/lib/demo/rotas";
 import { barrarForaDaExpedicao } from "@/lib/acesso-expedicao-proxy";
+import { COOKIE_VERSAO } from "@/lib/versao-dados";
 
 /*
  * `/api/cron/` não tem sessão: quem chama é o agendador da Vercel. Não é
@@ -161,6 +162,13 @@ export async function proxy(req: NextRequest) {
   if (data.user && !publica) {
     const bloqueio = await barrarForaDaExpedicao(req, sb, data.user.id, resposta);
     if (bloqueio) return bloqueio;
+  }
+
+  /* Quem grava passa a ver dado novo: a versão entra na chave das telas em cache. */
+  if (data.user && caminho.startsWith("/api/") && req.method !== "GET" && req.method !== "HEAD") {
+    resposta.cookies.set(COOKIE_VERSAO, String(Date.now()), {
+      path: "/", sameSite: "lax", httpOnly: true, secure: req.nextUrl.protocol === "https:",
+    });
   }
 
   return resposta;

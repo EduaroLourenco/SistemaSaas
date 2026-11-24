@@ -1,4 +1,5 @@
 import { carregarAnalise } from "@/lib/dados/analise";
+import { emCache } from "@/lib/cache-tela";
 import { lerPeriodo } from "@/lib/periodo-anuncios";
 import AnaliseAnuncios from "@/components/analise/central-anuncios";
 
@@ -9,6 +10,6 @@ export default async function Pagina({
 }: {
   searchParams: Promise<{ de?: string; ate?: string; vs?: string; vsde?: string; vsate?: string }>;
 }) {
-  const [dados, q] = await Promise.all([carregarAnalise(), searchParams]);
+  const [dados, q] = await Promise.all([emCache("analise", null, carregarAnalise), searchParams]);
   return <AnaliseAnuncios dados={dados} inicial={lerPeriodo(q, dados.hoje)} />;
 }

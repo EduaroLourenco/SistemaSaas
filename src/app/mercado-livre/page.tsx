@@ -1,4 +1,5 @@
 import { carregarTermometro } from "@/lib/dados/termometro";
+import { emCache } from "@/lib/cache-tela";
 import TermometroCliente from "./termometro-cliente";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,6 @@ export default async function Pagina({
   searchParams: Promise<{ conta?: string; semana?: string }>;
 }) {
   const { conta, semana } = await searchParams;
-  const dados = await carregarTermometro({ conta, semana });
+  const dados = await emCache("termometro", { conta, semana }, () => carregarTermometro({ conta, semana }));
   return <TermometroCliente dados={dados} />;
 }

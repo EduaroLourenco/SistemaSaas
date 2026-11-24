@@ -2,6 +2,7 @@ import "server-only";
 import { clientePrivilegiado } from "@/lib/supabase/privilegiado";
 import { planejarAtualizacao, type Origem } from "@/lib/atualizacao";
 import { BLOCOS, type Bloco } from "@/lib/atualizacao-blocos";
+import { limparCacheDaEmpresa } from "@/lib/cache-tela";
 
 /**
  * A fila da atualização: quem pede não precisa ficar esperando.
@@ -187,6 +188,8 @@ export async function rodarProxima(): Promise<"continuar" | "ocupado" | "vazio">
       const e = c.etapas.find((x) => x.id === proxima.id);
       if (e) Object.assign(e, fim, { fim: new Date().toISOString() });
     });
+    /* Dado novo no banco: as telas em cache desta empresa leem de novo. */
+    try { limparCacheDaEmpresa(l.operacao_id); } catch (e) { console.error("[cache-tela] não limpou:", e); }
     return "continuar";
   }
   return "vazio";
