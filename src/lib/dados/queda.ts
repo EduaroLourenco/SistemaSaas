@@ -1,6 +1,6 @@
 import "server-only";
 import { clienteServidor } from "@/lib/supabase/servidor";
-import { paginar } from "./paginar";
+import { paginar, paginarPorIds } from "./paginar";
 import { carregarContasRecorte } from "./contas-recorte";
 import { lerRecorte, noRecorte, opcoesRecorte, type GrupoRecorte } from "@/lib/recorte";
 import { diagnosticar, repartir } from "./queda-causa";
@@ -204,11 +204,12 @@ const GANHANDO = new Set(["winning", "sharing_first_place"]);
 async function disputaPorDia(
   sb: Awaited<ReturnType<typeof clienteServidor>>,
   de: string,
-  ate: string
+  ate: string,
+  anuncioIds: string[]
 ): Promise<{ anuncio_id: string; data: string; ganhando: boolean }[]> {
   type Linha = { anuncio_id: string; data: string; situacao: string };
-  const linhas = (await paginar(() =>
-    sb.from("anuncio_catalogo_diario").select("anuncio_id,data,situacao").gte("data", de).lte("data", ate).order("id")
+  const linhas = (await paginarPorIds(anuncioIds, (l) =>
+    sb.from("anuncio_catalogo_diario").select("anuncio_id,data,situacao").in("anuncio_id", l).gte("data", de).lte("data", ate)
   ).catch(() => [])) as unknown as Linha[];
   return linhas.map((l) => ({ anuncio_id: l.anuncio_id, data: l.data, ganhando: GANHANDO.has(l.situacao) }));
 }
@@ -235,15 +236,12 @@ async function precosDeVitrine(
   sb: Awaited<ReturnType<typeof clienteServidor>>,
   de: string,
   ate: string,
-  anuncioIds?: string[]
+  anuncioIds: string[]
 ): Promise<Map<string, number>> {
   type Cat = { anuncio_id: string; data: string; preco_atual: number | string };
-  const lerCatalogo = () => {
-    let q = sb.from("anuncio_catalogo_diario").select("anuncio_id,data,preco_atual").gte("data", de).lte("data", ate);
-    if (anuncioIds) q = q.in("anuncio_id", anuncioIds);
-    return q.not("preco_atual", "is", null).order("id");
-  };
-  const catalogo = (await paginar(lerCatalogo).catch(() => [])) as unknown as Cat[];
+  const catalogo = (await paginarPorIds(anuncioIds, (l) =>
+    sb.from("anuncio_catalogo_diario").select("anuncio_id,data,preco_atual").in("anuncio_id", l).gte("data", de).lte("data", ate).not("preco_atual", "is", null)
+  ).catch(() => [])) as unknown as Cat[];
   const m = new Map<string, number>();
   for (const c of catalogo) if (n(c.preco_atual) > 0) m.set(`${c.anuncio_id}|${c.data}`, n(c.preco_atual));
   return m;
@@ -375,10 +373,10 @@ export async function carregarQueda(opcoes: {
   type Desempenho = { anuncio_id: string; data: string; visitas: number };
   type Retrato = { anuncio_id: string; data: string; estoque: number; preco?: string | number | null };
 
-  const lerRetratos = async (): Promise<Retrato[]> => {
+  const lerRetratos = async (ids: string[]): Promise<Retrato[]> => {
     const q = (cols: string) =>
-      paginar(() =>
-        sb.from("anuncio_estoque_diario").select(cols).gte("data", deAnterior).lte("data", ate).order("id")
+      paginarPorIds(ids, (l) =>
+        sb.from("anuncio_estoque_diario").select(cols).in("anuncio_id", l).gte("data", deAnterior).lte("data", ate)
       );
     try {
       return (await q("anuncio_id,data,estoque,preco")) as unknown as Retrato[];
@@ -387,6 +385,24 @@ export async function carregarQueda(opcoes: {
       return (await q("anuncio_id,data,estoque")) as unknown as Retrato[];
     }
   };
+
+  /*
+   * As tabelas diárias (visitas, estoque, catálogo) só para os anúncios que
+   * entram na conta: os mesmos que viram grupo lá embaixo. Ler a empresa
+   * inteira e descartar depois estourava o tempo do banco em período longo.
+   */
+  const anunciosP = paginar(() =>
+    sb
+      .from("anuncios")
+      .select("id,codigo_externo,titulo,sku_canal,canal_id,conta_canal_id,status,preco_atual,estoque,sincronizado_em")
+      .order("id")
+  ) as unknown as Promise<Anuncio[]>;
+  const skuPedido = (opcoes.sku ?? "").trim().toUpperCase();
+  const idsP = anunciosP.then((an) =>
+    an
+      .filter((a) => dentro(a.canal_id, a.conta_canal_id) && (!skuPedido || (a.sku_canal ?? "").trim().toUpperCase() === skuPedido || a.codigo_externo.toUpperCase() === skuPedido))
+      .map((a) => a.id)
+  );
 
   const [itens, anuncios, desempenho, retratos, contas, vitrineOutras, disputa, vitrineAtual] = await Promise.all([
     paginar(() =>
@@ -400,25 +416,22 @@ export async function carregarQueda(opcoes: {
         .eq("pedidos.cancelado", false)
         .order("id")
     ) as unknown as Promise<Item[]>,
-    paginar(() =>
-      sb
-        .from("anuncios")
-        .select("id,codigo_externo,titulo,sku_canal,canal_id,conta_canal_id,status,preco_atual,estoque,sincronizado_em")
-        .order("id")
-    ) as unknown as Promise<Anuncio[]>,
-    paginar(() =>
-      sb
-        .from("anuncio_desempenho_diario")
-        .select("anuncio_id,data,visitas")
-        .not("visitas", "is", null)
-        .gte("data", deAnterior)
-        .lte("data", ate)
-        .order("id")
+    anunciosP,
+    idsP.then((ids) =>
+      paginarPorIds(ids, (l) =>
+        sb
+          .from("anuncio_desempenho_diario")
+          .select("anuncio_id,data,visitas")
+          .in("anuncio_id", l)
+          .not("visitas", "is", null)
+          .gte("data", deAnterior)
+          .lte("data", ate)
+      )
     ) as unknown as Promise<Desempenho[]>,
-    lerRetratos(),
+    idsP.then(lerRetratos),
     carregarContasRecorte(),
-    precosDeVitrine(sb, deAnterior, ate),
-    disputaPorDia(sb, deAnterior, ate),
+    idsP.then((ids) => precosDeVitrine(sb, deAnterior, ate, ids)),
+    idsP.then((ids) => disputaPorDia(sb, deAnterior, ate, ids)),
     carregarVitrineAtual(),
   ]);
 

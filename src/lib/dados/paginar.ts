@@ -117,3 +117,28 @@ export async function paginar<T>(
 
   return todos;
 }
+
+/**
+ * Lê uma tabela diária só para os ids pedidos, em lotes.
+ *
+ * Página funda é cara: para entregar a linha 17.000 o banco ordena o
+ * período inteiro e descarta o começo, de novo a cada página. No estoque
+ * diário de 01–23/11 eram 56 mil linhas e a página estourava o tempo
+ * (57014). Por anúncio, cada lote usa o índice (anuncio_id, data) e cabe em
+ * poucas páginas rasas — e quem chama já descartava os outros anúncios.
+ */
+export async function paginarPorIds<T>(
+  ids: string[],
+  montar: (lote: string[]) => Consulta<T>,
+  tamanho = 100,
+  juntos = 4
+): Promise<T[]> {
+  const lotes: string[][] = [];
+  for (let i = 0; i < ids.length; i += tamanho) lotes.push(ids.slice(i, i + tamanho));
+  const todos: T[] = [];
+  for (let i = 0; i < lotes.length; i += juntos) {
+    const partes = await Promise.all(lotes.slice(i, i + juntos).map((l) => paginar(() => montar(l))));
+    for (const p of partes) todos.push(...p);
+  }
+  return todos;
+}
