@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { useGerizoRouter as useRouter } from "@/lib/demo/runtime";
 import { AlertCircle, Check, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/primitives";
@@ -11,8 +12,27 @@ import { cn } from "@/lib/utils";
 
 const lerServidor = () => estadoInicial;
 
+/*
+ * De qual leitura vem o dado da tela aberta — é o horário dela que o relógio
+ * mostra. Tela sem leitura própria (cadastros, configurações) não mostra
+ * relógio: um horário de outra fonte ali seria um "atualizado" falso.
+ */
+const TELAS: [RegExp, Bloco][] = [
+  [/^\/mercado-livre\/envios/, "envios"],
+  [/^\/anuncios\/trafego-pago/, "publicidade"],
+  [/^\/financeiro/, "financeiro"],
+  [/^\/(anuncios|produtos|promocoes)(\/|$)/, "anuncios"],
+  [/^\/(vendas|mercado-livre|relatorios|planejamento|alertas)(\/|$)/, "vendas"],
+];
+function blocoDaTela(caminho: string) {
+  const tela = caminho.replace(/^\/demonstracao\/sistema/, "") || "/";
+  const id = TELAS.find(([re]) => re.test(tela))?.[1];
+  return id ? BLOCOS.find((b) => b.id === id) ?? null : null;
+}
+
 export function BotaoAtualizar({ compacto = false }: { compacto?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname() ?? "";
   const estado = React.useSyncExternalStore(atualizador.assinar, atualizador.ler, lerServidor);
   const [aberto, setAberto] = React.useState(false);
   const rodando = Boolean(estado.pedido?.ativo);
@@ -27,14 +47,19 @@ export function BotaoAtualizar({ compacto = false }: { compacto?: boolean }) {
     return () => { document.removeEventListener("visibilitychange", voltar); sair(); };
   }, [router]);
 
+  const bloco = blocoDaTela(pathname);
+  const ultima = bloco ? estado.ultima[bloco.id] : undefined;
+  const relogio = ultima ? `${bloco!.nome} · ${hora(ultima.em)}${ultima.falhou ? " · falhou" : ""}` : null;
+
   return <>
     {compacto ? <button
       type="button"
       onClick={() => setAberto(true)}
-      aria-label={rodando ? "Ver andamento da atualização" : "Atualizar"}
-      title={rodando ? "Atualizando…" : "Atualizar"}
-      className={cn("flex h-9 w-9 items-center justify-center rounded-r1 transition-colors hover:bg-panel-3", falhas ? "text-warn" : "text-ink-2 hover:text-ink")}
+      aria-label={rodando ? "Ver andamento da atualização" : relogio ? `Atualizar. ${relogio}` : "Atualizar"}
+      title={rodando ? "Atualizando…" : relogio ? `Dados de ${relogio}. Clique para atualizar.` : "Atualizar"}
+      className={cn("flex h-9 min-w-9 items-center justify-center gap-2 rounded-r1 px-2 transition-colors hover:bg-panel-3", falhas || ultima?.falhou ? "text-warn" : "text-ink-2 hover:text-ink")}
     >
+      {relogio && !rodando && <span className="num whitespace-nowrap text-[12px]">{relogio}</span>}
       <RefreshCw className={cn("h-4 w-4", rodando && "animate-spin")} aria-hidden />
     </button> : <Button onClick={() => setAberto(true)} variant="primary" size="sm">
       <RefreshCw className={cn("h-4 w-4", rodando && "animate-spin")} aria-hidden />
