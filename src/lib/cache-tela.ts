@@ -38,7 +38,9 @@ export async function emCache<T>(tela: string, filtros: unknown, carregar: () =>
   const usuario = claims?.claims?.sub;
   const token = sessao.session?.access_token;
   // Sem identidade conferida ou sem empresa, lê direto: nunca guarda o que não sabe de quem é.
-  if (!usuario || !token || !operacao || sessao.session?.user.id !== usuario) return carregar();
+  // O `sub` vem do getClaims, que confere a assinatura deste mesmo token; o `user`
+  // da sessão não é lido (vem do cookie sem conferência, e o supabase-js avisa no log).
+  if (!usuario || !token || !operacao) return carregar();
   const versao = jar.get(COOKIE_VERSAO)?.value ?? "";
   // O padrão das telas é "até ontem": virou o dia, é outra tela.
   const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
