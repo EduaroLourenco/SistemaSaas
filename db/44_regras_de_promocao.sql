@@ -96,10 +96,10 @@ begin
     execute format('alter table %I enable row level security', t);
     execute format('alter table %I force row level security', t);
     execute format('drop policy if exists %I_leitura on %I', t, t);
-    execute format('create policy %I_leitura on %I for select using (pode_ver_operacao(operacao_id))', t, t);
+    execute format('create policy %I_leitura on %I for select using (operacao_id in (select operacoes_do_usuario()))', t, t);
     execute format('drop policy if exists %I_escrita on %I', t, t);
     execute format(
-      'create policy %I_escrita on %I for all using (pode_editar_operacao(operacao_id)) with check (pode_editar_operacao(operacao_id))', t, t);
+      'create policy %I_escrita on %I for all using (operacao_id in (select operacoes_editaveis_do_usuario())) with check (operacao_id in (select operacoes_editaveis_do_usuario()))', t, t);
     execute format('grant select, insert, update, delete on %I to authenticated', t);
   end loop;
 end $$;

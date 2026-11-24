@@ -49,11 +49,65 @@ type Consulta<T> = {
   range: (de: number, ate: number) => PromiseLike<{ data: T[] | null; error: unknown }>;
 };
 type ComOrdem<T> = Consulta<T> & { order?: (coluna: string, o?: { ascending?: boolean }) => Consulta<T> };
+type Chaveavel<T> = Consulta<T> & {
+  url: URL;
+  gt: (coluna: string, valor: string) => Chaveavel<T>;
+  order: (coluna: string, o?: { ascending?: boolean }) => Chaveavel<T>;
+};
+
+const SEM_COLUNA_ID = ["42703", "PGRST100", "PGRST204"];
+
+/**
+ * Página a página a partir do último `id` lido, em vez de `OFFSET`.
+ *
+ * Com OFFSET, a página 38 obriga o banco a percorrer as 37 mil linhas
+ * anteriores só para descartá-las: ler a tabela inteira custava a soma de
+ * todas as páginas anteriores, e era isso que aparecia no topo das consultas
+ * lentas em 24/11 (média de 1,3 s, picos de 8 s, cancelamento 57014). Pelo
+ * `id`, cada página usa o índice e custa o mesmo — mas vem uma por vez.
+ *
+ * Devolve null quando a tabela não tem `id`: quem chama cai no OFFSET.
+ */
+async function porChave<T>(montar: () => Chaveavel<T>, limite: number): Promise<T[] | null> {
+  const todos: T[] = [];
+  let ultimo: string | null = null;
+  while (todos.length < limite) {
+    const q = montar();
+    q.url.searchParams.delete("order");
+    const sel = q.url.searchParams.get("select") ?? "*";
+    // O `id` é preciso para continuar; se quem chamou não o pediu, sai da linha.
+    const tirarId = !/(^|,)(\*|id)(,|$)/.test(sel);
+    if (tirarId) q.url.searchParams.set("select", `${sel},id`);
+    const { data, error } = await (ultimo ? q.gt("id", ultimo) : q)
+      .order("id", { ascending: true })
+      .range(0, PAGINA - 1);
+    if (error) {
+      if (!todos.length && SEM_COLUNA_ID.includes((error as { code?: string }).code ?? "")) return null;
+      throw erroDeVerdade(error, todos.length ? `ao ler depois da linha ${todos.length}` : "ao ler a primeira página");
+    }
+    const pagina = (data ?? []) as (T & { id?: string })[];
+    if (pagina.length) ultimo = String(pagina[pagina.length - 1].id);
+    for (const linha of pagina) {
+      if (tirarId) delete linha.id;
+      todos.push(linha);
+    }
+    if (pagina.length < PAGINA) return todos;
+  }
+  return todos;
+}
 
 export async function paginar<T>(
   montarOriginal: () => Consulta<T>,
   limite = 200_000
 ): Promise<T[]> {
+  /* Sem ordem pedida (ou só por `id`), a leitura vai pelo `id`. */
+  const sonda = montarOriginal() as unknown as Partial<Chaveavel<T>>;
+  const ordem = sonda.url instanceof URL ? sonda.url.searchParams.get("order") : "?";
+  if ((ordem === null || ordem === "id.asc") && typeof sonda.gt === "function") {
+    const lido = await porChave(montarOriginal as unknown as () => Chaveavel<T>, limite);
+    if (lido) return lido;
+  }
+
   /*
    * Desempate pelo `id`, sempre.
    *
@@ -93,10 +147,19 @@ export async function paginar<T>(
    */
   const todos = [...inicio];
   let offset = PAGINA;
+  /*
+   * As levas crescem 1, 2, 4, 8. Começar em 8 fazia uma tabela de 1.500
+   * linhas disparar 7 páginas vazias — e cada vazia ainda ordena tudo no
+   * banco. Com várias telas abertas, eram essas sobras que esgotavam as
+   * conexões (PGRST003) e estouravam o tempo (57014) em 24/11.
+   */
+  let leva = 1;
 
   while (offset < limite) {
+    const tamanho = leva;
+    leva = Math.min(leva * 2, SIMULTANEAS);
     const lote = await Promise.all(
-      Array.from({ length: SIMULTANEAS }, (_, i) => {
+      Array.from({ length: tamanho }, (_, i) => {
         const de = offset + i * PAGINA;
         if (de >= limite) return Promise.resolve({ data: [] as T[], error: null });
         return montar().range(de, de + PAGINA - 1);
@@ -112,7 +175,7 @@ export async function paginar<T>(
     }
 
     if (acabou) return todos;
-    offset += SIMULTANEAS * PAGINA;
+    offset += tamanho * PAGINA;
   }
 
   return todos;

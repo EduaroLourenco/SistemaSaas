@@ -46,11 +46,11 @@ alter table public.folgas_campanha force row level security;
 
 drop policy if exists folgas_campanha_leitura on public.folgas_campanha;
 create policy folgas_campanha_leitura on public.folgas_campanha
-  for select using (pode_ver_operacao(operacao_id));
+  for select using (operacao_id in (select operacoes_do_usuario()));
 
 drop policy if exists folgas_campanha_escrita on public.folgas_campanha;
 create policy folgas_campanha_escrita on public.folgas_campanha
-  for all using (pode_editar_operacao(operacao_id))
-  with check (pode_editar_operacao(operacao_id));
+  for all using (operacao_id in (select operacoes_editaveis_do_usuario()))
+  with check (operacao_id in (select operacoes_editaveis_do_usuario()));
 
 grant select, insert, update, delete on public.folgas_campanha to authenticated;
