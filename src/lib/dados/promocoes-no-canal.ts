@@ -10,11 +10,12 @@ import {
 
 /* Encerrada há mais que isto não muda decisão e só pesa na carga. */
 const DIAS_DE_HISTORICO = 15;
-const PROMOCOES_POR_VEZ = 6;
 
 /**
- * Lê promoção a promoção. Numa consulta só, a Probel somava milhares de itens
- * filtrados pela permissão do usuário, e a tela ficava sem nenhuma promoção.
+ * Os itens de todas as promoções numa leitura só. Promoção a promoção eram
+ * 64 consultas em 11 rodadas, e cada uma checava a permissão linha a linha
+ * (política da migração 40, fora da forma rápida até a 30 rodar de novo em
+ * 24/11) — era o que fazia a leitura única estourar o tempo antes.
  * Lança em caso de falha: quem mostra número precisa distinguir erro de zero.
  */
 export async function lerPromocoesNoCanal(
@@ -34,23 +35,19 @@ export async function lerPromocoesNoCanal(
       .or(vigente)
       .order("id"),
   )) as unknown as LinhaPromo[];
-  const itens: LinhaItem[] = [];
-  for (let i = 0; i < promos.length; i += PROMOCOES_POR_VEZ) {
-    const lote = await Promise.all(
-      promos.slice(i, i + PROMOCOES_POR_VEZ).map((p) =>
-        paginar(() =>
-          sb
-            .from("promocao_canal_itens")
-            .select("promocao_id,codigo_externo,status,inicio,fim")
-            .eq("promocao_id", p.id)
-            .in("status", ["started", "pending"])
-            .or(vigente)
-            .order("id"),
-        ),
-      ),
-    );
-    itens.push(...(lote.flat() as unknown as LinhaItem[]));
-  }
+  if (!promos.length) return montarPromocoesNoCanal(promos, [], skuPorMlb, agora);
+  const itens = (await paginar(() =>
+    sb
+      .from("promocao_canal_itens")
+      .select("promocao_id,codigo_externo,status,inicio,fim")
+      .in("promocao_id", promos.map((p) => p.id))
+      .in("status", ["started", "pending"])
+      .or(vigente),
+  )) as unknown as LinhaItem[];
+  // A montagem guarda a primeira promoção de cada grupo: mesma ordem de antes,
+  // por promoção e, dentro dela, por id (a leitura já vem por id; o sort é estável).
+  const posicao = new Map(promos.map((p, i) => [p.id, i]));
+  itens.sort((a, b) => posicao.get(a.promocao_id)! - posicao.get(b.promocao_id)!);
   return montarPromocoesNoCanal(promos, itens, skuPorMlb, agora);
 }
 

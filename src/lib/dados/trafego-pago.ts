@@ -449,7 +449,19 @@ export async function carregarTrafegoPago(
 
   const idsContasRelatorio = new Set(noCanal.filter((a) => `${a.inicio}|${a.fim}` === escolhida).map((a) => contaDoAnuncio.get(a.codigo_externo)).filter((v): v is string => Boolean(v)));
   const contaNaoIdentificada = ads.some((a) => !contaDoAnuncio.has(a.codigo_externo));
-  const baseCompleta = await carregarBaseMargem({ inicio, fim, canalId: recorte });
+  /* Margem, visitas e catálogo só dependem da janela: as três andam juntas. */
+  const [baseCompleta, visitasRaw, catalogoPorId] = await Promise.all([
+    carregarBaseMargem({ inicio, fim, canalId: recorte }),
+    paginar(() =>
+      sb
+        .from("anuncio_desempenho_diario")
+        .select("anuncio_id,visitas,data")
+        .gte("data", inicio)
+        .lte("data", fim)
+        .order("id")
+    ),
+    situacaoDeCatalogo(sb),
+  ]);
   // Mesmo sem filtro, o relatório não pode usar vendas de canais sem mídia
   // ou de contas que não têm relatório nesta janela como base do TACoS.
   const base = { ...baseCompleta, itens: baseCompleta.itens.filter((it) => idsContasRelatorio.has(it.contaCanalId)) };
@@ -500,19 +512,10 @@ export async function carregarTrafegoPago(
    * "pouco visto" de "não convence". A leitura é por data e vem depois
    * da escolha da janela, como a da margem: o intervalo só existe aqui.
    */
-  const visitasRaw = await paginar(() =>
-    sb
-      .from("anuncio_desempenho_diario")
-      .select("anuncio_id,visitas,data")
-      .gte("data", inicio)
-      .lte("data", fim)
-      .order("id")
-  );
   const mlbDoId = new Map((anunciosRaw as unknown as Anun[]).map((a) => [a.id, a.codigo_externo]));
 
   /* A disputa de catálogo, por MLB: é o que permite ler "gastou e não
      vendeu" sem confundir com venda que saiu pelo anúncio vencedor. */
-  const catalogoPorId = await situacaoDeCatalogo(sb);
   const catalogoPorMlb = new Map<string, SituacaoDisputa>();
   for (const [id, s] of catalogoPorId) {
     const mlb = mlbDoId.get(id);

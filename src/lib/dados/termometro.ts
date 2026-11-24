@@ -459,14 +459,14 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
   /* ── Catálogo: o estado da vitrine nas duas semanas ── */
   /* A semana inteira, não só os dias completos: o que aconteceu hoje
      explica o que está acontecendo hoje. */
-  const noCanal = await carregarPromocoesNoCanal(
+  /* O catálogo não depende das promoções: as duas leituras andam juntas. */
+  const promocoesEAcontecimentos = carregarPromocoesNoCanal(
     sb,
     contasAtivas,
     new Map(anuncios.flatMap((a) => (a.sku_canal ? [[a.codigo_externo.toUpperCase(), a.sku_canal.toUpperCase()] as const] : []))),
-  );
-  const acontecimentos = await carregarAcontecimentos(sb, inicioAnt, ate, noCanal);
+  ).then(async (noCanal) => ({ noCanal, acontecimentos: await carregarAcontecimentos(sb, inicioAnt, ate, noCanal) }));
 
-  const catalogo = await carregarCatalogoSemana(sb, {
+  const catalogoPromessa = carregarCatalogoSemana(sb, {
     contas: contaSelecionada ? contas.filter((c) => c.id === contaSelecionada) : contas,
     anuncios: anuncios.map((a) => ({
       id: a.id,
@@ -480,6 +480,7 @@ export async function carregarTermometro(opcoes: { conta?: string; semana?: stri
     inicioAnterior: inicioAnt,
     ateAnterior: dia(ultimoCompleto, -7),
   });
+  const [{ noCanal, acontecimentos }, catalogo] = await Promise.all([promocoesEAcontecimentos, catalogoPromessa]);
 
   /* ── Pontos de atenção: um cartão por assunto, não uma linha por anúncio ── */
   const atencao: Atencao[] = [];
