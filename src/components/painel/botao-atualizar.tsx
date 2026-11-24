@@ -43,8 +43,11 @@ export function BotaoAtualizar({ compacto = false }: { compacto?: boolean }) {
     // Celular bloqueado congela o relógio da página: ao voltar, relê na hora.
     const voltar = () => { if (document.visibilityState === "visible") atualizador.recarregar(); };
     document.addEventListener("visibilitychange", voltar);
+    /* O relógio do topo mostra a última leitura: sem reler, ficava no horário
+       em que a aba abriu (16:54 com vendas lidas às 17:24, em 24/11). */
+    const relogio = setInterval(voltar, 120_000);
     const sair = atualizador.aoTerminar(() => router.refresh());
-    return () => { document.removeEventListener("visibilitychange", voltar); sair(); };
+    return () => { document.removeEventListener("visibilitychange", voltar); clearInterval(relogio); sair(); };
   }, [router]);
 
   const bloco = blocoDaTela(pathname);
