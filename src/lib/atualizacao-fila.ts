@@ -189,7 +189,7 @@ export async function rodarProxima(): Promise<"continuar" | "ocupado" | "vazio">
       if (e) Object.assign(e, fim, { fim: new Date().toISOString() });
     });
     /* Dado novo no banco: as telas em cache desta empresa leem de novo. */
-    try { limparCacheDaEmpresa(l.operacao_id); } catch (e) { console.error("[cache-tela] não limpou:", e); }
+    try { limparCacheDaEmpresa(l.operacao_id, l.config.origem === "manual"); } catch (e) { console.error("[cache-tela] não limpou:", e); }
     return "continuar";
   }
   return "vazio";

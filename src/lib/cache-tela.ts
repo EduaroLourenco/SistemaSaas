@@ -52,13 +52,16 @@ export async function emCache<T>(tela: string, filtros: unknown, carregar: () =>
 }
 
 /**
- * Fim de sincronização: a próxima abertura mostra a versão anterior na hora
- * e refaz em segundo plano; a seguinte já vem com o dado novo.
+ * Fim de sincronização.
  *
- * Expirar na hora (`{ expire: 0 }`) fazia a pessoa esperar a remontagem, e
- * isso caía justo no pico do banco depois da sincronização — a Queda levou
- * 143 s em 24/11. O preço é uma abertura com o dado de uma hora antes.
+ * Pedida no botão Atualizar: expira na hora. A tela recarrega sozinha quando
+ * termina (`router.refresh`), e quem apertou espera ver o dado novo.
+ *
+ * Agendada: a próxima abertura mostra a versão anterior e refaz em segundo
+ * plano. Expirar na hora fazia a pessoa esperar a remontagem justo no pico
+ * do banco depois da sincronização — a Queda levou 143 s em 24/11. O preço é
+ * uma abertura com o dado de uma hora antes, sem ninguém ter pedido nada.
  */
-export function limparCacheDaEmpresa(operacaoId: string) {
-  revalidateTag(tagDaEmpresa(operacaoId), "max");
+export function limparCacheDaEmpresa(operacaoId: string, pedidaNoBotao: boolean) {
+  revalidateTag(tagDaEmpresa(operacaoId), pedidaNoBotao ? { expire: 0 } : "max");
 }
