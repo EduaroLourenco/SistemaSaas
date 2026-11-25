@@ -103,7 +103,7 @@ function Termometros({ conta, rep, envios, status }: { conta: string; rep: Reput
 }
 
 type Chave = "dias" | "entrega" | "cliente" | "produto" | "meli" | "status";
-const FILTROS = ["Em aberto", "Atrasados", "Sem status", ...Object.values(STATUS_MANUAL), "Todos"] as const;
+const FILTROS = ["Em aberto", "Atrasados", "Saiu atrasado", "Sem status", ...Object.values(STATUS_MANUAL), "Todos"] as const;
 /** A API manda com -04:00; a tela fala em horário de Brasília. */
 const brasilia = (iso: string) => new Date(Date.parse(iso) - 3 * 3600_000).toISOString();
 const dataHora = (iso: string) => `${diaBr(brasilia(iso))} · ${brasilia(iso).slice(11, 16)}`;
@@ -142,7 +142,7 @@ export function Painel({ envios, reputacao, status: inicial = SEM_STATUS, contas
   const s = (e: EnvioMeli) => status[e.pedido]?.s;
   const ef = (e: EnvioMeli) => automatico(e) ?? s(e);
   const passa = (e: EnvioMeli, f: (typeof FILTROS)[number]) =>
-    f === "Todos" ? true : f === "Em aberto" ? !e.saiu : f === "Atrasados" ? atrasado(e, s(e)) : f === "Sem status" ? !ef(e) : Boolean(ef(e) && STATUS_MANUAL[ef(e)!] === f);
+    f === "Todos" ? true : f === "Em aberto" ? !e.saiu : f === "Atrasados" ? atrasado(e, s(e)) : f === "Saiu atrasado" ? Boolean(e.meli?.atrasou) : f === "Sem status" ? !ef(e) : Boolean(ef(e) && STATUS_MANUAL[ef(e)!] === f);
   const contagem = (f: (typeof FILTROS)[number]) => envios.filter((e) => passa(e, f)).length;
   const val = (e: EnvioMeli): string | number =>
     ordem.chave === "dias" ? (e.limite ?? "9999") : ordem.chave === "entrega" ? (e.entrega ?? "9999") : ordem.chave === "cliente" ? (e.cliente ?? e.comprador ?? "") : ordem.chave === "produto" ? e.itens.map((i) => i.titulo).join(" ") : ordem.chave === "meli" ? e.situacao : (ef(e) ? STATUS_MANUAL[ef(e)!] : "~");
@@ -178,8 +178,8 @@ export function Painel({ envios, reputacao, status: inicial = SEM_STATUS, contas
   const prazo = (e: EnvioMeli) => {
     if (e.saiu) return (
       <div>
-        <p className="text-[15px] font-semibold leading-5 text-up">{e.meli?.despachadoEm ? diaBr(brasilia(e.meli.despachadoEm)) : "Saiu"}</p>
-        <p className="mt-0.5 text-[12px] text-ink-3">{e.meli?.despachadoEm ? `enviado às ${brasilia(e.meli.despachadoEm).slice(11, 16)}` : e.situacao.toLowerCase()}</p>
+        <p className={cn("text-[15px] font-semibold leading-5", e.meli?.atrasou ? "text-down" : "text-up")}>{e.meli?.despachadoEm ? diaBr(brasilia(e.meli.despachadoEm)) : "Saiu"}</p>
+        <p className={cn("mt-0.5 text-[12px]", e.meli?.atrasou ? "text-down" : "text-ink-3")}>{e.meli?.atrasou ? `com atraso${e.limite ? ` · limite ${e.limite.slice(8, 10)}/${e.limite.slice(5, 7)}` : ""}` : e.meli?.despachadoEm ? `enviado às ${brasilia(e.meli.despachadoEm).slice(11, 16)}` : e.situacao.toLowerCase()}</p>
       </div>
     );
     const late = atrasado(e, s(e));
@@ -216,7 +216,7 @@ export function Painel({ envios, reputacao, status: inicial = SEM_STATUS, contas
         {FILTROS.map((f) => {
           const n = contagem(f);
           return (
-            <button key={f} type="button" aria-pressed={filtro === f} onClick={() => setFiltro(f)} className={cn(f === "Atrasados" && n > 0 && "is-alerta")}>
+            <button key={f} type="button" aria-pressed={filtro === f} onClick={() => setFiltro(f)} className={cn((f === "Atrasados" || f === "Saiu atrasado") && n > 0 && "is-alerta")}>
               {f} <span className="num">{n}</span>
             </button>
           );
@@ -233,7 +233,7 @@ export function Painel({ envios, reputacao, status: inicial = SEM_STATUS, contas
             </th>
           ))}</tr></thead>
           <tbody>{lista.map((e) => (
-            <tr key={`${e.conta}-${e.pedido}`} className={cn(atrasado(e, s(e)) && "is-atrasado")}>
+            <tr key={`${e.conta}-${e.pedido}`} className={cn((atrasado(e, s(e)) || e.meli?.atrasou) && "is-atrasado")}>
               <td>{prazo(e)}</td>
               <td>{cliente(e)}</td>
               <td>{produto(e)}</td>
@@ -248,7 +248,7 @@ export function Painel({ envios, reputacao, status: inicial = SEM_STATUS, contas
 
       <div className="painel-cartoes md:hidden">
         {lista.map((e) => (
-          <article key={`${e.conta}-${e.pedido}`} className={cn(atrasado(e, s(e)) && "is-atrasado")}>
+          <article key={`${e.conta}-${e.pedido}`} className={cn((atrasado(e, s(e)) || e.meli?.atrasou) && "is-atrasado")}>
             <div className="flex items-start justify-between gap-3">{prazo(e)}<div className="text-right"><p className="text-[12px] text-ink-3">Entrega</p><p className="text-[14px] text-ink-2">{e.entrega ? diaBr(e.entrega) : "—"}</p></div></div>
             {cliente(e)}
             {produto(e)}

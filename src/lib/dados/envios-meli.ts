@@ -50,7 +50,13 @@ export type EnvioMeli = {
   /** me2 = Mercado Envios (o Meli mede o despacho); me1 = envio próprio. */
   logistica?: string | null;
   /** O que o Meli já registrou depois da saída, com a data (ISO). Só em `despachados`. */
-  meli?: { status: "despachado" | "entregue"; despachadoEm: string | null; entregueEm: string | null };
+  meli?: {
+    status: "despachado" | "entregue";
+    despachadoEm: string | null;
+    entregueEm: string | null;
+    /** Despachou depois do limite. Mercado Envios: o que o Meli conta (sla). Envio próprio: data de saída contra a prometida. */
+    atrasou?: boolean | null;
+  };
   itens: { titulo: string; sku: string | null; quantidade: number }[];
   total: number;
 };
@@ -230,15 +236,27 @@ async function doConta(contaId: string, nome: string, hoje: string): Promise<{ e
             }>(`/shipments/${o.shipping.id}`, contaId).catch(() => null)
           : null;
         const entregue = status === "delivered";
+        const despachadoEm = sh?.status_history?.date_shipped ?? null;
+        let limite: string | null = null;
+        let atrasou: boolean | null = null;
+        if (sh?.mode === "me2" && o.shipping?.id) {
+          const sla = await meliGet<{ status?: string; expected_date?: string }>(`/shipments/${o.shipping.id}/sla`, contaId).catch(() => null);
+          limite = sla?.expected_date ?? null;
+          atrasou = sla?.status ? sla.status === "delayed" : null;
+        } else {
+          /* Envio próprio: a data prometida é o fim do prazo de produção. */
+          limite = sh?.shipping_option?.estimated_delivery_time?.date ?? null;
+          if (limite && despachadoEm) atrasou = brt(Date.parse(despachadoEm)).slice(0, 10) > limite.slice(0, 10);
+        }
         despachados.push({
           conta: nome, contaId, envio: o.shipping?.id ?? null, pedido: o.id, venda: o.pack_id ?? o.id, saiu: true,
-          compra: o.date_created, limite: null, origem: null, dias: null,
+          compra: o.date_created, limite, origem: null, dias: null,
           situacao: entregue ? "Entregue" : "A caminho",
           comprador: o.buyer?.nickname ?? null,
           cliente: sh?.receiver_address?.receiver_name ?? null,
           entrega: sh?.shipping_option?.estimated_delivery_time?.date?.slice(0, 10) ?? null,
           logistica: sh?.mode ?? null,
-          meli: { status: entregue ? "entregue" : "despachado", despachadoEm: sh?.status_history?.date_shipped ?? null, entregueEm: sh?.status_history?.date_delivered ?? null },
+          meli: { status: entregue ? "entregue" : "despachado", despachadoEm, entregueEm: sh?.status_history?.date_delivered ?? null, atrasou },
           itens: (o.order_items ?? []).map((i) => ({ titulo: i.item?.title ?? "", sku: i.item?.seller_sku ?? null, quantidade: Number(i.quantity ?? 0) })),
           total: Number(o.total_amount ?? 0),
         });
