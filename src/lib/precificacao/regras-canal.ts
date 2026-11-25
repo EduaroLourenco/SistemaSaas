@@ -25,7 +25,17 @@ export type Faixa = {
   ate: number | null;
   comissaoPct: number;
   taxaFixa: number;
+  /** Como a tela mostra a faixa, quando "x% + R$ y" não diz a regra. */
+  rotulo?: string;
 };
+
+const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+/** "20% + R$ 4,50 até R$ 79,99 / 14% + R$ 16,00 / …", uma faixa por trecho. */
+export const resumoFaixas = (faixas: Faixa[]) =>
+  faixas
+    .map((f) => `${f.rotulo ?? `${f.comissaoPct}% + ${brl(f.taxaFixa)}`}${f.ate == null ? "" : ` até ${brl(f.ate)}`}`)
+    .join(" / ");
 
 /** Tipo de anúncio (ou plano) que muda a tarifa dentro do mesmo canal. */
 export type TipoAnuncio = {
@@ -70,21 +80,27 @@ export const REGRAS: RegraCanal[] = [
   canal({
     codigo: "shopee",
     nome: "Shopee",
-    // Vendedor CNPJ, com o Frete Grátis (obrigatório desde 03/2026) já dentro do percentual.
-    // ponytail: acima de R$ 80 a taxa fixa vai de R$ 16 a R$ 26 por faixa; uso R$ 16 até confirmar as faixas
+    // Vendedor CNPJ, tabela oficial (seller.shopee.com.br/edu/article/18483,
+    // atualizada em 21/10/2026). O percentual já inclui a taxa de transação e
+    // o Frete Grátis. Abaixo de R$ 9 a taxa fixa é metade do preço: 20% + 50%
+    // = 70% sem fixa, que o resolvedor faixa a faixa trata sem caso especial.
+    // O subsídio Pix (5% a 8% acima de R$ 80) é pago pela Shopee: não entra.
     tipos: [
       {
         id: "cnpj", nome: "CNPJ",
         faixas: [
+          { ate: 8.99, comissaoPct: 70, taxaFixa: 0, rotulo: "20% + metade do preço" },
           { ate: 79.99, comissaoPct: 20, taxaFixa: 4.5 },
-          { ate: null, comissaoPct: 14, taxaFixa: 16 },
+          { ate: 99.99, comissaoPct: 14, taxaFixa: 16 },
+          { ate: 199.99, comissaoPct: 14, taxaFixa: 20 },
+          { ate: null, comissaoPct: 14, taxaFixa: 26 },
         ],
         faixaCategoria: null,
       },
     ],
     frete: "incluso",
-    conferir: "taxas e frete grátis no painel",
-    vigencia: "2026-10-01",
+    conferir: null,
+    vigencia: "2026-03-01",
   }),
   canal({
     codigo: "tiktok",

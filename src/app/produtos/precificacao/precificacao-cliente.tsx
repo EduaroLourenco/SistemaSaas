@@ -15,7 +15,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { money, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
-  regraDoCanal, regraEfetiva, contaNoCanal, precoNoCanal, custoMeliEstimado,
+  regraDoCanal, regraEfetiva, contaNoCanal, precoNoCanal, custoMeliEstimado, resumoFaixas,
   type CustoProduto, type Logistica, type RegraCanal,
 } from "@/lib/precificacao/regras-canal";
 import type { Decomposicao } from "@/lib/dados/formula-preco";
@@ -181,7 +181,7 @@ export default function PrecificacaoCliente({ dados }: { dados: DadosPrecificaca
         </Field>
       ) : (
         <Field label="Comissão">
-          <span className="num flex h-10 items-center text-[12.5px] text-ink-2">{regra.faixas.map((x) => `${x.comissaoPct}% + ${money(x.taxaFixa)}`).join(" / ")}</span>
+          <span className="num flex h-10 items-center text-[12.5px] text-ink-2">{resumoFaixas(regra.faixas)}</span>
         </Field>
       )}
     </div>
@@ -697,7 +697,7 @@ function Cotacao({ dados, produtoId, onProduto, impostoGlobal, metaPct, marketin
                 ) : (
                   <Field label="Comissão">
                     <span className="num flex h-10 items-center text-[12.5px] text-ink-2">
-                      {r.efetiva.faixas.map((x) => `${x.comissaoPct}% + ${money(x.taxaFixa)}`).join(" / ")}
+                      {resumoFaixas(r.efetiva.faixas)}
                     </span>
                   </Field>
                 )}
