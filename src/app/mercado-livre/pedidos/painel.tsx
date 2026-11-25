@@ -15,7 +15,6 @@ const NIVEL: Record<string, string> = { "5_green": "Verde", "4_light_green": "Ve
 const pct = (v: number) => `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const diaBr = (iso: string) => `${DIAS[new Date(iso.slice(0, 10) + "T12:00:00").getDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const proprio = (e: EnvioMeli) => e.logistica === "me1" || (e.logistica == null && e.origem === "prazo");
 
 /** Posição 0–1 na régua de quatro faixas; a última vai até o dobro do teto do laranja. */
 function posicao(v: Variavel, valor: number, periodo: 60 | 365) {
@@ -50,16 +49,14 @@ function Termometros({ conta, rep, envios, status }: { conta: string; rep: Reput
   /* O que já saiu está na conta do Meli; a previsão olha só o que falta sair. */
   const abertos = envios.filter((e) => !e.saiu && status[e.pedido]?.s !== "entregue");
   const conta1 = (lista: EnvioMeli[]) => ({ abertos: lista.length, atrasados: lista.filter((e) => atrasado(e, status[e.pedido]?.s)).length });
-  const me = conta1(abertos.filter((e) => !proprio(e)));
-  const pr = conta1(abertos.filter(proprio));
-  const p = prever(rep, { abertosME: me.abertos, atrasadosME: me.atrasados, abertosProprio: pr.abertos, atrasadosProprio: pr.atrasados });
+  /* O Meli mede o despacho de toda venda com Envios, inclusive Mercado Envios 1 (conta a prazo). */
+  const me = conta1(abertos);
+  const p = prever(rep, { abertosME: me.abertos, atrasadosME: me.atrasados, abertosProprio: 0, atrasadosProprio: 0 });
   const hojeCor = corAtual(rep);
   const vHoje = piorVariavel(rep, rep.periodo);
   const vPrev = piorVariavel(p, rep.periodo);
-  const medeDespacho = me.abertos > 0 || rep.atrasos.valor > 0;
   const atrasoHoje = taxa(rep.atrasos), atrasoPrev = taxa(p.atrasos);
   const folgaAtrasos = folga("atrasos", p.atrasos, rep.periodo);
-  const folgaRecl = folga("reclamacoes", p.reclamacoes, rep.periodo);
   const real = rep.nivelReal ? NIVEL[rep.nivelReal] ?? rep.nivelReal : null;
 
   return (
@@ -80,12 +77,11 @@ function Termometros({ conta, rep, envios, status }: { conta: string; rep: Reput
           <dl className="termo-numeros">
             <div><dt>Reclamações</dt><dd>{rep.reclamacoes.valor} · {pct(taxa(rep.reclamacoes))}{p.reclamacoes.valor !== rep.reclamacoes.valor && <b> → {pct(taxa(p.reclamacoes))}</b>}</dd></div>
             <div><dt>Canceladas</dt><dd>{rep.cancelamentos.valor} · {pct(taxa(rep.cancelamentos))}</dd></div>
-            {pr.abertos > 0 && <div><dt>Cabem</dt><dd>{folgaRecl == null ? "—" : `${folgaRecl} no ${NOME_COR[cor("reclamacoes", taxa(p.reclamacoes), rep.periodo)].toLowerCase()}`}</dd></div>}
           </dl>
         </div>
         <div className="termo">
           <p className="termo-rotulo">Envios</p>
-          {medeDespacho ? <>
+          <>
             <p className="termo-valor">
               <span className={`termo-txt-${cor("atrasos", atrasoHoje, rep.periodo)}`}>{pct(atrasoHoje)}</span>
               {Math.abs(atrasoPrev - atrasoHoje) > 0.005 && <span className="termo-seta">→ <span className={`termo-txt-${p.corEnvios}`}>{pct(atrasoPrev)}</span></span>}
@@ -95,7 +91,7 @@ function Termometros({ conta, rep, envios, status }: { conta: string; rep: Reput
               <div><dt>Atrasos</dt><dd>{rep.atrasos.valor}{me.atrasados > 0 && <b> + {me.atrasados}</b>}</dd></div>
               <div><dt>Cabem</dt><dd>{folgaAtrasos == null ? "—" : `${folgaAtrasos} no ${NOME_COR[p.corEnvios].toLowerCase()}`}</dd></div>
             </dl>
-          </> : <p className="mt-2 text-[14px] text-ink-3">não medido · envio próprio</p>}
+          </>
         </div>
       </div>
     </section>

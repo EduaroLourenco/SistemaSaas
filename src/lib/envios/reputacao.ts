@@ -102,9 +102,9 @@ export type Previsao = {
 };
 
 /**
- * `abertosME` e `atrasadosME` são pedidos por Mercado Envios: o atraso conta
- * no despacho. Em envio próprio o Meli não mede o despacho, e o pedido atrasado
- * entra como reclamação provável — é o que costuma virar.
+ * `abertosME` e `atrasadosME`: pedidos com Envios, em que o atraso conta no
+ * despacho (o painel do Meli mede inclusive Mercado Envios 1). Os de entrega
+ * fora do Envios só podem virar reclamação.
  */
 export function prever(
   r: ReputacaoMeli,
