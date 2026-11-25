@@ -16,7 +16,7 @@ export const runtime = "nodejs";
  * repetir. A do banco vale para qualquer caminho, inclusive um script.
  */
 
-const PAPEIS = new Set(["proprietario", "administrador", "editor", "leitor", "expedicao"]);
+const PAPEIS = new Set(["proprietario", "administrador", "editor", "leitor", "expedicao", "acompanhamento"]);
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export async function POST(req: Request) {

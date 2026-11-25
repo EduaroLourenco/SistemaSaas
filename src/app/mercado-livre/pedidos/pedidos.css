@@ -1,0 +1,48 @@
+/* ── Controle de pedidos ── */
+.painel { display: grid; gap: 20px; min-width: 0; }
+.termo-lista { display: grid; gap: 16px; }
+.termo-conta { min-width: 0; padding: 20px 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.termo-cabeca { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 16px; }
+.termo-cabeca h3, .termo-conta > h3 { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.termo-cabeca span { font-size: 13px; color: var(--ink-3); }
+.termo-cabeca .termo-protegida { color: var(--warn); font-weight: 500; }
+.termo-par { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+.termo-rotulo { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.termo-valor { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 2px; font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.termo-seta { font-size: 20px; color: var(--ink-3); }
+.termo-regua { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; height: 10px; margin: 12px 0 14px; }
+.termo-faixa { border-radius: 2px; opacity: .85; }
+.termo-verde { background: #1f9d55; } .termo-amarelo { background: #e6b800; } .termo-laranja { background: #e8730c; } .termo-vermelho { background: #d03a4b; }
+.termo-txt-verde { color: var(--up); } .termo-txt-amarelo { color: var(--warn); } .termo-txt-laranja { color: #c25e05; } .termo-txt-vermelho { color: var(--down); }
+.termo-marca { position: absolute; top: -5px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--panel); }
+.termo-prevista { background: var(--panel); border: 2px solid var(--ink); }
+.termo-numeros { display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 13px; }
+.termo-numeros dt { color: var(--ink-3); }
+.termo-numeros dd { color: var(--ink); font-variant-numeric: tabular-nums; }
+.termo-numeros b { font-weight: 600; color: var(--down); }
+.painel-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+.painel-filtros button { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.painel-filtros button span { margin-left: 4px; color: var(--ink-3); }
+.painel-filtros button.is-alerta span { color: var(--down); font-weight: 600; }
+.painel-filtros [aria-pressed=true] { border-color: var(--brand); background: var(--brand-wash); color: var(--brand); }
+.painel-tabela { min-width: 0; overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.painel-tabela th { position: sticky; top: 0; padding: 4px 16px; border-bottom: 1px solid var(--line); background: var(--panel-2); }
+.painel-tabela th button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.painel-tabela td { padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.painel-tabela tr:last-child td { border-bottom: 0; }
+.painel-tabela tr.is-atrasado td:first-child, .painel-cartoes .is-atrasado { box-shadow: inset 3px 0 0 var(--down); }
+.painel-status { width: 100%; min-height: 44px; padding: 0 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel); font-size: 14px; color: var(--ink-3); }
+.painel-status.painel-s-producao_no_prazo { color: var(--ink); }
+.painel-status.painel-s-producao_atrasada { border-color: var(--down); background: var(--down-wash); color: var(--down); font-weight: 600; }
+.painel-status.painel-s-falta_faturar { border-color: var(--warn); background: var(--warn-wash); color: var(--warn); font-weight: 600; }
+.painel-status.painel-s-despachado, .painel-status.painel-s-entregue { border-color: var(--up); background: var(--up-wash); color: var(--up); font-weight: 600; }
+.painel-cartoes { display: grid; gap: 10px; }
+.painel-cartoes article { display: grid; gap: 10px; min-width: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+@media (max-width: 767px) {
+  .termo-conta { padding: 16px; }
+  .termo-par { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .painel-status { font-size: 16px; }
+}
+.painel-auto { display: grid; gap: 2px; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-weight: 600; }
+.painel-auto span { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+.painel-auto.painel-s-despachado, .painel-auto.painel-s-entregue { border-color: var(--up); background: var(--up-wash); color: var(--up); }

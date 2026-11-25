@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Truck,
+  ClipboardList,
   Package,
   ShoppingBag,
   TrendingUp,
@@ -79,6 +80,7 @@ const area = (i: number, sem?: string): NavItem => {
 export const NAV: NavGroup[] = [
   { label: "Hoje", icon: LayoutDashboard, href: "/vendas/dia" },
   { label: "Envios", icon: Truck, href: "/mercado-livre/envios" },
+  { label: "Pedidos", icon: ClipboardList, href: "/mercado-livre/pedidos" },
   /* Fora do Mercado Livre: a mídia é comprada por conta e todo canal terá a sua. */
   { label: "Tráfego pago", icon: Megaphone, href: "/anuncios/trafego-pago" },
   {

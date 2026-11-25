@@ -20,6 +20,9 @@ async function autorizar() {
   /* Expedição não lê os dados da empresa, mas atualiza a própria tela. */
   const { data: expede } = await sb.rpc("pode_expedir_operacao", { op: op.id });
   if (expede === true) return { op, soEnvios: true } as const;
+  /* Acompanhamento também só relê os envios, que é a fonte de Pedidos. */
+  const { data: acompanha } = await sb.rpc("pode_acompanhar_operacao", { op: op.id });
+  if (acompanha === true) return { op, soEnvios: true } as const;
   return { erro: "Você não tem acesso a esta empresa.", status: 403 } as const;
 }
 

@@ -1,14 +1,28 @@
 /**
- * O que o perfil Expedição pode abrir.
+ * O que os perfis de tela única podem abrir: Expedição (Envios) e
+ * Acompanhamento (Pedidos).
  *
- * A lista é de permissão: tela ou API nova nasce fechada para esse perfil.
+ * A lista é de permissão: tela ou API nova nasce fechada para esses perfis.
  * O cookie só serve para a moldura da tela; quem decide é o banco.
  */
 
 export const COOKIE_EXPEDICAO = "gerizo_expedicao";
 export const TELA_EXPEDICAO = "/mercado-livre/envios";
 
-const LIBERADAS = [TELA_EXPEDICAO, "/api/envios", "/api/atualizar", "/api/operacao", "/api/sair", "/_next"];
+export type PerfilRestrito = "expedicao" | "acompanhamento";
 
-export const rotaDaExpedicao = (caminho: string) =>
-  LIBERADAS.some((r) => caminho === r || caminho.startsWith(`${r}/`));
+const COMUNS = ["/api/atualizar", "/api/operacao", "/api/sair", "/_next"];
+export const TELA_DO_PERFIL: Record<PerfilRestrito, string> = {
+  expedicao: TELA_EXPEDICAO,
+  acompanhamento: "/mercado-livre/pedidos",
+};
+const LIBERADAS: Record<PerfilRestrito, string[]> = {
+  expedicao: [TELA_EXPEDICAO, "/api/envios", ...COMUNS],
+  acompanhamento: [TELA_DO_PERFIL.acompanhamento, "/api/pedidos", ...COMUNS],
+};
+
+export const rotaDoPerfil = (perfil: PerfilRestrito, caminho: string) =>
+  LIBERADAS[perfil].some((r) => caminho === r || caminho.startsWith(`${r}/`));
+
+
+
