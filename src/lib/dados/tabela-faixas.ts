@@ -18,14 +18,19 @@ export type LinhaFaixas = {
   /** Alíquota cheia do anúncio, em fração (0,115 clássico, 0,165 premium). */
   cheia: number;
   tipo: "classico" | "premium" | null;
-  /** Na ordem de `faixas`; nulo onde a base não tem preço. */
+  /** Antecipado, na ordem de `faixas`; nulo onde a base não tem preço. */
   precos: (number | null)[];
+  /** Fluxo, na mesma ordem; nulo inteiro quando a empresa não tem essa tabela. */
+  fluxo: (number | null)[] | null;
   /** Tabela na alíquota cheia, versão anterior. */
   antes: number | null;
 };
 
 export type TabelaFaixas = {
-  vigenteDe: string;
+  /** Vigência do Antecipado; nula quando só há Fluxo. */
+  vigenteDe: string | null;
+  /** Vigência do Fluxo; nula quando a empresa não tem essa tabela. */
+  fluxoDe: string | null;
   anterior: string | null;
   faixas: number[];
   tolerancia: number;
@@ -34,30 +39,31 @@ export type TabelaFaixas = {
 
 const k3 = (v: number) => Math.round(Number(v) * 1000) / 1000;
 
-export async function montarTabelaFaixas(sb: SupabaseClient, operacao: string): Promise<TabelaFaixas | null> {
-  const { data: v } = await sb
-    .from("formula_base_precos")
-    .select("vigente_de")
-    .eq("operacao_id", operacao)
-    .lte("vigente_de", new Date().toISOString().slice(0, 10))
-    .order("vigente_de", { ascending: false })
-    .limit(1);
-  const vigenteDe = v?.[0]?.vigente_de as string | undefined;
-  if (!vigenteDe) return null;
+async function ultimaVigencia(sb: SupabaseClient, tabela: string, operacao: string, antesDe?: string) {
+  let q = sb.from(tabela).select("vigente_de").eq("operacao_id", operacao);
+  q = antesDe ? q.lt("vigente_de", antesDe) : q.lte("vigente_de", new Date().toISOString().slice(0, 10));
+  const { data } = await q.order("vigente_de", { ascending: false }).limit(1);
+  return (data?.[0]?.vigente_de as string | undefined) ?? null;
+}
 
-  const { data: va } = await sb
-    .from("formula_base_precos")
-    .select("vigente_de")
-    .eq("operacao_id", operacao)
-    .lt("vigente_de", vigenteDe)
-    .order("vigente_de", { ascending: false })
-    .limit(1);
-  const anterior = (va?.[0]?.vigente_de as string | undefined) ?? null;
+export async function montarTabelaFaixas(sb: SupabaseClient, operacao: string): Promise<TabelaFaixas | null> {
+  const vigenteDe = await ultimaVigencia(sb, "formula_base_precos", operacao);
+  // Sem a migração 50 a consulta só falha e devolve nulo: tela segue sem Fluxo.
+  const fluxoDe = await ultimaVigencia(sb, "formula_base_fluxo", operacao);
+  if (!vigenteDe && !fluxoDe) return null;
+  const anterior = vigenteDe ? await ultimaVigencia(sb, "formula_base_precos", operacao, vigenteDe) : null;
 
   // Em série: o banco é compartilhado, e são ~30 páginas na Probel.
-  const precos = await paginar(() =>
-    sb.from("formula_base_precos").select("chave,comissao,preco").eq("operacao_id", operacao).eq("vigente_de", vigenteDe)
-  );
+  const precos = vigenteDe
+    ? await paginar(() =>
+        sb.from("formula_base_precos").select("chave,comissao,preco").eq("operacao_id", operacao).eq("vigente_de", vigenteDe)
+      )
+    : [];
+  const fluxo = fluxoDe
+    ? await paginar(() =>
+        sb.from("formula_base_fluxo").select("chave,comissao,preco").eq("operacao_id", operacao).eq("vigente_de", fluxoDe)
+      )
+    : [];
   const antigos = anterior
     ? await paginar(() =>
         sb
@@ -68,9 +74,11 @@ export async function montarTabelaFaixas(sb: SupabaseClient, operacao: string): 
           .in("comissao", [0.115, 0.165])
       )
     : [];
-  const itens = await paginar(() =>
-    sb.from("formula_base_itens").select("mlb,sku,comissao_padrao").eq("operacao_id", operacao).eq("vigente_de", vigenteDe)
-  );
+  const itens = vigenteDe
+    ? await paginar(() =>
+        sb.from("formula_base_itens").select("mlb,sku,comissao_padrao").eq("operacao_id", operacao).eq("vigente_de", vigenteDe)
+      )
+    : [];
   const anuncios = await paginar(() =>
     sb
       .from("anuncios")
@@ -81,16 +89,22 @@ export async function montarTabelaFaixas(sb: SupabaseClient, operacao: string): 
   const produtos = await paginar(() => sb.from("produtos").select("id,sku,titulo").eq("operacao_id", operacao));
   const { data: op } = await sb.from("operacoes").select("promo_tolerancia_pct").eq("id", operacao).maybeSingle();
 
-  const faixas = [...new Set(precos.map((p) => k3(p.comissao)))].sort((a, b) => a - b);
+  const faixas = [...new Set([...precos, ...fluxo].map((p) => k3(p.comissao)))].sort((a, b) => a - b);
   const col = new Map(faixas.map((f, i) => [f, i]));
-  const porChave = new Map<string, (number | null)[]>();
-  for (const p of precos) {
-    const c = String(p.chave);
-    const l = porChave.get(c) ?? faixas.map(() => null);
-    l[col.get(k3(p.comissao))!] = Number(p.preco);
-    porChave.set(c, l);
-  }
-  const antes = new Map(antigos.map((p) => [`${p.chave}|${k3(p.comissao)}`, Number(p.preco)]));
+  const matriz = (rows: typeof precos) => {
+    const m = new Map<string, (number | null)[]>();
+    for (const p of rows) {
+      const c = String(p.chave).toUpperCase();
+      const l = m.get(c) ?? faixas.map(() => null);
+      l[col.get(k3(p.comissao))!] = Number(p.preco);
+      m.set(c, l);
+    }
+    return m;
+  };
+  const porChave = matriz(precos);
+  const porChaveFluxo = matriz(fluxo);
+  for (const c of porChaveFluxo.keys()) if (!porChave.has(c)) porChave.set(c, faixas.map(() => null));
+  const antes = new Map(antigos.map((p) => [`${String(p.chave).toUpperCase()}|${k3(p.comissao)}`, Number(p.preco)]));
   const padraoMlb = new Map(itens.map((i) => [String(i.mlb), Number(i.comissao_padrao)]));
 
   // O anúncio ativo manda no título e no tipo; o resto completa.
@@ -119,6 +133,7 @@ export async function montarTabelaFaixas(sb: SupabaseClient, operacao: string): 
       cheia,
       tipo,
       precos: ps,
+      fluxo: fluxoDe ? porChaveFluxo.get(chave) ?? faixas.map(() => null) : null,
       antes: antes.get(`${chave}|${cheia}`) ?? null,
     });
   }
@@ -126,6 +141,7 @@ export async function montarTabelaFaixas(sb: SupabaseClient, operacao: string): 
 
   return {
     vigenteDe,
+    fluxoDe,
     anterior,
     faixas,
     tolerancia: Number(op?.promo_tolerancia_pct ?? 5) / 100,

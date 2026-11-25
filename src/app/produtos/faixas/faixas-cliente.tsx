@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { PageHeader, PageBody } from "@/components/layout/app-shell";
-import { Badge, EmptyState } from "@/components/ui/primitives";
+import { useRouter } from "next/navigation";
+import { Badge, Button, EmptyState } from "@/components/ui/primitives";
 import { Segmented, Input, Field } from "@/components/ui/controls";
 import { money } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,49 @@ function variacao(l: LinhaFaixas, faixas: number[]) {
 }
 
 type Ordem = { col: "nome" | "var" | number; dir: 1 | -1 };
+type Modo = "antecipado" | "fluxo";
+const NOME_MODO: Record<Modo, string> = { antecipado: "Antecipado", fluxo: "Fluxo" };
+
+/** Sobe a planilha do modo escolhido e recarrega a tela com ela. */
+function Importar({ modo, primario }: { modo: Modo; primario?: boolean }) {
+  const router = useRouter();
+  const ref = React.useRef<HTMLInputElement>(null);
+  const [estado, setEstado] = React.useState<{ ocupado?: boolean; msg?: string; erro?: boolean }>({});
+  const enviar = async (f: File) => {
+    setEstado({ ocupado: true });
+    const fd = new FormData();
+    fd.set("modo", modo);
+    fd.set("arquivo", f);
+    try {
+      const r = await fetch("/api/faixas/importar", { method: "POST", body: fd });
+      const j = await r.json();
+      if (!r.ok) return setEstado({ msg: j.erro ?? "Falha ao importar.", erro: true });
+      setEstado({ msg: `${j.skus} SKUs importados no ${NOME_MODO[modo]}.` });
+      router.refresh();
+    } catch {
+      setEstado({ msg: "Sem conexão. Tente de novo.", erro: true });
+    }
+  };
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <input ref={ref} type="file" accept=".xlsx,.xlsm" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) enviar(f); }} />
+      <Button variant={primario ? "primary" : "default"} disabled={estado.ocupado} onClick={() => ref.current?.click()}>
+        {estado.ocupado ? "Importando…" : `Importar tabela ${NOME_MODO[modo]}`}
+      </Button>
+      {estado.msg && <p role="status" className={cn("text-[13px]", estado.erro ? "text-down" : "text-ink-2")}>{estado.msg}</p>}
+    </div>
+  );
+}
+
+function SemTabela({ modo }: { modo: Modo }) {
+  return (
+    <EmptyState
+      title={`Esta empresa não tem tabela ${NOME_MODO[modo]}`}
+      description="Planilha com o SKU na coluna A e uma coluna por faixa de comissão (20,5%, 19,5%…). Com abas Fluxo e Antecipado, cada importação lê só as do modo."
+      action={<Importar modo={modo} primario />}
+    />
+  );
+}
 
 export default function FaixasCliente({ dados, empresa }: { dados: TabelaFaixas | null; empresa: string | null }) {
   const [sel, setSel] = React.useState<LinhaFaixas | null>(null);
@@ -40,37 +84,40 @@ export default function FaixasCliente({ dados, empresa }: { dados: TabelaFaixas 
   const [escopo, setEscopo] = React.useState<"anuncio" | "todos">("anuncio");
   const [busca, setBusca] = React.useState("");
   const [ordem, setOrdem] = React.useState<Ordem>({ col: "var", dir: -1 });
+  const [modo, setModo] = React.useState<Modo>(dados && !dados.vigenteDe ? "fluxo" : "antecipado");
+  const pr = React.useCallback((l: LinhaFaixas) => (modo === "fluxo" ? l.fluxo : l.precos) ?? [], [modo]);
+  const temTabela = modo === "fluxo" ? !!dados?.fluxoDe : !!dados?.vigenteDe;
 
   const linhas = React.useMemo(() => {
     if (!dados) return [];
     const q = busca.trim().toLowerCase();
     const val = (l: LinhaFaixas): number | null => {
-      if (ordem.col === "var") return variacao(l, dados.faixas);
+      if (ordem.col === "var") return modo === "fluxo" ? null : variacao(l, dados.faixas);
       if (ordem.col === "nome") return null;
-      const v = l.precos[ordem.col];
+      const v = pr(l)[ordem.col];
       return v == null ? null : leitura === "preco" ? v : recebeNaFaixa(v, dados.faixas[ordem.col]);
     };
     return dados.linhas
-      .filter((l) => (escopo === "todos" || l.mlbs.length > 0) && (!q || l.chave.toLowerCase().includes(q) || (l.titulo ?? "").toLowerCase().includes(q)))
+      .filter((l) => pr(l).some((v) => v != null) && (escopo === "todos" || l.mlbs.length > 0) && (!q || l.chave.toLowerCase().includes(q) || (l.titulo ?? "").toLowerCase().includes(q)))
       .sort((a, b) =>
         ordem.col === "nome"
           ? (a.titulo ?? a.chave).localeCompare(b.titulo ?? b.chave) * ordem.dir
           : ((val(a) ?? -Infinity) - (val(b) ?? -Infinity)) * ordem.dir
       );
-  }, [dados, busca, escopo, ordem, leitura]);
+  }, [dados, busca, escopo, ordem, leitura, modo, pr]);
 
   if (!dados) {
     return (
       <>
         <PageHeader title="Tabela por faixa" />
-        <PageBody><EmptyState title={empresa ? "Sem Fórmula base cadastrada" : "Nenhuma empresa selecionada"} /></PageBody>
+        <PageBody>{empresa ? <SemTabela modo="antecipado" /> : <EmptyState title="Nenhuma empresa selecionada" />}</PageBody>
       </>
     );
   }
 
   const p = ler(preco);
   const r = ler(recebe);
-  const leituraOferta = sel && p ? lerOferta(Object.fromEntries(dados.faixas.map((f, i) => [f, sel.precos[i]]).filter(([, v]) => v != null)), p, r, sel.cheia, dados.tolerancia) : null;
+  const leituraOferta = sel && p ? lerOferta(Object.fromEntries(dados.faixas.map((f, i) => [f, pr(sel)[i]]).filter(([, v]) => v != null)), p, r, sel.cheia, dados.tolerancia) : null;
 
   const escolher = (l: LinhaFaixas) => {
     setSel(l);
@@ -82,8 +129,19 @@ export default function FaixasCliente({ dados, empresa }: { dados: TabelaFaixas 
 
   return (
     <>
-      <PageHeader title="Tabela por faixa" badge={<Badge>{`Fórmula base de ${data(dados.vigenteDe)}`}</Badge>} />
+      <PageHeader
+        title="Tabela por faixa"
+        badge={temTabela ? <Badge>{`${NOME_MODO[modo]} de ${data((modo === "fluxo" ? dados.fluxoDe : dados.vigenteDe)!)}`}</Badge> : undefined}
+        actions={
+          <Segmented
+            options={[{ value: "antecipado", label: "Antecipado" }, { value: "fluxo", label: "Fluxo" }]}
+            value={modo}
+            onChange={(m) => { setModo(m); if (m === "fluxo" && ordem.col === "var") setOrdem({ col: "nome", dir: 1 }); }}
+          />
+        }
+      />
       <PageBody>
+        {!temTabela ? <SemTabela modo={modo} /> : <>
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-r2 border border-line bg-panel p-4">
             <Field label="Produto">
@@ -112,13 +170,12 @@ export default function FaixasCliente({ dados, empresa }: { dados: TabelaFaixas 
             )}
             <div className="mt-3 grid grid-cols-2 gap-3">
               <Field label="Preço final">
-                <Input inputMode="decimal" className="h-11" value={preco} onChange={(e) => setPreco(e.target.value)} placeholder="458,58" />
+                <Input inputMode="decimal" className="h-11" value={preco} onChange={(e) => setPreco(e.target.value)} />
               </Field>
               <Field label="Você recebe">
-                <Input inputMode="decimal" className="h-11" value={recebe} onChange={(e) => setRecebe(e.target.value)} placeholder="442,54" />
+                <Input inputMode="decimal" className="h-11" value={recebe} onChange={(e) => setRecebe(e.target.value)} />
               </Field>
             </div>
-            {!sel && <p className="mt-4 text-[13px] text-ink-3">Escolha um produto aqui ou na tabela.</p>}
             {sel && !p && r && <p className="mt-4 text-[13px] text-ink-3">Falta o preço final.</p>}
             {leituraOferta && (
               <>
@@ -153,7 +210,7 @@ export default function FaixasCliente({ dados, empresa }: { dados: TabelaFaixas 
                 </thead>
                 <tbody>
                   {dados.faixas.map((f, i) => {
-                    const t = sel.precos[i];
+                    const t = pr(sel)[i];
                     return (
                       <tr key={f} className={cn(leituraOferta?.faixa === f && "bg-brand-wash font-semibold")}>
                         <td className={cn("border-b border-line px-3 py-1.5", f === sel.cheia && "font-bold")}>
@@ -184,9 +241,9 @@ export default function FaixasCliente({ dados, empresa }: { dados: TabelaFaixas 
                 <th scope="col" className="sticky left-0 top-0 z-20 min-w-[150px] max-w-[150px] border-b border-line bg-panel-2 px-3 text-left font-medium md:min-w-[240px] md:max-w-[240px]">
                   <button type="button" className="min-h-11" onClick={() => ordenar("nome")}>Produto · {linhas.length}{seta("nome")}</button>
                 </th>
-                <th scope="col" className="sticky top-0 z-10 border-b border-line bg-panel-2 px-3 text-right font-medium whitespace-nowrap">
+                {modo === "antecipado" && <th scope="col" className="sticky top-0 z-10 border-b border-line bg-panel-2 px-3 text-right font-medium whitespace-nowrap">
                   <button type="button" className="min-h-11" onClick={() => ordenar("var")}>{dados.anterior ? `vs ${data(dados.anterior).slice(0, 5)}` : "variação"}{seta("var")}</button>
-                </th>
+                </th>}
                 {dados.faixas.map((f, i) => (
                   <th key={f} scope="col" className="sticky top-0 z-10 border-b border-line bg-panel-2 px-3 text-right font-medium whitespace-nowrap">
                     <button type="button" className="min-h-11" onClick={() => ordenar(i)}>{pc(f)}{seta(i)}</button>
@@ -204,11 +261,11 @@ export default function FaixasCliente({ dados, empresa }: { dados: TabelaFaixas 
                       {l.titulo ?? <span className="text-ink-3">sem cadastro</span>}
                       <span className="block text-[12px] text-ink-3">{l.chave}</span>
                     </td>
-                    <td className={cn("border-b border-line px-3 text-right whitespace-nowrap", ativo && "bg-brand-wash", v != null && v > 0.001 && "text-down", v != null && v < -0.001 && "text-up")}>
+                    {modo === "antecipado" && <td className={cn("border-b border-line px-3 text-right whitespace-nowrap", ativo && "bg-brand-wash", v != null && v > 0.001 && "text-down", v != null && v < -0.001 && "text-up")}>
                       {v == null ? <span className="text-ink-3">{dados.anterior ? "nova" : "—"}</span> : `${v > 0 ? "+" : ""}${(v * 100).toFixed(1).replace(".", ",")}%`}
-                    </td>
+                    </td>}
                     {dados.faixas.map((f, i) => {
-                      const t = l.precos[i];
+                      const t = pr(l)[i];
                       return (
                         <td key={f} className={cn("border-b border-line px-3 text-right whitespace-nowrap", ativo && "bg-brand-wash", f === l.cheia && "font-bold")}>
                           {t == null ? <span className="text-ink-3">—</span> : n2(leitura === "preco" ? t : recebeNaFaixa(t, f))}
@@ -222,6 +279,8 @@ export default function FaixasCliente({ dados, empresa }: { dados: TabelaFaixas 
           </table>
           {linhas.length > 400 && <p className="px-3 py-2 text-[12.5px] text-ink-3">400 de {linhas.length} · use a busca</p>}
         </div>
+        <div className="flex justify-start"><Importar modo={modo} /></div>
+        </>}
       </PageBody>
     </>
   );
