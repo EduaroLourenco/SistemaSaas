@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { operacaoPadrao } from "@/lib/dados/operacao";
-import { promocoesDoAnuncio } from "@/lib/meli/promocoes-canal";
+import { comissaoNoPreco, promocoesDoAnuncio } from "@/lib/meli/promocoes-canal";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +50,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ mlb: string }>
     }
 
     const r = await promocoesDoAnuncio(anuncio.conta_canal_id, mlb);
+    /* A comissão no preço que o comprador paga hoje: o menor no ar, ou a vitrine. */
+    const noAr = r.lido ? r.promocoes.filter((p) => p.status === "started" && p.preco != null).map((p) => p.preco as number) : [];
+    const comissao = await comissaoNoPreco(anuncio.conta_canal_id, mlb, noAr.length ? Math.min(...noAr) : null);
     return NextResponse.json(
-      { mlb, ...r, lidoEm: new Date().toISOString() },
+      { mlb, ...r, comissao, lidoEm: new Date().toISOString() },
       /* Promoção do canal muda em minutos, não em segundos. Cinco minutos
          cobrem abrir, fechar e reabrir o mesmo drawer sem gastar cota. */
       { headers: { "cache-control": "private, max-age=300" } }

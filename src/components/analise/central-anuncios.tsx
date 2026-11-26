@@ -13,6 +13,7 @@ import { FotoAnuncio } from "@/components/ui/foto-anuncio";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { BlocosDoSku } from "./blocos-sku";
 import { Bar, BarChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { PromocaoAoVivo } from "./promocao-ao-vivo";
 import type { DadosAnalise } from "@/lib/dados/analise";
 import type { AnuncioAnalisado } from "@/lib/analise";
 import { FILAS, prepararAnuncios, pertenceFila, resumoAnuncios, sinalAnuncio, type FilaAnuncios } from "@/lib/central-anuncios";
@@ -248,6 +249,7 @@ function Detalhe({item:a,periodo,porDia,antes,motivoVisitas,itens,fechar,abrir,a
         <details className="ads-disclosure"><summary>Critérios dos filtros</summary><p>“Abaixo/acima da tabela” exige diferença de pelo menos 3% em relação à referência. “Baixa conversão” reúne mais visitas e menos conversão que a média dos anúncios com histórico. “Poucas visitas” exige pelo menos duas vendas e conversão acima dessa média. São sinais para investigar, não causas confirmadas.</p></details>
       </>}
       {aba==="precos"&&<>
+        <PromocaoAoVivo mlb={a.mlb}/>
         <dl className="ads-price-grid"><Dado nome="Vitrine · cadastro" valor={a.precoAtual==null?"Sem leitura":money(a.precoAtual)} nota={`Sincronização: ${data(a.sincronizadoEm)}`}/><Dado nome="Preço de referência" valor={ref?money(ref):"Sem referência"} nota="Fórmula base"/><Dado nome="Preço pago" valor={m.precoPraticado==null?"Sem venda":money(m.precoPraticado)} nota={ultimaVenda?`Média · ${ultimaVenda.semana}`:undefined}/><Dado nome="Vitrine no período" valor={m.precoVitrine==null?"Sem leitura":money(m.precoVitrine)} nota={ultimaVitrine?.semana}/></dl>
         {temPrecos&&<section className="ads-price-history" aria-labelledby={`ads-price-history-${a.mlb}`}>
           <h3 id={`ads-price-history-${a.mlb}`}>Preço pago e vitrine</h3>

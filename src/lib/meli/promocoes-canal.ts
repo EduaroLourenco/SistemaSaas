@@ -281,6 +281,38 @@ export async function promocoesDoAnuncio(
   };
 }
 
+export type ComissaoNoPreco = { preco: number; valor: number; pct: number | null; fixa: number | null };
+
+/**
+ * A tarifa de venda que o canal cobraria a este preço, pela tabela dele
+ * (`/sites/MLB/listing_prices`): categoria e tipo saem do próprio anúncio.
+ * Sem `preco`, usa o da vitrine. Nulo quando o canal não responde — a
+ * promoção continua aparecendo sem ela.
+ *
+ * ponytail: tabela cheia — redução de tarifa bancada pelo canal numa
+ * campanha só aparece no `sale_fee` do pedido.
+ */
+export async function comissaoNoPreco(conta: Conta, mlb: string, preco?: number | null): Promise<ComissaoNoPreco | null> {
+  try {
+    const it = await meliGet<{ price?: number; category_id?: string; listing_type_id?: string }>(
+      `/items/${mlb}?attributes=price,category_id,listing_type_id`,
+      conta
+    );
+    const p = preco ?? num(it.price);
+    if (!p || !it.category_id || !it.listing_type_id) return null;
+    const t = await meliGet<{ sale_fee_amount?: number; sale_fee_details?: { percentage_fee?: number; fixed_fee?: number } }>(
+      `/sites/MLB/listing_prices?price=${p}&listing_type_id=${it.listing_type_id}&category_id=${it.category_id}`,
+      conta
+    );
+    const valor = num(t.sale_fee_amount);
+    if (valor == null) return null;
+    return { preco: p, valor, pct: num(t.sale_fee_details?.percentage_fee), fixa: num(t.sale_fee_details?.fixed_fee) };
+  } catch (e) {
+    console.error("[comissao-no-preco]", e);
+    return null;
+  }
+}
+
 export async function lerPromocoesDoCanal(conta: Conta): Promise<PromocaoCanal[]> {
   const v = await vendedor(conta);
   const r = await meliGet<{ results?: PromoBruta[] }>(`/seller-promotions/users/${v.id}?app_version=v2`, conta);

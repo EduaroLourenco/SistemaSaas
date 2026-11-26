@@ -5,7 +5,7 @@ import { gerizoFetch } from "@/lib/demo/runtime";
 import * as React from "react";
 import { money, shortDate } from "@/lib/format";
 import { rotuloPromocao, tomPromocao } from "@/lib/promocao-rotulos";
-import type { PromocaoDoAnuncio, PromocoesDoAnuncio } from "@/lib/meli/promocoes-canal";
+import type { ComissaoNoPreco, PromocaoDoAnuncio, PromocoesDoAnuncio } from "@/lib/meli/promocoes-canal";
 
 /**
  * O que o canal está cobrando por este anúncio AGORA.
@@ -50,7 +50,27 @@ const curto = (v: number) =>
 
 const pp = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 
-function Bloco({ children }: { children: React.ReactNode }) {
+function Comissao({ c }: { c: ComissaoNoPreco | null | undefined }) {
+  if (c === undefined) return null;
+  return (
+    <div className="mt-3 pt-3 border-t border-line flex items-baseline justify-between gap-2">
+      <p className="label">Comissão</p>
+      {c ? (
+        <span className="text-right">
+          <span className="num text-[17px] font-semibold text-ink">{money(c.valor)}</span>
+          <span className="block text-[11.5px] text-ink-3 num">
+            {c.pct != null ? `${pp(c.pct)}%` : ""}
+            {c.fixa ? ` + ${money(c.fixa)}` : ""} a {money(c.preco)}
+          </span>
+        </span>
+      ) : (
+        <span className="text-[12.5px] text-ink-3">sem leitura do canal</span>
+      )}
+    </div>
+  );
+}
+
+function Bloco({ children, comissao }: { children: React.ReactNode; comissao?: ComissaoNoPreco | null }) {
   return (
     <div className="px-4 py-3.5 border-b border-line">
       <div className="flex items-baseline justify-between gap-2 mb-2.5">
@@ -58,6 +78,7 @@ function Bloco({ children }: { children: React.ReactNode }) {
         <span className="text-[11px] text-ink-3 whitespace-nowrap">leitura agora</span>
       </div>
       {children}
+      <Comissao c={comissao} />
     </div>
   );
 }
@@ -132,8 +153,10 @@ function Grupo({
   );
 }
 
+type Dados = PromocoesDoAnuncio & { comissao?: ComissaoNoPreco | null };
+
 export function PromocaoAoVivo({ mlb }: { mlb: string }) {
-  const [dados, setDados] = React.useState<PromocoesDoAnuncio | null>(null);
+  const [dados, setDados] = React.useState<Dados | null>(null);
   const [estado, setEstado] = React.useState<"carregando" | "pronto" | "erro">("carregando");
 
   React.useEffect(() => {
@@ -142,7 +165,7 @@ export function PromocaoAoVivo({ mlb }: { mlb: string }) {
     setEstado("carregando");
     gerizoFetch(`/api/anuncios/promocoes/${encodeURIComponent(mlb)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d: PromocoesDoAnuncio) => {
+      .then((d: Dados) => {
         if (!vivo) return;
         setDados(d);
         setEstado("pronto");
@@ -172,7 +195,7 @@ export function PromocaoAoVivo({ mlb }: { mlb: string }) {
 
   if (!dados.lido)
     return (
-      <Bloco>
+      <Bloco comissao={dados.comissao}>
         <p className="text-[19px] font-semibold text-ink-3">—</p>
         <p className="mt-1 text-[12.5px] text-ink-3">{dados.motivo}</p>
       </Bloco>
@@ -186,7 +209,7 @@ export function PromocaoAoVivo({ mlb }: { mlb: string }) {
 
   if (!dados.promocoes.length)
     return (
-      <Bloco>
+      <Bloco comissao={dados.comissao}>
         <p className="text-[19px] font-semibold text-ink-2">Nenhuma no ar</p>
         <p className="mt-1 text-[12.5px] text-ink-2">nenhum convite</p>
       </Bloco>
@@ -219,7 +242,7 @@ export function PromocaoAoVivo({ mlb }: { mlb: string }) {
     ]);
 
   return (
-    <Bloco>
+    <Bloco comissao={dados.comissao}>
       {barata ? (
         <>
           <div className="flex items-baseline gap-2.5 flex-wrap">
