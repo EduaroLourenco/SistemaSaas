@@ -586,8 +586,13 @@ export default function CustosCliente({
                     variant="primary"
                     disabled={valorLote.trim() === ""}
                     onClick={() => {
-                      const v = Number(valorLote.replace(",", "."));
-                      if (!Number.isFinite(v) || v < 0) return;
+                      // Mesma leitura da célula: aceita "18%", "1.055,50", "R$ 10".
+                      const v = ler(valorLote.replace("%", ""));
+                      if (v == null) {
+                        setErro(`"${valorLote}" não é um número.`);
+                        return;
+                      }
+                      setErro(null);
                       for (const id of selecionados) editar(id, campoLote, v);
                       setValorLote("");
                     }}
