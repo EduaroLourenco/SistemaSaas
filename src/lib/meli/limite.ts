@@ -185,6 +185,8 @@ const ESCRITAS_PERMITIDAS: { metodo: string; caminho: RegExp }[] = [
    * `/seller-promotions` já aceita.
    */
   { metodo: "POST", caminho: /^\/seller-promotions\/items\/[A-Z]{3}\d+$/i },
+  /* Baixar o preço de quem já está numa DEAL ou SELLER_CAMPAIGN. */
+  { metodo: "PUT", caminho: /^\/seller-promotions\/items\/[A-Z]{3}\d+$/i },
   { metodo: "DELETE", caminho: /^\/seller-promotions\/items\/[A-Z]{3}\d+$/i },
   /*
    * Publicidade: lance e orçamento da campanha, e ligar ou desligar o

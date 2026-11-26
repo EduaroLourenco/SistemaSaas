@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { carregarCanais } from "@/lib/dados/canais";
-import { corpoDoAceite, type PedidoDeAceite } from "@/lib/planilhas/corpo-promocao";
+import { corpoDoAceite, corpoDaAlteracao, type PedidoDeAceite } from "@/lib/planilhas/corpo-promocao";
 
 export const dynamic = "force-dynamic";
 
@@ -37,10 +37,10 @@ export async function POST(req: NextRequest) {
   if (!minha) return NextResponse.json({ erro: "conta não encontrada" }, { status: 404 });
 
   const linhas = itens.map((p) => {
-    const r = corpoDoAceite(p);
+    const r = p.alterar ? corpoDaAlteracao(p) : corpoDoAceite(p);
     return "erro" in r
       ? { mlb: p.mlb, vai: false, motivo: r.erro }
-      : { mlb: p.mlb, vai: true, metodo: "POST", caminho: `/seller-promotions/items/${p.mlb}?app_version=v2`, corpo: r.corpo };
+      : { mlb: p.mlb, vai: true, metodo: p.alterar ? "PUT" : "POST", caminho: `/seller-promotions/items/${p.mlb}?app_version=v2`, corpo: r.corpo };
   });
 
   return NextResponse.json({

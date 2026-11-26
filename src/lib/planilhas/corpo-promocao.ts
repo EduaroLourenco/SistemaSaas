@@ -42,7 +42,44 @@ export type PedidoDeAceite = {
   estoque?: number | null;
   /** O que o canal propôs, para a trava do teto. */
   tetoDoCanal?: number | null;
+  /**
+   * Mudar o preço de um item que JÁ está na campanha (PUT), em vez de
+   * entrar nela (POST). Só em DEAL e SELLER_CAMPAIGN.
+   */
+  alterar?: boolean;
+  /** O preço atual dentro da campanha — com ela começada, o novo tem de ser menor. */
+  precoAtual?: number | null;
 };
+
+/** Onde dá para trocar o preço de quem já está dentro. */
+const ALTERAVEL = new Set(["DEAL", "SELLER_CAMPAIGN"]);
+
+/**
+ * O corpo do PUT que muda o preço de um item já dentro da campanha.
+ *
+ * Pela documentação do Meli (Seller campaigns › Modify items), com a
+ * campanha começada "prices can only improve": o canal recusa preço
+ * maior com "New deal_price must be lower than current deal_price". A
+ * recusa acontece aqui, de graça, antes de gastar a chamada.
+ */
+export function corpoDaAlteracao(p: PedidoDeAceite): { corpo: Record<string, unknown> } | { erro: string } {
+  const tipo = p.tipo.toUpperCase();
+  if (!ALTERAVEL.has(tipo)) return { erro: `não dá para mudar o preço dentro de uma campanha ${p.tipo}` };
+  if (p.preco == null || !(p.preco > 0)) return { erro: "faltou o preço novo" };
+  if (p.precoAtual != null && p.preco >= p.precoAtual - 0.005) {
+    return {
+      erro: `o preço atual é ${p.precoAtual.toFixed(2)} e o novo é ${p.preco.toFixed(2)} — ` +
+        "com a campanha começada o preço só pode descer",
+    };
+  }
+  return {
+    corpo: {
+      promotion_id: p.promocao,
+      promotion_type: tipo,
+      deal_price: Math.round(p.preco * 100) / 100,
+    },
+  };
+}
 
 /**
  * Monta o corpo do POST. Devolve o motivo em vez do corpo quando o

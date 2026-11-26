@@ -1,8 +1,8 @@
 import "server-only";
 import { meliEscrever, type Conta } from "./cliente";
-import { corpoDoAceite, familiaDe, type PedidoDeAceite } from "@/lib/planilhas/corpo-promocao";
+import { corpoDoAceite, corpoDaAlteracao, familiaDe, type PedidoDeAceite } from "@/lib/planilhas/corpo-promocao";
 
-export { corpoDoAceite, familiaDe };
+export { corpoDoAceite, corpoDaAlteracao, familiaDe };
 export type { PedidoDeAceite };
 
 export type ResultadoAceite = {
@@ -49,18 +49,40 @@ type RespostaAceite = { price?: number; deal_price?: number; offer_id?: string; 
  * justamente o que a pessoa precisa ver depois de apertar o botão.
  */
 
-/** Põe UM item na promoção. */
+const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Só o 429 se repete. A documentação do Meli manda backoff exponencial
+ * com jitter quando a cota estoura — e o 429 é recusa ANTES de processar,
+ * então repetir não duplica nada. Um 5xx num POST pode ter entrado do
+ * lado de lá; repetir arriscaria entrar duas vezes, então não repete.
+ */
+async function comNovaTentativa<T>(chamar: () => Promise<T>): Promise<T> {
+  for (let tentativa = 0; ; tentativa++) {
+    try {
+      return await chamar();
+    } catch (e) {
+      const cota = e instanceof Error && /HTTP 429/.test(e.message);
+      if (!cota || tentativa >= 3) throw e;
+      await dormir(1000 * 2 ** tentativa + Math.random() * 500);
+    }
+  }
+}
+
+/** Põe UM item na promoção — ou, com `alterar`, baixa o preço de quem já está dentro. */
 export async function aceitarItem(conta: Conta, p: PedidoDeAceite): Promise<ResultadoAceite> {
-  const montado = corpoDoAceite(p);
+  const montado = p.alterar ? corpoDaAlteracao(p) : corpoDoAceite(p);
   if ("erro" in montado) return { mlb: p.mlb, ok: false, erro: montado.erro };
   try {
-    const r = await meliEscrever<RespostaAceite>(
-      "POST",
-      `/seller-promotions/items/${p.mlb}?app_version=v2`,
-      conta,
-      montado.corpo
+    const r = await comNovaTentativa(() =>
+      meliEscrever<RespostaAceite>(
+        p.alterar ? "PUT" : "POST",
+        `/seller-promotions/items/${p.mlb}?app_version=v2`,
+        conta,
+        montado.corpo
+      )
     );
-    return { mlb: p.mlb, ok: true, preco: r.price ?? r.deal_price ?? null, ofertaCriada: r.offer_id ?? null };
+    return { mlb: p.mlb, ok: true, preco: r?.price ?? r?.deal_price ?? null, ofertaCriada: r?.offer_id ?? null };
   } catch (e) {
     return { mlb: p.mlb, ok: false, erro: e instanceof Error ? e.message : "o canal recusou" };
   }

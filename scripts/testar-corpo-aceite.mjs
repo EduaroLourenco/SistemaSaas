@@ -8,7 +8,7 @@
  * Uso: node scripts/testar-corpo-aceite.mjs
  */
 import { strict as assert } from "node:assert";
-import { corpoDoAceite, familiaDe } from "./lib/corpo-promocao.mjs";
+import { corpoDoAceite, corpoDaAlteracao, familiaDe } from "./lib/corpo-promocao.mjs";
 
 const ok = (r) => { assert.ok(!("erro" in r), `esperava corpo e veio erro: ${r.erro}`); return r.corpo; };
 const erro = (r) => { assert.ok("erro" in r, "esperava erro e veio corpo"); return r.erro; };
@@ -73,6 +73,19 @@ assert.match(erro(corpoDoAceite({ mlb: "MLB1", promocao: "P", tipo: "LIGHTNING",
   assert.deepEqual(c, { promotion_type: "LIGHTNING", promotion_id: "LGH-MLB1000", deal_price: 111.75, offer_id: "C-1", stock: 5 });
 }
 assert.match(erro(corpoDoAceite({ mlb: "MLB1", promocao: "P", tipo: "DOD", estoque: 2 })), /offer_id/);
+
+/* ── Mudar o preço de quem já está dentro (PUT) ── */
+{
+  const c = ok(corpoDaAlteracao({ mlb: "MLB1", promocao: "C-MLB6565848", tipo: "seller_campaign", preco: 361.684, precoAtual: 412.8 }));
+  assert.deepEqual(c, { promotion_id: "C-MLB6565848", promotion_type: "SELLER_CAMPAIGN", deal_price: 361.68 });
+}
+/* Com a campanha começada, só desce: igual ou maior é recusa do canal. */
+assert.match(erro(corpoDaAlteracao({ mlb: "MLB1", promocao: "C", tipo: "SELLER_CAMPAIGN", preco: 412.8, precoAtual: 412.8 })), /só pode descer/);
+assert.match(erro(corpoDaAlteracao({ mlb: "MLB1", promocao: "C", tipo: "SELLER_CAMPAIGN", preco: 450, precoAtual: 412.8 })), /só pode descer/);
+/* Cofinanciada e relâmpago não aceitam PUT. */
+assert.match(erro(corpoDaAlteracao({ mlb: "MLB1", promocao: "P", tipo: "SMART", preco: 10 })), /não dá para mudar/);
+assert.match(erro(corpoDaAlteracao({ mlb: "MLB1", promocao: "P", tipo: "LIGHTNING", preco: 10 })), /não dá para mudar/);
+assert.match(erro(corpoDaAlteracao({ mlb: "MLB1", promocao: "C", tipo: "DEAL" })), /preço novo/);
 
 /* ── Tipo desconhecido não vira chamada ── */
 assert.match(erro(corpoDoAceite({ mlb: "MLB1", promocao: "P", tipo: "INVENTADA" })), /não sei montar/);

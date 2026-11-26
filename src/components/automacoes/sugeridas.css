@@ -1,0 +1,153 @@
+/*
+ * Promoções sugeridas.
+ *
+ * Segue a lista de campanhas (`automacoes.css`): hierarquia por tipografia,
+ * não por caixa; cor só no que pede ação. A linha em destaque é a única
+ * exceção — ela precisa ser achada primeiro, então ganha o tom da marca.
+ */
+
+/* ── a linha em destaque, no topo da lista ── */
+.sug-linha {
+  display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; align-items: center;
+  width: 100%; min-height: 64px; margin-top: 18px; padding: 12px 14px 12px 2px;
+  border: 1px solid var(--brand-edge); border-radius: var(--r2);
+  background: var(--brand-wash); text-align: left;
+}
+.sug-linha:hover { border-color: var(--brand); }
+.sug-linha-marca { justify-self: center; font-size: 18px; color: var(--brand); }
+.sug-linha-id .nm { display: block; font-size: 15px; font-weight: 680; color: var(--brand-2); letter-spacing: -.01em; }
+.sug-linha-id .sub { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-2); }
+.sug-linha-acao { font-size: 13px; font-weight: 650; color: var(--brand-2); }
+
+/* ── o painel ── */
+.sug-painel {
+  margin-top: 16px; padding: 24px; border: 1px solid var(--line); border-radius: 16px;
+  background: var(--panel); font-variant-numeric: tabular-nums;
+}
+.sug-topo { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.sug-heroi { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.sug-heroi .big { font-family: var(--f-ui); font-size: 56px; font-weight: 600; line-height: .86; letter-spacing: -.055em; }
+.sug-heroi .leg { font-size: 14px; color: var(--ink-2); line-height: 1.35; }
+.sug-heroi .leg b { color: var(--ink); font-weight: 650; white-space: nowrap; }
+.sug-acoes { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.sug-fonte { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; font-size: 13px; color: var(--ink-3); }
+.sug-fonte b { color: var(--ink-2); font-weight: 600; }
+.sug-aviso { display: flex; gap: 6px; align-items: flex-start; margin-top: 10px; font-size: 13px; color: var(--warn); }
+.sug-aviso.ok { color: var(--up); }
+.sug-aviso svg { flex: none; margin-top: 2px; }
+.sug-lendo { margin-top: 10px; font-size: 13px; color: var(--ink-3); }
+.sug-lendo::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--brand); animation: sug-pulso 1s ease-in-out infinite alternate; }
+@keyframes sug-pulso { from { opacity: .25 } to { opacity: 1 } }
+.sug-erro { font-size: 13px; color: var(--down); }
+
+/* ── abas: texto com sublinhado, como o filtro das campanhas ── */
+.sug-abas { display: flex; gap: 18px; overflow-x: auto; overflow-y: hidden; margin-top: 20px; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.sug-abas::-webkit-scrollbar { display: none; }
+.sug-abas button { flex: none; position: relative; min-height: 44px; font-size: 14px; font-weight: 550; color: var(--ink-3); white-space: nowrap; }
+.sug-abas button span { margin-left: 4px; font-family: var(--f-ui); font-weight: 650; color: var(--ink-2); }
+.sug-abas button[aria-selected="true"] { color: var(--ink); font-weight: 680; }
+.sug-abas button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--ink); }
+
+.sug-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 2px 4px; }
+
+/* ── a lista ── */
+.sug-lista { list-style: none; margin: 0; padding: 0; }
+.sug-item {
+  display: grid; grid-template-columns: 28px 44px minmax(0, 1fr) auto; gap: 0 12px; align-items: start;
+  padding: 16px 2px; border-bottom: 1px solid var(--line);
+}
+.sug-item.on { background: linear-gradient(90deg, var(--brand-wash), transparent 60%); }
+.sug-check { padding-top: 13px; }
+.sug-foto { border-radius: 8px; }
+.sug-corpo { min-width: 0; }
+.sug-titulo { font-size: 14.5px; font-weight: 620; letter-spacing: -.008em; overflow-wrap: anywhere; }
+.sug-id { margin-top: 2px; font-size: 12px; color: var(--ink-3); overflow-wrap: anywhere; }
+.sug-acao { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 8px; }
+.sug-verbo { font-size: 12px; font-weight: 750; text-transform: uppercase; letter-spacing: .04em; color: var(--up); }
+.sug-verbo.baixar { color: var(--brand-2); }
+.sug-promo { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.sug-preco { font-size: 14px; color: var(--ink-2); }
+.sug-preco b { font-family: var(--f-ui); font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+.sug-preco s { color: var(--ink-3); }
+.sug-prazo { font-size: 12px; font-weight: 600; color: var(--warn); }
+.sug-motivo { margin-top: 8px; font-size: 13px; color: var(--ink-2); }
+.sug-numeros { margin-top: 6px; font-size: 12.5px; color: var(--ink-3); }
+.sug-numeros i { font-style: normal; color: var(--ink-3); }
+.sug-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.sug-outras { margin-top: 10px; max-width: 520px; }
+.sug-ferramentas { display: flex; gap: 2px; }
+.sug-ferramentas button { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r1); color: var(--ink-2); }
+.sug-ferramentas button:hover { background: var(--panel-3); color: var(--ink); }
+.sug-item.alerta .sug-titulo { color: var(--ink); }
+.sug-alerta-txt { display: flex; gap: 6px; align-items: flex-start; margin-top: 8px; font-size: 13.5px; font-weight: 600; color: var(--down); }
+.sug-alerta-txt svg { flex: none; margin-top: 2px; }
+
+.sug-sem { margin-top: 16px; }
+.sug-sem > button { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.sug-sem ul { list-style: none; margin: 0; padding: 0; }
+.sug-sem li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 8px; align-items: center; padding: 8px 2px; border-top: 1px solid var(--line); font-size: 13px; }
+.sug-sem li .sug-id { grid-column: 1; }
+.sug-sem li button { grid-row: 1 / span 2; grid-column: 2; display: grid; place-items: center; width: 40px; height: 40px; color: var(--ink-2); }
+
+/* ── rodapé fixo com o botão de revisar ── */
+.sug-rodape {
+  position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 16px -24px -24px; padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line); border-radius: 0 0 16px 16px; background: var(--panel);
+  font-size: 14px; font-weight: 600;
+}
+
+/* ── folhas ── */
+.sug-regras { padding: 20px 24px; }
+.sug-cob { font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+.sug-regra { padding: 14px 0; border-top: 1px solid var(--line); }
+.sug-regra.off .nm, .sug-regra.off .faz { color: var(--ink-3); }
+.sug-regra-cab { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.sug-regra .nm { font-size: 14px; font-weight: 650; }
+.sug-regra .faz { margin-top: 2px; font-size: 12.5px; color: var(--ink-2); }
+.sug-regra .por { margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--warn); }
+.sug-regra-params { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+
+.sug-sim { padding: 20px 24px 28px; }
+.sug-sim h3, .sug-revisao h3 { margin: 22px 0 8px; font-size: 13px; font-weight: 650; color: var(--ink-2); }
+.sug-sim-calc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.sug-sim-calc .num { margin-top: 6px; font-family: var(--f-ui); font-size: 22px; font-weight: 650; letter-spacing: -.02em; }
+.sug-faixas { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sug-faixas th { padding: 6px 4px; text-align: right; font-weight: 600; color: var(--ink-3); border-bottom: 1px solid var(--line); }
+.sug-faixas td { padding: 8px 4px; text-align: right; border-bottom: 1px solid var(--line); }
+.sug-faixas th:first-child, .sug-faixas td:first-child { text-align: left; }
+.sug-faixas tr.melhor td { background: var(--up-wash); color: var(--ink); }
+.sug-falta { list-style: none; padding: 0; margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.sug-falta li { padding: 8px 0; border-top: 1px solid var(--line); }
+.sug-falta b { color: var(--ink); }
+
+.sug-revisao { display: grid; gap: 10px; padding: 20px 24px 28px; }
+.sug-revisao ul { list-style: none; margin: 0; padding: 0; }
+.sug-revisao li { display: grid; gap: 2px; padding: 9px 0; border-top: 1px solid var(--line); }
+.sug-revisao li .t { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+.sug-revisao li .a { font-size: 13px; color: var(--ink-2); }
+.sug-resultado { padding: 28px 24px; }
+.sug-resultado .big { font-family: var(--f-ui); font-size: 48px; font-weight: 650; letter-spacing: -.04em; }
+.sug-resultado .big span { font-size: 16px; font-weight: 550; letter-spacing: 0; color: var(--ink-2); }
+.sug-recusas { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 8px; }
+.sug-recusas li { display: grid; gap: 3px; padding: 10px 12px; border-radius: 8px; background: var(--down-wash); font-size: 13px; color: var(--down); overflow-wrap: anywhere; }
+.sug-recusas b { color: var(--ink); }
+
+@media (max-width: 720px) {
+  .sug-painel { padding: 16px; border-radius: 12px; }
+  .sug-heroi .big { font-size: 48px; }
+  .sug-item { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .sug-foto { display: none; }
+  .sug-ferramentas { flex-direction: column; }
+  .sug-rodape { margin: 16px -16px -16px; padding-inline: 16px; }
+}
+/* No celular a barra de navegação flutua sobre o pé da tela: o rodapé sobe acima dela. */
+@media (max-width: 767px) {
+  .sug-rodape {
+    bottom: calc(84px + env(safe-area-inset-bottom)); margin: 16px 0 0; padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--sh-2);
+  }
+  .sug-sim-calc { grid-template-columns: 1fr 1fr; }
+  .sug-sim-calc > :first-child { grid-column: 1 / -1; }
+}

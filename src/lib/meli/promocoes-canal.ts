@@ -185,6 +185,8 @@ export type PromocaoDoAnuncio = {
   estoqueMax: number | null;
   /** Só em promoção de meio de pagamento (BANK/COFINANCED): "PIX". */
   meioPagamento: string | null;
+  /** Desconto extra que o Meli dá por conta dele (boost), em reais. */
+  boost?: number | null;
 };
 
 /** Lista, ou o motivo de não ter perguntado. Nunca lista vazia por falha. */
@@ -212,6 +214,8 @@ type PromoDoItemBruta = {
   ref_id?: string;
   stock?: { min?: number; max?: number };
   payment_method?: string;
+  boosted_offer?: boolean;
+  discount_meli_boost_amount?: number;
 };
 
 /**
@@ -271,6 +275,7 @@ export async function promocoesDoAnuncio(
           estoqueMin: num(p.stock?.min),
           estoqueMax: num(p.stock?.max),
           meioPagamento: p.payment_method ?? null,
+          boost: p.boosted_offer ? num(p.discount_meli_boost_amount) : null,
         };
       }),
   };

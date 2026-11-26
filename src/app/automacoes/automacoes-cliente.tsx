@@ -20,6 +20,7 @@ import { ROTULO_PROMOCAO, TOM_PROMOCAO, nomePromocao } from "@/lib/promocao-rotu
 import { GRUPOS, agruparCampanhas, oQueNaoEspera, type Campanha } from "@/lib/agenda-promocoes";
 import type { Fila } from "@/lib/dados/fila-aprovacao";
 import { FilaAprovacao } from "@/components/automacoes/fila";
+import { LinhaSugeridas, PainelSugeridas } from "@/components/automacoes/sugeridas";
 import { avaliarItem, type Regra, type Resultado } from "@/lib/planilhas/avaliar-regras";
 import { paraRegra, type ItemDaTela } from "@/lib/planilhas/item-para-regra";
 import { pisoDoItem, faixaDoPreco, precoComFolga, resultadoEstimado } from "@/lib/planilhas/piso-promocao";
@@ -112,6 +113,8 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
     [porTipo]
   );
   const [aberta, setAberta] = React.useState<PromocaoAberta | null>(null);
+  /* As sugeridas abrem no topo, acima das campanhas; abrir uma fecha a outra. */
+  const [sugeridas, setSugeridas] = React.useState(false);
 
   /*
    * Os contadores do canal, buscados em fila de quatro.
@@ -322,10 +325,17 @@ export default function Automacoes({ dados, ads, regras, folgas, fila }: {
             ))}
           </div>
 
+          {/* Sempre a primeira: junta tabela de preço, convites e giro numa lista só. */}
+          <LinhaSugeridas
+            aberta={sugeridas}
+            onAbrir={() => { setSugeridas(!sugeridas); setAberta(null); }}
+          />
+          {sugeridas && <PainelSugeridas contaFiltro={conta} />}
+
           <Lista
             campanhas={visiveis}
             aberta={aberta}
-            onAbrir={(p) => setAberta(aberta?.codigo === p.codigo && aberta.contaId === p.contaId ? null : p)}
+            onAbrir={(p) => { setSugeridas(false); setAberta(aberta?.codigo === p.codigo && aberta.contaId === p.contaId ? null : p); }}
           />
         </div>
 

@@ -5,13 +5,14 @@ import { contasDemo, produtosDemo, mlbDemo, DEMO_HOJE, moedaDemo } from "./fixtu
 import { dadosCustosDemo } from "./fixtures-financeiro";
 import { avaliarItem, type Regra } from "@/lib/planilhas/avaliar-regras";
 import { paraRegra } from "@/lib/planilhas/item-para-regra";
-import { corpoDoAceite, type PedidoDeAceite } from "@/lib/planilhas/corpo-promocao";
+import { corpoDoAceite, corpoDaAlteracao, type PedidoDeAceite } from "@/lib/planilhas/corpo-promocao";
 import { pisoDoItem, precoProposto, faixaDoPreco } from "@/lib/planilhas/piso-promocao";
 import { processItem, getPrecoTabela, precoPiso, precoComExtra, norm, type FormulaBaseData, type RegraPreco } from "@/lib/planilhas/motor-promocoes";
 import type { LinhaProcessada } from "@/lib/planilhas/processar";
 import type { LinhaFila } from "@/lib/dados/fila-aprovacao";
 import type { ItemHistorico, CampanhaResumo } from "@/lib/dados/promocoes";
 import type ExcelJS from "exceljs";
+import { contextoSugestoesDemo, contaSugestoesDemo, diasSimulacaoDemo } from "./fixtures-sugestoes";
 
 type Configuracao = { piso?: { usarComoPiso: boolean; toleranciaPct: number }; folgas?: Record<string, number> };
 type Pacote = { linhas: LinhaProcessada[]; arquivos: { nome: string; campanha: string; linhas: number }[]; livros: { nome: string; livro: ExcelJS.Workbook }[]; descontoExtra: number };
@@ -218,6 +219,14 @@ export async function apiPromocoesDemo(req: Request): Promise<Response | null> {
       updateDemoState(s => { (s.promocoes as typeof s.promocoes & Configuracao).piso = piso; }); return demoJson(piso);
     }
     if (path === "/api/automacoes/contagem" && req.method === "GET") return demoJson(contagemPromocaoDemo);
+    if (path === "/api/automacoes/sugestoes" && req.method === "GET") {
+      const c = url.searchParams.get("conta");
+      if (!c) return demoJson(contextoSugestoesDemo);
+      if (!contaValida(c)) return erro("Conta fictícia não encontrada.", 404);
+      return demoJson(contaSugestoesDemo());
+    }
+    if (path === "/api/automacoes/simulacao" && req.method === "GET") return demoJson({ dias: diasSimulacaoDemo(url.searchParams.get("mlb") ?? "") });
+    if (path === "/api/automacoes/preco-minimo" && req.method === "POST") return erro("Na demonstração a tabela é fictícia e não pode ser trocada.");
     if (path === "/api/automacoes/itens" && req.method === "GET") {
       if (!contaValida(url.searchParams.get("conta"))) return erro("Conta fictícia não encontrada.", 404);
       // A proposta recebe o mesmo cadastro de custos exibido em Financeiro,
@@ -231,6 +240,7 @@ export async function apiPromocoesDemo(req: Request): Promise<Response | null> {
       }) });
     }
     const corpo = await corpoDemo(req);
+    if (path === "/api/automacoes/robo") return demoJson({ ok: true, parametros: corpo });
     if (path === "/api/automacoes/folga") {
       const folga = numero(corpo.folga, NaN); if (!Number.isFinite(folga) || folga < 0 || folga > 50) return erro("Use uma folga de 0 a 50%.");
       updateDemoState(s => { const p = s.promocoes as typeof s.promocoes & Configuracao; p.folgas = { ...p.folgas, [String(corpo.tipo ?? "*")]: folga }; }); return demoJson({ ok: true });
@@ -256,7 +266,7 @@ export async function apiPromocoesDemo(req: Request): Promise<Response | null> {
     if (path === "/api/automacoes/revisar" || path === "/api/automacoes/enviar") {
       if (!contaValida(corpo.conta)) return erro("Conta fictícia não encontrada.", 404);
       const itens = array(corpo.itens) as PedidoDeAceite[]; if (!itens.length) return erro("Selecione os itens para revisar.");
-      const linhas = itens.map(p => { const r = corpoDoAceite(p); return "erro" in r ? { mlb: p.mlb, vai: false, motivo: r.erro } : { mlb: p.mlb, vai: true, metodo: "POST", caminho: `/seller-promotions/items/${p.mlb}?app_version=v2`, corpo: r.corpo }; });
+      const linhas = itens.map(p => { const r = p.alterar ? corpoDaAlteracao(p) : corpoDoAceite(p); return "erro" in r ? { mlb: p.mlb, vai: false, motivo: r.erro } : { mlb: p.mlb, vai: true, metodo: p.alterar ? "PUT" : "POST", caminho: `/seller-promotions/items/${p.mlb}?app_version=v2`, corpo: r.corpo }; });
       if (path.endsWith("/revisar")) return demoJson({ conta: contasDemo[0].nome, escritaConectada: true, vao: linhas.filter(l => l.vai).length, ficam: linhas.filter(l => !l.vai).length, linhas });
       if (corpo.confirmar !== true) return erro("Confirme a simulação de envio.");
       const resultados = linhas.map(l => ({ mlb: l.mlb, ok: l.vai, erro: l.vai ? undefined : l.motivo, preco: itens.find(i => i.mlb === l.mlb)?.preco ?? null }));
