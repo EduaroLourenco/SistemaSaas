@@ -281,20 +281,24 @@ export default function CustosCliente({
     setSalvando(true);
     setErro(null);
     try {
-      const r = await gerizoFetch("/api/custos", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          edicoes: [...edicoes.entries()].map(([produtoId, campos]) => ({
-            produtoId,
-            ...campos,
-          })),
-        }),
-      });
-      const corpo = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        setErro(corpo.erro ?? `Falha ao gravar (HTTP ${r.status})`);
-        return;
+      // A rota aceita até 500 por chamada; "aplicar a todos" passa disso,
+      // então manda em pacotes, um depois do outro.
+      const todas = [...edicoes.entries()].map(([produtoId, campos]) => ({ produtoId, ...campos }));
+      let gravados = 0;
+      for (let i = 0; i < todas.length; i += 500) {
+        const r = await gerizoFetch("/api/custos", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ edicoes: todas.slice(i, i + 500) }),
+        });
+        const corpo = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const msg = corpo.erro ?? `Falha ao gravar (HTTP ${r.status})`;
+          setErro(gravados ? `${msg} — ${gravados} de ${todas.length} já tinham sido gravados.` : msg);
+          if (gravados) gerizoReload();
+          return;
+        }
+        gravados += Math.min(500, todas.length - i);
       }
       setSalvo(true);
       // Recarrega para que a margem apareça recalculada pelo servidor —
