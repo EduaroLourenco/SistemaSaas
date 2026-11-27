@@ -58,3 +58,14 @@ assert.match(
 );
 
 console.log("conferência ao vivo: ok");
+
+/* ── Trava do anúncio irmão ── */
+const { jaEntrou, travadoNoCanal } = await import("./lib/conferir-pedido.mjs");
+assert.ok(travadoNoCanal('HTTP 423 em POST ... LockedEntityException: Offer Locked [MLB4085093701-MLB4085208559]'));
+assert.ok(travadoNoCanal('HTTP 400 ... OFFER_SIBLING_CREATION_IN_PROCESS'));
+assert.ok(!travadoNoCanal('HTTP 400 ... New deal_price must be lower'));
+const black = [{ id: "C-MLB6565848", type: "SELLER_CAMPAIGN", status: "started", price: 9.9 }];
+assert.ok(jaEntrou({ mlb: "MLB4085093701", promocao: "C-MLB6565848", tipo: "SELLER_CAMPAIGN", preco: 9.9 }, black));
+assert.ok(!jaEntrou({ mlb: "MLB4085093701", promocao: "C-MLB6565848", tipo: "SELLER_CAMPAIGN", preco: 9.5 }, black), "preço acima do pedido não conta");
+assert.ok(!jaEntrou({ mlb: "MLB4085093701", promocao: "C-MLB6565848", tipo: "SELLER_CAMPAIGN", preco: 9.9 }, [{ ...black[0], status: "candidate" }]));
+console.log("trava do irmão: ok");

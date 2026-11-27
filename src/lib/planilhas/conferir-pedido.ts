@@ -67,3 +67,19 @@ export function conferirPedido(p: PedidoDeAceite, aoVivo: PromoAoVivo[]): Confer
   }
   return { vai: true, pedido: p };
 }
+
+/**
+ * O item já está onde o pedido queria? Usado depois de uma trava do canal
+ * (anúncio irmão sendo copiado): a cópia muitas vezes já fez o serviço.
+ */
+export function jaEntrou(p: PedidoDeAceite, aoVivo: PromoAoVivo[]): boolean {
+  const tipo = p.tipo.toUpperCase();
+  const dentro = aoVivo.find(
+    (v) => v.id === p.promocao && (v.type ?? "").toUpperCase() === tipo && (v.status === "started" || v.status === "pending")
+  );
+  if (!dentro) return false;
+  return p.preco == null || (dentro.price != null && dentro.price <= p.preco + 0.01);
+}
+
+/** Recusa por trava: o canal está gravando outra oferta no mesmo produto. Nada foi gravado. */
+export const travadoNoCanal = (erro: string) => /HTTP 423|OFFER_SIBLING_CREATION_IN_PROCESS|Offer Locked/i.test(erro);

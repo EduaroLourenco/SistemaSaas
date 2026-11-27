@@ -1,7 +1,7 @@
 # Promoções sugeridas — a lógica
 
-Status: implementado em 26/11/2026 (ver "O que foi feito", no fim). Falta: rodar
-db/52, importar a tabela, e o primeiro envio real com o Eduardo junto.
+Status: implementado em 26/11/2026 (ver "O que foi feito", no fim). A planilha da Black
+não é tabela de mínimo (era só para a Black) — não importar; primeiro envio real feito em 26/11 (11 de 13).
 Pedido do Eduardo: um cartão **"Sugeridas"** destacado, sempre primeiro no
 carrossel de promoções, que junta numa lista só (1) os itens que a tabela de
 preço diz que dá para pôr em promoção e (2) os convites do Meli que as regras
@@ -317,3 +317,13 @@ nova segue estas regras para não repetir:
    `Tabela de preço Minimo_nov_26 (para importar).xlsx` (já convertido, na
    pasta Downloads). O .xlsb precisa ser salvo como .xlsx.
 3. Primeiro envio real: 2 ou 3 itens, com o Eduardo junto.
+
+### Primeiro envio real (26/11, BdC)
+
+11 de 13 entraram, um item por chamada (o Meli não tem endpoint de lote para
+`seller-promotions`; o "em massa" é a fila de 4 em paralelo). Os 2 recusados
+(423 "Offer Locked" e 400 `OFFER_SIBLING_CREATION_IN_PROCESS`) eram anúncios
+irmãos do mesmo produto no mesmo envio — e entraram sozinhos pela cópia do
+Meli. Agora `aceitarItem` espera 4/8/12 s, relê o item e só manda de novo se
+ele ainda não estiver na promoção (`jaEntrou`, `travadoNoCanal` em
+`conferir-pedido.ts`).

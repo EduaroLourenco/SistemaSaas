@@ -1,5 +1,6 @@
 import "server-only";
-import { meliEscrever, type Conta } from "./cliente";
+import { meliEscrever, meliGet, type Conta } from "./cliente";
+import { jaEntrou, travadoNoCanal, type PromoAoVivo } from "@/lib/planilhas/conferir-pedido";
 import { corpoDoAceite, corpoDaAlteracao, familiaDe, type PedidoDeAceite } from "@/lib/planilhas/corpo-promocao";
 
 export { corpoDoAceite, corpoDaAlteracao, familiaDe };
@@ -70,7 +71,7 @@ async function comNovaTentativa<T>(chamar: () => Promise<T>): Promise<T> {
 }
 
 /** Põe UM item na promoção — ou, com `alterar`, baixa o preço de quem já está dentro. */
-export async function aceitarItem(conta: Conta, p: PedidoDeAceite): Promise<ResultadoAceite> {
+export async function aceitarItem(conta: Conta, p: PedidoDeAceite, tentativa = 0): Promise<ResultadoAceite> {
   const montado = p.alterar ? corpoDaAlteracao(p) : corpoDoAceite(p);
   if ("erro" in montado) return { mlb: p.mlb, ok: false, erro: montado.erro };
   try {
@@ -84,8 +85,28 @@ export async function aceitarItem(conta: Conta, p: PedidoDeAceite): Promise<Resu
     );
     return { mlb: p.mlb, ok: true, preco: r?.price ?? r?.deal_price ?? null, ofertaCriada: r?.offer_id ?? null };
   } catch (e) {
-    return { mlb: p.mlb, ok: false, erro: e instanceof Error ? e.message : "o canal recusou" };
+    const erro = e instanceof Error ? e.message : "o canal recusou";
+    return travadoNoCanal(erro) && tentativa < 3
+      ? depoisDaTrava(conta, p, tentativa)
+      : { mlb: p.mlb, ok: false, erro };
   }
+}
+
+/**
+ * Trava do canal (423 / OFFER_SIBLING_CREATION_IN_PROCESS): o Meli está
+ * copiando uma oferta para o anúncio irmão do mesmo produto e recusou sem
+ * gravar. Espera, relê e só manda de novo se a cópia não fez o serviço —
+ * em 26/11 os dois travados da BdC tinham entrado sozinhos pela cópia.
+ */
+async function depoisDaTrava(conta: Conta, p: PedidoDeAceite, tentativa: number): Promise<ResultadoAceite> {
+  await dormir(4000 * (tentativa + 1));
+  try {
+    const aoVivo = await meliGet<PromoAoVivo[]>(`/seller-promotions/items/${p.mlb}?app_version=v2`, conta);
+    if (Array.isArray(aoVivo) && jaEntrou(p, aoVivo)) return { mlb: p.mlb, ok: true, preco: p.preco ?? null };
+  } catch {
+    /* sem a releitura, tenta mandar: a trava recusa sem gravar, então não duplica */
+  }
+  return aceitarItem(conta, p, tentativa + 1);
 }
 
 /** Tira UM item de UMA promoção. */
